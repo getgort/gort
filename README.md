@@ -27,10 +27,18 @@ Cog was originally designed as a distributed computation framework, and much of 
 
 ## The road to 0.1.0
 
+1. First ordered list item
+2. Another item
+  * Unordered sub-list. 
+1. Actual numbers don't matter, just that it's a number
+  1. Ordered sub-list
+4. And another item.
+
+
 1. Slack things (0.0.1)
-  1. Send a message to a channel (DONE)
-  1. Establish a connection with channel (DONE)
-  1. Make channel configurable (DONE)
+   1. Send a message to a channel (DONE)
+   1. Establish a connection with channel (DONE)
+   1. Make channel configurable (DONE)
 1.  Container things (0.0.2)
   1. Run a container
   1. Run a container in response to a message
