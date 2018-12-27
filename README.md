@@ -31,11 +31,11 @@ Cog was originally designed as a distributed computation framework, and much of 
    1. Send a message to a channel (DONE)
    2. Establish a connection with channel (DONE)
    3. Make channel configurable (DONE)
-2.  Container things (0.0.2)
+1.  Container things (0.0.2)
    1. Run a container
    2. Run a container in response to a message
    3. Pass message into container at run
    4. Pass container output back into channel
-3. Bundles (0.0.3)
-4. Templates (0.0.4)
-5. Users (0.1.0) - *POC feature complete* (NOT fully feature complete!)
+1. Bundles (0.0.3)
+1. Templates (0.0.4)
+1. Users (0.1.0) - *POC feature complete* (NOT fully feature complete!)
