@@ -1,0 +1,10 @@
+global:
+  command-timeout-seconds: 300
+
+docker:
+  host: unix:///var/run/docker.sock
+
+slack:
+- name: ClockworkSoul
+  api-token: xoxb-318612539623-512030882149-I3JUlQSw30088hMU7fDQsScO
+
