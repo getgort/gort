@@ -25,6 +25,7 @@ var (
 
 type CogConfig struct {
 	GlobalConfigs  GlobalConfigs   `json:"global"`
+	DockerConfigs  DockerConfigs   `json:"docker"`
 	SlackProviders []SlackProvider `json:"slack"`
 }
 
@@ -32,12 +33,20 @@ type GlobalConfigs struct {
 	CommandTimeoutSeconds int `json:"command-timeout-seconds"`
 }
 
+type DockerConfigs struct {
+	DockerHost string `json:"host"`
+}
+
 type SlackProvider struct {
 	Name          string `json:"name"`
 	SlackAPIToken string `json:"api-token"`
 }
 
-func GetGlobalConfig() GlobalConfigs {
+func GetDockerConfigs() DockerConfigs {
+	return _config.DockerConfigs
+}
+
+func GetGlobalConfigs() GlobalConfigs {
 	return _config.GlobalConfigs
 }
 
