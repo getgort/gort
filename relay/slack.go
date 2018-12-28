@@ -124,6 +124,16 @@ func (s *SlackRelay) OnChannelMessage(event *slack.MessageEvent) {
 		channel.Name,
 		event.Msg.Text,
 	)
+
+	go func() {
+		params := TokenizeParameters(event.Msg.Text)
+		image, _ := FindImage(event.Msg.Text)
+		output, _ := SpawnWorker(image, params)
+
+		for str := range output {
+			s.rtm.SendMessage(s.rtm.NewOutgoingMessage(str, channel.ID))
+		}
+	}()
 }
 
 func (s *SlackRelay) OnDirectMessage(event *slack.MessageEvent) {

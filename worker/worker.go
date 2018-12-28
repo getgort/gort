@@ -13,15 +13,16 @@ import (
 )
 
 type Worker struct {
-	DockerClient     *client.Client
-	DockerContext    context.Context
-	DockerHost       string
-	ExecutionTimeout time.Duration
-	ImageName        string
-	done             chan struct{}
+	CommandParameters []string
+	DockerClient      *client.Client
+	DockerContext     context.Context
+	DockerHost        string
+	ExecutionTimeout  time.Duration
+	ImageName         string
+	done              chan struct{}
 }
 
-func NewWorker(imageName string, timeout time.Duration) (*Worker, error) {
+func NewWorker(imageName string, commandParams ...string) (*Worker, error) {
 	dcli, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
@@ -34,31 +35,38 @@ func NewWorker(imageName string, timeout time.Duration) (*Worker, error) {
 	}
 
 	return &Worker{
-		DockerClient:     dcli,
-		DockerContext:    context.Background(),
-		DockerHost:       config.GetDockerConfigs().DockerHost,
-		ExecutionTimeout: timeout,
-		ImageName:        imageName,
-		done:             make(chan struct{}, 1),
+		CommandParameters: commandParams,
+		DockerClient:      dcli,
+		DockerContext:     context.Background(),
+		DockerHost:        config.GetDockerConfigs().DockerHost,
+		ExecutionTimeout:  1 * time.Minute,
+		ImageName:         imageName,
+		done:              make(chan struct{}, 1),
 	}, nil
 }
 
-func (w *Worker) Stopped() <-chan struct{} {
-	return w.done
-}
-
+// Start triggers a worker to run a container according to its settings.
+// It returns a string channel that emits the container's combined stdout and stderr streams.
 func (w *Worker) Start() (<-chan string, error) {
 	cli := w.DockerClient
 	ctx := w.DockerContext
 	imageName := w.ImageName
 	timeout := w.ExecutionTimeout
 
-	_, err := cli.ImagePull(ctx, imageName, types.ImagePullOptions{})
+	// Start the image pull. This blocks until the pull is complete.
+	err := w.pullImage()
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := cli.ContainerCreate(ctx, &container.Config{Image: w.ImageName}, nil, nil, "")
+	resp, err := cli.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image: imageName,
+			Cmd:   w.CommandParameters,
+			Tty:   true,
+		},
+		nil, nil, "")
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +100,15 @@ func (w *Worker) Start() (<-chan string, error) {
 	return logs, nil
 }
 
-func (w *Worker) buildContainerLogChannel(containerId string) (<-chan string, error) {
+// Stopped returns a channel that blocks until this worker's container has stopped.
+func (w *Worker) Stopped() <-chan struct{} {
+	return w.done
+}
+
+// buildContainerLogChannel constructs the log output channel returned by Start()
+func (w *Worker) buildContainerLogChannel(containerID string) (<-chan string, error) {
 	options := types.ContainerLogsOptions{Follow: true, ShowStdout: true, ShowStderr: true}
-	out, err := w.DockerClient.ContainerLogs(w.DockerContext, containerId, options)
+	out, err := w.DockerClient.ContainerLogs(w.DockerContext, containerID, options)
 	if err != nil {
 		return nil, err
 	}
@@ -110,4 +124,26 @@ func (w *Worker) buildContainerLogChannel(containerId string) (<-chan string, er
 	}()
 
 	return logs, nil
+}
+
+// pullImage pull the worker's image. It blocks until the pull is complete.
+func (w *Worker) pullImage() error {
+	cli := w.DockerClient
+	ctx := w.DockerContext
+	imageName := w.ImageName
+
+	reader, err := cli.ImagePull(ctx, imageName, types.ImagePullOptions{})
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	// Watch the daemon output until we get an EOF
+	bytes := make([]byte, 256)
+	var e error
+	for e == nil {
+		_, e = reader.Read(bytes)
+	}
+
+	return nil
 }
