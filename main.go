@@ -3,13 +3,14 @@ package main
 import (
 	"log"
 
-	"github.com/clockworksoul/cog2/listeners"
+	"github.com/clockworksoul/cog2/context"
+	"github.com/clockworksoul/cog2/relays"
 )
 
 func main() {
-	log.Printf("Starting Cog2.%s\n", version)
+	log.Printf("Starting Cog2 version %s\n", context.CogVersion)
 
-	listeners.StartListening()
+	relays.StartListening()
 
 	<-make(chan struct{})
 }
