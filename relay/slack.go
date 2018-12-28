@@ -1,4 +1,4 @@
-package relays
+package relay
 
 import (
 	"errors"
@@ -185,15 +185,4 @@ func (s *SlackRelay) getUserInfo(id string) (*slack.User, error) {
 	}
 
 	return user, err
-}
-
-func StartListening() {
-	for _, sp := range config.GetSlackProviders() {
-		listener := NewSlackRelay(sp)
-
-		listener.Initialize()
-		listener.Connect()
-
-		go listener.Listen()
-	}
 }
