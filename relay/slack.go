@@ -12,6 +12,8 @@ import (
 )
 
 type SlackRelay struct {
+	Relay
+
 	provider config.SlackProvider
 	client   *slack.Client
 	rtm      *slack.RTM
@@ -20,22 +22,18 @@ type SlackRelay struct {
 	_users    map[string]*slack.User
 }
 
-func NewSlackRelay(p config.SlackProvider) *SlackRelay {
-	return &SlackRelay{provider: p}
+func NewSlackRelay(p config.SlackProvider) SlackRelay {
+	return SlackRelay{provider: p}
 }
 
-func (s *SlackRelay) Connect() {
+func (s SlackRelay) Listen() {
+	s.client = slack.New(s.provider.SlackAPIToken)
+	s.rtm = s.client.NewRTM()
+
 	log.Printf("Connecting to Slack provider %s...\n", s.provider.Name)
 
 	go s.rtm.ManageConnection()
-}
 
-func (s *SlackRelay) Initialize() {
-	s.client = slack.New(s.provider.SlackAPIToken)
-	s.rtm = s.client.NewRTM()
-}
-
-func (s *SlackRelay) Listen() {
 	for msg := range s.rtm.IncomingEvents {
 		switch ev := msg.Data.(type) {
 		case *slack.ConnectedEvent:
