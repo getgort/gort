@@ -205,6 +205,7 @@ func (s *SlackRelay) OnMessage(event *slack.MessageEvent, info *Info) *ProviderE
 func (s SlackRelay) SendMessage(channel string, message string) {
 	s.rtm.PostMessage(
 		channel,
+		slack.MsgOptionDisableMarkdown(),
 		slack.MsgOptionAsUser(false),
 		slack.MsgOptionUsername(s.provider.BotName),
 		slack.MsgOptionText(message, true),

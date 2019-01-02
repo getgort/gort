@@ -13,16 +13,18 @@ slack:
 bundles:
 - name: test
   description: A test bundle.
+  
   docker:
-    image: clockworksoul/echotest
+    image: clockworksoul/relaytest
     tag: latest
+
   commands:
-    splitecho:
-      description: Echos back anything sent to it, one parameter at a time.
-      executable: /opt/app/splitecho.sh
-    curl:
-      description: Echos back anything sent to it, one parameter at a time.
-      executable: /usr/bin/curl
-    echo:
-      description: Echos back anything sent to it, one parameter at a time.
-      executable: /bin/echo
+  - command: splitecho
+    description: "Echos back anything sent to it, one parameter at a time."
+    executable: [ "/opt/app/splitecho.sh" ]
+  - command: curl
+    description: "The official curl command."
+    executable: [ "/usr/bin/curl" ]
+  - command: echo
+    description: "Echos back anything sent to it, all at once."
+    executable: [ "/bin/echo" ]

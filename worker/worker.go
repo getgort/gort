@@ -17,12 +17,13 @@ type Worker struct {
 	DockerClient      *client.Client
 	DockerContext     context.Context
 	DockerHost        string
+	EntryPoint        []string
 	ExecutionTimeout  time.Duration
 	ImageName         string
 	done              chan struct{}
 }
 
-func NewWorker(imageName string, commandParams ...string) (*Worker, error) {
+func NewWorker(image string, tag string, entryPoint []string, commandParams ...string) (*Worker, error) {
 	dcli, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
@@ -34,13 +35,18 @@ func NewWorker(imageName string, commandParams ...string) (*Worker, error) {
 		return nil, err
 	}
 
+	if tag == "" {
+		tag = "latest"
+	}
+
 	return &Worker{
 		CommandParameters: commandParams,
 		DockerClient:      dcli,
 		DockerContext:     context.Background(),
 		DockerHost:        config.GetDockerConfigs().DockerHost,
+		EntryPoint:        entryPoint,
 		ExecutionTimeout:  1 * time.Minute,
-		ImageName:         imageName,
+		ImageName:         image + ":" + tag,
 		done:              make(chan struct{}, 1),
 	}, nil
 }
@@ -51,6 +57,7 @@ func (w *Worker) Start() (<-chan string, error) {
 	cli := w.DockerClient
 	ctx := w.DockerContext
 	imageName := w.ImageName
+	entryPoint := w.EntryPoint
 	timeout := w.ExecutionTimeout
 
 	// Start the image pull. This blocks until the pull is complete.
@@ -59,14 +66,17 @@ func (w *Worker) Start() (<-chan string, error) {
 		return nil, err
 	}
 
-	resp, err := cli.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: imageName,
-			Cmd:   w.CommandParameters,
-			Tty:   true,
-		},
-		nil, nil, "")
+	cfg := container.Config{
+		Image: imageName,
+		Cmd:   w.CommandParameters,
+		Tty:   true,
+	}
+
+	if entryPoint != nil && len(entryPoint) > 0 && entryPoint[0] != "" {
+		cfg.Entrypoint = entryPoint
+	}
+
+	resp, err := cli.ContainerCreate(ctx, &cfg, nil, nil, "")
 	if err != nil {
 		return nil, err
 	}

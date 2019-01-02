@@ -1,35 +1,45 @@
 package config
 
-// bundles:
-// - name: test
-//   description: A test bundle.
-//   docker:
-//     image: clockworksoul/echotest
-//     tag: latest
-//   commands:
-//     splitecho:
-//       description: Echos back anything sent to it, one parameter at a time.
-//       executable: /opt/app/splitecho.sh
-//     curl:
-//       description: Echos back anything sent to it, one parameter at a time.
-//       executable: /home/bundle/tweet_cog_wrapper.sh
-//     echo:
-//       description: Echos back anything sent to it, one parameter at a time.
-//       executable: /home/bundle/tweet_cog_wrapper.sh
+import (
+	"errors"
+	"strings"
+)
 
-type BundleConfig struct {
-	Name        string             `json:"name"`
-	Description string             `json:"description"`
-	Docker      BundleDockerConfig `json:"docker"`
-	// Commands    []BundleCommandConfig `json:"commands"`
+type CommandEntry struct {
+	Bundle  BundleConfig
+	Command BundleCommandConfig
 }
 
-// type BundleCommandConfig struct {
-// 	Description string `json:"description"`
-// 	Executable  string `json:"executable"`
-// }
+func FindCommandEntry(name string) ([]CommandEntry, error) {
+	var bundleName string
+	var commandName string
 
-type BundleDockerConfig struct {
-	Image string `json:"image"`
-	Tag   string `json:"tag"`
+	split := strings.Split(name, ":")
+
+	switch len(split) {
+	case 1:
+		bundleName = "*"
+		commandName = split[0]
+	case 2:
+		bundleName = split[0]
+		commandName = split[1]
+	default:
+		return nil, errors.New("Invalid bundle:comand pair")
+	}
+
+	entries := make([]CommandEntry, 0)
+
+	for _, bundle := range GetBundleConfigs() {
+		if bundleName != bundle.Name && bundleName != "*" {
+			continue
+		}
+
+		for _, command := range bundle.Commands {
+			if command.Command == commandName {
+				entries = append(entries, CommandEntry{Bundle: bundle, Command: command})
+			}
+		}
+	}
+
+	return entries, nil
 }

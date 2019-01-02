@@ -19,16 +19,41 @@ type Relay interface {
 	SendMessage(channel string, message string)
 }
 
-func FindImage(commandString string) (string, error) {
-	return "clockworksoul/echotest", nil
+func GetCommandEntry(tokens []string) (config.CommandEntry, error) {
+	entries, err := config.FindCommandEntry(tokens[0])
+	if err != nil {
+		return config.CommandEntry{}, err
+	}
+
+	if len(entries) == 0 {
+		return config.CommandEntry{}, fmt.Errorf("No such bundle:command: %s", tokens[0])
+	}
+
+	if len(entries) > 1 {
+		return config.CommandEntry{},
+			fmt.Errorf("Multiple commands found: %s:%s vs %s:%s",
+				entries[0].Bundle.Name, entries[0].Command.Command,
+				entries[1].Bundle.Name, entries[1].Command.Command,
+			)
+	}
+
+	return entries[0], nil
 }
 
 func TokenizeParameters(commandString string) []string {
+	if commandString[0] == '!' {
+		commandString = commandString[1:]
+	}
+
 	return strings.Split(commandString, " ")
 }
 
-func SpawnWorker(imageName string, cmdParameters []string) (<-chan string, error) {
-	worker, err := worker.NewWorker(imageName, cmdParameters...)
+func SpawnWorker(command config.CommandEntry, cmdParameters []string) (<-chan string, error) {
+	image := command.Bundle.Docker.Image
+	tag := command.Bundle.Docker.Tag
+	entrypoint := command.Command.Executable
+
+	worker, err := worker.NewWorker(image, tag, entrypoint, cmdParameters...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,15 +82,6 @@ func StartListening() {
 
 	go func() {
 		for event := range allEvents {
-			log.Printf(
-				"provider=%s(%s) event=%s data=%v (type %T)\n",
-				event.Info.Provider.Name,
-				event.Info.Provider.Type,
-				event.EventType,
-				event.Data,
-				event.Data,
-			)
-
 			switch ev := event.Data.(type) {
 			case *ConnectedEvent:
 				OnConnected(event, ev)
@@ -104,6 +120,15 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 }
 
 func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) {
+	text := strings.TrimSpace(data.Text)
+
+	if len(text) < 2 || text[0] != '!' {
+		return
+	}
+
+	// Remove the "trigger character" (!)
+	text = text[1:]
+
 	channel, err := event.Relay.GetChannelInfo(data.Channel)
 	if err != nil {
 		log.Printf("Could not find channel: " + err.Error())
@@ -119,18 +144,13 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) {
 	log.Printf("Message from @%s in %s: %s\n",
 		userinfo.DisplayNameNormalized,
 		channel.Name,
-		data.Text,
+		text,
 	)
 
-	go func() {
-		params := TokenizeParameters(data.Text)
-		image, _ := FindImage(data.Text)
-		output, _ := SpawnWorker(image, params)
-
-		for str := range output {
-			event.Relay.SendMessage(channel.ID, str)
-		}
-	}()
+	err = TriggerCommand(text, event.Relay, data.Channel)
+	if err != nil {
+		log.Printf(err.Error())
+	}
 }
 
 func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) {
@@ -144,4 +164,28 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) {
 		userinfo.DisplayNameNormalized,
 		data.Text,
 	)
+}
+
+func TriggerCommand(text string, relay Relay, channelID string) error {
+	params := TokenizeParameters(text)
+
+	command, err := GetCommandEntry(params)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Found matching command: %s:%s\n", command.Bundle.Name, command.Command.Command)
+
+	output, err := SpawnWorker(command, params[1:])
+	if err != nil {
+		return fmt.Errorf("Error spawning %s: %s\n", command.Bundle.Docker.Image, err.Error())
+	}
+
+	go func() {
+		for str := range output {
+			relay.SendMessage(channelID, str)
+		}
+	}()
+
+	return nil
 }

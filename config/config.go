@@ -23,51 +23,28 @@ var (
 	_lastReloadWorked            = true // Prevents spam
 )
 
-type CogConfig struct {
-	GlobalConfigs  GlobalConfigs   `json:"global"`
-	DockerConfigs  DockerConfigs   `json:"docker"`
-	SlackProviders []SlackProvider `json:"slack"`
-	BundleConfigs  []BundleConfig  `json:"bundles"`
-}
-
-type GlobalConfigs struct {
-	CommandTimeoutSeconds int `json:"command-timeout-seconds"`
-}
-
-type DockerConfigs struct {
-	DockerHost string `json:"host"`
-}
-
-type Provider interface{}
-
-type AbstractProvider struct {
-	Provider
-	BotName string `json:"bot-name"`
-	Name    string `json:"name"`
-}
-
-type SlackProvider struct {
-	AbstractProvider
-	IconURL       string `json:"icon-url"`
-	SlackAPIToken string `json:"api-token"`
-}
-
+// GetBundleConfigs returns the data wrapper for the "bundles" config section.
 func GetBundleConfigs() []BundleConfig {
 	return _config.BundleConfigs
 }
 
+// GetDockerConfigs returns the data wrapper for the "docker" config section.
 func GetDockerConfigs() DockerConfigs {
 	return _config.DockerConfigs
 }
 
+// GetGlobalConfigs returns the data wrapper for the "global" config section.
 func GetGlobalConfigs() GlobalConfigs {
 	return _config.GlobalConfigs
 }
 
+// GetSlackProviders returns the data wrapper for the "slack" config section.
 func GetSlackProviders() []SlackProvider {
 	return _config.SlackProviders
 }
 
+// Runs at startup but causes problems during testing.
+// TODO replace with a call that points to a config doc specidfied by the user.
 func init() {
 	err := executeFullConfigurationReload()
 	if err != nil {
