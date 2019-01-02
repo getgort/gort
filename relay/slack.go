@@ -3,9 +3,14 @@ package relay
 import (
 	"fmt"
 	"log"
+	"regexp"
 
 	"github.com/clockworksoul/cog2/config"
 	"github.com/nlopes/slack"
+)
+
+var (
+	linkMarkdownRegex = regexp.MustCompile("<([a-zA-Z0-9]*://[a-zA-Z0-9]*\\.[a-zA-Z0-9]*)\\|([a-zA-Z0-9]*\\.[a-zA-Z0-9]*)>")
 )
 
 type SlackRelay struct {
@@ -162,7 +167,7 @@ func (s *SlackRelay) OnChannelMessage(event *slack.MessageEvent, info *Info) *Pr
 		info,
 		&ChannelMessageEvent{
 			Channel: event.Channel,
-			Text:    event.Msg.Text,
+			Text:    ScrubMarkdown(event.Msg.Text),
 			User:    event.Msg.User,
 		},
 	)
@@ -173,7 +178,7 @@ func (s *SlackRelay) OnDirectMessage(event *slack.MessageEvent, info *Info) *Pro
 		"direct_message",
 		info,
 		&DirectMessageEvent{
-			Text: event.Msg.Text,
+			Text: ScrubMarkdown(event.Msg.Text),
 			User: event.Msg.User,
 		},
 	)
@@ -223,4 +228,24 @@ func (s *SlackRelay) wrapEvent(eventType string, info *Info, data interface{}) *
 		Info:      info,
 		Relay:     s,
 	}
+}
+
+func ScrubMarkdown(text string) string {
+	indices := linkMarkdownRegex.FindAllSubmatchIndex([]byte(text), -1)
+	last := 0
+
+	if len(indices) > 0 {
+		newStr := ""
+
+		for _, z := range indices {
+			newStr += text[last:z[0]]
+			newStr += text[z[4]:z[5]]
+			last = z[5] + 1
+		}
+
+		newStr += text[indices[len(indices)-1][5]+1:]
+		text = newStr
+	}
+
+	return text
 }
