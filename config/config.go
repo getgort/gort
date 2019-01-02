@@ -38,6 +38,8 @@ type DockerConfigs struct {
 }
 
 type SlackProvider struct {
+	BotName       string `json:"bot-name"`
+	IconURL       string `json:"icon-url"`
 	Name          string `json:"name"`
 	SlackAPIToken string `json:"api-token"`
 }

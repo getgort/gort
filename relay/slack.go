@@ -77,7 +77,7 @@ func (s *SlackRelay) OnConnected(event *slack.ConnectedEvent) {
 
 	for _, c := range channels {
 		message := fmt.Sprintf("Cog2 version %s is online. Hello, %s!", context.CogVersion, c.Name)
-		s.rtm.SendMessage(s.rtm.NewOutgoingMessage(message, c.ID))
+		s.SendMessage(c.ID, message)
 	}
 }
 
@@ -94,8 +94,10 @@ func (s *SlackRelay) OnMessage(event *slack.MessageEvent) {
 	case "message_deleted":
 		log.Printf("Message %s: ignoring", strings.TrimPrefix(event.Msg.SubType, "message_"))
 		return
+	case "bot_message":
+		return
 	default:
-		log.Printf("Received unknown submessage type!")
+		log.Printf("Received unknown submessage type (%s)", event.Msg.SubType)
 		return
 	}
 
@@ -131,7 +133,7 @@ func (s *SlackRelay) OnChannelMessage(event *slack.MessageEvent) {
 		output, _ := SpawnWorker(image, params)
 
 		for str := range output {
-			s.rtm.SendMessage(s.rtm.NewOutgoingMessage(str, channel.ID))
+			s.SendMessage(channel.ID, str)
 		}
 	}()
 }
@@ -146,6 +148,18 @@ func (s *SlackRelay) OnDirectMessage(event *slack.MessageEvent) {
 	log.Printf("Direct message from @%s: %s\n",
 		userinfo.Profile.DisplayNameNormalized,
 		event.Msg.Text,
+	)
+}
+
+func (s SlackRelay) SendMessage(channel string, message string) {
+	s.rtm.PostMessage(
+		channel,
+		slack.MsgOptionAsUser(false),
+		slack.MsgOptionUsername(s.provider.BotName),
+		slack.MsgOptionText(message, true),
+		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
+			IconURL: s.provider.IconURL,
+		}),
 	)
 }
 

@@ -9,6 +9,7 @@ import (
 
 type Relay interface {
 	Listen()
+	SendMessage(channel string, message string)
 }
 
 func FindImage(commandString string) (string, error) {
