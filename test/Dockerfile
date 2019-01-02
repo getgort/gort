@@ -1,7 +1,17 @@
 FROM ubuntu:16.04
 
-ADD stest.sh /opt/app/stest.sh
+# Install curl
+#
+RUN apt-get update                                          \
+  && apt-get -y --force-yes install --no-install-recommends \
+    curl                                                    \
+  && apt-get clean                                          \
+  && apt-get autoclean                                      \
+  && apt-get autoremove                                     \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ENTRYPOINT [ "/bin/bash", "/opt/app/stest.sh" ]
+ADD splitecho.sh /opt/app/splitecho.sh
+
+ENTRYPOINT [ "/bin/bash", "/opt/app/splitecho.sh" ]
 
 CMD [ "foo" ]

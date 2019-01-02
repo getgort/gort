@@ -1,154 +1,205 @@
 package relay
 
 import (
-	"errors"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/clockworksoul/cog2/config"
-	"github.com/clockworksoul/cog2/context"
 	"github.com/nlopes/slack"
 )
 
 type SlackRelay struct {
 	Relay
 
-	provider config.SlackProvider
 	client   *slack.Client
+	provider config.SlackProvider
 	rtm      *slack.RTM
-
-	_channels map[string]*slack.Channel
-	_users    map[string]*slack.User
 }
 
-func NewSlackRelay(p config.SlackProvider) SlackRelay {
-	return SlackRelay{provider: p}
+func NewSlackRelay(provider config.SlackProvider) SlackRelay {
+	client := slack.New(provider.SlackAPIToken)
+	rtm := client.NewRTM()
+
+	return SlackRelay{
+		client:   client,
+		provider: provider,
+		rtm:      rtm,
+	}
 }
 
-func (s SlackRelay) Listen() {
-	s.client = slack.New(s.provider.SlackAPIToken)
-	s.rtm = s.client.NewRTM()
+func (s SlackRelay) GetChannelInfo(channelID string) (*ChannelInfo, error) {
+	ch, err := s.rtm.GetChannelInfo(channelID)
+	if err != nil {
+		return nil, err
+	}
+
+	return newChannelInfoFromSlackChannel(ch), nil
+}
+
+func (s SlackRelay) GetUserInfo(userID string) (*UserInfo, error) {
+	u, err := s.rtm.GetUserInfo(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return newUserInfoFromSlackUser(u), nil
+}
+
+// Channels returns a slice of channel ID strings that the Relay is present in.
+// This is expensive. Don't use it often.
+func (s SlackRelay) GetPresentChannels(userID string) ([]*ChannelInfo, error) {
+	allChannels, err := s.rtm.GetChannels(true)
+	if err != nil {
+		return nil, err
+	}
+
+	channels := make([]*ChannelInfo, 0)
+
+	// A nested loop. It's terrible. It's hacky. I know.
+	for _, ch := range allChannels {
+		members := ch.Members
+
+	inner:
+		for _, memberID := range members {
+			if userID == memberID {
+				channels = append(
+					channels,
+					newChannelInfoFromSlackChannel(&ch),
+				)
+				break inner
+			}
+		}
+	}
+
+	return channels, nil
+}
+
+func (s SlackRelay) Listen() <-chan *ProviderEvent {
+	events := make(chan *ProviderEvent)
 
 	log.Printf("Connecting to Slack provider %s...\n", s.provider.Name)
 
 	go s.rtm.ManageConnection()
 
-	for msg := range s.rtm.IncomingEvents {
-		switch ev := msg.Data.(type) {
-		case *slack.ConnectedEvent:
-			go s.OnConnected(ev)
-
-		case *slack.MessageEvent:
-			s.OnMessage(ev)
-
-		case *slack.PresenceChangeEvent:
-			log.Printf("Presence Change: %v\n", ev)
-
-		case *slack.RTMError:
-			s.OnError(ev)
-
-		case *slack.InvalidAuthEvent:
-			s.OnBadCredentials(ev)
-			return
-
-		default:
-			// Ignore other events..
+	go func() {
+		info := &Info{
+			Provider: NewProviderInfoFromConfig(s.provider),
+			User:     &UserInfo{},
 		}
-	}
+
+	eventLoop:
+		for msg := range s.rtm.IncomingEvents {
+			switch ev := msg.Data.(type) {
+			case *slack.ConnectedEvent:
+				suser, err := s.rtm.GetUserInfo(ev.Info.User.ID)
+				if err != nil {
+					log.Printf("Error finding user %s on connect: %s\n",
+						ev.Info.User.ID,
+						err.Error())
+					continue eventLoop
+				}
+
+				info.User.setFromSlackUser(suser)
+
+				events <- s.OnConnected(ev, info)
+
+			case *slack.MessageEvent:
+				providerEvent := s.OnMessage(ev, info)
+				if providerEvent.EventType != "" {
+					events <- providerEvent
+				}
+
+			case *slack.RTMError:
+				events <- s.OnError(ev, info)
+
+			case *slack.InvalidAuthEvent:
+				events <- s.OnAuthenticationError(ev, info)
+				break eventLoop
+
+			default:
+				// Ignore other events..
+			}
+		}
+
+		close(events)
+	}()
+
+	return events
 }
 
-func (s *SlackRelay) OnBadCredentials(event *slack.InvalidAuthEvent) {
-	log.Printf("Connection failed to %s: invalid credentials\n", s.provider.Name)
-}
-
-func (s *SlackRelay) OnConnected(event *slack.ConnectedEvent) {
-	log.Printf(
-		"Connection established to %s.slack.com. I am @%s!\n",
-		event.Info.Team.Domain,
-		event.Info.User.Name,
+func (s *SlackRelay) OnAuthenticationError(event *slack.InvalidAuthEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"authentication_error",
+		info,
+		&AuthenticationErrorEvent{
+			Msg: fmt.Sprintf("Connection failed to %s: invalid credentials", s.provider.Name),
+		},
 	)
-
-	channels, err := s.rtm.GetChannels(true)
-	if err != nil {
-		log.Printf("Failed to get channels list for %s: %s", s.provider.Name, err.Error())
-		return
-	}
-
-	for _, c := range channels {
-		message := fmt.Sprintf("Cog2 version %s is online. Hello, %s!", context.CogVersion, c.Name)
-		s.SendMessage(c.ID, message)
-	}
 }
 
-func (s *SlackRelay) OnError(event *slack.RTMError) {
-	log.Println("Received error event: " + event.Error())
+func (s *SlackRelay) OnConnected(event *slack.ConnectedEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"connected",
+		info,
+		&ConnectedEvent{},
+	)
 }
 
-func (s *SlackRelay) OnMessage(event *slack.MessageEvent) {
-	// If the message changed or deleted (or unknown), we ignore it.
+func (s *SlackRelay) OnError(event *slack.RTMError, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"error",
+		info,
+		&ErrorEvent{
+			Code: event.Code,
+			Msg:  event.Msg,
+		},
+	)
+}
+
+func (s *SlackRelay) OnChannelMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"channel_message",
+		info,
+		&ChannelMessageEvent{
+			Channel: event.Channel,
+			Text:    event.Msg.Text,
+			User:    event.Msg.User,
+		},
+	)
+}
+
+func (s *SlackRelay) OnDirectMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"direct_message",
+		info,
+		&DirectMessageEvent{
+			Text: event.Msg.Text,
+			User: event.Msg.User,
+		},
+	)
+}
+
+func (s *SlackRelay) OnMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
 	switch event.Msg.SubType {
-	case "": // Base case. Do nothing.
+	case "": // Just a plain message. Handle accordingly.
+		if event.Channel[0] == 'D' {
+			return s.OnDirectMessage(event, info)
+		} else {
+			return s.OnChannelMessage(event, info)
+		}
 	case "message_changed":
-		fallthrough
+		// Note here for later; ignore for now.
+		return &ProviderEvent{}
 	case "message_deleted":
-		log.Printf("Message %s: ignoring", strings.TrimPrefix(event.Msg.SubType, "message_"))
-		return
+		// Note here for later; ignore for now.
+		return &ProviderEvent{}
 	case "bot_message":
-		return
+		// Note here for later; ignore for now.
+		return &ProviderEvent{}
 	default:
 		log.Printf("Received unknown submessage type (%s)", event.Msg.SubType)
-		return
+		return &ProviderEvent{}
 	}
-
-	if event.Channel[0] == 'D' {
-		s.OnDirectMessage(event)
-	} else {
-		s.OnChannelMessage(event)
-	}
-}
-
-func (s *SlackRelay) OnChannelMessage(event *slack.MessageEvent) {
-	channel, err := s.getChannelInfo(event.Channel)
-	if err != nil {
-		log.Printf("Could not find channel: " + err.Error())
-		return
-	}
-
-	userinfo, err := s.getUserInfo(event.Msg.User)
-	if err != nil {
-		log.Printf("Could not find user: " + err.Error())
-		return
-	}
-
-	log.Printf("Message from @%s in %s: %s\n",
-		userinfo.Profile.DisplayNameNormalized,
-		channel.Name,
-		event.Msg.Text,
-	)
-
-	go func() {
-		params := TokenizeParameters(event.Msg.Text)
-		image, _ := FindImage(event.Msg.Text)
-		output, _ := SpawnWorker(image, params)
-
-		for str := range output {
-			s.SendMessage(channel.ID, str)
-		}
-	}()
-}
-
-func (s *SlackRelay) OnDirectMessage(event *slack.MessageEvent) {
-	userinfo, err := s.getUserInfo(event.Msg.User)
-	if err != nil {
-		log.Printf("Could not find user: " + err.Error())
-		return
-	}
-
-	log.Printf("Direct message from @%s: %s\n",
-		userinfo.Profile.DisplayNameNormalized,
-		event.Msg.Text,
-	)
 }
 
 func (s SlackRelay) SendMessage(channel string, message string) {
@@ -163,48 +214,12 @@ func (s SlackRelay) SendMessage(channel string, message string) {
 	)
 }
 
-func (s *SlackRelay) getChannelInfo(id string) (*slack.Channel, error) {
-	if id == "" {
-		return nil, errors.New("Empty channel id")
+// Wrap event creates a new ProviderEvent instance with metadata and the Event data attached.
+func (s *SlackRelay) wrapEvent(eventType string, info *Info, data interface{}) *ProviderEvent {
+	return &ProviderEvent{
+		EventType: eventType,
+		Data:      data,
+		Info:      info,
+		Relay:     s,
 	}
-
-	if channel, ok := s._channels[id]; ok {
-		return channel, nil
-	}
-
-	channel, err := s.rtm.GetChannelInfo(id)
-	if channel == nil {
-		return nil, errors.New("No such channel: " + id)
-	} else if err != nil {
-		s._channels[id] = channel
-	}
-
-	if channel == nil {
-		err = fmt.Errorf("No such channel: %s", id)
-	}
-
-	return channel, err
-}
-
-func (s *SlackRelay) getUserInfo(id string) (*slack.User, error) {
-	if id == "" {
-		return nil, errors.New("Empty user id")
-	}
-
-	if user, ok := s._users[id]; ok {
-		return user, nil
-	}
-
-	user, err := s.rtm.GetUserInfo(id)
-	if user == nil {
-		return nil, errors.New("No such user: " + id)
-	} else if err != nil {
-		s._users[id] = user
-	}
-
-	if user == nil {
-		err = fmt.Errorf("No such user: %s", id)
-	}
-
-	return user, err
 }

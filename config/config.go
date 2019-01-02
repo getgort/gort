@@ -27,6 +27,7 @@ type CogConfig struct {
 	GlobalConfigs  GlobalConfigs   `json:"global"`
 	DockerConfigs  DockerConfigs   `json:"docker"`
 	SlackProviders []SlackProvider `json:"slack"`
+	BundleConfigs  []BundleConfig  `json:"bundles"`
 }
 
 type GlobalConfigs struct {
@@ -37,11 +38,22 @@ type DockerConfigs struct {
 	DockerHost string `json:"host"`
 }
 
+type Provider interface{}
+
+type AbstractProvider struct {
+	Provider
+	BotName string `json:"bot-name"`
+	Name    string `json:"name"`
+}
+
 type SlackProvider struct {
-	BotName       string `json:"bot-name"`
+	AbstractProvider
 	IconURL       string `json:"icon-url"`
-	Name          string `json:"name"`
 	SlackAPIToken string `json:"api-token"`
+}
+
+func GetBundleConfigs() []BundleConfig {
+	return _config.BundleConfigs
 }
 
 func GetDockerConfigs() DockerConfigs {

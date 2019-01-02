@@ -10,3 +10,19 @@ slack:
   icon-url: https://emoji.slack-edge.com/T025151EM/dragongopher/cdc9b1bd1a7752eb.png
   bot-name: Cog2
 
+bundles:
+- name: test
+  description: A test bundle.
+  docker:
+    image: clockworksoul/echotest
+    tag: latest
+  commands:
+    splitecho:
+      description: Echos back anything sent to it, one parameter at a time.
+      executable: /opt/app/splitecho.sh
+    curl:
+      description: Echos back anything sent to it, one parameter at a time.
+      executable: /usr/bin/curl
+    echo:
+      description: Echos back anything sent to it, one parameter at a time.
+      executable: /bin/echo
