@@ -2,6 +2,7 @@ package relay
 
 import "github.com/nlopes/slack"
 
+// ChannelInfo contains the basic information for a single channel in any provider.
 type ChannelInfo struct {
 	ID      string
 	Members []string

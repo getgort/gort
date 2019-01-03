@@ -12,17 +12,19 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Worker represents a container executor. It has a lifetime of a single command execution.
 type Worker struct {
 	CommandParameters []string
 	DockerClient      *client.Client
 	DockerContext     context.Context
 	DockerHost        string
 	EntryPoint        []string
+	ExitStatus        chan int64
 	ExecutionTimeout  time.Duration
 	ImageName         string
-	done              chan struct{}
 }
 
+// NewWorker will build and returns a new Worker for a single command execution.
 func NewWorker(image string, tag string, entryPoint []string, commandParams ...string) (*Worker, error) {
 	dcli, err := client.NewEnvClient()
 	if err != nil {
@@ -47,7 +49,7 @@ func NewWorker(image string, tag string, entryPoint []string, commandParams ...s
 		EntryPoint:        entryPoint,
 		ExecutionTimeout:  1 * time.Minute,
 		ImageName:         image + ":" + tag,
-		done:              make(chan struct{}, 1),
+		ExitStatus:        make(chan int64),
 	}, nil
 }
 
@@ -97,8 +99,9 @@ func (w *Worker) Start() (<-chan string, error) {
 	// Watch for the container to enter "not running" state. This supports the Stopped() method.
 	go func() {
 		chwait, _ := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-		<-chwait
-		w.done <- struct{}{}
+		ok := <-chwait
+
+		w.ExitStatus <- ok.StatusCode
 	}()
 
 	// Build the channel that will stream back the container logs
@@ -111,8 +114,9 @@ func (w *Worker) Start() (<-chan string, error) {
 }
 
 // Stopped returns a channel that blocks until this worker's container has stopped.
-func (w *Worker) Stopped() <-chan struct{} {
-	return w.done
+// The value emitted is the exit status code of the underlying process.
+func (w *Worker) Stopped() <-chan int64 {
+	return w.ExitStatus
 }
 
 // buildContainerLogChannel constructs the log output channel returned by Start()

@@ -5,11 +5,15 @@ import (
 	"strings"
 )
 
+// CommandEntry wraps a bundle and a command within that bundle.
 type CommandEntry struct {
 	Bundle  BundleConfig
 	Command BundleCommandConfig
 }
 
+// FindCommandEntry looks for a command in the configuration. It expects a
+// string in the format "bundle:command" or "command"; the latter can return
+// multiple values if a similarly-named command is found in multiple bundles.
 func FindCommandEntry(name string) ([]CommandEntry, error) {
 	var bundleName string
 	var commandName string

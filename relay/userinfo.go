@@ -4,6 +4,7 @@ import (
 	"github.com/nlopes/slack"
 )
 
+// UserInfo contains the basic information for a single user in any provider.
 type UserInfo struct {
 	ID                    string
 	Name                  string

@@ -2,6 +2,7 @@ package relay
 
 import "fmt"
 
+// Info is used by events to wrap user and provider info.
 type Info struct {
 	User     *UserInfo
 	Provider *ProviderInfo
@@ -22,34 +23,34 @@ type ProviderEvent struct {
 	Relay Relay
 }
 
-// Failed to authenticate
+// AuthenticationErrorEvent indicates failure to authenticate
 type AuthenticationErrorEvent struct {
 	Msg string
 }
 
-// Received a message via a public or private channel (message.channels)
+// ChannelMessageEvent indicates received a message via a public or private channel (message.channels)
 type ChannelMessageEvent struct {
 	Channel string
 	Text    string
 	User    string
 }
 
-// The client has successfully connected to the provider server (hello)
+// ConnectedEvent indicates the client has successfully connected to the provider server (hello)
 type ConnectedEvent struct {
 }
 
-// You joined a channel
+// ChannelJoinedEvent indicates the bot has joined a channel
 type ChannelJoinedEvent struct {
 	Channel string
 }
 
-// Received a message from a user (message.im)
+// DirectMessageEvent indicates the bot has received a direct message from a user (message.im)
 type DirectMessageEvent struct {
 	Text string
 	User string
 }
 
-// Error reported by the provider
+// ErrorEvent indicates an error reported by the provider
 type ErrorEvent struct {
 	Code int
 	Msg  string

@@ -14,6 +14,9 @@ var (
 	linkMarkdownRegexLong  = regexp.MustCompile("<([a-zA-Z0-9]*://[a-zA-Z0-9\\.]*)\\|([a-zA-Z0-9\\.]*)>")
 )
 
+// SlackRelay is the Slack provider implementation of a relay, which knows how
+// to receive events from the Slack API, translate them into Cog2 events, and
+// forward them along.
 type SlackRelay struct {
 	Relay
 
@@ -22,6 +25,7 @@ type SlackRelay struct {
 	rtm      *slack.RTM
 }
 
+// NewSlackRelay will construct a SlackRelay instance for a given provider configuration.
 func NewSlackRelay(provider config.SlackProvider) SlackRelay {
 	client := slack.New(provider.SlackAPIToken)
 	rtm := client.NewRTM()
@@ -33,6 +37,7 @@ func NewSlackRelay(provider config.SlackProvider) SlackRelay {
 	}
 }
 
+// GetChannelInfo returns the ChannelInfo for a requested channel.
 func (s SlackRelay) GetChannelInfo(channelID string) (*ChannelInfo, error) {
 	ch, err := s.rtm.GetChannelInfo(channelID)
 	if err != nil {
@@ -42,6 +47,7 @@ func (s SlackRelay) GetChannelInfo(channelID string) (*ChannelInfo, error) {
 	return newChannelInfoFromSlackChannel(ch), nil
 }
 
+// GetUserInfo returns the UserInfo for a requested user.
 func (s SlackRelay) GetUserInfo(userID string) (*UserInfo, error) {
 	u, err := s.rtm.GetUserInfo(userID)
 	if err != nil {
@@ -51,8 +57,8 @@ func (s SlackRelay) GetUserInfo(userID string) (*UserInfo, error) {
 	return newUserInfoFromSlackUser(u), nil
 }
 
-// Channels returns a slice of channel ID strings that the Relay is present in.
-// This is expensive. Don't use it often.
+// GetPresentChannels returns a slice of channel ID strings that the Relay
+// is present in. This is expensive. Don't use it often.
 func (s SlackRelay) GetPresentChannels(userID string) ([]*ChannelInfo, error) {
 	allChannels, err := s.rtm.GetChannels(true)
 	if err != nil {
@@ -80,6 +86,8 @@ func (s SlackRelay) GetPresentChannels(userID string) ([]*ChannelInfo, error) {
 	return channels, nil
 }
 
+// Listen instructs the relay to begin listening to the provider that it's attached to.
+// It exits immediately, returning a channel that emits ProviderEvents.
 func (s SlackRelay) Listen() <-chan *ProviderEvent {
 	events := make(chan *ProviderEvent)
 
@@ -119,7 +127,7 @@ func (s SlackRelay) Listen() <-chan *ProviderEvent {
 				events <- s.OnError(ev, info)
 
 			case *slack.InvalidAuthEvent:
-				events <- s.OnAuthenticationError(ev, info)
+				events <- s.OnInvalidAuth(ev, info)
 				break eventLoop
 
 			default:
@@ -133,7 +141,8 @@ func (s SlackRelay) Listen() <-chan *ProviderEvent {
 	return events
 }
 
-func (s *SlackRelay) OnAuthenticationError(event *slack.InvalidAuthEvent, info *Info) *ProviderEvent {
+// OnInvalidAuth is called when the Slack API emits an InvalidAuthEvent.
+func (s *SlackRelay) OnInvalidAuth(event *slack.InvalidAuthEvent, info *Info) *ProviderEvent {
 	return s.wrapEvent(
 		"authentication_error",
 		info,
@@ -143,6 +152,7 @@ func (s *SlackRelay) OnAuthenticationError(event *slack.InvalidAuthEvent, info *
 	)
 }
 
+// OnConnected is called when the Slack API emits a ConnectedEvent.
 func (s *SlackRelay) OnConnected(event *slack.ConnectedEvent, info *Info) *ProviderEvent {
 	return s.wrapEvent(
 		"connected",
@@ -151,6 +161,7 @@ func (s *SlackRelay) OnConnected(event *slack.ConnectedEvent, info *Info) *Provi
 	)
 }
 
+// OnError is called when the Slack API emits an RTMError.
 func (s *SlackRelay) OnError(event *slack.RTMError, info *Info) *ProviderEvent {
 	return s.wrapEvent(
 		"error",
@@ -162,6 +173,7 @@ func (s *SlackRelay) OnError(event *slack.RTMError, info *Info) *ProviderEvent {
 	)
 }
 
+// OnChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.
 func (s *SlackRelay) OnChannelMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
 	return s.wrapEvent(
 		"channel_message",
@@ -174,6 +186,7 @@ func (s *SlackRelay) OnChannelMessage(event *slack.MessageEvent, info *Info) *Pr
 	)
 }
 
+// OnDirectMessage is called when the Slack API emits an MessageEvent for a direct message.
 func (s *SlackRelay) OnDirectMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
 	return s.wrapEvent(
 		"direct_message",
@@ -185,14 +198,15 @@ func (s *SlackRelay) OnDirectMessage(event *slack.MessageEvent, info *Info) *Pro
 	)
 }
 
+// OnMessage is called when the Slack API emits an InvalidAuthEvent.
 func (s *SlackRelay) OnMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
 	switch event.Msg.SubType {
 	case "": // Just a plain message. Handle accordingly.
 		if event.Channel[0] == 'D' {
 			return s.OnDirectMessage(event, info)
-		} else {
-			return s.OnChannelMessage(event, info)
 		}
+
+		return s.OnChannelMessage(event, info)
 	case "message_changed":
 		// Note here for later; ignore for now.
 		return &ProviderEvent{}
@@ -208,9 +222,11 @@ func (s *SlackRelay) OnMessage(event *slack.MessageEvent, info *Info) *ProviderE
 	}
 }
 
-func (s SlackRelay) SendMessage(channel string, message string) {
+// SendMessage will send a message (from the bot) into the specified channel.
+func (s SlackRelay) SendMessage(channelID string, message string) {
 	s.rtm.PostMessage(
-		channel,
+		channelID,
+		slack.MsgOptionDisableMediaUnfurl(),
 		slack.MsgOptionDisableMarkdown(),
 		slack.MsgOptionAsUser(false),
 		slack.MsgOptionUsername(s.provider.BotName),
@@ -221,7 +237,7 @@ func (s SlackRelay) SendMessage(channel string, message string) {
 	)
 }
 
-// Wrap event creates a new ProviderEvent instance with metadata and the Event data attached.
+// wrapEvent creates a new ProviderEvent instance with metadata and the Event data attached.
 func (s *SlackRelay) wrapEvent(eventType string, info *Info, data interface{}) *ProviderEvent {
 	return &ProviderEvent{
 		EventType: eventType,
@@ -231,6 +247,8 @@ func (s *SlackRelay) wrapEvent(eventType string, info *Info, data interface{}) *
 	}
 }
 
+// ScrubMarkdown removes unnecessary/undesirable Slack markdown (of links, of
+// example) from text recieved from Slack.
 func ScrubMarkdown(text string) string {
 	var indices [][]int
 	var last int

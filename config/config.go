@@ -17,10 +17,10 @@ const (
 )
 
 var (
-	_configfile                  = "config.yml"
-	_md5sum                      = []byte{}
-	_config           *CogConfig = nil
-	_lastReloadWorked            = true // Prevents spam
+	_configfile       = "config.yml"
+	_md5sum           = []byte{}
+	_config           *CogConfig
+	_lastReloadWorked = true // Prevents spam
 )
 
 // GetBundleConfigs returns the data wrapper for the "bundles" config section.

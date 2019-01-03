@@ -10,6 +10,8 @@ import (
 	"github.com/clockworksoul/cog2/worker"
 )
 
+// Relay represents a single relay. Right now it's pretty different from what
+// Cog calls a relay, but that'll probably change.
 type Relay interface {
 	GetBotUser() *UserInfo
 	GetChannelInfo(channelID string) (*ChannelInfo, error)
@@ -19,6 +21,9 @@ type Relay interface {
 	SendMessage(channel string, message string)
 }
 
+// GetCommandEntry accepts a tokenized parameter slice and locates the
+// associated config.CommandEntry. If the number of matching commands is != 1,
+// an error is returned.
 func GetCommandEntry(tokens []string) (config.CommandEntry, error) {
 	entries, err := config.FindCommandEntry(tokens[0])
 	if err != nil {
@@ -40,6 +45,9 @@ func GetCommandEntry(tokens []string) (config.CommandEntry, error) {
 	return entries[0], nil
 }
 
+// TokenizeParameters splits a command string into parameter tokens. The
+// trigger character, if any, is trimmed. Quotes aren't yet respected, but
+// they will be eventually.
 func TokenizeParameters(commandString string) []string {
 	if commandString[0] == '!' {
 		commandString = commandString[1:]
@@ -48,19 +56,18 @@ func TokenizeParameters(commandString string) []string {
 	return strings.Split(commandString, " ")
 }
 
-func SpawnWorker(command config.CommandEntry, cmdParameters []string) (<-chan string, error) {
+// SpawnWorker receives a CommandEntry and a slice of command parameters
+// strings, and constructs a new worker.Worker.
+func SpawnWorker(command config.CommandEntry, cmdParameters []string) (*worker.Worker, error) {
 	image := command.Bundle.Docker.Image
 	tag := command.Bundle.Docker.Tag
 	entrypoint := command.Command.Executable
 
-	worker, err := worker.NewWorker(image, tag, entrypoint, cmdParameters...)
-	if err != nil {
-		return nil, err
-	}
-
-	return worker.Start()
+	return worker.NewWorker(image, tag, entrypoint, cmdParameters...)
 }
 
+// StartListening instructs all relays to establish connections, receives all
+// events from all relays, and forwards them to the various On* handler functions.
 func StartListening() {
 	allEvents := make(chan *ProviderEvent)
 	relays := make(map[string]bool)
@@ -99,6 +106,7 @@ func StartListening() {
 	}()
 }
 
+// OnConnected handles ConnectedEvent events.
 func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 	log.Printf(
 		"Connection established to %s provider %s. I am @%s!\n",
@@ -119,6 +127,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 	}
 }
 
+// OnChannelMessage handles ChannelMessageEvent events.
 func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) {
 	channel, err := event.Relay.GetChannelInfo(data.Channel)
 	if err != nil {
@@ -153,6 +162,7 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) {
 	}
 }
 
+// OnDirectMessage handles DirectMessageEvent events.
 func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) {
 	userinfo, err := event.Relay.GetUserInfo(data.User)
 	if err != nil {
@@ -177,6 +187,8 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) {
 	}
 }
 
+// TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
+// valid command trigger is identified.
 func TriggerCommand(text string, relay Relay, channelID string) error {
 	params := TokenizeParameters(text)
 
@@ -187,15 +199,27 @@ func TriggerCommand(text string, relay Relay, channelID string) error {
 
 	log.Printf("Found matching command: %s:%s\n", command.Bundle.Name, command.Command.Command)
 
-	output, err := SpawnWorker(command, params[1:])
+	worker, err := SpawnWorker(command, params[1:])
 	if err != nil {
-		return fmt.Errorf("Error spawning %s: %s\n", command.Bundle.Docker.Image, err.Error())
+		return fmt.Errorf("Error spawning %s: %s", command.Bundle.Docker.Image, err.Error())
+	}
+
+	output, err := worker.Start()
+	if err != nil {
+		return fmt.Errorf("Error starting worker %s: %s", command.Bundle.Docker.Image, err.Error())
 	}
 
 	go func() {
+		text := ""
+
 		for str := range output {
-			relay.SendMessage(channelID, str)
+			text += fmt.Sprintf("%s\n", str)
 		}
+
+		status := <-worker.ExitStatus
+		log.Printf("Worker existed with status %d\n", status)
+
+		relay.SendMessage(channelID, text)
 	}()
 
 	return nil
