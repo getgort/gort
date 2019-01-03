@@ -37,8 +37,8 @@ func GetCommandEntry(tokens []string) (config.CommandEntry, error) {
 	if len(entries) > 1 {
 		return config.CommandEntry{},
 			fmt.Errorf("Multiple commands found: %s:%s vs %s:%s",
-				entries[0].Bundle.Name, entries[0].Command.Command,
-				entries[1].Bundle.Name, entries[1].Command.Command,
+				entries[0].Bundle.Name, entries[0].Command.Name,
+				entries[1].Bundle.Name, entries[1].Command.Name,
 			)
 	}
 
@@ -197,7 +197,7 @@ func TriggerCommand(text string, relay Relay, channelID string) error {
 		return err
 	}
 
-	log.Printf("Found matching command: %s:%s\n", command.Bundle.Name, command.Command.Command)
+	log.Printf("Found matching command: %s:%s\n", command.Bundle.Name, command.Command.Name)
 
 	worker, err := SpawnWorker(command, params[1:])
 	if err != nil {
@@ -217,7 +217,7 @@ func TriggerCommand(text string, relay Relay, channelID string) error {
 		}
 
 		status := <-worker.ExitStatus
-		log.Printf("Worker existed with status %d\n", status)
+		log.Printf("Worker exited with status %d\n", status)
 
 		relay.SendMessage(channelID, text)
 	}()

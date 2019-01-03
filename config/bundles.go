@@ -38,8 +38,9 @@ func FindCommandEntry(name string) ([]CommandEntry, error) {
 			continue
 		}
 
-		for _, command := range bundle.Commands {
-			if command.Command == commandName {
+		for name, command := range bundle.Commands {
+			if name == commandName {
+				command.Name = name
 				entries = append(entries, CommandEntry{Bundle: bundle, Command: command})
 			}
 		}

@@ -10,6 +10,15 @@ import (
 func Test(t *testing.T) {
 	config := CogConfig{}
 
+	config.SlackProviders = make([]SlackProvider, 1)
+
+	config.SlackProviders[0] = SlackProvider{
+		BotName:       "Cog2",
+		Name:          "ClockworkSoul",
+		IconURL:       "https://emoji.slack-edge.com/T025151EM/dragongopher/cdc9b1bd1a7752eb.png",
+		SlackAPIToken: "SlackAPIToken",
+	}
+
 	config.BundleConfigs = make([]BundleConfig, 1)
 
 	config.BundleConfigs[0] = BundleConfig{
@@ -22,22 +31,19 @@ func Test(t *testing.T) {
 		Tag:   "latest",
 	}
 
-	config.BundleConfigs[0].Commands = make([]BundleCommandConfig, 3)
+	config.BundleConfigs[0].Commands = make(map[string]BundleCommandConfig)
 
-	config.BundleConfigs[0].Commands[0] = BundleCommandConfig{
-		Command:     "splitecho",
+	config.BundleConfigs[0].Commands["splitecho"] = BundleCommandConfig{
 		Description: "Echos back anything sent to it, one parameter at a time.",
 		Executable:  []string{"/opt/app/splitecho.sh"},
 	}
 
-	config.BundleConfigs[0].Commands[1] = BundleCommandConfig{
-		Command:     "curl",
+	config.BundleConfigs[0].Commands["curl"] = BundleCommandConfig{
 		Description: "The official curl command",
 		Executable:  []string{"/usr/bin/curl"},
 	}
 
-	config.BundleConfigs[0].Commands[2] = BundleCommandConfig{
-		Command:     "echo",
+	config.BundleConfigs[0].Commands["echo"] = BundleCommandConfig{
 		Description: "Echos back anything sent to it, all at once.",
 		Executable:  []string{"/bin/echo"},
 	}

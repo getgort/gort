@@ -2,20 +2,20 @@ package config
 
 // CogConfig is the top-level configuration object
 type CogConfig struct {
-	GlobalConfigs  GlobalConfigs   `json:"global"`
-	DockerConfigs  DockerConfigs   `json:"docker"`
-	SlackProviders []SlackProvider `json:"slack"`
-	BundleConfigs  []BundleConfig  `json:"bundles"`
+	GlobalConfigs  GlobalConfigs   `yaml:"global"`
+	DockerConfigs  DockerConfigs   `yaml:"docker"`
+	SlackProviders []SlackProvider `yaml:"slack"`
+	BundleConfigs  []BundleConfig  `yaml:"bundles"`
 }
 
 // GlobalConfigs is the data wrapper for the "global" section
 type GlobalConfigs struct {
-	CommandTimeoutSeconds int `json:"command-timeout-seconds"`
+	CommandTimeoutSeconds int `yaml:"command-timeout-seconds"`
 }
 
 // DockerConfigs is the data wrapper for the "docker" section. Small now, but more will come.
 type DockerConfigs struct {
-	DockerHost string `json:"host"`
+	DockerHost string `yaml:"host"`
 }
 
 //// The wrappers for the "slack" section.
@@ -25,40 +25,34 @@ type DockerConfigs struct {
 // Currently only Slack is supported, with HipChat coming in time.
 type Provider interface{}
 
-// AbstractProvider is the data wrapper that all providers have in common.
-type AbstractProvider struct {
-	Provider
-	BotName string `json:"bot-name"`
-	Name    string `json:"name"`
-}
-
 // SlackProvider is the data wrapper for a Slack provider.
 type SlackProvider struct {
-	AbstractProvider
-	IconURL       string `json:"icon-url"`
-	SlackAPIToken string `json:"api-token"`
+	Provider      `yaml:"-"`
+	BotName       string `yaml:"bot-name"`
+	IconURL       string `yaml:"icon-url"`
+	Name          string `yaml:"name"`
+	SlackAPIToken string `yaml:"api-token"`
 }
 
 //// The wrappers for the "bundles" section
-//
 
 // BundleConfig represents an element in the "bundles" section
 type BundleConfig struct {
-	Name        string                `json:"name"`
-	Description string                `json:"description"`
-	Docker      BundleDockerConfig    `json:"docker"`
-	Commands    []BundleCommandConfig `json:"commands"`
+	Name        string                         `yaml:"name"`
+	Description string                         `yaml:"description"`
+	Docker      BundleDockerConfig             `yaml:"docker"`
+	Commands    map[string]BundleCommandConfig `yaml:"commands"`
 }
 
 // BundleDockerConfig represents the "bundles/docker" subsection of the config doc
 type BundleDockerConfig struct {
-	Image string `json:"image"`
-	Tag   string `json:"tag"`
+	Image string `yaml:"image"`
+	Tag   string `yaml:"tag"`
 }
 
 // BundleCommandConfig represents the "bundles/commands" subsection of the config doc
 type BundleCommandConfig struct {
-	Command     string   `json:"command"`
-	Description string   `json:"description"`
-	Executable  []string `json:"executable"`
+	Description string   `yaml:"description"`
+	Executable  []string `yaml:"executable"`
+	Name        string   `yaml:"-"`
 }
