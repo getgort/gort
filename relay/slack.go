@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	linkMarkdownRegex = regexp.MustCompile("<([a-zA-Z0-9]*://[a-zA-Z0-9]*\\.[a-zA-Z0-9]*)\\|([a-zA-Z0-9]*\\.[a-zA-Z0-9]*)>")
+	linkMarkdownRegexShort = regexp.MustCompile("<([a-zA-Z0-9]*://[a-zA-Z0-9\\.]*)>")
+	linkMarkdownRegexLong  = regexp.MustCompile("<([a-zA-Z0-9]*://[a-zA-Z0-9\\.]*)\\|([a-zA-Z0-9\\.]*)>")
 )
 
 type SlackRelay struct {
@@ -231,8 +232,31 @@ func (s *SlackRelay) wrapEvent(eventType string, info *Info, data interface{}) *
 }
 
 func ScrubMarkdown(text string) string {
-	indices := linkMarkdownRegex.FindAllSubmatchIndex([]byte(text), -1)
-	last := 0
+	var indices [][]int
+	var last int
+
+	// Remove links of the format "<https://google.com>"
+	//
+	indices = linkMarkdownRegexShort.FindAllSubmatchIndex([]byte(text), -1)
+	last = 0
+
+	if len(indices) > 0 {
+		newStr := ""
+
+		for _, z := range indices {
+			newStr += text[last:z[0]]
+			newStr += text[z[0]+1 : z[1]-1]
+			last = z[1]
+		}
+
+		newStr += text[indices[len(indices)-1][1]:]
+		text = newStr
+	}
+
+	// Remove links of the format "<http://google.com|google.com>"
+	//
+	indices = linkMarkdownRegexLong.FindAllSubmatchIndex([]byte(text), -1)
+	last = 0
 
 	if len(indices) > 0 {
 		newStr := ""

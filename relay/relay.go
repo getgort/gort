@@ -120,15 +120,6 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 }
 
 func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) {
-	text := strings.TrimSpace(data.Text)
-
-	if len(text) < 2 || text[0] != '!' {
-		return
-	}
-
-	// Remove the "trigger character" (!)
-	text = text[1:]
-
 	channel, err := event.Relay.GetChannelInfo(data.Channel)
 	if err != nil {
 		log.Printf("Could not find channel: " + err.Error())
@@ -141,11 +132,20 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) {
 		return
 	}
 
+	text := strings.TrimSpace(data.Text)
+
 	log.Printf("Message from @%s in %s: %s\n",
 		userinfo.DisplayNameNormalized,
 		channel.Name,
 		text,
 	)
+
+	if len(text) < 2 || text[0] != '!' {
+		return
+	}
+
+	// Remove the "trigger character" (!)
+	text = text[1:]
 
 	err = TriggerCommand(text, event.Relay, data.Channel)
 	if err != nil {
@@ -164,6 +164,17 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) {
 		userinfo.DisplayNameNormalized,
 		data.Text,
 	)
+
+	text := strings.TrimSpace(data.Text)
+
+	if len(text) < 1 {
+		return
+	}
+
+	err = TriggerCommand(text, event.Relay, data.User)
+	if err != nil {
+		log.Printf(err.Error())
+	}
 }
 
 func TriggerCommand(text string, relay Relay, channelID string) error {
