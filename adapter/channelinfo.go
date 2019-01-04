@@ -1,4 +1,4 @@
-package relay
+package adapter
 
 import "github.com/nlopes/slack"
 

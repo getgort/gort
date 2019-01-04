@@ -9,13 +9,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/clockworksoul/cog2/data"
 	yaml "gopkg.in/yaml.v2"
 )
 
 var (
 	configfile       = "config.yml"
 	md5sum           = []byte{}
-	config           *CogConfig
+	config           *data.CogConfig
 	lastReloadWorked = true // Prevents spam
 )
 
@@ -38,22 +39,22 @@ func BeginChangeCheck(frequency time.Duration) {
 }
 
 // GetBundleConfigs returns the data wrapper for the "bundles" config section.
-func GetBundleConfigs() []BundleConfig {
+func GetBundleConfigs() []data.Bundle {
 	return config.BundleConfigs
 }
 
 // GetDockerConfigs returns the data wrapper for the "docker" config section.
-func GetDockerConfigs() DockerConfigs {
+func GetDockerConfigs() data.DockerConfigs {
 	return config.DockerConfigs
 }
 
 // GetGlobalConfigs returns the data wrapper for the "global" config section.
-func GetGlobalConfigs() GlobalConfigs {
+func GetGlobalConfigs() data.GlobalConfigs {
 	return config.GlobalConfigs
 }
 
 // GetSlackProviders returns the data wrapper for the "slack" config section.
-func GetSlackProviders() []SlackProvider {
+func GetSlackProviders() []data.SlackProvider {
 	return config.SlackProviders
 }
 
@@ -103,14 +104,14 @@ func getMd5Sum(file string) ([]byte, error) {
 	return hashBytes, nil
 }
 
-func loadConfiguration(file string) (*CogConfig, error) {
+func loadConfiguration(file string) (*data.CogConfig, error) {
 	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
 
-	var cp CogConfig
+	var cp data.CogConfig
 	err = yaml.Unmarshal(dat, &cp)
 	if err != nil {
 		return nil, err

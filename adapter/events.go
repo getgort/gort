@@ -1,4 +1,4 @@
-package relay
+package adapter
 
 import "fmt"
 
@@ -19,8 +19,8 @@ type ProviderEvent struct {
 	// Contextual info (user, provider)
 	Info *Info
 
-	// The relay that generated the event
-	Relay Relay
+	// The adapter that generated the event
+	Adapter Adapter
 }
 
 // AuthenticationErrorEvent indicates failure to authenticate
@@ -57,5 +57,5 @@ type ErrorEvent struct {
 }
 
 func (e ErrorEvent) Error() string {
-	return fmt.Sprintf("Code %d - %s", e.Code, e.Msg)
+	return fmt.Sprintf("code %d - %s", e.Code, e.Msg)
 }
