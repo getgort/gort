@@ -227,12 +227,35 @@ func (s SlackRelay) SendMessage(channelID string, message string) {
 	s.rtm.PostMessage(
 		channelID,
 		slack.MsgOptionDisableMediaUnfurl(),
+		slack.MsgOptionAsUser(false),
+		slack.MsgOptionUsername(s.provider.BotName),
+		slack.MsgOptionText(message, false),
+		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
+			IconURL:  s.provider.IconURL,
+			Markdown: true,
+		}),
+	)
+}
+
+// SendErrorMessage will send a message (from the bot) into the specified channel.
+func (s SlackRelay) SendErrorMessage(channelID string, title string, text string) {
+	s.rtm.PostMessage(
+		channelID,
+		slack.MsgOptionAttachments(
+			slack.Attachment{
+				Title:      title,
+				Text:       text,
+				Color:      "#FF0000",
+				MarkdownIn: []string{"text"},
+			},
+		),
+		slack.MsgOptionDisableMediaUnfurl(),
 		slack.MsgOptionDisableMarkdown(),
 		slack.MsgOptionAsUser(false),
 		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionText(message, true),
 		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL: s.provider.IconURL,
+			IconURL:  s.provider.IconURL,
+			Markdown: true,
 		}),
 	)
 }

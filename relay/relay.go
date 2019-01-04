@@ -10,6 +10,26 @@ import (
 	"github.com/clockworksoul/cog2/worker"
 )
 
+type TriggerCommandError struct {
+	command          config.CommandEntry
+	params           []string
+	title            string // Command Error
+	shortDescription string // The pipeline failed planning the invocation:
+	longDescription  string // <command output>
+}
+
+func (e TriggerCommandError) Error() string {
+	return e.shortDescription
+}
+
+func (e TriggerCommandError) RawCommand() string {
+	return fmt.Sprintf(
+		"%s:%s %s",
+		e.command.Bundle.Name,
+		e.command.Command.Name,
+		strings.Join(e.params, " "))
+}
+
 // Relay represents a single relay. Right now it's pretty different from what
 // Cog calls a relay, but that'll probably change.
 type Relay interface {
@@ -18,6 +38,7 @@ type Relay interface {
 	GetPresentChannels(userID string) ([]*ChannelInfo, error)
 	GetUserInfo(userID string) (*UserInfo, error)
 	Listen() <-chan *ProviderEvent
+	SendErrorMessage(channelID string, title string, text string)
 	SendMessage(channel string, message string)
 }
 
@@ -189,8 +210,8 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) {
 
 // TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
 // valid command trigger is identified.
-func TriggerCommand(text string, relay Relay, channelID string) error {
-	params := TokenizeParameters(text)
+func TriggerCommand(rawCommand string, relay Relay, channelID string) error {
+	params := TokenizeParameters(rawCommand)
 
 	command, err := GetCommandEntry(params)
 	if err != nil {
@@ -210,17 +231,39 @@ func TriggerCommand(text string, relay Relay, channelID string) error {
 	}
 
 	go func() {
-		text := ""
+		outputText := ""
 
 		for str := range output {
-			text += fmt.Sprintf("%s\n", str)
+			outputText += fmt.Sprintf("%s\n", str)
 		}
 
 		status := <-worker.ExitStatus
 		log.Printf("Worker exited with status %d\n", status)
 
-		relay.SendMessage(channelID, text)
+		// TODO THIS IS NOT GENERALIZED! Replace Slack-specific ``` with templates!!! Eventually.
+		if status == 0 {
+			relay.SendMessage(channelID, "```"+outputText+"```")
+		} else {
+			relay.SendErrorMessage(
+				channelID,
+				"Command Error",
+				generateCommandErrorMessage(command, params[1:], outputText))
+		}
 	}()
 
 	return nil
+}
+
+func generateCommandErrorMessage(command config.CommandEntry, params []string, output string) string {
+	rawCommand := fmt.Sprintf(
+		"%s:%s %s",
+		command.Bundle.Name, command.Command.Name, strings.Join(params, " "))
+
+	return fmt.Sprintf(
+		"%s\n```%s```\n%s\n```%s```",
+		"The pipeline failed planning the invocation:",
+		rawCommand,
+		"The specific error was:",
+		output,
+	)
 }

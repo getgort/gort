@@ -12,53 +12,24 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const (
-	configReloadFrequencySeconds = 3
-)
-
 var (
-	_configfile       = "config.yml"
-	_md5sum           = []byte{}
-	_config           *CogConfig
-	_lastReloadWorked = true // Prevents spam
+	configfile       = "config.yml"
+	md5sum           = []byte{}
+	config           *CogConfig
+	lastReloadWorked = true // Prevents spam
 )
 
-// GetBundleConfigs returns the data wrapper for the "bundles" config section.
-func GetBundleConfigs() []BundleConfig {
-	return _config.BundleConfigs
-}
-
-// GetDockerConfigs returns the data wrapper for the "docker" config section.
-func GetDockerConfigs() DockerConfigs {
-	return _config.DockerConfigs
-}
-
-// GetGlobalConfigs returns the data wrapper for the "global" config section.
-func GetGlobalConfigs() GlobalConfigs {
-	return _config.GlobalConfigs
-}
-
-// GetSlackProviders returns the data wrapper for the "slack" config section.
-func GetSlackProviders() []SlackProvider {
-	return _config.SlackProviders
-}
-
-// Runs at startup but causes problems during testing.
-// TODO replace with a call that points to a config doc specidfied by the user.
-func init() {
-	err := executeFullConfigurationReload()
-	if err != nil {
-		panic(err.Error())
-	}
-
-	ticker := time.NewTicker(configReloadFrequencySeconds * time.Second)
+// BeginChangeCheck starts a routine that checks the underlying config for
+// changes and reloads if one is found.
+func BeginChangeCheck(frequency time.Duration) {
+	ticker := time.NewTicker(frequency)
 
 	go func() {
 		for range ticker.C {
 			err := executeFullConfigurationReload()
 			if err != nil {
-				if _lastReloadWorked {
-					_lastReloadWorked = false
+				if lastReloadWorked {
+					lastReloadWorked = false
 					log.Println(err.Error())
 				}
 			}
@@ -66,23 +37,50 @@ func init() {
 	}()
 }
 
+// GetBundleConfigs returns the data wrapper for the "bundles" config section.
+func GetBundleConfigs() []BundleConfig {
+	return config.BundleConfigs
+}
+
+// GetDockerConfigs returns the data wrapper for the "docker" config section.
+func GetDockerConfigs() DockerConfigs {
+	return config.DockerConfigs
+}
+
+// GetGlobalConfigs returns the data wrapper for the "global" config section.
+func GetGlobalConfigs() GlobalConfigs {
+	return config.GlobalConfigs
+}
+
+// GetSlackProviders returns the data wrapper for the "slack" config section.
+func GetSlackProviders() []SlackProvider {
+	return config.SlackProviders
+}
+
+// Initialize is called by main() to trigger creation of the config singleton.
+func Initialize(file string) error {
+	configfile = file
+
+	return executeFullConfigurationReload()
+}
+
 func executeFullConfigurationReload() error {
-	md5sum, err := getMd5Sum(_configfile)
+	sum, err := getMd5Sum(configfile)
 	if err != nil {
-		return fmt.Errorf("Failed hash file %s: %s", _configfile, err.Error())
+		return fmt.Errorf("Failed hash file %s: %s", configfile, err.Error())
 	}
 
-	if !slicesAreEqual(_md5sum, md5sum) {
-		cp, err := loadConfiguration(_configfile)
+	if !slicesAreEqual(sum, md5sum) {
+		cp, err := loadConfiguration(configfile)
 		if err != nil {
-			return fmt.Errorf("Failed to load config %s: %s", _configfile, err.Error())
+			return fmt.Errorf("Failed to load config %s: %s", configfile, err.Error())
 		}
 
-		_md5sum = md5sum
-		_config = cp
-		_lastReloadWorked = true
+		md5sum = sum
+		config = cp
+		lastReloadWorked = true
 
-		log.Printf("Loaded configuration file %s\n", _configfile)
+		log.Printf("Loaded configuration file %s\n", configfile)
 	}
 
 	return nil
