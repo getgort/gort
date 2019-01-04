@@ -107,12 +107,12 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 // If a command is found in the text, it will emit a data.CommandRequest
 // instance to the commands channel.
 func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
-	channelinfo, err := event.Adapter.GetChannelInfo(data.Channel)
+	channelinfo, err := event.Adapter.GetChannelInfo(data.ChannelID)
 	if err != nil {
 		return nil, fmt.Errorf("Could not find channel: " + err.Error())
 	}
 
-	userinfo, err := event.Adapter.GetUserInfo(data.User)
+	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("Could not find user: " + err.Error())
 	}
@@ -133,13 +133,13 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 	// Remove the "trigger character" (!)
 	rawCommandText = rawCommandText[1:]
 
-	return TriggerCommand(rawCommandText, event.Adapter, channelinfo, userinfo)
+	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 
 }
 
 // OnDirectMessage handles DirectMessageEvent events.
 func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
-	userinfo, err := event.Adapter.GetUserInfo(data.User)
+	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("Could not find user: " + err.Error())
 	}
@@ -149,7 +149,7 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 		data.Text,
 	)
 
-	return TriggerCommand(data.Text, event.Adapter, nil, userinfo)
+	return TriggerCommand(data.Text, event.Adapter, data.ChannelID, data.UserID)
 }
 
 // StartListening instructs all relays to establish connections, receives all
@@ -171,7 +171,7 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 
 // TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
 // valid command trigger is identified.
-func TriggerCommand(rawCommand string, adapter Adapter, channel *ChannelInfo, user *UserInfo) (*data.CommandRequest, error) {
+func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
 	params := TokenizeParameters(rawCommand)
 
 	command, err := GetCommandEntry(params)
@@ -183,10 +183,10 @@ func TriggerCommand(rawCommand string, adapter Adapter, channel *ChannelInfo, us
 
 	request := data.CommandRequest{
 		CommandEntry: command,
-		ChannelID:    channel.ID,
+		ChannelID:    channelID,
 		Adapter:      adapter.GetName(),
 		Parameters:   params[1:],
-		UserID:       user.ID,
+		UserID:       userID,
 	}
 
 	return &request, nil

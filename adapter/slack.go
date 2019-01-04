@@ -184,9 +184,9 @@ func (s *SlackAdapter) OnChannelMessage(event *slack.MessageEvent, info *Info) *
 		"channel_message",
 		info,
 		&ChannelMessageEvent{
-			Channel: event.Channel,
-			Text:    ScrubMarkdown(event.Msg.Text),
-			User:    event.Msg.User,
+			ChannelID: event.Channel,
+			Text:      ScrubMarkdown(event.Msg.Text),
+			UserID:    event.Msg.User,
 		},
 	)
 }
@@ -197,8 +197,9 @@ func (s *SlackAdapter) OnDirectMessage(event *slack.MessageEvent, info *Info) *P
 		"direct_message",
 		info,
 		&DirectMessageEvent{
-			Text: ScrubMarkdown(event.Msg.Text),
-			User: event.Msg.User,
+			ChannelID: event.Channel,
+			Text:      ScrubMarkdown(event.Msg.Text),
+			UserID:    event.Msg.User,
 		},
 	)
 }

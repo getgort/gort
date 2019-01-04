@@ -30,9 +30,9 @@ type AuthenticationErrorEvent struct {
 
 // ChannelMessageEvent indicates received a message via a public or private channel (message.channels)
 type ChannelMessageEvent struct {
-	Channel string
-	Text    string
-	User    string
+	ChannelID string
+	Text      string
+	UserID    string
 }
 
 // ConnectedEvent indicates the client has successfully connected to the provider server (hello)
@@ -46,8 +46,9 @@ type ChannelJoinedEvent struct {
 
 // DirectMessageEvent indicates the bot has received a direct message from a user (message.im)
 type DirectMessageEvent struct {
-	Text string
-	User string
+	ChannelID string
+	Text      string
+	UserID    string
 }
 
 // ErrorEvent indicates an error reported by the provider
