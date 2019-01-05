@@ -85,7 +85,7 @@ func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
 // OnConnected handles ConnectedEvent events.
 func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 	log.Infof(
-		"Connection established to %s provider %s. I am @%s!",
+		"[OnConnected] Connection established to %s provider %s. I am @%s!",
 		event.Info.Provider.Type,
 		event.Info.Provider.Name,
 		event.Info.User.Name,
@@ -93,7 +93,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 
 	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
 	if err != nil {
-		log.Errorf("Failed to get channels list for %s: %s", event.Info.Provider.Name, err.Error())
+		log.Errorf("[OnConnected] Failed to get channels list for %s: %s", event.Info.Provider.Name, err.Error())
 		return
 	}
 
@@ -119,7 +119,7 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 
 	rawCommandText := data.Text
 
-	log.Debugf("Message from @%s in %s: %s",
+	log.Debugf("[OnChannelMessage] Message from @%s in %s: %s",
 		userinfo.DisplayNameNormalized,
 		channelinfo.Name,
 		rawCommandText,
@@ -144,7 +144,7 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 		return nil, fmt.Errorf("Could not find user: " + err.Error())
 	}
 
-	log.Debugf("Direct message from @%s: %s",
+	log.Debugf("[OnDirectMessage] Direct message from @%s: %s",
 		userinfo.DisplayNameNormalized,
 		data.Text,
 	)
@@ -179,7 +179,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		return nil, err
 	}
 
-	log.Debugf("Found matching command: %s:%s", command.Bundle.Name, command.Command.Name)
+	log.Debugf("[TriggerCommand] Found matching command: %s:%s", command.Bundle.Name, command.Command.Name)
 
 	request := data.CommandRequest{
 		CommandEntry: command,
@@ -267,7 +267,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			adapterErrors <- ev
 
 		default:
-			log.Fatalf("Unknown data type: %T", ev)
+			log.Fatalf("[startProviderEventListening] Unknown data type: %T", ev)
 		}
 	}
 }

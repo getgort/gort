@@ -2,6 +2,7 @@ package worker
 
 import (
 	"bufio"
+	"strings"
 	"time"
 
 	"github.com/clockworksoul/cog2/config"
@@ -56,6 +57,9 @@ func NewWorker(image string, tag string, entryPoint []string, commandParams ...s
 // Start triggers a worker to run a container according to its settings.
 // It returns a string channel that emits the container's combined stdout and stderr streams.
 func (w *Worker) Start() (<-chan string, error) {
+	// Track time spent in this method
+	startTime := time.Now()
+
 	cli := w.DockerClient
 	ctx := w.DockerContext
 	imageName := w.ImageName
@@ -63,7 +67,7 @@ func (w *Worker) Start() (<-chan string, error) {
 	timeout := w.ExecutionTimeout
 
 	// Start the image pull. This blocks until the pull is complete.
-	err := w.pullImage()
+	err := w.pullImage(false)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +114,12 @@ func (w *Worker) Start() (<-chan string, error) {
 		return nil, err
 	}
 
+	log.Debugf("Image=%s Entrypoint=%s - Completed in %s",
+		w.ImageName,
+		strings.Join(entryPoint, " "),
+		time.Now().Sub(startTime).String(),
+	)
+
 	return logs, nil
 }
 
@@ -140,23 +150,59 @@ func (w *Worker) buildContainerLogChannel(containerID string) (<-chan string, er
 	return logs, nil
 }
 
+// imageExistsLocally returns true if the specified image is present and
+// accessible to the docker daemon.
+func (w *Worker) imageExistsLocally(image string) (bool, error) {
+	if strings.IndexByte(image, ':') == -1 {
+		image += ":latest"
+	}
+
+	images, err := w.DockerClient.ImageList(w.DockerContext, types.ImageListOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	for _, img := range images {
+		for _, tag := range img.RepoTags {
+			if image == tag {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // pullImage pull the worker's image. It blocks until the pull is complete.
-func (w *Worker) pullImage() error {
+func (w *Worker) pullImage(force bool) error {
 	cli := w.DockerClient
 	ctx := w.DockerContext
 	imageName := w.ImageName
 
-	reader, err := cli.ImagePull(ctx, imageName, types.ImagePullOptions{})
+	exists, err := w.imageExistsLocally(imageName)
 	if err != nil {
 		return err
 	}
-	defer reader.Close()
 
-	// Watch the daemon output until we get an EOF
-	bytes := make([]byte, 256)
-	var e error
-	for e == nil {
-		_, e = reader.Read(bytes)
+	if force || !exists {
+		startTime := time.Now()
+
+		log.Debugf("Pulling image %s", imageName)
+
+		reader, err := cli.ImagePull(ctx, imageName, types.ImagePullOptions{})
+		if err != nil {
+			return err
+		}
+		defer reader.Close()
+
+		// Watch the daemon output until we get an EOF
+		bytes := make([]byte, 256)
+		var e error
+		for e == nil {
+			_, e = reader.Read(bytes)
+		}
+
+		log.Debugf("Image %s pulled in %s", imageName, time.Now().Sub(startTime).String())
 	}
 
 	return nil

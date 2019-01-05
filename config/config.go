@@ -27,11 +27,11 @@ func BeginChangeCheck(frequency time.Duration) {
 
 	go func() {
 		for range ticker.C {
-			err := executeFullConfigurationReload()
+			err := ReloadConfiguration()
 			if err != nil {
 				if lastReloadWorked {
 					lastReloadWorked = false
-					log.Errorln(err.Error())
+					log.Errorf("[BeginChangeCheck] %s", err.Error())
 				}
 			}
 		}
@@ -62,10 +62,10 @@ func GetSlackProviders() []data.SlackProvider {
 func Initialize(file string) error {
 	configfile = file
 
-	return executeFullConfigurationReload()
+	return ReloadConfiguration()
 }
 
-func executeFullConfigurationReload() error {
+func ReloadConfiguration() error {
 	sum, err := getMd5Sum(configfile)
 	if err != nil {
 		return fmt.Errorf("Failed hash file %s: %s", configfile, err.Error())
@@ -81,7 +81,7 @@ func executeFullConfigurationReload() error {
 		config = cp
 		lastReloadWorked = true
 
-		log.Infof("Loaded configuration file %s", configfile)
+		log.Infof("[ReloadConfiguration] Loaded configuration file %s", configfile)
 	}
 
 	return nil

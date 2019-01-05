@@ -26,11 +26,11 @@ func initializeConfig(configfile string) error {
 }
 
 func main() {
-	log.Infof("Starting Cog2 version %s", context.CogVersion)
+	log.Infof("[main] Starting Cog2 version %s", context.CogVersion)
 
 	err := initializeConfig("config.yml")
 	if err != nil {
-		log.Panic(err.Error())
+		log.Panicf("[main] %s", err.Error())
 	}
 
 	// Tells the chat provider adapters (ad defined in the config) to connect.
@@ -56,7 +56,7 @@ func main() {
 
 		// An adapter is reporting an error.
 		case aerr := <-adapterErrorsFrom:
-			log.Errorln(aerr.Error())
+			log.Errorf("[main] %s", aerr.Error())
 		}
 	}
 }

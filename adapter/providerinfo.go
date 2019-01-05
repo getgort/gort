@@ -23,7 +23,7 @@ func (p *ProviderInfo) SetProviderInfo(provider data.Provider) *ProviderInfo {
 		p.Type = "slack"
 		p.Name = ap.Name
 	default:
-		log.Errorf("Unsupported provider type: %T", ap)
+		log.Errorf("[ProviderInfo.SetProviderInfo] Unsupported provider type: %T", ap)
 	}
 
 	return p

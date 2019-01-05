@@ -96,7 +96,7 @@ func (s SlackAdapter) GetUserInfo(userID string) (*UserInfo, error) {
 func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 	events := make(chan *ProviderEvent)
 
-	log.Infof("Connecting to Slack provider %s...", s.provider.Name)
+	log.Infof("[SlackAdapter.Listen] Connecting to Slack provider %s...", s.provider.Name)
 
 	go s.rtm.ManageConnection()
 
@@ -112,15 +112,23 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 			case *slack.ConnectedEvent:
 				suser, err := s.rtm.GetUserInfo(ev.Info.User.ID)
 				if err != nil {
-					log.Errorf("Error finding user %s on connect: %s",
+					log.Errorf("[SlackAdapter.Listen] Error finding user %s on connect: %s",
 						ev.Info.User.ID,
 						err.Error())
+
 					continue eventLoop
 				}
 
 				info.User.setFromSlackUser(suser)
 
 				events <- s.OnConnected(ev, info)
+
+			case *slack.InvalidAuthEvent:
+				events <- s.OnInvalidAuth(ev, info)
+				break eventLoop
+
+			case *slack.LatencyReport:
+				s.OnLatencyReport(ev, info)
 
 			case *slack.MessageEvent:
 				providerEvent := s.OnMessage(ev, info)
@@ -131,12 +139,9 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 			case *slack.RTMError:
 				events <- s.OnError(ev, info)
 
-			case *slack.InvalidAuthEvent:
-				events <- s.OnInvalidAuth(ev, info)
-				break eventLoop
-
 			default:
 				// Ignore other events..
+				log.Debugf("[SlackAdapter.Listen] Received (and ignored) event type %T", ev)
 			}
 		}
 
@@ -144,6 +149,23 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 	}()
 
 	return events
+}
+
+// OnLatencyReport is called when the Slack API emits a LatencyReport.
+func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *Info) *ProviderEvent {
+	millis := event.Value.Nanoseconds() / 1000000
+	template := "[SlackAdapter.OnLatencyReport] High latency detected: %s"
+
+	switch {
+	case millis > 500 && millis < 1000:
+		log.Debugf(template, event.Value.String())
+	case millis > 1000 && millis < 1500:
+		log.Infof(template, event.Value.String())
+	case millis > 1500:
+		log.Warnf(template, event.Value.String())
+	}
+
+	return nil
 }
 
 // OnInvalidAuth is called when the Slack API emits an InvalidAuthEvent.
@@ -223,7 +245,7 @@ func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *Info) *Provide
 		// Note here for later; ignore for now.
 		return &ProviderEvent{}
 	default:
-		log.Warnf("Received unknown submessage type (%s)", event.Msg.SubType)
+		log.Warnf("[SlackAdapter.OnMessage] Received unknown submessage type (%s)", event.Msg.SubType)
 		return &ProviderEvent{}
 	}
 }
