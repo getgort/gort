@@ -2,13 +2,13 @@ package worker
 
 import (
 	"bufio"
-	"log"
 	"time"
 
 	"github.com/clockworksoul/cog2/config"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -92,7 +92,7 @@ func (w *Worker) Start() (<-chan string, error) {
 		<-time.After(timeout)
 		err := w.DockerClient.ContainerStop(w.DockerContext, resp.ID, nil)
 		if err != nil {
-			log.Printf("Failed to stop container %s: %s", resp.ID, err.Error())
+			log.Warnf("Failed to stop container %s: %s", resp.ID, err.Error())
 		}
 	}()
 

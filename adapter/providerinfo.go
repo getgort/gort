@@ -1,9 +1,8 @@
 package adapter
 
 import (
-	"log"
-
 	"github.com/clockworksoul/cog2/data"
+	log "github.com/sirupsen/logrus"
 )
 
 // ProviderInfo contains the basic information for a chat provider.
@@ -24,7 +23,7 @@ func (p *ProviderInfo) SetProviderInfo(provider data.Provider) *ProviderInfo {
 		p.Type = "slack"
 		p.Name = ap.Name
 	default:
-		log.Panicf("Unsupported provider type: %T\n", ap)
+		log.Errorf("Unsupported provider type: %T", ap)
 	}
 
 	return p

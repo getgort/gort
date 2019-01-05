@@ -2,12 +2,12 @@ package adapter
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/clockworksoul/cog2/config"
 	"github.com/clockworksoul/cog2/context"
 	"github.com/clockworksoul/cog2/data"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -21,19 +21,19 @@ type Adapter interface {
 	// its respective provider.
 	GetBotUser() *UserInfo
 
-	// GetName provides the name of this adapter as per the configuration.
-	GetName() string
-
 	// GetChannelInfo provides info on a specific provider channel accessible
 	// to the adapter.
 	GetChannelInfo(channelID string) (*ChannelInfo, error)
 
-	// GetUserInfo provides info on a specific provider channel accessible
-	// to the adapter.
-	GetUserInfo(userID string) (*UserInfo, error)
+	// GetName provides the name of this adapter as per the configuration.
+	GetName() string
 
 	// GetPresentChannels returns a slice of channels that a user is present in.
 	GetPresentChannels(userID string) ([]*ChannelInfo, error)
+
+	// GetUserInfo provides info on a specific provider channel accessible
+	// to the adapter.
+	GetUserInfo(userID string) (*UserInfo, error)
 
 	// Listen causes the Adapter to ititiate a connection to its provider and
 	// begin relaying back events via the returned channel.
@@ -84,8 +84,8 @@ func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
 
 // OnConnected handles ConnectedEvent events.
 func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
-	log.Printf(
-		"Connection established to %s provider %s. I am @%s!\n",
+	log.Infof(
+		"Connection established to %s provider %s. I am @%s!",
 		event.Info.Provider.Type,
 		event.Info.Provider.Name,
 		event.Info.User.Name,
@@ -93,7 +93,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 
 	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
 	if err != nil {
-		log.Printf("Failed to get channels list for %s: %s", event.Info.Provider.Name, err.Error())
+		log.Errorf("Failed to get channels list for %s: %s", event.Info.Provider.Name, err.Error())
 		return
 	}
 
@@ -119,7 +119,7 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 
 	rawCommandText := data.Text
 
-	log.Printf("Message from @%s in %s: %s\n",
+	log.Debugf("Message from @%s in %s: %s",
 		userinfo.DisplayNameNormalized,
 		channelinfo.Name,
 		rawCommandText,
@@ -144,7 +144,7 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 		return nil, fmt.Errorf("Could not find user: " + err.Error())
 	}
 
-	log.Printf("Direct message from @%s: %s\n",
+	log.Debugf("Direct message from @%s: %s",
 		userinfo.DisplayNameNormalized,
 		data.Text,
 	)
@@ -179,7 +179,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		return nil, err
 	}
 
-	log.Printf("Found matching command: %s:%s\n", command.Bundle.Name, command.Command.Name)
+	log.Debugf("Found matching command: %s:%s", command.Bundle.Name, command.Command.Name)
 
 	request := data.CommandRequest{
 		CommandEntry: command,
@@ -267,7 +267,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			adapterErrors <- ev
 
 		default:
-			log.Fatalf("Unknown data type: %T\n", ev)
+			log.Fatalf("Unknown data type: %T", ev)
 		}
 	}
 }

@@ -2,11 +2,11 @@ package adapter
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 
 	"github.com/clockworksoul/cog2/data"
 	"github.com/nlopes/slack"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -96,7 +96,7 @@ func (s SlackAdapter) GetUserInfo(userID string) (*UserInfo, error) {
 func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 	events := make(chan *ProviderEvent)
 
-	log.Printf("Connecting to Slack provider %s...\n", s.provider.Name)
+	log.Infof("Connecting to Slack provider %s...", s.provider.Name)
 
 	go s.rtm.ManageConnection()
 
@@ -112,7 +112,7 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 			case *slack.ConnectedEvent:
 				suser, err := s.rtm.GetUserInfo(ev.Info.User.ID)
 				if err != nil {
-					log.Printf("Error finding user %s on connect: %s\n",
+					log.Errorf("Error finding user %s on connect: %s",
 						ev.Info.User.ID,
 						err.Error())
 					continue eventLoop
@@ -223,7 +223,7 @@ func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *Info) *Provide
 		// Note here for later; ignore for now.
 		return &ProviderEvent{}
 	default:
-		log.Printf("Received unknown submessage type (%s)", event.Msg.SubType)
+		log.Warnf("Received unknown submessage type (%s)", event.Msg.SubType)
 		return &ProviderEvent{}
 	}
 }

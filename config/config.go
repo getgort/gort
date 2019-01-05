@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"time"
 
 	"github.com/clockworksoul/cog2/data"
+	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -31,7 +31,7 @@ func BeginChangeCheck(frequency time.Duration) {
 			if err != nil {
 				if lastReloadWorked {
 					lastReloadWorked = false
-					log.Println(err.Error())
+					log.Errorln(err.Error())
 				}
 			}
 		}
@@ -81,7 +81,7 @@ func executeFullConfigurationReload() error {
 		config = cp
 		lastReloadWorked = true
 
-		log.Printf("Loaded configuration file %s\n", configfile)
+		log.Infof("Loaded configuration file %s", configfile)
 	}
 
 	return nil
