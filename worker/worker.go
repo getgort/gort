@@ -96,7 +96,7 @@ func (w *Worker) Start() (<-chan string, error) {
 		<-time.After(timeout)
 		err := w.DockerClient.ContainerStop(w.DockerContext, resp.ID, nil)
 		if err != nil {
-			log.Warnf("Failed to stop container %s: %s", resp.ID, err.Error())
+			log.Warnf("[Worker.Start] Failed to stop container %s: %s", resp.ID, err.Error())
 		}
 	}()
 
@@ -104,6 +104,13 @@ func (w *Worker) Start() (<-chan string, error) {
 	go func() {
 		chwait, _ := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 		ok := <-chwait
+
+		log.Debugf("[Worker.Start] %s %s %s - Completed in %s",
+			w.ImageName,
+			strings.Join(entryPoint, " "),
+			strings.Join(w.CommandParameters, " "),
+			time.Now().Sub(startTime).String(),
+		)
 
 		w.ExitStatus <- ok.StatusCode
 	}()
@@ -113,12 +120,6 @@ func (w *Worker) Start() (<-chan string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	log.Debugf("Image=%s Entrypoint=%s - Completed in %s",
-		w.ImageName,
-		strings.Join(entryPoint, " "),
-		time.Now().Sub(startTime).String(),
-	)
 
 	return logs, nil
 }
@@ -187,7 +188,7 @@ func (w *Worker) pullImage(force bool) error {
 	if force || !exists {
 		startTime := time.Now()
 
-		log.Debugf("Pulling image %s", imageName)
+		log.Debugf("[Worker.pullImage] Pulling image %s", imageName)
 
 		reader, err := cli.ImagePull(ctx, imageName, types.ImagePullOptions{})
 		if err != nil {
@@ -202,7 +203,7 @@ func (w *Worker) pullImage(force bool) error {
 			_, e = reader.Read(bytes)
 		}
 
-		log.Debugf("Image %s pulled in %s", imageName, time.Now().Sub(startTime).String())
+		log.Debugf("[Worker.pullImage] Image %s pulled in %s", imageName, time.Now().Sub(startTime).String())
 	}
 
 	return nil

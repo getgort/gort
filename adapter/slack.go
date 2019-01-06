@@ -132,7 +132,7 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 
 			case *slack.MessageEvent:
 				providerEvent := s.OnMessage(ev, info)
-				if providerEvent.EventType != "" {
+				if providerEvent != nil && providerEvent.EventType != "" {
 					events <- providerEvent
 				}
 
@@ -157,11 +157,11 @@ func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *Info) *
 	template := "[SlackAdapter.OnLatencyReport] High latency detected: %s"
 
 	switch {
-	case millis > 500 && millis < 1000:
-		log.Debugf(template, event.Value.String())
 	case millis > 1000 && millis < 1500:
+		log.Debugf(template, event.Value.String())
+	case millis > 1500 && millis < 2000:
 		log.Infof(template, event.Value.String())
-	case millis > 1500:
+	case millis > 2000:
 		log.Warnf(template, event.Value.String())
 	}
 
@@ -226,7 +226,7 @@ func (s *SlackAdapter) OnDirectMessage(event *slack.MessageEvent, info *Info) *P
 	)
 }
 
-// OnMessage is called when the Slack API emits an InvalidAuthEvent.
+// OnMessage is called when the Slack API emits a MessageEvent.
 func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
 	switch event.Msg.SubType {
 	case "": // Just a plain message. Handle accordingly.
@@ -237,16 +237,16 @@ func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *Info) *Provide
 		return s.OnChannelMessage(event, info)
 	case "message_changed":
 		// Note here for later; ignore for now.
-		return &ProviderEvent{}
+		return nil
 	case "message_deleted":
 		// Note here for later; ignore for now.
-		return &ProviderEvent{}
+		return nil
 	case "bot_message":
 		// Note here for later; ignore for now.
-		return &ProviderEvent{}
+		return nil
 	default:
 		log.Warnf("[SlackAdapter.OnMessage] Received unknown submessage type (%s)", event.Msg.SubType)
-		return &ProviderEvent{}
+		return nil
 	}
 }
 

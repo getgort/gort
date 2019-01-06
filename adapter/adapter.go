@@ -144,12 +144,18 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 		return nil, fmt.Errorf("Could not find user: " + err.Error())
 	}
 
+	rawCommandText := data.Text
+
 	log.Debugf("[OnDirectMessage] Direct message from @%s: %s",
 		userinfo.DisplayNameNormalized,
 		data.Text,
 	)
 
-	return TriggerCommand(data.Text, event.Adapter, data.ChannelID, data.UserID)
+	if rawCommandText[0] == '!' {
+		rawCommandText = rawCommandText[1:]
+	}
+
+	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
 
 // StartListening instructs all relays to establish connections, receives all
