@@ -145,13 +145,17 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 				events <- s.OnError(ev, info)
 
 			case *slack.AckErrorEvent:
-				fallthrough
+				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+
 			case *slack.ConnectionErrorEvent:
-				fallthrough
+				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+
 			case *slack.OutgoingErrorEvent:
-				fallthrough
+				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+
 			case *slack.RateLimitedError:
-				fallthrough
+				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+
 			case *slack.UnmarshallingErrorEvent:
 				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
 
