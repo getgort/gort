@@ -108,6 +108,8 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 
 	eventLoop:
 		for msg := range s.rtm.IncomingEvents {
+			log.Tracef("[SlackAdapter.Listen] %s %v", msg.Type, msg.Data)
+
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
 				suser, err := s.rtm.GetUserInfo(ev.Info.User.ID)
@@ -122,6 +124,9 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 				info.User.setFromSlackUser(suser)
 
 				events <- s.OnConnected(ev, info)
+
+			case *slack.DisconnectedEvent:
+				events <- s.OnDisconnected(ev, info)
 
 			case *slack.InvalidAuthEvent:
 				events <- s.OnInvalidAuth(ev, info)
@@ -139,6 +144,17 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 			case *slack.RTMError:
 				events <- s.OnError(ev, info)
 
+			case *slack.AckErrorEvent:
+				fallthrough
+			case *slack.ConnectionErrorEvent:
+				fallthrough
+			case *slack.OutgoingErrorEvent:
+				fallthrough
+			case *slack.RateLimitedError:
+				fallthrough
+			case *slack.UnmarshallingErrorEvent:
+				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+
 			default:
 				// Ignore other events..
 				log.Debugf("[SlackAdapter.Listen] Received (and ignored) event type %T", ev)
@@ -149,6 +165,73 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 	}()
 
 	return events
+}
+
+// OnChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.
+func (s *SlackAdapter) OnChannelMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"channel_message",
+		info,
+		&ChannelMessageEvent{
+			ChannelID: event.Channel,
+			Text:      ScrubMarkdown(event.Msg.Text),
+			UserID:    event.Msg.User,
+		},
+	)
+}
+
+// OnConnected is called when the Slack API emits a ConnectedEvent.
+func (s *SlackAdapter) OnConnected(event *slack.ConnectedEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"connected",
+		info,
+		&ConnectedEvent{},
+	)
+}
+
+// OnDirectMessage is called when the Slack API emits an MessageEvent for a direct message.
+func (s *SlackAdapter) OnDirectMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"direct_message",
+		info,
+		&DirectMessageEvent{
+			ChannelID: event.Channel,
+			Text:      ScrubMarkdown(event.Msg.Text),
+			UserID:    event.Msg.User,
+		},
+	)
+}
+
+// OnDisconnected is called when the Slack API emits a DisconnectedEvent.
+func (s *SlackAdapter) OnDisconnected(event *slack.DisconnectedEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"disconnected",
+		info,
+		&DisconnectedEvent{Intentional: event.Intentional},
+	)
+}
+
+// OnError is called when the Slack API emits an RTMError.
+func (s *SlackAdapter) OnError(event *slack.RTMError, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"error",
+		info,
+		&ErrorEvent{
+			Code: event.Code,
+			Msg:  event.Msg,
+		},
+	)
+}
+
+// OnInvalidAuth is called when the Slack API emits an InvalidAuthEvent.
+func (s *SlackAdapter) OnInvalidAuth(event *slack.InvalidAuthEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"authentication_error",
+		info,
+		&AuthenticationErrorEvent{
+			Msg: fmt.Sprintf("Connection failed to %s: invalid credentials", s.provider.Name),
+		},
+	)
 }
 
 // OnLatencyReport is called when the Slack API emits a LatencyReport.
@@ -166,64 +249,6 @@ func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *Info) *
 	}
 
 	return nil
-}
-
-// OnInvalidAuth is called when the Slack API emits an InvalidAuthEvent.
-func (s *SlackAdapter) OnInvalidAuth(event *slack.InvalidAuthEvent, info *Info) *ProviderEvent {
-	return s.wrapEvent(
-		"authentication_error",
-		info,
-		&AuthenticationErrorEvent{
-			Msg: fmt.Sprintf("Connection failed to %s: invalid credentials", s.provider.Name),
-		},
-	)
-}
-
-// OnConnected is called when the Slack API emits a ConnectedEvent.
-func (s *SlackAdapter) OnConnected(event *slack.ConnectedEvent, info *Info) *ProviderEvent {
-	return s.wrapEvent(
-		"connected",
-		info,
-		&ConnectedEvent{},
-	)
-}
-
-// OnError is called when the Slack API emits an RTMError.
-func (s *SlackAdapter) OnError(event *slack.RTMError, info *Info) *ProviderEvent {
-	return s.wrapEvent(
-		"error",
-		info,
-		&ErrorEvent{
-			Code: event.Code,
-			Msg:  event.Msg,
-		},
-	)
-}
-
-// OnChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.
-func (s *SlackAdapter) OnChannelMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
-	return s.wrapEvent(
-		"channel_message",
-		info,
-		&ChannelMessageEvent{
-			ChannelID: event.Channel,
-			Text:      ScrubMarkdown(event.Msg.Text),
-			UserID:    event.Msg.User,
-		},
-	)
-}
-
-// OnDirectMessage is called when the Slack API emits an MessageEvent for a direct message.
-func (s *SlackAdapter) OnDirectMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
-	return s.wrapEvent(
-		"direct_message",
-		info,
-		&DirectMessageEvent{
-			ChannelID: event.Channel,
-			Text:      ScrubMarkdown(event.Msg.Text),
-			UserID:    event.Msg.User,
-		},
-	)
 }
 
 // OnMessage is called when the Slack API emits a MessageEvent.

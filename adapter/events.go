@@ -35,8 +35,13 @@ type ChannelMessageEvent struct {
 	UserID    string
 }
 
-// ConnectedEvent indicates the client has successfully connected to the provider server (hello)
+// ConnectedEvent indicates the client has successfully connected to the provider server
 type ConnectedEvent struct {
+}
+
+// DisconnectedEvent indicates the client has disconnected to the provider server
+type DisconnectedEvent struct {
+	Intentional bool
 }
 
 // ChannelJoinedEvent indicates the bot has joined a channel
