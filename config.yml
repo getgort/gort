@@ -6,6 +6,7 @@ docker:
 
 slack:
 - name: ClockworkSoul
+  # No, this isn't a real API token.
   api-token: xoxb-318612539623-512030882149-I3JUlQSw30088hMU7fDQsScO
   icon-url: https://emoji.slack-edge.com/T025151EM/dragongopher/cdc9b1bd1a7752eb.png
   bot-name: Cog2
