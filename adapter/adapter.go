@@ -251,6 +251,9 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 		case *ConnectedEvent:
 			OnConnected(event, ev)
 
+		case *AuthenticationErrorEvent:
+			adapterErrors <- fmt.Errorf(ev.Msg)
+
 		case *ChannelMessageEvent:
 			request, err := OnChannelMessage(event, ev)
 			if request != nil {
