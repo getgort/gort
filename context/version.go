@@ -2,5 +2,5 @@ package context
 
 const (
 	// CogVersion is the current version of Cog2
-	CogVersion = "0.0.4-dev.6"
+	CogVersion = "0.1.0-dev.0"
 )

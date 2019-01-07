@@ -1,41 +1,31 @@
 # Cog2
 
-Cog2 is a Go reimplementation and significant simplification of the [Cog Slack Bot](https://github.com/operable/cog).
+Cog2 is a re-imagining and re-implementation of the current version of Operable's Cog [Cog Slack Bot](https://github.com/operable/cog) (Cog version 1, or Cog1).
 
-## Cog2 feature summary (ALL ARE WIP!)
+## Overview
 
-### Retained features (under consideration)
+Operable Cog is described in its literature as a chatbot that brings the power of the command line to your chat window, and provides a powerful set of features that allow developers to implement arbitrary functionality, regulated by a powerful authorization layer.
 
-All of the [high-level features listed here](https://book.cog.bot/sections/introducing_cog.html#current-features):
+Cog1 was originally designed as a distributed computation engine that was later rebranded as a chatops tool, and much of the original intent is reflected in its design, implementation, and featureset. As a result, many of Cog1’s features, however innovative, go largely unused, and the codebase has become difficult to extend and maintain. These difficulties are compounded by its implementation language -- Elixir -- which has few proficient developers.
 
-* Extensibility 
-  * Build new bot commands in any language (Docker container command handlers)
-  * Built-in templating
-* Adaptability
-  * Unix-style pipelines? (may or may not be included)
-  * Output redirection?
-* Security
-  * Fine-grained command permissions: Users, Groups, and Roles
-  * Audit logging
-* Chat-Provider Agnostic (Slack, HipChat, others)
+The solution, which has been discussed for many months on the [Cog Slack workspace](https://cogbot.slack.com), is to rewrite Cog from scratch in a more accessible language, such as [Go](http://golang.org), removing superfluous functionality and reducing complexity in the process.
 
-### Discarded features (under consideration)
+This gives us the opportunity to consider and possibly redefine what Cog is meant to be. To choose the features that make sense, and to discard those that don’t. In this way, Cog2 can be described more as a “spiritual successor” to Cog1 than a faithful reimplementation: many things will change, others will cease to exist entirely.
 
-Cog was originally designed as a distributed computation framework, and much of the functionality built for this is unused or seldom used. Features that are not currently being considered for support in Cog2 are as follows:
-* Remote relays (but may be considered later)
-* Unix-style pipelines? (may or may not be included)
+## Goals
+The primary goal of this project is reimplement in Go the core features of Cog that distinguish it from other chatops tools. Namely, the ability to: 
 
-## The road to 0.1.0
+* define arbitrary command functionality in any programming language,
+* package those commands into bundles that can be installed in Cog,
+* allow a user to trigger commands through Cog and be presented with the output,
+* regulate the use of commands with a built-in authentication/authorization system,
+* and record activity in an audit log.
 
-1. Slack things (0.0.1)
-   1. Send a message to a channel (DONE)
-   1. Establish a connection with channel (DONE)
-   1. Make channel configurable (DONE)
-1. Container things (0.0.2)
-   1. Run a container (DONE)
-   1. Run a container in response to a message (DONE)
-   1. Pass message into container at run (DONE)
-   1. Pass container output back into channel (DONE)
-1. Bundles (0.0.3)
-1. Templates (0.0.4)
-1. Users (0.1.0) - *POC feature complete* (NOT fully feature complete!)
+This includes all of the [high-level features listed in the Cog1 documentation](https://book.cog.bot/sections/introducing_cog.html#current-features).
+
+## Non-Goals  
+While some effort will be made to support existing functionality (such as Cog1 bundles), perfect compatibility is explicitly not guaranteed (however, a migration guide should be written eventually).
+
+## Cog2 design
+
+A WIP design doc, including rough milestones (but not dates) [can be seen here](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit?usp=sharing). Feel free to add questions or comments.
