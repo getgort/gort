@@ -62,6 +62,10 @@ func GetSlackProviders() []data.SlackProvider {
 func Initialize(file string) error {
 	configfile = file
 
+	if _, err := os.Stat(configfile); os.IsNotExist(err) {
+		return fmt.Errorf("file %s does not exist", configfile)
+	}
+
 	return ReloadConfiguration()
 }
 
