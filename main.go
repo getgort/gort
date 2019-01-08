@@ -7,6 +7,7 @@ import (
 	"github.com/clockworksoul/cog2/config"
 	"github.com/clockworksoul/cog2/context"
 	"github.com/clockworksoul/cog2/relay"
+	"github.com/clockworksoul/cog2/service"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,13 +27,39 @@ func initializeConfig(configfile string) error {
 	return nil
 }
 
+func startRESTServer(addr string) {
+	// Build the service representation
+	server := service.BuildRESTServer(addr)
+
+	// Start watching the
+	go func() {
+		logs := server.Requests()
+		for logevent := range logs {
+			log.Info(logevent)
+		}
+	}()
+
+	// Make the service listen.
+	go func() {
+		err := server.ListenAndServe()
+		if err != nil {
+			log.Errorf("[main] %s", err.Error())
+		}
+	}()
+}
+
 func main() {
 	log.Infof("[main] Starting Cog2 version %s", context.CogVersion)
 
+	// Load the Cog configuration.
+	// TODO Allow the user to specify a config document.
 	err := initializeConfig("config.yml")
 	if err != nil {
 		log.Panicf("[main] %s", err.Error())
 	}
+
+	// Start the Cog REST web service
+	startRESTServer(":8080")
 
 	// Tells the chat provider adapters (ad defined in the config) to connect.
 	// Returns channels to get user command requests and adapter errors out.
