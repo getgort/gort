@@ -14,6 +14,7 @@ func TestTokenizeParameters(t *testing.T) {
 		{"foo\"bar\"", "foobar"},
 		{"foo\"bar bat\"", "foobar bat"},
 		{"foo\"bar'bat\"", "foobar'bat"},
+		{"foo “bar bat”", "foo bar bat"}, // smart quotes
 	}
 
 	for _, pair := range testStrings {

@@ -1,6 +1,8 @@
 package adapter
 
-import "strings"
+import (
+	"strings"
+)
 
 // TokenizeParameters splits a command string into parameter tokens. Any
 // trigger characters (i.e., !) are expected to have already been removed.
@@ -34,6 +36,10 @@ func TokenizeParameters(commandString string) []string {
 				currentToken += "\\"
 			case '\'':
 				currentToken += "'"
+			case '“': // Smart left quote
+				fallthrough
+			case '”': // Smart right quote
+				fallthrough
 			case '"':
 				currentToken += "\""
 			case '?':
@@ -52,6 +58,10 @@ func TokenizeParameters(commandString string) []string {
 				}
 			case '\\':
 				escapeNextRune = true
+			case '“': // Smart left quote
+				fallthrough
+			case '”': // Smart right quote
+				fallthrough
 			case '"':
 				if inSingleQuote {
 					currentToken += "\""
