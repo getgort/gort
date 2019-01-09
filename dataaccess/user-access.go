@@ -10,8 +10,8 @@ import (
 // A temporary place to store data until we can get a database into place.
 var _users = struct {
 	sync.RWMutex
-	m map[string]rest.User
-}{m: make(map[string]rest.User)}
+	m map[string]*rest.User
+}{m: make(map[string]*rest.User)}
 
 // UserCreate is used to create a new Cog user in the data store. An error is
 // returned if the username is empty or if a user already exists.
@@ -29,7 +29,7 @@ func UserCreate(user rest.User) error {
 	}
 
 	_users.Lock()
-	_users.m[user.Username] = user
+	_users.m[user.Username] = &user
 	_users.Unlock()
 
 	return nil
@@ -87,7 +87,7 @@ func UserGet(username string) (rest.User, error) {
 	user := _users.m[username]
 	_users.RUnlock()
 
-	return user, nil
+	return *user, nil
 }
 
 // UserList returns a list of all known users in the datastore.
@@ -97,7 +97,7 @@ func UserList() ([]rest.User, error) {
 
 	for _, u := range _users.m {
 		u.Password = ""
-		list = append(list, u)
+		list = append(list, *u)
 	}
 
 	return list, nil
@@ -120,7 +120,7 @@ func UserUpdate(user rest.User) error {
 	}
 
 	_users.Lock()
-	_users.m[user.Username] = user
+	_users.m[user.Username] = &user
 	_users.Unlock()
 
 	return nil

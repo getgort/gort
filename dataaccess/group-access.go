@@ -11,22 +11,30 @@ import (
 // A temporary place to store data until we can get a database into place.
 var _groups = struct {
 	sync.RWMutex
-	m map[string]rest.Group
-}{m: make(map[string]rest.Group)}
+	m map[string]*rest.Group
+}{m: make(map[string]*rest.Group)}
 
 // GroupAddUser adds a user to a group
 func GroupAddUser(groupname string, username string) error {
-	group, err := GroupGet(groupname)
+	_, err := GroupGet(groupname)
 	if err != nil {
 		return err
 	}
 
-	user, err := UserGet(username)
+	_, err = UserGet(username)
 	if err != nil {
 		return err
 	}
 
-	group.Users = append(group.Users, user)
+	_groups.RLock()
+	_users.RLock()
+
+	group := _groups.m[groupname]
+	user := _users.m[username]
+	group.Users = append(group.Users, *user)
+
+	_users.RUnlock()
+	_groups.RUnlock()
 
 	return nil
 }
@@ -46,7 +54,7 @@ func GroupCreate(group rest.Group) error {
 	}
 
 	_groups.Lock()
-	_groups.m[group.Name] = group
+	_groups.m[group.Name] = &group
 	_groups.Unlock()
 
 	return nil
@@ -100,7 +108,7 @@ func GroupGet(name string) (rest.Group, error) {
 	group := _groups.m[name]
 	_groups.RUnlock()
 
-	return group, nil
+	return *group, nil
 }
 
 // GroupGrantRole grants one or more roles to a group.
@@ -114,7 +122,7 @@ func GroupList() ([]rest.Group, error) {
 	list := make([]rest.Group, 0)
 
 	for _, g := range _groups.m {
-		list = append(list, g)
+		list = append(list, *g)
 	}
 
 	return list, nil
@@ -159,7 +167,7 @@ func GroupUpdate(group rest.Group) error {
 	}
 
 	_groups.Lock()
-	_groups.m[group.Name] = group
+	_groups.m[group.Name] = &group
 	_groups.Unlock()
 
 	return nil

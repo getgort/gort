@@ -15,7 +15,7 @@ func TestUserExists(t *testing.T) {
 	}
 
 	// Now we add a user to find.
-	_users.m["test-exists"] = rest.User{Username: "test-exists"}
+	_users.m["test-exists"] = &rest.User{Username: "test-exists"}
 	defer delete(_users.m, "test-exists")
 
 	exists, _ = UserExists("test-exists")
@@ -63,7 +63,7 @@ func TestUserGet(t *testing.T) {
 		t.Error("Expected an error")
 	}
 
-	_users.m["test-get"] = rest.User{Username: "test-get"}
+	_users.m["test-get"] = &rest.User{Username: "test-get"}
 	defer delete(_users.m, "test-get")
 
 	// User should exist now
@@ -87,7 +87,7 @@ func TestUserList(t *testing.T) {
 	UserCreate(rest.User{Username: "test-list-1", Password: "password1!"})
 	UserCreate(rest.User{Username: "test-list-2", Password: "password2!"})
 	UserCreate(rest.User{Username: "test-list-3", Password: "password3!"})
-	defer func() { _users.m = make(map[string]rest.User) }()
+	defer func() { _users.m = make(map[string]*rest.User) }()
 
 	users, err := UserList()
 	if err != nil {
