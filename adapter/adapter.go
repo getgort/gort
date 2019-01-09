@@ -106,6 +106,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 // OnChannelMessage handles ChannelMessageEvent events.
 // If a command is found in the text, it will emit a data.CommandRequest
 // instance to the commands channel.
+// TODO Support direct in-channel mentions.
 func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
 	channelinfo, err := event.Adapter.GetChannelInfo(data.ChannelID)
 	if err != nil {
@@ -127,6 +128,11 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 
 	// If this isn't prepended by a trigger character, ignore.
 	if len(rawCommandText) <= 1 || rawCommandText[0] != '!' {
+		return nil, nil
+	}
+
+	// If this starts with a trigger character but enable_spoken_commands is false, ignore.
+	if rawCommandText[0] == '!' && !config.GetCogServerConfigs().EnableSpokenCommands {
 		return nil, nil
 	}
 

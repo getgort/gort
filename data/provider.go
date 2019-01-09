@@ -10,8 +10,8 @@ type Provider interface{}
 // SlackProvider is the data wrapper for a Slack provider.
 type SlackProvider struct {
 	Provider      `yaml:"-"`
-	BotName       string `yaml:"bot-name,omitempty"`
-	IconURL       string `yaml:"icon-url,omitempty"`
+	BotName       string `yaml:"bot_name,omitempty"`
+	IconURL       string `yaml:"icon_url,omitempty"`
 	Name          string `yaml:"name,omitempty"`
-	SlackAPIToken string `yaml:"api-token,omitempty"`
+	SlackAPIToken string `yaml:"api_token,omitempty"`
 }

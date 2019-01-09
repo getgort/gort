@@ -90,7 +90,7 @@ func startCog() error {
 	}
 
 	// Start the Cog REST web service
-	startServer(":8080")
+	startServer(config.GetCogServerConfigs().APIAddress)
 
 	// Tells the chat provider adapters (ad defined in the config) to connect.
 	// Returns channels to get user command requests and adapter errors out.

@@ -48,6 +48,11 @@ func GetDockerConfigs() data.DockerConfigs {
 	return config.DockerConfigs
 }
 
+// GetCogServerConfigs returns the data wrapper for the "cog" config section.
+func GetCogServerConfigs() data.CogServerConfigs {
+	return config.CogServerConfigs
+}
+
 // GetGlobalConfigs returns the data wrapper for the "global" config section.
 func GetGlobalConfigs() data.GlobalConfigs {
 	return config.GlobalConfigs
@@ -108,6 +113,7 @@ func getMd5Sum(file string) ([]byte, error) {
 	return hashBytes, nil
 }
 
+// TODO Find some  way to automatically inject defaults if a field isn't specified.
 func loadConfiguration(file string) (*data.CogConfig, error) {
 	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)
@@ -115,13 +121,14 @@ func loadConfiguration(file string) (*data.CogConfig, error) {
 		return nil, err
 	}
 
-	var cp data.CogConfig
-	err = yaml.Unmarshal(dat, &cp)
+	var config data.CogConfig
+
+	err = yaml.Unmarshal(dat, &config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &cp, nil
+	return &config, nil
 }
 
 func slicesAreEqual(a, b []byte) bool {

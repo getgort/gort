@@ -115,7 +115,7 @@ func (s *RESTServer) Requests() <-chan RequestEvent {
 
 // ListenAndServe starts the Cog web service.
 func (s *RESTServer) ListenAndServe() error {
-	log.Printf("[RESTServer.ListenAndServe] Cog service is starting on localhost:8080")
+	log.Printf("[RESTServer.ListenAndServe] Cog service is starting on " + s.Addr)
 
 	return s.Server.ListenAndServe()
 }

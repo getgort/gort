@@ -1,15 +1,74 @@
 global:
-  command-timeout-seconds: 300
+  # How long before a command times out, in seconds.
+  # TODO Allow overriding at the command level
+  command_timeout_seconds: 60
 
+cog:
+  # Cog will automatically create accounts for new users when set.
+  # User accounts created this way will still need to be placed into groups
+  # by an administrator in order to be granted any permissions.
+  allow_self_registration: true
+
+  # The address to listen on for Cog’s REST API. Defaults to ":4000".
+  api_address: ":4000"
+
+  # Controls the prefix of URLs generated for the core API. URLs may contain a
+  # scheme (either http or https), a host, an optional port (defaulting to 80
+  # for http and 443 for https), and an optional path.
+  # Defaults to localhost
+  api_url_base: localhost
+
+  # If true, allows Cog to respond to commands prefixed with ! instead of only
+  # via direct mentions. Defaults to true.
+  enable_spoken_commands: true
+
+# Not yet supported
+database:
+  # The URL at which Cog may access its PostgreSQL database.
+  database_url: postgresql://localhost:5432/cog
+
+  # The user to connect to Cog’s PostgreSQL database.
+  database_user: cog
+
+  # The password for connecting to Cog’s PostgreSQL database.
+  # TODO Think of a better way to do this. Maybe allow {{ variables }} that
+  # can be injected at startup and interpolated? Is that over-engineering?
+  database_password: "veryKleverPassw0rd!"
+
+  # Amount of time to wait for execution of a database query to complete.
+  # Defaults to 15000 ms.
+  query_timeout: 15000
+
+  # Set this to true to have Cog connect to its database using SSL.
+  # Defaults to false.
+  ssl_enabled: false
+
+  # Database connection pool size. Defaults to 10.
+  pool_size: 10
+
+  # Number of milliseconds to wait to checkout a database connection from the pool.
+  # Defaults to 15000 ms.
+  pool_timeout: 15000
+
+# Move this to the relay config later.
 docker:
   host: unix:///var/run/docker.sock
 
 slack:
-- name: ClockworkSoul
-  # No, this isn't a real API token.
-  api-token: xoxb-318612539623-512030882149-nyWJ3U4JoWuUtaUkRPKn0dJR
-  icon-url: https://emoji.slack-edge.com/T025151EM/dragongopher/cdc9b1bd1a7752eb.png
-  bot-name: Cog2
+- # An arbitrary name for human labelling purposes.
+  # TODO Do we need this? Is it confusing? Should we use the API-provided workspace name?
+  name: ClockworkSoul
+
+  # Bot User OAuth Access Token (https://api.slack.com/docs/token-types#bot)
+  # used to connect to Slack. You want the one that starts with "xoxb"
+  api_token: xoxb-210987654321-123456789012-nyWJ3U4JoWuUtaUkRPKn0dJR
+
+  # The chat icon for the bot. If not defined defaults to the configured bot default.
+  icon_url: https://emoji.slack-edge.com/T025151EM/dragongopher/cdc9b1bd1a7752eb.png
+
+  # The name of the bot, as it appears in Slack. Defaults to the name used
+  # when the bot was added to the account.
+  bot_name: Cog2
 
 bundles:
 - name: test
