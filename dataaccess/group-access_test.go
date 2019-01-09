@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/clockworksoul/cog2/data/rest"
@@ -162,5 +163,46 @@ func TestGroupAddUser(t *testing.T) {
 
 	if len(group.Users) > 0 && group.Users[0].Username != "bar" {
 		t.Error("Wrong user!")
+	}
+}
+
+func TestGroupRemoveUser(t *testing.T) {
+	GroupCreate(rest.Group{Name: "foo"})
+	defer GroupDelete("foo")
+
+	UserCreate(rest.User{Username: "bat"})
+	defer UserDelete("bat")
+
+	err := GroupAddUser("foo", "bat")
+	if err != nil {
+		t.Error("Expected no error")
+	}
+
+	group, err := GroupGet("foo")
+	if err != nil {
+		t.Error("Expected no error")
+	}
+
+	if len(group.Users) != 1 {
+		t.Error("Users list empty")
+	}
+
+	if len(group.Users) > 0 && group.Users[0].Username != "bat" {
+		t.Error("Wrong user!")
+	}
+
+	err = GroupRemoveUser("foo", "bat")
+	if err != nil {
+		t.Error("Expected no error")
+	}
+
+	group, err = GroupGet("foo")
+	if err != nil {
+		t.Error("Expected no error")
+	}
+
+	if len(group.Users) != 0 {
+		fmt.Println(group.Users)
+		t.Error("User not removed")
 	}
 }

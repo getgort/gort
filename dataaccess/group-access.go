@@ -130,14 +130,13 @@ func GroupList() ([]rest.Group, error) {
 
 // GroupRemoveUser removes one or more users from a group.
 func GroupRemoveUser(groupname string, username string) error {
-	group, err := GroupGet(groupname)
-	if err != nil {
-		return err
-	}
+	_groups.RLock()
+	group := _groups.m[groupname]
+	defer _groups.RUnlock()
 
 	for i, u := range group.Users {
 		if u.Username == username {
-			group.Users = append(group.Users[:i], group.Users[:i+1]...)
+			group.Users = append(group.Users[:i], group.Users[i+1:]...)
 			return nil
 		}
 	}

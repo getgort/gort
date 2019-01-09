@@ -33,7 +33,7 @@ func (e RequestEvent) String() string {
 }
 
 // StatusCaptureWriter is a wrapper around a http.ResponseWriter that is used
-// by middleware to capure a response status and byte length for logging
+// by middleware to capture a response status and byte length for logging
 // purposes.
 type StatusCaptureWriter struct {
 	http.ResponseWriter
