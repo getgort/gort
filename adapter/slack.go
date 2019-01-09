@@ -27,7 +27,7 @@ type SlackAdapter struct {
 
 // NewSlackAdapter will construct a SlackAdapter instance for a given provider configuration.
 func NewSlackAdapter(provider data.SlackProvider) SlackAdapter {
-	client := slack.New(provider.SlackAPIToken)
+	client := slack.New(provider.APIToken)
 	rtm := client.NewRTM()
 
 	return SlackAdapter{

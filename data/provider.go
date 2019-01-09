@@ -7,11 +7,16 @@ package data
 // Currently only Slack is supported, with HipChat coming in time.
 type Provider interface{}
 
+// AbstractProvider is used to contain the general properties shared by
+// all providers.
+type AbstractProvider struct {
+	BotName string `yaml:"bot_name,omitempty"`
+	Name    string `yaml:"name,omitempty"`
+}
+
 // SlackProvider is the data wrapper for a Slack provider.
 type SlackProvider struct {
-	Provider      `yaml:"-"`
-	BotName       string `yaml:"bot_name,omitempty"`
-	IconURL       string `yaml:"icon_url,omitempty"`
-	Name          string `yaml:"name,omitempty"`
-	SlackAPIToken string `yaml:"api_token,omitempty"`
+	AbstractProvider `yaml:",inline"`
+	APIToken         string `yaml:"api_token,omitempty"`
+	IconURL          string `yaml:"icon_url,omitempty"`
 }
