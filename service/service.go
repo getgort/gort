@@ -101,6 +101,7 @@ func BuildRESTServer(addr string) *RESTServer {
 	router := mux.NewRouter()
 	router.Use(buildLoggingMiddleware(requests))
 	addUserMethodsToRouter(router)
+	addGroupMethodsToRouter(router)
 
 	server := &http.Server{Addr: addr, Handler: router}
 

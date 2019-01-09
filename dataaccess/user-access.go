@@ -7,6 +7,7 @@ import (
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
+// A temporary place to store data until we can get a database into place.
 var _users = struct {
 	sync.RWMutex
 	m map[string]rest.User
@@ -102,7 +103,7 @@ func UserList() ([]rest.User, error) {
 	return list, nil
 }
 
-// UserUpdate is used to update an existing user. An error is returned is the
+// UserUpdate is used to update an existing user. An error is returned if the
 // username is empty or if the user doesn't exist.
 // TODO Should we let this create users that don't exist?
 func UserUpdate(user rest.User) error {

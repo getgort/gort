@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// handleGetUsers handles "GET /user"
+// handleGetUsers handles "GET /v2/user"
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := dataaccess.UserList()
 
@@ -21,7 +21,7 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
-// handleGetUser handles "GET /user/{username}"
+// handleGetUser handles "GET /v2/user/{username}"
 func handleGetUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
@@ -44,7 +44,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
-// handlePostUser handles "POST /user/{username}"
+// handlePostUser handles "POST /v2/user/{username}"
 func handlePostUser(w http.ResponseWriter, r *http.Request) {
 	var user rest.User
 	var err error
@@ -73,7 +73,7 @@ func handlePostUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handlePostUser handles "DELETE /user/{username}"
+// handlePostUser handles "DELETE /v2/user/{username}"
 func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	err := dataaccess.UserDelete(params["username"])
@@ -85,8 +85,8 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func addUserMethodsToRouter(router *mux.Router) {
-	router.HandleFunc("/user", handleGetUsers).Methods("GET")
-	router.HandleFunc("/user/{username}", handleGetUser).Methods("GET")
-	router.HandleFunc("/user/{username}", handlePostUser).Methods("POST")
-	router.HandleFunc("/user/{username}", handleDeleteUser).Methods("DELETE")
+	router.HandleFunc("/v2/user", handleGetUsers).Methods("GET")
+	router.HandleFunc("/v2/user/{username}", handleGetUser).Methods("GET")
+	router.HandleFunc("/v2/user/{username}", handlePostUser).Methods("POST")
+	router.HandleFunc("/v2/user/{username}", handleDeleteUser).Methods("DELETE")
 }
