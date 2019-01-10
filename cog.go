@@ -50,7 +50,7 @@ func initializeCommands() {
 		"config", "c", "config.yml", "The location of the config file to use")
 	startCmd.Flags().CountVarP(
 		&verboseCount,
-		"verbose", "v", "Verbose mode (can be used multiple times")
+		"verbose", "v", "Verbose mode (can be used multiple times)")
 
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(versionCmd)
