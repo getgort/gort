@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/clockworksoul/cog2/dal"
 	"github.com/clockworksoul/cog2/data/rest"
-	"github.com/clockworksoul/cog2/dataaccess"
 	"github.com/gorilla/mux"
 )
 
@@ -13,7 +13,7 @@ import (
 func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	exists, err := dataaccess.GroupExists(params["groupname"])
+	exists, err := dal.GroupExists(params["groupname"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -23,7 +23,7 @@ func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := dataaccess.GroupGet(params["groupname"])
+	group, err := dal.GroupGet(params["groupname"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -34,7 +34,7 @@ func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 
 // handleGetGroups handles "GET /v2/group"
 func handleGetGroups(w http.ResponseWriter, r *http.Request) {
-	groups, err := dataaccess.GroupList()
+	groups, err := dal.GroupList()
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -49,7 +49,7 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	groupname := params["groupname"]
 
-	exists, err := dataaccess.GroupExists(groupname)
+	exists, err := dal.GroupExists(groupname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -59,7 +59,7 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := dataaccess.GroupGet(groupname)
+	group, err := dal.GroupGet(groupname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -79,7 +79,7 @@ func handlePostGroup(w http.ResponseWriter, r *http.Request) {
 
 	group.Name = params["groupname"]
 
-	exists, err := dataaccess.GroupExists(group.Name)
+	exists, err := dal.GroupExists(group.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -87,9 +87,9 @@ func handlePostGroup(w http.ResponseWriter, r *http.Request) {
 
 	// NOTE: Should we just make "update" create groups that don't exist?
 	if exists {
-		err = dataaccess.GroupUpdate(group)
+		err = dal.GroupUpdate(group)
 	} else {
-		err = dataaccess.GroupCreate(group)
+		err = dal.GroupCreate(group)
 	}
 
 	if err != nil {
@@ -106,7 +106,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 	groupname := params["groupname"]
 	username := params["username"]
 
-	exists, err = dataaccess.GroupExists(groupname)
+	exists, err = dal.GroupExists(groupname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -116,7 +116,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err = dataaccess.UserExists(username)
+	exists, err = dal.UserExists(username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -126,7 +126,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataaccess.GroupRemoveUser(groupname, username)
+	err = dal.GroupRemoveUser(groupname, username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -141,7 +141,7 @@ func handlePostGroupMember(w http.ResponseWriter, r *http.Request) {
 	groupname := params["groupname"]
 	username := params["username"]
 
-	exists, err = dataaccess.GroupExists(groupname)
+	exists, err = dal.GroupExists(groupname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -151,7 +151,7 @@ func handlePostGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err = dataaccess.UserExists(username)
+	exists, err = dal.UserExists(username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -161,7 +161,7 @@ func handlePostGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataaccess.GroupAddUser(groupname, username)
+	err = dal.GroupAddUser(groupname, username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -170,7 +170,7 @@ func handlePostGroupMember(w http.ResponseWriter, r *http.Request) {
 // handlePostGroup handles "DELETE /v2/group/{groupname}"
 func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	err := dataaccess.GroupDelete(params["groupname"])
+	err := dal.GroupDelete(params["groupname"])
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
