@@ -29,3 +29,9 @@ While some effort will be made to support existing functionality (such as Cog1 b
 ## Cog2 design
 
 A WIP design doc, including rough milestones (but not dates) [can be seen here](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit?usp=sharing). Feel free to add questions or comments.
+
+## How to run
+
+With Go installed, you can run (for testing) with: `go run . start`
+
+Note that you'll need a proper API key in the config first!
