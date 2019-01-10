@@ -24,8 +24,11 @@ cog:
 
 # Not yet supported
 database:
-  # The URL at which Cog may access its PostgreSQL database.
-  database_url: postgresql://localhost:5432/cog
+  # The host where Cog's PostgreSQL database lives. Defaults to localhost.
+  database_host: localhost
+
+  # The port at which Cog may access its PostgreSQL database. Defaults to 5432.
+  database_port: 5432
 
   # The user to connect to Cog’s PostgreSQL database.
   database_user: cog
