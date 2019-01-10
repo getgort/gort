@@ -4,7 +4,6 @@ services:
   cog:
     image: clockworksoul/cog2:latest
     command: "/cog2 start -v"
-    privileged: true
     ports:
       - "4000:4000"
     volumes:
