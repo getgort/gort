@@ -25,22 +25,18 @@ cog:
 # Not yet supported
 database:
   # The host where Cog's PostgreSQL database lives. Defaults to localhost.
-  database_host: localhost
+  host: localhost
 
   # The port at which Cog may access its PostgreSQL database. Defaults to 5432.
-  database_port: 5432
+  port: 5432
 
   # The user to connect to Cog’s PostgreSQL database.
-  database_user: cog
+  user: cog
 
   # The password for connecting to Cog’s PostgreSQL database.
   # TODO Think of a better way to do this. Maybe allow {{ variables }} that
   # can be injected at startup and interpolated? Is that over-engineering?
-  database_password: "veryKleverPassw0rd!"
-
-  # Amount of time to wait for execution of a database query to complete.
-  # Defaults to 15000 ms.
-  query_timeout: 15000
+  password: "veryKleverPassw0rd!"
 
   # Set this to true to have Cog connect to its database using SSL.
   # Defaults to false.
@@ -52,6 +48,10 @@ database:
   # Number of milliseconds to wait to checkout a database connection from the pool.
   # Defaults to 15000 ms.
   pool_timeout: 15000
+
+  # Amount of time to wait for execution of a database query to complete.
+  # Defaults to 15000 ms.
+  query_timeout: 15000
 
 # Move this to the relay config later.
 docker:

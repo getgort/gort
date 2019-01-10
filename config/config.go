@@ -43,6 +43,11 @@ func GetBundleConfigs() []data.Bundle {
 	return config.BundleConfigs
 }
 
+// GetDatabaseConfigs returns the data wrapper for the "database" config section.
+func GetDatabaseConfigs() data.DatabaseConfigs {
+	return config.DatabaseConfigs
+}
+
 // GetDockerConfigs returns the data wrapper for the "docker" config section.
 func GetDockerConfigs() data.DockerConfigs {
 	return config.DockerConfigs

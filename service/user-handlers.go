@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/clockworksoul/cog2/dal"
 	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/gorilla/mux"
 )
 
 // handleGetUsers handles "GET /v2/user"
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := dal.UserList()
+	users, err := dataAccessLayer.UserList()
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -25,7 +24,7 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 func handleGetUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	exists, err := dal.UserExists(params["username"])
+	exists, err := dataAccessLayer.UserExists(params["username"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -35,7 +34,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := dal.UserGet(params["username"])
+	user, err := dataAccessLayer.UserGet(params["username"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -55,7 +54,7 @@ func handlePostUser(w http.ResponseWriter, r *http.Request) {
 
 	user.Username = params["username"]
 
-	exists, err := dal.UserExists(user.Username)
+	exists, err := dataAccessLayer.UserExists(user.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -63,9 +62,9 @@ func handlePostUser(w http.ResponseWriter, r *http.Request) {
 
 	// NOTE: Should we just make "update" create users that don't exist?
 	if exists {
-		err = dal.UserUpdate(user)
+		err = dataAccessLayer.UserUpdate(user)
 	} else {
-		err = dal.UserCreate(user)
+		err = dataAccessLayer.UserCreate(user)
 	}
 
 	if err != nil {
@@ -76,7 +75,7 @@ func handlePostUser(w http.ResponseWriter, r *http.Request) {
 // handlePostUser handles "DELETE /v2/user/{username}"
 func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	err := dal.UserDelete(params["username"])
+	err := dataAccessLayer.UserDelete(params["username"])
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

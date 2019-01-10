@@ -5,6 +5,13 @@ import (
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
+type InMemoryDataAccess struct {
+	dal.DataAccess
+
+	groups map[string]*rest.Group
+	users  map[string]*rest.User
+}
+
 func NewInMemoryDataAccess() dal.DataAccess {
 	da := InMemoryDataAccess{
 		groups: make(map[string]*rest.Group),
@@ -14,9 +21,6 @@ func NewInMemoryDataAccess() dal.DataAccess {
 	return da
 }
 
-type InMemoryDataAccess struct {
-	dal.DataAccess
-
-	groups map[string]*rest.Group
-	users  map[string]*rest.User
+func (da InMemoryDataAccess) Initialize() error {
+	return nil
 }

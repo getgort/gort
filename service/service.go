@@ -5,8 +5,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/clockworksoul/cog2/dal"
+	"github.com/clockworksoul/cog2/dal/memory"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	dataAccessLayerInitialized bool
+	dataAccessLayer            dal.DataAccess
 )
 
 // RequestEvent represents a request of a service endpoint.
@@ -96,6 +103,8 @@ type RESTServer struct {
 
 // BuildRESTServer builds a RESTServer.
 func BuildRESTServer(addr string) *RESTServer {
+	InitializeDataAccessLayer()
+
 	requests := make(chan RequestEvent)
 
 	router := mux.NewRouter()
@@ -118,4 +127,34 @@ func (s *RESTServer) ListenAndServe() error {
 	log.Printf("[RESTServer.ListenAndServe] Cog service is starting on " + s.Addr)
 
 	return s.Server.ListenAndServe()
+}
+
+// InitializeDataAccessLayer will initialize the data access layer, if it
+// isn't already initialized. It is called automatically by BuildRESTServer().
+func InitializeDataAccessLayer() {
+	go func() {
+		var delay time.Duration = 1
+
+		for !dataAccessLayerInitialized {
+			dataAccessLayer = memory.NewInMemoryDataAccess()
+			err := dataAccessLayer.Initialize()
+
+			if err != nil {
+				log.Warn("[InitializeDataAccessLayer] Failed to connect to data source: ", err.Error())
+				log.Infof("[InitializeDataAccessLayer] Waiting %d seconds to try again", delay)
+
+				<-time.After(delay * time.Second)
+
+				delay *= 2
+
+				if delay > 60 {
+					delay = 60
+				}
+			}
+
+			dataAccessLayerInitialized = true
+		}
+
+		log.Info("[InitializeDataAccessLayer] Connection to data source established")
+	}()
 }
