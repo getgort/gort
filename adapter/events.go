@@ -8,7 +8,8 @@ type Info struct {
 	Provider *ProviderInfo
 }
 
-// ProviderEvent is the main wrapper. You will find all the other messages attached as Data
+// ProviderEvent is the main wrapper. You will find all the other messages
+// attached as Data
 type ProviderEvent struct {
 	// The type of event
 	EventType string
@@ -28,18 +29,21 @@ type AuthenticationErrorEvent struct {
 	Msg string
 }
 
-// ChannelMessageEvent indicates received a message via a public or private channel (message.channels)
+// ChannelMessageEvent indicates received a message via a public or private
+// channel (message.channels)
 type ChannelMessageEvent struct {
 	ChannelID string
 	Text      string
 	UserID    string
 }
 
-// ConnectedEvent indicates the client has successfully connected to the provider server
+// ConnectedEvent indicates the client has successfully connected to
+// the provider server
 type ConnectedEvent struct {
 }
 
-// DisconnectedEvent indicates the client has disconnected to the provider server
+// DisconnectedEvent indicates the client has disconnected from the
+// provider server
 type DisconnectedEvent struct {
 	Intentional bool
 }
@@ -49,19 +53,25 @@ type ChannelJoinedEvent struct {
 	Channel string
 }
 
-// DirectMessageEvent indicates the bot has received a direct message from a user (message.im)
+// DirectMessageEvent indicates the bot has received a direct message from a
+// user (message.im)
 type DirectMessageEvent struct {
 	ChannelID string
 	Text      string
 	UserID    string
 }
 
-// ErrorEvent indicates an error reported by the provider
+// ErrorEvent indicates an error reported by the provider. The occurs before a
+// successful connection, Code will be unset.
 type ErrorEvent struct {
 	Code int
 	Msg  string
 }
 
 func (e ErrorEvent) Error() string {
-	return fmt.Sprintf("code %d - %s", e.Code, e.Msg)
+	if e.Code != 0 {
+		return fmt.Sprintf("code %d - %s", e.Code, e.Msg)
+	}
+
+	return e.Msg
 }

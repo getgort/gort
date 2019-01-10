@@ -125,6 +125,9 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 
 				events <- s.OnConnected(ev, info)
 
+			case *slack.ConnectionErrorEvent:
+				events <- s.OnConnectionError(ev, info)
+
 			case *slack.DisconnectedEvent:
 				events <- s.OnDisconnected(ev, info)
 
@@ -142,12 +145,9 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 				}
 
 			case *slack.RTMError:
-				events <- s.OnError(ev, info)
+				events <- s.OnRTMError(ev, info)
 
 			case *slack.AckErrorEvent:
-				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
-
-			case *slack.ConnectionErrorEvent:
 				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
 
 			case *slack.OutgoingErrorEvent:
@@ -193,6 +193,15 @@ func (s *SlackAdapter) OnConnected(event *slack.ConnectedEvent, info *Info) *Pro
 	)
 }
 
+// OnConnectionError is called when the Slack API emits an ConnectionErrorEvent.
+func (s *SlackAdapter) OnConnectionError(event *slack.ConnectionErrorEvent, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"connection_error",
+		info,
+		&ErrorEvent{Msg: event.Error()},
+	)
+}
+
 // OnDirectMessage is called when the Slack API emits an MessageEvent for a direct message.
 func (s *SlackAdapter) OnDirectMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
 	return s.wrapEvent(
@@ -212,18 +221,6 @@ func (s *SlackAdapter) OnDisconnected(event *slack.DisconnectedEvent, info *Info
 		"disconnected",
 		info,
 		&DisconnectedEvent{Intentional: event.Intentional},
-	)
-}
-
-// OnError is called when the Slack API emits an RTMError.
-func (s *SlackAdapter) OnError(event *slack.RTMError, info *Info) *ProviderEvent {
-	return s.wrapEvent(
-		"error",
-		info,
-		&ErrorEvent{
-			Code: event.Code,
-			Msg:  event.Msg,
-		},
 	)
 }
 
@@ -277,6 +274,18 @@ func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *Info) *Provide
 		log.Warnf("[SlackAdapter.OnMessage] Received unknown submessage type (%s)", event.Msg.SubType)
 		return nil
 	}
+}
+
+// OnRTMError is called when the Slack API emits an RTMError.
+func (s *SlackAdapter) OnRTMError(event *slack.RTMError, info *Info) *ProviderEvent {
+	return s.wrapEvent(
+		"error",
+		info,
+		&ErrorEvent{
+			Code: event.Code,
+			Msg:  event.Msg,
+		},
+	)
 }
 
 // SendMessage will send a message (from the bot) into the specified channel.
