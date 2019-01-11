@@ -47,16 +47,23 @@ install:
 	@go get gopkg.in/yaml.v1
 	@go get gopkg.in/yaml.v2
 
-test:
-	@docker build --target test -t foo_$(PROJECT)_foo .
+test_begin:
+	@docker run -d -e POSTGRES_USER=cog -e POSTGRES_PASSWORD=password -p 5432:5432 --name foo_postgres postgres:10
+	
+test: test_begin
+	@docker build --target test -t foo_$(PROJECT)_foo --network host .
 	@docker rmi foo_$(PROJECT)_foo
+	@docker stop foo_postgres
+	@docker rm foo_postgres
 
 build: clean
 	mkdir -p bin
 	@go build -a -installsuffix cgo -o bin/$(PROJECT) $(GIT_REPOSITORY)
 
-image:
-	@docker build --target image -t $(IMAGE_NAME):$(IMAGE_TAG) .
+image: test_begin
+	@docker build --target image -t $(IMAGE_NAME):$(IMAGE_TAG) --network host .
+	@docker stop foo_postgres
+	@docker rm foo_postgres
 
 push:
 	@docker push $(IMAGE_NAME):$(IMAGE_TAG)
