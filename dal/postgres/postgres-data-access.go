@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/clockworksoul/cog2/config"
 	"github.com/clockworksoul/cog2/dal"
 	"github.com/clockworksoul/cog2/data"
 
@@ -16,11 +15,12 @@ type PostgresDataAccess struct {
 	dal.DataAccess
 
 	configs data.DatabaseConfigs
+	db      *sql.DB
 }
 
 // NewPostgresDataAccess will create and return a new PostgresDataAccess instance.
-func NewPostgresDataAccess(data.DatabaseConfigs) dal.DataAccess {
-	return PostgresDataAccess{configs: config.GetDatabaseConfigs()}
+func NewPostgresDataAccess(configs data.DatabaseConfigs) dal.DataAccess {
+	return PostgresDataAccess{configs: configs}
 }
 
 // Initialize sets up the database.
