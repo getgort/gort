@@ -56,17 +56,17 @@ func (da PostgresDataAccess) GroupCreate(group rest.Group) error {
 }
 
 // GroupDelete deletes a group.
-func (da PostgresDataAccess) GroupDelete(name string) error {
-	if name == "" {
+func (da PostgresDataAccess) GroupDelete(groupname string) error {
+	if groupname == "" {
 		return fmt.Errorf("empty group name")
 	}
 
-	exists, err := da.GroupExists(name)
+	exists, err := da.GroupExists(groupname)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("no such group: %s", name)
+		return fmt.Errorf("no such group: %s", groupname)
 	}
 
 	db, err := da.connect("cog")
@@ -76,13 +76,13 @@ func (da PostgresDataAccess) GroupDelete(name string) error {
 	}
 
 	query := `DELETE FROM groupusers WHERE groupname=$1;`
-	_, err = db.Exec(query, name)
+	_, err = db.Exec(query, groupname)
 	if err != nil {
 		return err
 	}
 
 	query = `DELETE FROM groups WHERE groupname=$1;`
-	_, err = db.Exec(query, name)
+	_, err = db.Exec(query, groupname)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (da PostgresDataAccess) GroupDelete(name string) error {
 }
 
 // GroupExists is used to determine whether a group exists in the data store.
-func (da PostgresDataAccess) GroupExists(name string) (bool, error) {
+func (da PostgresDataAccess) GroupExists(groupname string) (bool, error) {
 	db, err := da.connect("cog")
 	defer db.Close()
 	if err != nil {
@@ -101,7 +101,7 @@ func (da PostgresDataAccess) GroupExists(name string) (bool, error) {
 	query := "SELECT EXISTS(SELECT 1 FROM groups WHERE groupname=$1)"
 	exists := false
 
-	err = db.QueryRow(query, name).Scan(&exists)
+	err = db.QueryRow(query, groupname).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
