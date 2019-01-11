@@ -123,11 +123,11 @@ func (da PostgresDataAccess) initializeCogDatabase(db *sql.DB) error {
 	var err error
 
 	createUserQuery := `CREATE TABLE users (
-		email TEXT PRIMARY KEY,
+		email TEXT UNIQUE NOT NULL,
 		first_name TEXT,
 		last_name TEXT,
 		password_hash TEXT,
-		username TEXT UNIQUE NOT NULL
+		username TEXT PRIMARY KEY
 	  );`
 
 	_, err = db.Exec(createUserQuery)
@@ -136,10 +136,21 @@ func (da PostgresDataAccess) initializeCogDatabase(db *sql.DB) error {
 	}
 
 	createGroupQuery := `CREATE TABLE groups (
-		name TEXT PRIMARY KEY
+		groupname TEXT PRIMARY KEY
 	  );`
 
 	_, err = db.Exec(createGroupQuery)
+	if err != nil {
+		return err
+	}
+
+	createGroupUsersQuery := `CREATE TABLE groupusers (
+		groupname TEXT REFERENCES groups,
+		username TEXT REFERENCES users,
+		PRIMARY KEY (groupname, username)
+	);`
+
+	_, err = db.Exec(createGroupUsersQuery)
 	if err != nil {
 		return err
 	}

@@ -3,20 +3,7 @@ package postgres
 import (
 	"testing"
 
-	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
-)
-
-var (
-	configs = data.DatabaseConfigs{
-		Host:       "localhost",
-		Password:   "password",
-		Port:       5432,
-		SSLEnabled: false,
-		User:       "cog",
-	}
-
-	da = NewPostgresDataAccess(configs)
 )
 
 func TestUserNotExists(t *testing.T) {

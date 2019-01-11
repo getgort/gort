@@ -1,26 +1,12 @@
 package postgres
 
 import (
-	"database/sql"
 	"fmt"
 
 	"github.com/clockworksoul/cog2/dal"
 
 	"github.com/clockworksoul/cog2/data/rest"
 )
-
-func (da PostgresDataAccess) getConnection() (*sql.DB, error) {
-	var err error
-
-	if da.db == nil {
-		da.db, err = da.connect("cog")
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return da.db, da.db.Ping()
-}
 
 // UserCreate is used to create a new Cog user in the data store. An error is
 // returned if the username is empty or if a user already exists.
@@ -37,7 +23,8 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 		return fmt.Errorf("user %s already exists", user.Username)
 	}
 
-	db, err := da.getConnection()
+	db, err := da.connect("cog")
+	defer db.Close()
 	if err != nil {
 		return err
 	}
@@ -58,7 +45,7 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 }
 
 // UserDelete deletes an existing user from the data store. An error is
-// returned if the username parameter is empty of if the user doesn't
+// returned if the username parameter is empty or if the user doesn't
 // exist.
 func (da PostgresDataAccess) UserDelete(username string) error {
 	if username == "" {
@@ -73,21 +60,32 @@ func (da PostgresDataAccess) UserDelete(username string) error {
 		return fmt.Errorf("no such user: %s", username)
 	}
 
-	db, err := da.getConnection()
+	db, err := da.connect("cog")
+	defer db.Close()
 	if err != nil {
 		return err
 	}
 
-	query := "DELETE FROM users WHERE username=$1;"
+	query := `DELETE FROM groupusers WHERE username=$1;`
 	_, err = db.Exec(query, username)
+	if err != nil {
+		return err
+	}
 
-	return err
+	query = "DELETE FROM users WHERE username=$1;"
+	_, err = db.Exec(query, username)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // UserExists is used to determine whether a Cog user with the given username
 // exists in the data store.
 func (da PostgresDataAccess) UserExists(username string) (bool, error) {
-	db, err := da.getConnection()
+	db, err := da.connect("cog")
+	defer db.Close()
 	if err != nil {
 		return false, err
 	}
@@ -106,7 +104,8 @@ func (da PostgresDataAccess) UserExists(username string) (bool, error) {
 // UserGet returns a user from the data store. An error is returned if the
 // username parameter is empty or if the user doesn't exist.
 func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
-	db, err := da.getConnection()
+	db, err := da.connect("cog")
+	defer db.Close()
 	if err != nil {
 		return rest.User{}, err
 	}
@@ -128,7 +127,8 @@ func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
 func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 	users := make([]rest.User, 0)
 
-	db, err := da.getConnection()
+	db, err := da.connect("cog")
+	defer db.Close()
 	if err != nil {
 		return users, err
 	}
@@ -164,7 +164,8 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 		return fmt.Errorf("user %s doesn't exist", user.Username)
 	}
 
-	db, err := da.getConnection()
+	db, err := da.connect("cog")
+	defer db.Close()
 	if err != nil {
 		return err
 	}
