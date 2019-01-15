@@ -1,6 +1,6 @@
 # Cog2
 
-Cog2 is a re-imagining and re-implementation of the current version of Operable's Cog [Cog Slack Bot](https://github.com/operable/cog) (Cog version 1, or Cog1).
+Cog2 is a re-imagining and re-implementation of the current version of Operable's [Cog Slack Bot](https://github.com/operable/cog) (Cog version 1, or Cog1).
 
 ## Overview
 
