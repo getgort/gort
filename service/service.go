@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -109,6 +110,8 @@ func BuildRESTServer(addr string) *RESTServer {
 
 	router := mux.NewRouter()
 	router.Use(buildLoggingMiddleware(requests))
+
+	addHealthzMethodToRouter(router)
 	addUserMethodsToRouter(router)
 	addGroupMethodsToRouter(router)
 
@@ -157,4 +160,16 @@ func InitializeDataAccessLayer() {
 
 		log.Info("[InitializeDataAccessLayer] Connection to data source established")
 	}()
+}
+
+// handleHealthz handles "GET /healthz}"
+// TODO Can we make this more meaningful?
+func handleHealthz(w http.ResponseWriter, r *http.Request) {
+	m := map[string]bool{"healthy": true}
+
+	json.NewEncoder(w).Encode(m)
+}
+
+func addHealthzMethodToRouter(router *mux.Router) {
+	router.HandleFunc("/healthz", handleHealthz).Methods("GET")
 }
