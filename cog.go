@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/clockworksoul/cog2/adapter"
@@ -81,7 +83,7 @@ func initializeLogger(verbose int) {
 func startCog() error {
 	initializeLogger(verboseCount)
 
-	log.Infof("[start] Starting Cog2 version %s", context.CogVersion)
+	log.Infof("[startCog] Starting Cog2 version %s", context.CogVersion)
 
 	// Load the Cog configuration.
 	err := initializeConfig(configfile)
@@ -91,6 +93,9 @@ func startCog() error {
 
 	// Start the Cog REST web service
 	startServer(config.GetCogServerConfigs().APIAddress)
+
+	// Listen for signals for graceful shutdown
+	go catchSignals()
 
 	// Tells the chat provider adapters (ad defined in the config) to connect.
 	// Returns channels to get user command requests and adapter errors out.
@@ -118,6 +123,24 @@ func startCog() error {
 			log.Errorf("[start] %s", aerr.Error())
 		}
 	}
+}
+
+func catchSignals() {
+	c := make(chan os.Signal, 1)
+
+	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
+	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+	signal.Notify(c, os.Interrupt)
+
+	// Block until we receive our signal.
+	<-c
+
+	// Optionally, you could run srv.Shutdown in a goroutine and block on
+	// <-ctx.Done() if your application should wait for other services
+	// to finalize based on context cancellation.
+	log.Infof("[catchSignals] Shutting down Cog2")
+
+	os.Exit(0)
 }
 
 func startServer(addr string) {
