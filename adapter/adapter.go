@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/clockworksoul/cog2/config"
-	"github.com/clockworksoul/cog2/context"
 	"github.com/clockworksoul/cog2/data"
+	"github.com/clockworksoul/cog2/meta"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -98,7 +98,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 	}
 
 	for _, c := range channels {
-		message := fmt.Sprintf("Cog2 version %s is online. Hello, %s!", context.CogVersion, c.Name)
+		message := fmt.Sprintf("Cog2 version %s is online. Hello, %s!", meta.CogVersion, c.Name)
 		event.Adapter.SendMessage(c.ID, message)
 	}
 }

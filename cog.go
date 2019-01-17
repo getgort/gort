@@ -8,7 +8,7 @@ import (
 
 	"github.com/clockworksoul/cog2/adapter"
 	"github.com/clockworksoul/cog2/config"
-	"github.com/clockworksoul/cog2/context"
+	"github.com/clockworksoul/cog2/meta"
 	"github.com/clockworksoul/cog2/relay"
 	"github.com/clockworksoul/cog2/service"
 	log "github.com/sirupsen/logrus"
@@ -42,7 +42,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print Cog's version number",
 	Long:  `All software has versions. This is Cog's.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Cog ChatOps Engine v%s\n", context.CogVersion)
+		fmt.Printf("Cog ChatOps Engine v%s\n", meta.CogVersion)
 	},
 }
 
@@ -83,7 +83,7 @@ func initializeLogger(verbose int) {
 func startCog() error {
 	initializeLogger(verboseCount)
 
-	log.Infof("[startCog] Starting Cog2 version %s", context.CogVersion)
+	log.Infof("[startCog] Starting Cog2 version %s", meta.CogVersion)
 
 	// Load the Cog configuration.
 	err := initializeConfig(configfile)
@@ -137,7 +137,7 @@ func catchSignals() {
 
 	// Optionally, you could run srv.Shutdown in a goroutine and block on
 	// <-ctx.Done() if your application should wait for other services
-	// to finalize based on context cancellation.
+	// to finalize based on meta cancellation.
 	log.Infof("[catchSignals] Shutting down Cog2")
 
 	os.Exit(0)
