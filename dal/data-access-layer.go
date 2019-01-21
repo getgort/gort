@@ -1,6 +1,10 @@
 package dal
 
 import (
+	"crypto/rand"
+	b64 "encoding/base64"
+	"time"
+
 	"github.com/clockworksoul/cog2/data/rest"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,14 +23,57 @@ type DataAccess interface {
 	GroupRemoveUser(string, string) error
 	GroupRevokeRole() error
 	GroupUpdate(rest.Group) error
+
+	UserAuthenticate(string, string) (bool, error)
 	UserCreate(rest.User) error
 	UserDelete(string) error
 	UserExists(string) (bool, error)
 	UserGet(string) (rest.User, error)
 	UserList() ([]rest.User, error)
 	UserUpdate(rest.User) error
+
+	TokenEvaluate(token string) bool
+	TokenGenerate(user string, duration time.Duration) (Token, error)
+	TokenInvalidate(token string) error
+	TokenRetrieveByUser(user string) (Token, error)
+	TokenRetrieveByToken(token string) (Token, error)
 }
 
+// Token contains all of the metadata for an access token.
+type Token struct {
+	Duration   time.Duration
+	Token      string
+	User       string
+	ValidFrom  time.Time
+	ValidUntil time.Time
+}
+
+// IsExpired returns true if the token has expired.
+func (t Token) IsExpired() bool {
+	return !t.ValidUntil.After(time.Now())
+}
+
+// CompareHashAndPassword receives a plaintext password and its hash, and
+// returns true if they match.
+func CompareHashAndPassword(hashedPassword string, password string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)) == nil
+}
+
+// GenerateRandomToken generates a random ~128 character token.
+func GenerateRandomToken() (string, error) {
+	bytes := make([]byte, 96)
+
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	sEnc := b64.StdEncoding.EncodeToString(bytes)
+
+	return sEnc, nil
+}
+
+// HashPassword receives a plaintext password and returns its hashed equivalent.
 func HashPassword(pwd string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.MinCost)
 	if err != nil {

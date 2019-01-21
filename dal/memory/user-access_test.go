@@ -47,6 +47,36 @@ func TestUserCreate(t *testing.T) {
 	}
 }
 
+func TestUserAuthenticate(t *testing.T) {
+	var err error
+
+	// Expect no error
+	err = da.UserCreate(rest.User{
+		Username: "test-auth",
+		Email:    "test-auth@bar.com",
+		Password: "password",
+	})
+	defer da.UserDelete("test-auth")
+	if err != nil {
+		t.Error("Expected no error. Got:", err.Error())
+	}
+
+	authenticated, err := da.UserAuthenticate("test-auth", "no-match")
+	if err != nil {
+		t.Error("Expected no error. Got:", err.Error())
+	}
+	if authenticated {
+		t.Error("Expected false")
+	}
+
+	authenticated, err = da.UserAuthenticate("test-auth", "password")
+	if err != nil {
+		t.Error("Expected no error. Got:", err.Error())
+	}
+	if !authenticated {
+		t.Error("Expected true")
+	}
+}
 func TestUserGet(t *testing.T) {
 	var err error
 	var user rest.User

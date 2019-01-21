@@ -8,6 +8,34 @@ import (
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
+// UserAuthenticate authenticates a username/password combination.
+func (da PostgresDataAccess) UserAuthenticate(username string, password string) (bool, error) {
+	exists, err := da.UserExists(username)
+	if err != nil {
+		return false, err
+	}
+	if !exists {
+		return false, fmt.Errorf("no such user: %s", username)
+	}
+
+	db, err := da.connect("cog")
+	defer db.Close()
+	if err != nil {
+		return false, err
+	}
+
+	query := `SELECT password_hash
+		FROM users
+		WHERE username=$1`
+
+	var hash string
+	err = db.
+		QueryRow(query, username).
+		Scan(&hash)
+
+	return dal.CompareHashAndPassword(hash, password), err
+}
+
 // UserCreate is used to create a new Cog user in the data store. An error is
 // returned if the username is empty or if a user already exists.
 func (da PostgresDataAccess) UserCreate(user rest.User) error {

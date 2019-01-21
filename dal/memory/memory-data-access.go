@@ -5,6 +5,8 @@ import (
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
+// InMemoryDataAccess is an entirely in-memory representation of a data access layer.
+// Great for testing and development. Terrible for production.
 type InMemoryDataAccess struct {
 	dal.DataAccess
 
@@ -12,6 +14,7 @@ type InMemoryDataAccess struct {
 	users  map[string]*rest.User
 }
 
+// NewInMemoryDataAccess returns a new InMemoryDataAccess instance.
 func NewInMemoryDataAccess() dal.DataAccess {
 	da := InMemoryDataAccess{
 		groups: make(map[string]*rest.Group),
@@ -21,6 +24,7 @@ func NewInMemoryDataAccess() dal.DataAccess {
 	return da
 }
 
+// Initialize initializes an InMemoryDataAccess instance.
 func (da InMemoryDataAccess) Initialize() error {
 	return nil
 }

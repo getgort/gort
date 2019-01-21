@@ -6,6 +6,24 @@ import (
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
+// UserAuthenticate authenticates a username/password combination.
+func (da InMemoryDataAccess) UserAuthenticate(username string, password string) (bool, error) {
+	exists, err := da.UserExists(username)
+	if err != nil {
+		return false, err
+	}
+	if !exists {
+		return false, fmt.Errorf("no such user: %s", username)
+	}
+
+	user, err := da.UserGet(username)
+	if err != nil {
+		return false, err
+	}
+
+	return password == user.Password, nil
+}
+
 // UserCreate is used to create a new Cog user in the data store. An error is
 // returned if the username is empty or if a user already exists.
 func (da InMemoryDataAccess) UserCreate(user rest.User) error {

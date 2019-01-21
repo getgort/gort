@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/clockworksoul/cog2/dal"
@@ -95,6 +96,27 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 	}
 }
 
+func tokenObservingMiddleware(next http.Handler) http.Handler {
+	exemptEndpoints := map[string]bool{
+		"/authenticate": true,
+		"/healthz":      true,
+		"/metrics":      true,
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestURI := strings.Split(r.RequestURI, "?")[0]
+		token := r.Header.Get("X-Session-Token")
+
+		if !exemptEndpoints[requestURI] {
+			fmt.Printf("URI=%s TOKEN=%s\n", requestURI, token)
+
+			http.Error(w, "Authenication failed", http.StatusForbidden)
+		} else {
+			next.ServeHTTP(w, r)
+		}
+	})
+}
+
 // RESTServer represents a Cog REST API service.
 type RESTServer struct {
 	*http.Server
@@ -109,7 +131,7 @@ func BuildRESTServer(addr string) *RESTServer {
 	requests := make(chan RequestEvent)
 
 	router := mux.NewRouter()
-	router.Use(buildLoggingMiddleware(requests))
+	router.Use(buildLoggingMiddleware(requests), tokenObservingMiddleware)
 
 	addHealthzMethodToRouter(router)
 	addUserMethodsToRouter(router)
@@ -162,6 +184,24 @@ func InitializeDataAccessLayer() {
 	}()
 }
 
+// handleHealthz handles "GET /authenticate?username={username}&password={password}}"
+// TODO Can we make this more meaningful?
+func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	username := vars["username"]
+	password := vars["password"]
+
+	authenticated, err := dataAccessLayer.UserAuthenticate(username, password)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	} else if authenticated {
+		token := "THIS_IS_A_TOKEN"
+		json.NewEncoder(w).Encode(token)
+	} else {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+	}
+}
+
 // handleHealthz handles "GET /healthz}"
 // TODO Can we make this more meaningful?
 func handleHealthz(w http.ResponseWriter, r *http.Request) {
@@ -171,5 +211,10 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func addHealthzMethodToRouter(router *mux.Router) {
-	router.HandleFunc("/healthz", handleHealthz).Methods("GET")
+	router.HandleFunc("/authenticate", handleAuthenticate).
+		Methods("GET").
+		Queries("username", "{username}", "password", "{password}")
+
+	router.HandleFunc("/healthz", handleHealthz).
+		Methods("GET")
 }
