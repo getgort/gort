@@ -7,8 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/clockworksoul/cog2/config"
 	"github.com/clockworksoul/cog2/dal"
-	"github.com/clockworksoul/cog2/dal/memory"
+	"github.com/clockworksoul/cog2/dal/postgres"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -161,7 +162,7 @@ func InitializeDataAccessLayer() {
 		var delay time.Duration = 1
 
 		for !dataAccessLayerInitialized {
-			dataAccessLayer = memory.NewInMemoryDataAccess()
+			dataAccessLayer = postgres.NewPostgresDataAccess(config.GetDatabaseConfigs())
 			err := dataAccessLayer.Initialize()
 
 			if err != nil {
@@ -175,9 +176,9 @@ func InitializeDataAccessLayer() {
 				if delay > 60 {
 					delay = 60
 				}
+			} else {
+				dataAccessLayerInitialized = true
 			}
-
-			dataAccessLayerInitialized = true
 		}
 
 		log.Info("[InitializeDataAccessLayer] Connection to data source established")

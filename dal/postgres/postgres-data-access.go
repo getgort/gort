@@ -46,7 +46,49 @@ func (da PostgresDataAccess) Initialize() error {
 
 	// If not, assume none of them do. Create them all.
 	if !exists {
-		err = da.initializeCogDatabase(db)
+		err = da.createUsersTable(db)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check whether the users table exists
+	exists, err = da.tableExists("groups", db)
+	if err != nil {
+		return err
+	}
+
+	// If not, assume none of them do. Create them all.
+	if !exists {
+		err = da.createGroupsTable(db)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check whether the users table exists
+	exists, err = da.tableExists("groupusers", db)
+	if err != nil {
+		return err
+	}
+
+	// If not, assume none of them do. Create them all.
+	if !exists {
+		err = da.createGroupUsersTable(db)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check whether the tokens table exists
+	exists, err = da.tableExists("tokens", db)
+	if err != nil {
+		return err
+	}
+
+	// If not, assume none of them do. Create them all.
+	if !exists {
+		err = da.createTokensTable(db)
 		if err != nil {
 			return err
 		}
@@ -119,21 +161,8 @@ func (da PostgresDataAccess) ensureCogDatabaseExists() error {
 	return nil
 }
 
-func (da PostgresDataAccess) initializeCogDatabase(db *sql.DB) error {
+func (da PostgresDataAccess) createGroupsTable(db *sql.DB) error {
 	var err error
-
-	createUserQuery := `CREATE TABLE users (
-		email TEXT UNIQUE NOT NULL,
-		first_name TEXT,
-		last_name TEXT,
-		password_hash TEXT,
-		username TEXT PRIMARY KEY
-	  );`
-
-	_, err = db.Exec(createUserQuery)
-	if err != nil {
-		return err
-	}
 
 	createGroupQuery := `CREATE TABLE groups (
 		groupname TEXT PRIMARY KEY
@@ -144,13 +173,60 @@ func (da PostgresDataAccess) initializeCogDatabase(db *sql.DB) error {
 		return err
 	}
 
+	return nil
+}
+
+func (da PostgresDataAccess) createGroupUsersTable(db *sql.DB) error {
+	var err error
+
 	createGroupUsersQuery := `CREATE TABLE groupusers (
 		groupname TEXT REFERENCES groups,
-		username TEXT REFERENCES users,
+		username  TEXT REFERENCES users,
 		PRIMARY KEY (groupname, username)
 	);`
 
 	_, err = db.Exec(createGroupUsersQuery)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) createTokensTable(db *sql.DB) error {
+	var err error
+
+	createTokensQuery := `CREATE TABLE tokens (
+		token       TEXT,
+		username    TEXT REFERENCES users,
+		valid_from  TIMESTAMP WITH TIME ZONE,
+		valid_until TIMESTAMP WITH TIME ZONE,
+		PRIMARY KEY (username)
+	);
+	
+	CREATE UNIQUE INDEX tokens_token ON tokens (token);
+	`
+
+	_, err = db.Exec(createTokensQuery)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
+	var err error
+
+	createUserQuery := `CREATE TABLE users (
+		email         TEXT UNIQUE NOT NULL,
+		first_name    TEXT,
+		last_name     TEXT,
+		password_hash TEXT,
+		username TEXT PRIMARY KEY
+	  );`
+
+	_, err = db.Exec(createUserQuery)
 	if err != nil {
 		return err
 	}

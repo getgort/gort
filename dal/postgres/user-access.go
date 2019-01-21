@@ -100,6 +100,12 @@ func (da PostgresDataAccess) UserDelete(username string) error {
 		return err
 	}
 
+	query = "DELETE FROM tokens WHERE username=$1;"
+	_, err = db.Exec(query, username)
+	if err != nil {
+		return err
+	}
+
 	query = "DELETE FROM users WHERE username=$1;"
 	_, err = db.Exec(query, username)
 	if err != nil {
