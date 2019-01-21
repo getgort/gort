@@ -78,6 +78,14 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 			// Call the next handler, which can be another middleware in the chain, or the final handler.
 			next.ServeHTTP(StatusCaptureWriter{w, &status, &bytelen}, r)
 
+			// If there's a token, retrieve it for logging purposes.
+			userID := "-"
+			tokenString := r.Header.Get("X-Session-Token")
+			if token != "" {
+				token, _ := dataAccessLayer.TokenRetrieveByToken(tokenString)
+				userID = token.User
+			}
+
 			requestLine := fmt.Sprintf("%s %s %s",
 				r.Method,
 				r.RequestURI,
@@ -85,7 +93,7 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 
 			e := RequestEvent{
 				Addr:      r.RemoteAddr,
-				UserID:    "-", // TODO Identify logged in users.
+				UserID:    userID,
 				Timestamp: time.Now(),
 				Request:   requestLine,
 				Status:    status,
@@ -106,15 +114,18 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestURI := strings.Split(r.RequestURI, "?")[0]
-		token := r.Header.Get("X-Session-Token")
 
 		if !exemptEndpoints[requestURI] {
-			fmt.Printf("URI=%s TOKEN=%s\n", requestURI, token)
-
-			http.Error(w, "Authenication failed", http.StatusForbidden)
-		} else {
 			next.ServeHTTP(w, r)
 		}
+
+		token := r.Header.Get("X-Session-Token")
+		if token == "" || !dataAccessLayer.TokenEvaluate(token)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -195,12 +206,21 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	authenticated, err := dataAccessLayer.UserAuthenticate(username, password)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-	} else if authenticated {
-		token := "THIS_IS_A_TOKEN"
-		json.NewEncoder(w).Encode(token)
-	} else {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
 	}
+
+	if !authenticated {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	token, err := dataAccessLayer.TokenRetrieveByUser(username)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(token)
 }
 
 // handleHealthz handles "GET /healthz}"
