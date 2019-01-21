@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/clockworksoul/cog2/dal"
@@ -52,11 +51,6 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 		ValidFrom:  validFrom,
 		ValidUntil: validUntil,
 	}
-
-	fmt.Println("WRITE:")
-	fmt.Printf("Valid from : %v\n", token.ValidFrom)
-	fmt.Printf("Valid until: %v\n", token.ValidUntil)
-	fmt.Printf("Duration   : %v\n", token.Duration)
 
 	db, err := da.connect("cog")
 	defer db.Close()
@@ -112,13 +106,6 @@ func (da PostgresDataAccess) TokenRetrieveByUser(username string) (dal.Token, er
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 	token.Duration = token.ValidUntil.Sub(token.ValidFrom)
 
-	if err == nil {
-		fmt.Println("READ:")
-		fmt.Printf("Valid from : %v\n", token.ValidFrom)
-		fmt.Printf("Valid until: %v\n", token.ValidUntil)
-		fmt.Printf("Duration   : %v\n", token.Duration)
-	}
-
 	return token, err
 }
 
@@ -141,13 +128,6 @@ func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (dal.Token
 		QueryRow(query, tokenString).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 	token.Duration = token.ValidUntil.Sub(token.ValidFrom)
-
-	if err == nil {
-		fmt.Println("READ:")
-		fmt.Printf("Valid from : %v\n", token.ValidFrom)
-		fmt.Printf("Valid until: %v\n", token.ValidUntil)
-		fmt.Printf("Duration   : %v\n", token.Duration)
-	}
 
 	return token, err
 }
