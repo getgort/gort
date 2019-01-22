@@ -58,7 +58,7 @@ func TestTokenRetrieveByUser(t *testing.T) {
 		t.Error(err)
 	}
 
-	if token != rtoken {
+	if token.Token != rtoken.Token {
 		t.Error("token mismatch")
 	}
 }
@@ -86,7 +86,7 @@ func TestTokenRetrieveByToken(t *testing.T) {
 		t.Error(err)
 	}
 
-	if token != rtoken {
+	if token.Token != rtoken.Token {
 		t.Error("token mismatch")
 	}
 }
