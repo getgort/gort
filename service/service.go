@@ -229,14 +229,23 @@ func InitializeDataAccessLayer() {
 
 // handleAuthenticate handles "GET /authenticate?username={username}&password={password}}"
 func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	username := vars["username"]
-	password := vars["password"]
+	// Grab the user struct from the request. If it doesn't exist, respond with
+	// a client error.
+	user := rest.User{}
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, "Missing user data", http.StatusBadRequest)
+		log.Errorf("[handleAuthenticate.1] %s", "Missing user data")
+		return
+	}
+
+	username := user.Username
+	password := user.Password
 
 	authenticated, err := dataAccessLayer.UserAuthenticate(username, password)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleAuthenticate] %s", err.Error())
+		log.Errorf("[handleAuthenticate.2] %s", err.Error())
 		return
 	}
 
@@ -247,8 +256,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 	token, err := dataAccessLayer.TokenGenerate(username, 10*time.Minute)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleAuthenticate] %s", err.Error())
+		respondAndLogServerError(w, err, "handleAuthenticate", 3)
 		return
 	}
 
