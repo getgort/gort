@@ -81,7 +81,7 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 			// If there's a token, retrieve it for logging purposes.
 			userID := "-"
 			tokenString := r.Header.Get("X-Session-Token")
-			if token != "" {
+			if tokenString != "" {
 				token, _ := dataAccessLayer.TokenRetrieveByToken(tokenString)
 				userID = token.User
 			}
@@ -120,7 +120,7 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 		}
 
 		token := r.Header.Get("X-Session-Token")
-		if token == "" || !dataAccessLayer.TokenEvaluate(token)
+		if token == "" || !dataAccessLayer.TokenEvaluate(token) {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
