@@ -59,9 +59,10 @@ func CompareHashAndPassword(hashedPassword string, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)) == nil
 }
 
-// GenerateRandomToken generates a random ~128 character token.
-func GenerateRandomToken() (string, error) {
-	bytes := make([]byte, 96)
+// GenerateRandomToken generates a random character token.
+func GenerateRandomToken(length int) (string, error) {
+	byteCount := (length * 3) / 4
+	bytes := make([]byte, byteCount)
 
 	_, err := rand.Read(bytes)
 	if err != nil {

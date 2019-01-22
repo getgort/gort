@@ -241,9 +241,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We already have a method to generate a random string. Let the
-	// auto-generated password be the first 32 characters of a random token
-	token, err := dal.GenerateRandomToken()
+	password, err := dal.GenerateRandomToken(32)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		log.Errorf("[handleBootstrap] %s", err.Error())
@@ -255,7 +253,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		Email:     "cog@localhost",
 		FirstName: "Cog",
 		LastName:  "Administrator",
-		Password:  token[0:32],
+		Password:  password,
 		Username:  "admin",
 	}
 	err = dataAccessLayer.UserCreate(user)

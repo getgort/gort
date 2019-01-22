@@ -40,7 +40,7 @@ func (da InMemoryDataAccess) TokenGenerate(username string, duration time.Durati
 		return dal.Token{}, errors.New("no such user")
 	}
 
-	tokenString, err := dal.GenerateRandomToken()
+	tokenString, err := dal.GenerateRandomToken(64)
 	if err != nil {
 		return dal.Token{}, err
 	}

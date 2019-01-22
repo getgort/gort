@@ -36,7 +36,7 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 		da.TokenInvalidate(token.Token)
 	}
 
-	tokenString, err := dal.GenerateRandomToken()
+	tokenString, err := dal.GenerateRandomToken(64)
 	if err != nil {
 		return dal.Token{}, err
 	}
