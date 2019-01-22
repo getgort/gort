@@ -29,9 +29,7 @@ func (da PostgresDataAccess) UserAuthenticate(username string, password string) 
 		WHERE username=$1`
 
 	var hash string
-	err = db.
-		QueryRow(query, username).
-		Scan(&hash)
+	err = db.QueryRow(query, username).Scan(&hash)
 
 	return dal.CompareHashAndPassword(hash, password), err
 }

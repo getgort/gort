@@ -10,6 +10,7 @@ import (
 	"github.com/clockworksoul/cog2/config"
 	"github.com/clockworksoul/cog2/dal"
 	"github.com/clockworksoul/cog2/dal/postgres"
+	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -108,6 +109,7 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 func tokenObservingMiddleware(next http.Handler) http.Handler {
 	exemptEndpoints := map[string]bool{
 		"/authenticate": true,
+		"/bootstrap":    true,
 		"/healthz":      true,
 		"/metrics":      true,
 	}
@@ -115,8 +117,9 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestURI := strings.Split(r.RequestURI, "?")[0]
 
-		if !exemptEndpoints[requestURI] {
+		if exemptEndpoints[requestURI] {
 			next.ServeHTTP(w, r)
+			return
 		}
 
 		token := r.Header.Get("X-Session-Token")
@@ -196,8 +199,7 @@ func InitializeDataAccessLayer() {
 	}()
 }
 
-// handleHealthz handles "GET /authenticate?username={username}&password={password}}"
-// TODO Can we make this more meaningful?
+// handleAuthenticate handles "GET /authenticate?username={username}&password={password}}"
 func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	username := vars["username"]
@@ -206,6 +208,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	authenticated, err := dataAccessLayer.UserAuthenticate(username, password)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Errorf("[handleAuthenticate] %s", err.Error())
 		return
 	}
 
@@ -214,13 +217,72 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := dataAccessLayer.TokenRetrieveByUser(username)
+	token, err := dataAccessLayer.TokenGenerate(username, 10*time.Minute)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Errorf("[handleAuthenticate] %s", err.Error())
 		return
 	}
 
 	json.NewEncoder(w).Encode(token)
+}
+
+// handleBootstrap handles "POST /bootstrap"
+func handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	users, err := dataAccessLayer.UserList()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Errorf("[handleBootstrap] %s", err.Error())
+		return
+	}
+
+	if len(users) != 0 {
+		http.Error(w, "Service already bootstrapped", http.StatusConflict)
+		return
+	}
+
+	// We already have a method to generate a random string. Let the
+	// auto-generated password be the first 32 characters of a random token
+	token, err := dal.GenerateRandomToken()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Errorf("[handleBootstrap] %s", err.Error())
+		return
+	}
+
+	// Create admin user
+	user := rest.User{
+		Email:     "cog@localhost",
+		FirstName: "Cog",
+		LastName:  "Administrator",
+		Password:  token[0:32],
+		Username:  "admin",
+	}
+	err = dataAccessLayer.UserCreate(user)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Errorf("[handleBootstrap] %s", err.Error())
+		return
+	}
+
+	// Create cog-admin user
+	group := rest.Group{Name: "cog-admin"}
+	err = dataAccessLayer.GroupCreate(group)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Errorf("[handleBootstrap] %s", err.Error())
+		return
+	}
+
+	// Add the admin user to the cog-admin group
+	err = dataAccessLayer.GroupAddUser(group.Name, user.Username)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Errorf("[handleBootstrap] %s", err.Error())
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
 }
 
 // handleHealthz handles "GET /healthz}"
@@ -235,6 +297,9 @@ func addHealthzMethodToRouter(router *mux.Router) {
 	router.HandleFunc("/authenticate", handleAuthenticate).
 		Methods("GET").
 		Queries("username", "{username}", "password", "{password}")
+
+	router.HandleFunc("/bootstrap", handleBootstrap).
+		Methods("POST")
 
 	router.HandleFunc("/healthz", handleHealthz).
 		Methods("GET")

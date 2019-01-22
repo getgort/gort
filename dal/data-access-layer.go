@@ -41,11 +41,11 @@ type DataAccess interface {
 
 // Token contains all of the metadata for an access token.
 type Token struct {
-	Duration   time.Duration
-	Token      string
-	User       string
-	ValidFrom  time.Time
-	ValidUntil time.Time
+	Duration   time.Duration `json:"-"`
+	Token      string        `json:",omitempty"`
+	User       string        `json:",omitempty"`
+	ValidFrom  time.Time     `json:",omitempty"`
+	ValidUntil time.Time     `json:",omitempty"`
 }
 
 // IsExpired returns true if the token has expired.

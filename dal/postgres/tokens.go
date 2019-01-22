@@ -32,7 +32,7 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 
 	// If a token already exists for this user, automatically invalidate it.
 	token, err := da.TokenRetrieveByUser(username)
-	if err != nil {
+	if err == nil {
 		da.TokenInvalidate(token.Token)
 	}
 
