@@ -17,6 +17,7 @@ RUN go get github.com/docker/docker/api \
     && go get github.com/docker/docker/client \
     && go get github.com/gorilla/mux \
     && go get github.com/lib/pq \
+    && go get github.com/mitchellh/go-homedir \
     && go get github.com/nlopes/slack \
     && go get github.com/sirupsen/logrus\
     && go get github.com/spf13/cobra \
@@ -41,6 +42,7 @@ RUN go get github.com/docker/docker/api \
     && go get github.com/docker/docker/client \
     && go get github.com/gorilla/mux \
     && go get github.com/lib/pq \
+    && go get github.com/mitchellh/go-homedir \
     && go get github.com/nlopes/slack \
     && go get github.com/sirupsen/logrus\
     && go get github.com/spf13/cobra \

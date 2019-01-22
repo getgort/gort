@@ -191,41 +191,6 @@ func (c *CogClient) IsTLS() bool {
 	return c.host.Scheme == "https"
 }
 
-// initializeCogDirs creates the .cog directory in the user's home directory
-// if it doesn't exist. If it does, this does nothing.
-func (c *CogClient) initializeCogDirs() error {
-	homeDir, err := homedir.Dir()
-	if err != nil {
-		return err
-	}
-
-	cogDir := homeDir + "/.cog"
-	if cogDirInfo, err := os.Stat(cogDir); err == nil {
-		if !cogDirInfo.IsDir() {
-			return fmt.Errorf("%s exists but is not a directory", cogDir)
-		}
-	} else if os.IsNotExist(err) {
-		merr := os.Mkdir(cogDir, 0500)
-		if merr != nil {
-			return merr
-		}
-	}
-
-	tokenDir := cogDir + "/tokens"
-	if tokenDirInfo, err := os.Stat(tokenDir); err == nil {
-		if !tokenDirInfo.IsDir() {
-			return fmt.Errorf("%s exists but is not a directory", tokenDir)
-		}
-	} else if os.IsNotExist(err) {
-		merr := os.Mkdir(tokenDir, 0500)
-		if merr != nil {
-			return merr
-		}
-	}
-
-	return nil
-}
-
 func (c *CogClient) getCogConfigDir() (string, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
