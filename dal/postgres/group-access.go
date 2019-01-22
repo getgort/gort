@@ -179,7 +179,7 @@ func (da PostgresDataAccess) GroupListUsers(groupname string) ([]rest.User, erro
 		return users, err
 	}
 
-	query := `SELECT email, first_name, last_name, username
+	query := `SELECT email, full_name, username
 	FROM users
 	WHERE username IN (
 		SELECT username 
@@ -194,7 +194,7 @@ func (da PostgresDataAccess) GroupListUsers(groupname string) ([]rest.User, erro
 
 	for rows.NextResultSet() && rows.Next() {
 		user := rest.User{}
-		rows.Scan(&user.Email, &user.FirstName, &user.LastName, &user.Username)
+		rows.Scan(&user.Email, &user.FullName, &user.Username)
 		users = append(users, user)
 	}
 

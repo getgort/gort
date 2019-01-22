@@ -108,10 +108,10 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 
 func tokenObservingMiddleware(next http.Handler) http.Handler {
 	exemptEndpoints := map[string]bool{
-		"/authenticate": true,
-		"/bootstrap":    true,
-		"/healthz":      true,
-		"/metrics":      true,
+		"/v2/authenticate": true,
+		"/v2/bootstrap":    true,
+		"/v2/healthz":      true,
+		"/v2/metrics":      true,
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -232,7 +232,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	users, err := dataAccessLayer.UserList()
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap] %s", err.Error())
+		log.Errorf("[handleBootstrap.1] %s", err.Error())
 		return
 	}
 
@@ -241,34 +241,53 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	password, err := dal.GenerateRandomToken(32)
+	// Grab the user struct from the request. If it doesn't exist, respond
+	// with a client error.
+	user := rest.User{}
+	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap] %s", err.Error())
+		http.Error(w, "Missing user data", http.StatusBadRequest)
+		log.Errorf("[handleBootstrap.2] %s", "Missing user data")
 		return
 	}
 
-	// Create admin user
-	user := rest.User{
-		Email:     "cog@localhost",
-		FirstName: "Cog",
-		LastName:  "Administrator",
-		Password:  password,
-		Username:  "admin",
+	// If user doesn't have a defined email, we default to "cog@localhost".
+	if user.Email == "" {
+		user.Email = "cog@localhost"
 	}
+
+	// If user doesn't have a defined password, we kindly generate one.
+	fmt.Printf("PASS: %q\n", user.Password)
+	if user.Password == "" {
+		user.Password, err = dal.GenerateRandomToken(32)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Errorf("[handleBootstrap.3] %s", err.Error())
+			return
+		}
+	}
+
+	// If user doesn't have a defined email, we default to "admin".
+	if user.Username == "" {
+		user.Username = "admin"
+	}
+
+	fmt.Println(user)
+
+	// Persist our new user to the database.
 	err = dataAccessLayer.UserCreate(user)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap] %s", err.Error())
+		log.Errorf("[handleBootstrap.4] %s", err.Error())
 		return
 	}
 
-	// Create cog-admin user
+	// Create cog-admin group. This currently can't be customized.
 	group := rest.Group{Name: "cog-admin"}
 	err = dataAccessLayer.GroupCreate(group)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap] %s", err.Error())
+		log.Errorf("[handleBootstrap.5] %s", err.Error())
 		return
 	}
 
@@ -276,7 +295,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	err = dataAccessLayer.GroupAddUser(group.Name, user.Username)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap] %s", err.Error())
+		log.Errorf("[handleBootstrap.6] %s", err.Error())
 		return
 	}
 
@@ -292,13 +311,13 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func addHealthzMethodToRouter(router *mux.Router) {
-	router.HandleFunc("/authenticate", handleAuthenticate).
+	router.HandleFunc("/v2/authenticate", handleAuthenticate).
 		Methods("GET").
 		Queries("username", "{username}", "password", "{password}")
 
-	router.HandleFunc("/bootstrap", handleBootstrap).
+	router.HandleFunc("/v2/bootstrap", handleBootstrap).
 		Methods("POST")
 
-	router.HandleFunc("/healthz", handleHealthz).
+	router.HandleFunc("/v2/healthz", handleHealthz).
 		Methods("GET")
 }

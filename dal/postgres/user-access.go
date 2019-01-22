@@ -63,9 +63,9 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 		}
 	}
 
-	query := `INSERT INTO users (email, first_name, last_name, password_hash, username)
-		 VALUES ($1, $2, $3, $4, $5);`
-	_, err = db.Exec(query, user.Email, user.FirstName, user.LastName, hash, user.Username)
+	query := `INSERT INTO users (email, full_name, password_hash, username)
+		 VALUES ($1, $2, $3, $4);`
+	_, err = db.Exec(query, user.Email, user.FullName, hash, user.Username)
 
 	return err
 }
@@ -142,14 +142,14 @@ func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
 		return rest.User{}, err
 	}
 
-	query := `SELECT email, first_name, last_name, username
+	query := `SELECT email, full_name, username
 		FROM users
 		WHERE username=$1`
 
 	user := rest.User{}
 	err = db.
 		QueryRow(query, username).
-		Scan(&user.Email, &user.FirstName, &user.LastName, &user.Username)
+		Scan(&user.Email, &user.FullName, &user.Username)
 
 	return user, err
 }
@@ -165,7 +165,7 @@ func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 		return users, err
 	}
 
-	query := `SELECT email, first_name, last_name, username FROM users`
+	query := `SELECT email, full_name, username FROM users`
 	rows, err := db.Query(query)
 	if err != nil {
 		return users, err
@@ -173,7 +173,7 @@ func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 
 	for rows.NextResultSet() && rows.Next() {
 		user := rest.User{}
-		rows.Scan(&user.Email, &user.FirstName, &user.LastName, &user.Username)
+		rows.Scan(&user.Email, &user.FullName, &user.Username)
 		users = append(users, user)
 	}
 
@@ -211,10 +211,10 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 	}
 
 	query := `UPDATE users
-	SET email=$1, first_name=$2, last_name=$3, password_hash=$4
-	WHERE username=$5;`
+	SET email=$1, full_name=$2, password_hash=$3
+	WHERE username=$4;`
 
-	_, err = db.Exec(query, user.Email, user.FirstName, user.LastName, hash, user.Username)
+	_, err = db.Exec(query, user.Email, user.FullName, hash, user.Username)
 
 	return err
 }

@@ -220,8 +220,7 @@ func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
 
 	createUserQuery := `CREATE TABLE users (
 		email         TEXT UNIQUE NOT NULL,
-		first_name    TEXT,
-		last_name     TEXT,
+		full_name     TEXT,
 		password_hash TEXT,
 		username TEXT PRIMARY KEY
 	  );`
