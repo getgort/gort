@@ -70,6 +70,34 @@ func (w StatusCaptureWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
+func bootstrapUserWithDefaults(user rest.User) (rest.User, error) {
+	// If user doesn't have a defined email, we default to "cog@localhost".
+	if user.Email == "" {
+		user.Email = "cog@localhost"
+	}
+
+	// If user doesn't have a defined name, we default to "Cog Administrator".
+	if user.FullName == "" {
+		user.FullName = "Cog Administrator"
+	}
+
+	// If user doesn't have a defined email, we default to "admin".
+	if user.Username == "" {
+		user.Username = "admin"
+	}
+
+	// If user doesn't have a defined password, we kindly generate one.
+	if user.Password == "" {
+		password, err := dal.GenerateRandomToken(32)
+		if err != nil {
+			return user, err
+		}
+		user.Password = password
+	}
+
+	return user, nil
+}
+
 func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -227,58 +255,47 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(token)
 }
 
+func respondAndLogServerError(w http.ResponseWriter, err error, label string, index int) {
+	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	log.Errorf("[%s.%d] %s", label, index, err.Error())
+}
+
 // handleBootstrap handles "POST /bootstrap"
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	users, err := dataAccessLayer.UserList()
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap.1] %s", err.Error())
+		respondAndLogServerError(w, err, "handleBootstrap", 1)
 		return
 	}
 
+	// If we already have users on this host, reject as "already bootstrapped".
 	if len(users) != 0 {
 		http.Error(w, "Service already bootstrapped", http.StatusConflict)
+		log.Warn("[handleBootstrap.2] Re-bootstrap attempted")
 		return
 	}
 
-	// Grab the user struct from the request. If it doesn't exist, respond
-	// with a client error.
+	// Grab the user struct from the request. If it doesn't exist, respond with
+	// a client error.
 	user := rest.User{}
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, "Missing user data", http.StatusBadRequest)
-		log.Errorf("[handleBootstrap.2] %s", "Missing user data")
+		log.Errorf("[handleBootstrap.3] %s", "Missing user data")
 		return
 	}
 
-	// If user doesn't have a defined email, we default to "cog@localhost".
-	if user.Email == "" {
-		user.Email = "cog@localhost"
+	// Set user defaults where necessary.
+	user, err = bootstrapUserWithDefaults(user)
+	if err != nil {
+		respondAndLogServerError(w, err, "handleBootstrap", 4)
+		return
 	}
 
-	// If user doesn't have a defined password, we kindly generate one.
-	fmt.Printf("PASS: %q\n", user.Password)
-	if user.Password == "" {
-		user.Password, err = dal.GenerateRandomToken(32)
-		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			log.Errorf("[handleBootstrap.3] %s", err.Error())
-			return
-		}
-	}
-
-	// If user doesn't have a defined email, we default to "admin".
-	if user.Username == "" {
-		user.Username = "admin"
-	}
-
-	fmt.Println(user)
-
-	// Persist our new user to the database.
+	// Persist our shiny new user to the database.
 	err = dataAccessLayer.UserCreate(user)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap.4] %s", err.Error())
+		respondAndLogServerError(w, err, "handleBootstrap", 5)
 		return
 	}
 
@@ -286,16 +303,14 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	group := rest.Group{Name: "cog-admin"}
 	err = dataAccessLayer.GroupCreate(group)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap.5] %s", err.Error())
+		respondAndLogServerError(w, err, "handleBootstrap", 6)
 		return
 	}
 
 	// Add the admin user to the cog-admin group
 	err = dataAccessLayer.GroupAddUser(group.Name, user.Username)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleBootstrap.6] %s", err.Error())
+		respondAndLogServerError(w, err, "handleBootstrap", 7)
 		return
 	}
 

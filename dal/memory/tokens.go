@@ -5,16 +5,17 @@ import (
 	"time"
 
 	"github.com/clockworksoul/cog2/dal"
+	"github.com/clockworksoul/cog2/data/rest"
 )
 
 var (
-	tokensByUser  map[string]dal.Token // key=username
-	tokensByValue map[string]dal.Token // key=token
+	tokensByUser  map[string]rest.Token // key=username
+	tokensByValue map[string]rest.Token // key=token
 )
 
 func init() {
-	tokensByUser = make(map[string]dal.Token)
-	tokensByValue = make(map[string]dal.Token)
+	tokensByUser = make(map[string]rest.Token)
+	tokensByValue = make(map[string]rest.Token)
 }
 
 // TokenEvaluate will test a token for validity. It returns true if the token
@@ -31,24 +32,24 @@ func (da InMemoryDataAccess) TokenEvaluate(tokenString string) bool {
 // TokenGenerate generates a new token for the given user with a specified
 // expiration duration. Any existing token for this user will be automatically
 // invalidated. If the user doesn't exist an error is returned.
-func (da InMemoryDataAccess) TokenGenerate(username string, duration time.Duration) (dal.Token, error) {
+func (da InMemoryDataAccess) TokenGenerate(username string, duration time.Duration) (rest.Token, error) {
 	exists, err := da.UserExists(username)
 	if err != nil {
-		return dal.Token{}, err
+		return rest.Token{}, err
 	}
 	if !exists {
-		return dal.Token{}, errors.New("no such user")
+		return rest.Token{}, errors.New("no such user")
 	}
 
 	tokenString, err := dal.GenerateRandomToken(64)
 	if err != nil {
-		return dal.Token{}, err
+		return rest.Token{}, err
 	}
 
 	validFrom := time.Now()
 	validUntil := validFrom.Add(duration)
 
-	token := dal.Token{
+	token := rest.Token{
 		Duration:   duration,
 		Token:      tokenString,
 		User:       username,
@@ -78,20 +79,20 @@ func (da InMemoryDataAccess) TokenInvalidate(tokenString string) error {
 
 // TokenRetrieveByUser retrieves the token associated with a username. An
 // error is returned if no such token (or user) exists.
-func (da InMemoryDataAccess) TokenRetrieveByUser(username string) (dal.Token, error) {
+func (da InMemoryDataAccess) TokenRetrieveByUser(username string) (rest.Token, error) {
 	if token, ok := tokensByUser[username]; ok {
 		return token, nil
 	}
 
-	return dal.Token{}, errors.New("no token for given user")
+	return rest.Token{}, errors.New("no token for given user")
 }
 
 // TokenRetrieveByToken retrieves the token by its value. An error is returned
 // if no such token exists.
-func (da InMemoryDataAccess) TokenRetrieveByToken(tokenString string) (dal.Token, error) {
+func (da InMemoryDataAccess) TokenRetrieveByToken(tokenString string) (rest.Token, error) {
 	if token, ok := tokensByValue[tokenString]; ok {
 		return token, nil
 	}
 
-	return dal.Token{}, errors.New("no such token")
+	return rest.Token{}, errors.New("no such token")
 }

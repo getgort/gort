@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/clockworksoul/cog2/dal"
+	"github.com/clockworksoul/cog2/data/rest"
 )
 
 // TokenEvaluate will test a token for validity. It returns true if the token
@@ -21,13 +22,13 @@ func (da PostgresDataAccess) TokenEvaluate(tokenString string) bool {
 // TokenGenerate generates a new token for the given user with a specified
 // expiration duration. Any existing token for this user will be automatically
 // invalidated. If the user doesn't exist an error is returned.
-func (da PostgresDataAccess) TokenGenerate(username string, duration time.Duration) (dal.Token, error) {
+func (da PostgresDataAccess) TokenGenerate(username string, duration time.Duration) (rest.Token, error) {
 	exists, err := da.UserExists(username)
 	if err != nil {
-		return dal.Token{}, err
+		return rest.Token{}, err
 	}
 	if !exists {
-		return dal.Token{}, errors.New("no such user")
+		return rest.Token{}, errors.New("no such user")
 	}
 
 	// If a token already exists for this user, automatically invalidate it.
@@ -38,13 +39,13 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 
 	tokenString, err := dal.GenerateRandomToken(64)
 	if err != nil {
-		return dal.Token{}, err
+		return rest.Token{}, err
 	}
 
 	validFrom := time.Now().UTC()
 	validUntil := validFrom.Add(duration)
 
-	token = dal.Token{
+	token = rest.Token{
 		Duration:   duration,
 		Token:      tokenString,
 		User:       username,
@@ -55,14 +56,14 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 	db, err := da.connect("cog")
 	defer db.Close()
 	if err != nil {
-		return dal.Token{}, err
+		return rest.Token{}, err
 	}
 
 	query := `INSERT INTO tokens (token, username, valid_from, valid_until)
 	VALUES ($1, $2, $3, $4);`
 	_, err = db.Exec(query, token.Token, token.User, token.ValidFrom, token.ValidUntil)
 	if err != nil {
-		return dal.Token{}, err
+		return rest.Token{}, err
 	}
 
 	return token, nil
@@ -88,11 +89,11 @@ func (da PostgresDataAccess) TokenInvalidate(tokenString string) error {
 
 // TokenRetrieveByUser retrieves the token associated with a username. An
 // error is returned if no such token (or user) exists.
-func (da PostgresDataAccess) TokenRetrieveByUser(username string) (dal.Token, error) {
+func (da PostgresDataAccess) TokenRetrieveByUser(username string) (rest.Token, error) {
 	db, err := da.connect("cog")
 	defer db.Close()
 	if err != nil {
-		return dal.Token{}, err
+		return rest.Token{}, err
 	}
 
 	// There will be more here eventually
@@ -100,7 +101,7 @@ func (da PostgresDataAccess) TokenRetrieveByUser(username string) (dal.Token, er
 		FROM tokens
 		WHERE username=$1`
 
-	token := dal.Token{}
+	token := rest.Token{}
 	err = db.
 		QueryRow(query, username).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
@@ -111,11 +112,11 @@ func (da PostgresDataAccess) TokenRetrieveByUser(username string) (dal.Token, er
 
 // TokenRetrieveByToken retrieves the token by its value. An error is returned
 // if no such token exists.
-func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (dal.Token, error) {
+func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (rest.Token, error) {
 	db, err := da.connect("cog")
 	defer db.Close()
 	if err != nil {
-		return dal.Token{}, err
+		return rest.Token{}, err
 	}
 
 	// There will be more here eventually
@@ -123,7 +124,7 @@ func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (dal.Token
 		FROM tokens
 		WHERE token=$1`
 
-	token := dal.Token{}
+	token := rest.Token{}
 	err = db.
 		QueryRow(query, tokenString).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)

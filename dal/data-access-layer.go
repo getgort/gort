@@ -33,24 +33,10 @@ type DataAccess interface {
 	UserUpdate(rest.User) error
 
 	TokenEvaluate(token string) bool
-	TokenGenerate(user string, duration time.Duration) (Token, error)
+	TokenGenerate(user string, duration time.Duration) (rest.Token, error)
 	TokenInvalidate(token string) error
-	TokenRetrieveByUser(user string) (Token, error)
-	TokenRetrieveByToken(token string) (Token, error)
-}
-
-// Token contains all of the metadata for an access token.
-type Token struct {
-	Duration   time.Duration `json:"-"`
-	Token      string        `json:",omitempty"`
-	User       string        `json:",omitempty"`
-	ValidFrom  time.Time     `json:",omitempty"`
-	ValidUntil time.Time     `json:",omitempty"`
-}
-
-// IsExpired returns true if the token has expired.
-func (t Token) IsExpired() bool {
-	return !t.ValidUntil.After(time.Now())
+	TokenRetrieveByUser(user string) (rest.Token, error)
+	TokenRetrieveByToken(token string) (rest.Token, error)
 }
 
 // CompareHashAndPassword receives a plaintext password and its hash, and
