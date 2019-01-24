@@ -131,8 +131,8 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handlePostGroupMember handles "POST "/v2/group/{groupname}/member/{username}""
-func handlePostGroupMember(w http.ResponseWriter, r *http.Request) {
+// handlePutGroupMember handles "POST "/v2/group/{groupname}/member/{username}""
+func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 	var exists bool
 	var err error
 
@@ -187,5 +187,5 @@ func addGroupMethodsToRouter(router *mux.Router) {
 	// Group user membership
 	router.HandleFunc("/v2/group/{groupname}/member", handleGetGroupMembers).Methods("GET")
 	router.HandleFunc("/v2/group/{groupname}/member/{username}", handleDeleteGroupMember).Methods("DELETE")
-	router.HandleFunc("/v2/group/{groupname}/member/{username}", handlePostGroupMember).Methods("POST")
+	router.HandleFunc("/v2/group/{groupname}/member/{username}", handlePutGroupMember).Methods("PUT")
 }

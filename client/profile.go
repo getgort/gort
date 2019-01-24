@@ -18,7 +18,13 @@ type Profile struct {
 // Default returns this Profile's default entry. If there's no default, or if
 // the default doesn't exist, an empty ProfileEntry is returned.
 func (p Profile) Default() ProfileEntry {
-	return p.Profiles[p.Defaults.Profile]
+	entry, ok := p.Profiles[p.Defaults.Profile]
+
+	if ok {
+		entry.Name = p.Defaults.Profile
+	}
+
+	return entry
 }
 
 // ProfileDefaults is used to store default values for a cog client profile.
@@ -78,13 +84,14 @@ func loadClientProfile() (Profile, error) {
 	}
 
 	// Ensure that the URL field gets set.
-	for _, entry := range profile.Profiles {
+	for k, entry := range profile.Profiles {
 		if entry.URLString != "" {
 			url, err := parseHostURL(entry.URLString)
 			if err != nil {
 				return profile, err
 			}
 			entry.URL = url
+			profile.Profiles[k] = entry
 		}
 	}
 

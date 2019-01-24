@@ -1,12 +1,15 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/clockworksoul/cog2/data/rest"
 	homedir "github.com/mitchellh/go-homedir"
@@ -34,7 +37,16 @@ func Connect(profileName string) (*CogClient, error) {
 	if profileName == "" {
 		entry = profile.Default()
 	} else {
-		entry = profile.Profiles[profileName]
+		ok := false
+		entry, ok = profile.Profiles[profileName]
+
+		if ok {
+			entry.Name = profileName
+		}
+	}
+
+	if entry.Name == "" {
+		return nil, fmt.Errorf("no such profile: %s", profileName)
 	}
 
 	return &CogClient{profile: entry}, nil
@@ -103,7 +115,26 @@ func getCogTokenDir() (string, error) {
 		}
 	}
 
-	return "", nil
+	return tokenDir, nil
+}
+
+func getResponseError(resp *http.Response) error {
+	bytes, _ := ioutil.ReadAll(resp.Body)
+	customError := strings.TrimSpace(string(bytes))
+	return fmt.Errorf("%d %s", resp.StatusCode, customError)
+}
+
+func (c *CogClient) doRequest(method string, url string, body []byte) (*http.Response, error) {
+	token, err := c.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(method, url, bytes.NewReader(body))
+	req.Header.Add("X-Session-Token", token.Token)
+
+	client := &http.Client{}
+	return client.Do(req)
 }
 
 // getCogTokenFilename finds and returns the full-qualified filename for this
@@ -140,7 +171,7 @@ func (c *CogClient) loadHostToken() (rest.Token, error) {
 	}
 
 	token := rest.Token{}
-	err = json.Unmarshal(bytes, token)
+	err = json.Unmarshal(bytes, &token)
 	if err != nil {
 		return token, err
 	}

@@ -105,6 +105,7 @@ func (c *CogClient) Bootstrap(user rest.User) (rest.User, error) {
 	if err != nil {
 		return rest.User{}, err
 	}
+	defer resp.Body.Close()
 
 	switch resp.StatusCode {
 	case http.StatusOK: // Everything is swell.

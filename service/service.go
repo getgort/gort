@@ -227,7 +227,7 @@ func InitializeDataAccessLayer() {
 	}()
 }
 
-// handleAuthenticate handles "GET /authenticate?username={username}&password={password}}"
+// handleAuthenticate handles "GET /authenticate"
 func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	// Grab the user struct from the request. If it doesn't exist, respond with
 	// a client error.
@@ -335,8 +335,7 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 
 func addHealthzMethodToRouter(router *mux.Router) {
 	router.HandleFunc("/v2/authenticate", handleAuthenticate).
-		Methods("GET").
-		Queries("username", "{username}", "password", "{password}")
+		Methods("POST")
 
 	router.HandleFunc("/v2/bootstrap", handleBootstrap).
 		Methods("POST")
