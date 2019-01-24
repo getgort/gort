@@ -8,6 +8,52 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// handlePostGroup handles "DELETE /v2/group/{groupname}"
+func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	err := dataAccessLayer.GroupDelete(params["groupname"])
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// handleDeleteGroupMember handles "DELETE "/v2/group/{groupname}/member/{username}""
+func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
+	var exists bool
+	var err error
+
+	params := mux.Vars(r)
+	groupname := params["groupname"]
+	username := params["username"]
+
+	exists, err = dataAccessLayer.GroupExists(groupname)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "no such group", http.StatusNotFound)
+		return
+	}
+
+	exists, err = dataAccessLayer.UserExists(username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "no such user", http.StatusNotFound)
+		return
+	}
+
+	err = dataAccessLayer.GroupRemoveUser(groupname, username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 // handleGetGroup handles "GET /v2/group/{groupname}"
 func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -74,7 +120,11 @@ func handlePostGroup(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
 
-	_ = json.NewDecoder(r.Body).Decode(&group)
+	err = json.NewDecoder(r.Body).Decode(&group)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotAcceptable)
+		return
+	}
 
 	group.Name = params["groupname"]
 
@@ -91,41 +141,6 @@ func handlePostGroup(w http.ResponseWriter, r *http.Request) {
 		err = dataAccessLayer.GroupCreate(group)
 	}
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-// handleDeleteGroupMember handles "DELETE "/v2/group/{groupname}/member/{username}""
-func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
-	var exists bool
-	var err error
-
-	params := mux.Vars(r)
-	groupname := params["groupname"]
-	username := params["username"]
-
-	exists, err = dataAccessLayer.GroupExists(groupname)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !exists {
-		http.Error(w, "no such group", http.StatusNotFound)
-		return
-	}
-
-	exists, err = dataAccessLayer.UserExists(username)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !exists {
-		http.Error(w, "no such user", http.StatusNotFound)
-		return
-	}
-
-	err = dataAccessLayer.GroupRemoveUser(groupname, username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -163,17 +178,6 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 	err = dataAccessLayer.GroupAddUser(groupname, username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-// handlePostGroup handles "DELETE /v2/group/{groupname}"
-func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	err := dataAccessLayer.GroupDelete(params["groupname"])
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 }
 

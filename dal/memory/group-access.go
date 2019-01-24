@@ -146,3 +146,18 @@ func (da InMemoryDataAccess) GroupUpdate(group rest.Group) error {
 
 	return nil
 }
+
+// GroupUserList comments TBD
+func (da InMemoryDataAccess) GroupUserList(group string) ([]rest.User, error) {
+	return []rest.User{}, fmt.Errorf("InMemoryDataAccess: not yet implemented")
+}
+
+// GroupUserAdd comments TBD
+func (da InMemoryDataAccess) GroupUserAdd(group string, user string) error {
+	return fmt.Errorf("InMemoryDataAccess: not yet implemented")
+}
+
+// GroupUserDelete comments TBD
+func (da InMemoryDataAccess) GroupUserDelete(group string, user string) error {
+	return fmt.Errorf("InMemoryDataAccess: not yet implemented")
+}

@@ -218,3 +218,108 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 
 	return err
 }
+
+// UserGroupList comments TBD
+func (da PostgresDataAccess) UserGroupList(user string) ([]rest.Group, error) {
+	groups := make([]rest.Group, 0)
+
+	db, err := da.connect("cog")
+	defer db.Close()
+	if err != nil {
+		return groups, err
+	}
+
+	query := `SELECT groupname FROM groupusers`
+	rows, err := db.Query(query)
+	if err != nil {
+		return groups, err
+	}
+
+	for rows.NextResultSet() && rows.Next() {
+		group := rest.Group{}
+		rows.Scan(&group.Name)
+		groups = append(groups, group)
+	}
+
+	return groups, nil
+}
+
+// UserGroupAdd comments TBD
+func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) error {
+	if username == "" {
+		return fmt.Errorf("empty username")
+	}
+
+	if groupname == "" {
+		return fmt.Errorf("empty groupname")
+	}
+
+	exists, err := da.UserExists(username)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("user %s doesn't exist", username)
+	}
+
+	exists, err = da.GroupExists(username)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("group %s doesn't exist", groupname)
+	}
+
+	db, err := da.connect("cog")
+	defer db.Close()
+	if err != nil {
+		return err
+	}
+
+	query := `UPDATE groupusers
+		SET groupname=$1, username=$2
+		WHERE username=$2;`
+
+	_, err = db.Exec(query, groupname, username)
+
+	return err
+}
+
+// UserGroupDelete comments TBD
+func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) error {
+	if username == "" {
+		return fmt.Errorf("empty username")
+	}
+
+	if groupname == "" {
+		return fmt.Errorf("empty groupname")
+	}
+
+	exists, err := da.UserExists(username)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("user %s doesn't exist", username)
+	}
+
+	exists, err = da.GroupExists(username)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("group %s doesn't exist", groupname)
+	}
+
+	db, err := da.connect("cog")
+	defer db.Close()
+	if err != nil {
+		return err
+	}
+
+	query := `DELETE FROM groupusers WHERE groupname=$1 AND username=$2;`
+
+	_, err = db.Exec(query, groupname, username)
+
+	return err
+}

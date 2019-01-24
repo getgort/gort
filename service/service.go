@@ -242,10 +242,21 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	username := user.Username
 	password := user.Password
 
+	exists, err := dataAccessLayer.UserExists(username)
+	if err != nil {
+		log.Errorf("[handleAuthenticate.2] %s", err.Error())
+		return
+	}
+
+	if !exists {
+		http.Error(w, "No such user", http.StatusBadRequest)
+		log.Errorf("[handleAuthenticate.3] No such user %q", username)
+		return
+	}
+
 	authenticated, err := dataAccessLayer.UserAuthenticate(username, password)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Errorf("[handleAuthenticate.2] %s", err.Error())
+		respondAndLogServerError(w, err, "handleAuthenticate", 4)
 		return
 	}
 
@@ -256,7 +267,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 	token, err := dataAccessLayer.TokenGenerate(username, 10*time.Minute)
 	if err != nil {
-		respondAndLogServerError(w, err, "handleAuthenticate", 3)
+		respondAndLogServerError(w, err, "handleAuthenticate", 5)
 		return
 	}
 
@@ -264,7 +275,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 }
 
 func respondAndLogServerError(w http.ResponseWriter, err error, label string, index int) {
-	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	log.Errorf("[%s.%d] %s", label, index, err.Error())
 }
 

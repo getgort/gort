@@ -23,12 +23,18 @@ type DataAccess interface {
 	GroupRemoveUser(string, string) error
 	GroupRevokeRole() error
 	GroupUpdate(rest.Group) error
+	GroupUserList(group string) ([]rest.User, error)
+	GroupUserAdd(group string, user string) error
+	GroupUserDelete(group string, user string) error
 
 	UserAuthenticate(string, string) (bool, error)
 	UserCreate(rest.User) error
 	UserDelete(string) error
 	UserExists(string) (bool, error)
 	UserGet(string) (rest.User, error)
+	UserGroupList(user string) ([]rest.Group, error)
+	UserGroupAdd(user string, group string) error
+	UserGroupDelete(user string, group string) error
 	UserList() ([]rest.User, error)
 	UserUpdate(rest.User) error
 

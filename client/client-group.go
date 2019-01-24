@@ -101,6 +101,26 @@ func (c *CogClient) GroupDelete(groupname string) error {
 	return nil
 }
 
+// GroupExists simply returns true if a group exists with the specified
+// groupname; false otherwise.
+func (c *CogClient) GroupExists(groupname string) (bool, error) {
+	url := fmt.Sprintf("%s/v2/group/%s", c.profile.URL.String(), groupname)
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case 200:
+		return true, nil
+	case 404:
+		return false, nil
+	default:
+		return false, getResponseError(resp)
+	}
+}
+
 // GroupMemberList comments to be written...
 func (c *CogClient) GroupMemberList(groupname string) ([]rest.User, error) {
 	url := fmt.Sprintf("%s/v2/group/%s/member", c.profile.URL.String(), groupname)

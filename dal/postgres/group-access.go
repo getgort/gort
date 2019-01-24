@@ -263,3 +263,18 @@ func (da PostgresDataAccess) GroupUpdate(group rest.Group) error {
 
 	return err
 }
+
+// GroupUserList comments TBD
+func (da PostgresDataAccess) GroupUserList(group string) ([]rest.User, error) {
+	return []rest.User{}, fmt.Errorf("PostgresDataAccess: not yet implemented")
+}
+
+// GroupUserAdd comments TBD
+func (da PostgresDataAccess) GroupUserAdd(group string, user string) error {
+	return fmt.Errorf("PostgresDataAccess: not yet implemented")
+}
+
+// GroupUserDelete comments TBD
+func (da PostgresDataAccess) GroupUserDelete(group string, user string) error {
+	return fmt.Errorf("PostgresDataAccess: not yet implemented")
+}

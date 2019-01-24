@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 
@@ -36,6 +35,26 @@ func (c *CogClient) UserList() ([]rest.User, error) {
 	return users, nil
 }
 
+// UserExists simply returns true if a user exists with the specified
+// username; false otherwise.
+func (c *CogClient) UserExists(username string) (bool, error) {
+	url := fmt.Sprintf("%s/v2/user/%s", c.profile.URL.String(), username)
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case 200:
+		return true, nil
+	case 404:
+		return false, nil
+	default:
+		return false, getResponseError(resp)
+	}
+}
+
 // UserGet comments to be written...
 func (c *CogClient) UserGet(username string) (rest.User, error) {
 	url := fmt.Sprintf("%s/v2/user/%s", c.profile.URL.String(), username)
@@ -63,7 +82,9 @@ func (c *CogClient) UserGet(username string) (rest.User, error) {
 	return user, nil
 }
 
-// UserSave comments to be written...
+// UserSave will create or update a user. Note the the key is the username: if
+// this is called with a user whose username exists that user is updated;
+// otherwise a new user is created.
 func (c *CogClient) UserSave(user rest.User) error {
 	url := fmt.Sprintf("%s/v2/user/%s", c.profile.URL.String(), user.Username)
 
@@ -104,5 +125,27 @@ func (c *CogClient) UserDelete(username string) error {
 
 // UserGroupList comments to be written...
 func (c *CogClient) UserGroupList(username string) ([]rest.Group, error) {
-	return []rest.Group{}, errors.New("not yet implemented")
+	url := fmt.Sprintf("%s/v2/user/%s/group", c.profile.URL.String(), username)
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return []rest.Group{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return []rest.Group{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []rest.Group{}, err
+	}
+
+	user := []rest.Group{}
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		return []rest.Group{}, err
+	}
+
+	return user, nil
 }
