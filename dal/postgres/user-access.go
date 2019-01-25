@@ -78,6 +78,11 @@ func (da PostgresDataAccess) UserDelete(username string) error {
 		return fmt.Errorf("empty username")
 	}
 
+	// Thou Shalt Not Delete Admin
+	if username == "admin" {
+		return fmt.Errorf("admin user can't be deleted")
+	}
+
 	exists, err := da.UserExists(username)
 	if err != nil {
 		return err

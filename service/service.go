@@ -81,10 +81,8 @@ func bootstrapUserWithDefaults(user rest.User) (rest.User, error) {
 		user.FullName = "Cog Administrator"
 	}
 
-	// If user doesn't have a defined email, we default to "admin".
-	if user.Username == "" {
-		user.Username = "admin"
-	}
+	// The bootstrap user is _always_ named "admin".
+	user.Username = "admin"
 
 	// If user doesn't have a defined password, we kindly generate one.
 	if user.Password == "" {
@@ -318,15 +316,15 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create cog-admin group. This currently can't be customized.
-	group := rest.Group{Name: "cog-admin"}
+	// Create admin group.
+	group := rest.Group{Name: "admin"}
 	err = dataAccessLayer.GroupCreate(group)
 	if err != nil {
 		respondAndLogServerError(w, err, "handleBootstrap", 6)
 		return
 	}
 
-	// Add the admin user to the cog-admin group
+	// Add the admin user to the admin group.
 	err = dataAccessLayer.GroupAddUser(group.Name, user.Username)
 	if err != nil {
 		respondAndLogServerError(w, err, "handleBootstrap", 7)

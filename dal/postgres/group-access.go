@@ -61,6 +61,11 @@ func (da PostgresDataAccess) GroupDelete(groupname string) error {
 		return fmt.Errorf("empty group name")
 	}
 
+	// Thou Shalt Not Delete Admin
+	if groupname == "admin" {
+		return fmt.Errorf("admin group can't be deleted")
+	}
+
 	exists, err := da.GroupExists(groupname)
 	if err != nil {
 		return err
