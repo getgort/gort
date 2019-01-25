@@ -104,7 +104,6 @@ func handlePostUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// NOTE: Should we just make "update" create users that don't exist?
 	if exists {
 		err = dataAccessLayer.UserUpdate(user)
 	} else {

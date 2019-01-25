@@ -182,18 +182,9 @@ func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 
 // UserUpdate is used to update an existing user. An error is returned if the
 // username is empty or if the user doesn't exist.
-// TODO Should we let this create users that don't exist?
 func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 	if user.Username == "" {
 		return fmt.Errorf("empty username")
-	}
-
-	exists, err := da.UserExists(user.Username)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("user %s doesn't exist", user.Username)
 	}
 
 	db, err := da.connect("cog")
@@ -202,25 +193,41 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 		return err
 	}
 
-	hash := ""
+	query := `SELECT email, full_name, username, password_hash
+		FROM users
+		WHERE username=$1`
+
+	userOld := rest.User{}
+	err = db.
+		QueryRow(query, user.Username).
+		Scan(&userOld.Email, &userOld.FullName, &userOld.Username, &userOld.Password)
+
+	if user.Email != "" {
+		userOld.Email = user.Email
+	}
+
+	if user.FullName != "" {
+		userOld.FullName = user.FullName
+	}
+
 	if user.Password != "" {
-		hash, err = dal.HashPassword(user.Password)
+		userOld.Password, err = dal.HashPassword(user.Password)
 		if err != nil {
 			return err
 		}
 	}
 
-	query := `UPDATE users
+	query = `UPDATE users
 	SET email=$1, full_name=$2, password_hash=$3
 	WHERE username=$4;`
 
-	_, err = db.Exec(query, user.Email, user.FullName, hash, user.Username)
+	_, err = db.Exec(query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username)
 
 	return err
 }
 
 // UserGroupList comments TBD
-func (da PostgresDataAccess) UserGroupList(user string) ([]rest.Group, error) {
+func (da PostgresDataAccess) UserGroupList(username string) ([]rest.Group, error) {
 	groups := make([]rest.Group, 0)
 
 	db, err := da.connect("cog")
@@ -229,8 +236,8 @@ func (da PostgresDataAccess) UserGroupList(user string) ([]rest.Group, error) {
 		return groups, err
 	}
 
-	query := `SELECT groupname FROM groupusers`
-	rows, err := db.Query(query)
+	query := `SELECT groupname FROM groupusers WHERE username=$1`
+	rows, err := db.Query(query, username)
 	if err != nil {
 		return groups, err
 	}

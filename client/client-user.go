@@ -83,8 +83,8 @@ func (c *CogClient) UserGet(username string) (rest.User, error) {
 }
 
 // UserSave will create or update a user. Note the the key is the username: if
-// this is called with a user whose username exists that user is updated;
-// otherwise a new user is created.
+// this is called with a user whose username exists that user is updated
+// (empty fields will not be overwritten); otherwise a new user is created.
 func (c *CogClient) UserSave(user rest.User) error {
 	url := fmt.Sprintf("%s/v2/user/%s", c.profile.URL.String(), user.Username)
 
