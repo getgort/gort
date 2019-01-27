@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/clockworksoul/cog2/config"
-	"github.com/clockworksoul/cog2/dal"
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/cog2/dataaccess"
 	"github.com/clockworksoul/cog2/meta"
 	log "github.com/sirupsen/logrus"
 )
@@ -244,7 +244,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 
 // findOrMakeCogUser ...
 func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
-	da, err := dal.DataAccessInterface()
+	da, err := dataaccess.Get()
 	if err != nil {
 		return rest.User{}, false, err
 	}

@@ -7,15 +7,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clockworksoul/cog2/dal"
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/cog2/dataaccess"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	dataAccessLayer dal.DataAccess
+	dataAccessLayer dataaccess.DataAccess
 )
 
 // RequestEvent represents a request of a service endpoint.
@@ -165,10 +165,16 @@ type RESTServer struct {
 
 // BuildRESTServer builds a RESTServer.
 func BuildRESTServer(addr string) *RESTServer {
-	<-dal.ListenForInitialization()
+	dalUpdate := dataaccess.Updates()
+
+	for dalState := range dalUpdate {
+		if dalState == dataaccess.StateInitialized {
+			break
+		}
+	}
 
 	var err error
-	dataAccessLayer, err = dal.DataAccessInterface()
+	dataAccessLayer, err = dataaccess.Get()
 	if err != nil {
 		log.Fatal("Could not connect to data access layer:", err.Error())
 	}

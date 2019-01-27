@@ -1,4 +1,4 @@
-package dal
+package dataaccess
 
 import (
 	"time"
