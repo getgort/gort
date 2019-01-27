@@ -11,6 +11,7 @@ import (
 // handlePostGroup handles "DELETE /v2/group/{groupname}"
 func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
+
 	err := dataAccessLayer.GroupDelete(params["groupname"])
 
 	if err != nil {

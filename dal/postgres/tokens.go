@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/clockworksoul/cog2/dal"
+	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
@@ -37,7 +37,7 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 		da.TokenInvalidate(token.Token)
 	}
 
-	tokenString, err := dal.GenerateRandomToken(64)
+	tokenString, err := data.GenerateRandomToken(64)
 	if err != nil {
 		return rest.Token{}, err
 	}

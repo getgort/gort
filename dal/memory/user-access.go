@@ -93,6 +93,12 @@ func (da InMemoryDataAccess) UserGet(username string) (rest.User, error) {
 	return *user, nil
 }
 
+// UserGetByEmail returns a user from the data store. An error is returned if
+// the email parameter is empty or if the user doesn't exist.
+func (da InMemoryDataAccess) UserGetByEmail(email string) (rest.User, error) {
+	return rest.User{}, fmt.Errorf("InMemoryDataAccess: not yet implemented")
+}
+
 // UserList returns a list of all known users in the datastore.
 // Passwords are not included. Nice try.
 func (da InMemoryDataAccess) UserList() ([]rest.User, error) {

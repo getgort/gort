@@ -42,7 +42,7 @@ type CommandRequest struct {
 	CommandEntry
 	Adapter    string   // The name of the adapter this request originated from.
 	ChannelID  string   // The channel that the request originated in.
-	UserID     string   // The ID of the user making thise request.
+	UserID     string   // The ID of the user making this request.
 	Parameters []string // Tokenized command parameters
 }
 

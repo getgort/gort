@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	configfile       = "config.yml"
+	configfile       string
 	md5sum           = []byte{}
 	config           *data.CogConfig
 	lastReloadWorked = true // Prevents spam
+	updateListeners  = make([]chan struct{}, 0)
 )
 
 // BeginChangeCheck starts a routine that checks the underlying config for
@@ -27,7 +28,7 @@ func BeginChangeCheck(frequency time.Duration) {
 
 	go func() {
 		for range ticker.C {
-			err := ReloadConfiguration()
+			err := reloadConfiguration()
 			if err != nil {
 				if lastReloadWorked {
 					lastReloadWorked = false
@@ -76,29 +77,15 @@ func Initialize(file string) error {
 		return fmt.Errorf("file %s does not exist", configfile)
 	}
 
-	return ReloadConfiguration()
+	return reloadConfiguration()
 }
 
-func ReloadConfiguration() error {
-	sum, err := getMd5Sum(configfile)
-	if err != nil {
-		return fmt.Errorf("Failed hash file %s: %s", configfile, err.Error())
-	}
-
-	if !slicesAreEqual(sum, md5sum) {
-		cp, err := loadConfiguration(configfile)
-		if err != nil {
-			return fmt.Errorf("Failed to load config %s: %s", configfile, err.Error())
-		}
-
-		md5sum = sum
-		config = cp
-		lastReloadWorked = true
-
-		log.Infof("[ReloadConfiguration] Loaded configuration file %s", configfile)
-	}
-
-	return nil
+// Updates returns a channel that emits a message whenever the underlying
+// configuration is updated.
+func Updates() <-chan struct{} {
+	ch := make(chan struct{}, 1)
+	updateListeners = append(updateListeners, ch)
+	return ch
 }
 
 func getMd5Sum(file string) ([]byte, error) {
@@ -134,6 +121,32 @@ func loadConfiguration(file string) (*data.CogConfig, error) {
 	}
 
 	return &config, nil
+}
+
+func reloadConfiguration() error {
+	sum, err := getMd5Sum(configfile)
+	if err != nil {
+		return fmt.Errorf("Failed hash file %s: %s", configfile, err.Error())
+	}
+
+	if !slicesAreEqual(sum, md5sum) {
+		cp, err := loadConfiguration(configfile)
+		if err != nil {
+			return fmt.Errorf("Failed to load config %s: %s", configfile, err.Error())
+		}
+
+		md5sum = sum
+		config = cp
+		lastReloadWorked = true
+
+		for _, ch := range updateListeners {
+			ch <- struct{}{}
+		}
+
+		log.Infof("[reloadConfiguration] Loaded configuration file %s", configfile)
+	}
+
+	return nil
 }
 
 func slicesAreEqual(a, b []byte) bool {

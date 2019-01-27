@@ -3,8 +3,7 @@ package postgres
 import (
 	"fmt"
 
-	"github.com/clockworksoul/cog2/dal"
-
+	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
@@ -31,7 +30,7 @@ func (da PostgresDataAccess) UserAuthenticate(username string, password string) 
 	var hash string
 	err = db.QueryRow(query, username).Scan(&hash)
 
-	return dal.CompareHashAndPassword(hash, password), err
+	return data.CompareHashAndPassword(hash, password), err
 }
 
 // UserCreate is used to create a new Cog user in the data store. An error is
@@ -57,7 +56,7 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 
 	hash := ""
 	if user.Password != "" {
-		hash, err = dal.HashPassword(user.Password)
+		hash, err = data.HashPassword(user.Password)
 		if err != nil {
 			return err
 		}
@@ -159,6 +158,27 @@ func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
 	return user, err
 }
 
+// UserGetByEmail returns a user from the data store. An error is returned if
+// the email parameter is empty or if the user doesn't exist.
+func (da PostgresDataAccess) UserGetByEmail(email string) (rest.User, error) {
+	db, err := da.connect("cog")
+	defer db.Close()
+	if err != nil {
+		return rest.User{}, err
+	}
+
+	query := `SELECT email, full_name, username
+		FROM users
+		WHERE email=$1`
+
+	user := rest.User{}
+	err = db.
+		QueryRow(query, email).
+		Scan(&user.Email, &user.FullName, &user.Username)
+
+	return user, err
+}
+
 // UserList returns a list of all known users in the datastore.
 // Passwords are not included. Nice try.
 func (da PostgresDataAccess) UserList() ([]rest.User, error) {
@@ -216,7 +236,7 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 	}
 
 	if user.Password != "" {
-		userOld.Password, err = dal.HashPassword(user.Password)
+		userOld.Password, err = data.HashPassword(user.Password)
 		if err != nil {
 			return err
 		}

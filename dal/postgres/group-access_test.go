@@ -17,7 +17,7 @@ var (
 		User:       "cog",
 	}
 
-	da = NewPostgresDataAccess(configs)
+	da = PostgresDataAccess{configs: configs}
 )
 
 func TestGroupExists(t *testing.T) {

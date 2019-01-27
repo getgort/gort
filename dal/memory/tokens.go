@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/clockworksoul/cog2/dal"
+	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
@@ -41,7 +41,7 @@ func (da InMemoryDataAccess) TokenGenerate(username string, duration time.Durati
 		return rest.Token{}, errors.New("no such user")
 	}
 
-	tokenString, err := dal.GenerateRandomToken(64)
+	tokenString, err := data.GenerateRandomToken(64)
 	if err != nil {
 		return rest.Token{}, err
 	}

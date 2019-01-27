@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/clockworksoul/cog2/dal"
 	"github.com/clockworksoul/cog2/data"
 
 	_ "github.com/lib/pq" // Load the Postgres drivers
@@ -12,14 +11,13 @@ import (
 
 // PostgresDataAccess is a data access implementation backed by a database.
 type PostgresDataAccess struct {
-	dal.DataAccess
-
 	configs data.DatabaseConfigs
 	db      *sql.DB
 }
 
-// NewPostgresDataAccess will create and return a new PostgresDataAccess instance.
-func NewPostgresDataAccess(configs data.DatabaseConfigs) dal.DataAccess {
+// NewPostgresDataAccess returns a new PostgresDataAccess based on the
+// supplied config.
+func NewPostgresDataAccess(configs data.DatabaseConfigs) PostgresDataAccess {
 	return PostgresDataAccess{configs: configs}
 }
 
@@ -137,30 +135,6 @@ func (da PostgresDataAccess) connect(dbname string) (*sql.DB, error) {
 	return db, db.Ping()
 }
 
-// ensureCogDatabaseExists simply checks whether the "cog" database exists,
-// and creates the empty database if it doesn't.
-func (da PostgresDataAccess) ensureCogDatabaseExists() error {
-	db, err := da.connect("postgres")
-	defer db.Close()
-	if err != nil {
-		return err
-	}
-
-	exists, err := da.cogDatabaseExists(db)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		_, err := db.Exec("CREATE DATABASE Cog")
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (da PostgresDataAccess) createGroupsTable(db *sql.DB) error {
 	var err error
 
@@ -228,6 +202,30 @@ func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
 	_, err = db.Exec(createUserQuery)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// ensureCogDatabaseExists simply checks whether the "cog" database exists,
+// and creates the empty database if it doesn't.
+func (da PostgresDataAccess) ensureCogDatabaseExists() error {
+	db, err := da.connect("postgres")
+	defer db.Close()
+	if err != nil {
+		return err
+	}
+
+	exists, err := da.cogDatabaseExists(db)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		_, err := db.Exec("CREATE DATABASE Cog")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

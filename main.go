@@ -5,7 +5,9 @@ import (
 )
 
 func init() {
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
 
 	initializeCommands()
 }

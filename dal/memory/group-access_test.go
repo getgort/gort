@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	da = NewInMemoryDataAccess().(InMemoryDataAccess)
+	da = NewInMemoryDataAccess()
 )
 
 func TestGroupExists(t *testing.T) {

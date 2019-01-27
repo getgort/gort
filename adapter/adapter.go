@@ -1,11 +1,14 @@
 package adapter
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/clockworksoul/cog2/config"
+	"github.com/clockworksoul/cog2/dal"
 	"github.com/clockworksoul/cog2/data"
+	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/clockworksoul/cog2/meta"
 	log "github.com/sirupsen/logrus"
 )
@@ -13,6 +16,10 @@ import (
 var (
 	// All existant adapters keyed by name
 	adapterLookup map[string]Adapter
+
+	ErrSelfRegistrationOff = errors.New("user doesn't exist and self-registration is off")
+
+	ErrCogNotBootstrapped = errors.New("Cog hasn't been bootstrapped yet")
 )
 
 // Adapter represents a connection to a chat provider.
@@ -140,7 +147,6 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 	rawCommandText = rawCommandText[1:]
 
 	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
-
 }
 
 // OnDirectMessage handles DirectMessageEvent events.
@@ -191,7 +197,39 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		return nil, err
 	}
 
-	log.Debugf("[TriggerCommand] Found matching command: %s:%s", command.Bundle.Name, command.Command.Name)
+	log.Debugf("[TriggerCommand] Found matching command: %s:%s",
+		command.Bundle.Name, command.Command.Name)
+
+	info, err := adapter.GetUserInfo(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	user, autocreated, err := findOrMakeCogUser(info)
+	if err != nil {
+		switch {
+		case err == ErrSelfRegistrationOff:
+			message := "I'm terribly sorry, but either I don't " +
+				"have a Cog account for you, or your Slack chat handle has " +
+				"not been registered. Currently, only registered users can " +
+				"interact with me.\n\n\nYou'll need to ask a Cog " +
+				"administrator to fix this situation and to register your " +
+				"Slack handle."
+			adapter.SendMessage(info.ID, message)
+		case err == ErrCogNotBootstrapped:
+			fallthrough
+		default:
+			msg := formatCommandErrorMessage(command, params, err.Error())
+			adapter.SendErrorMessage(channelID, "Error", msg)
+		}
+
+		return nil, err
+	} else if autocreated {
+		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
+			"owner of a shiny new Cog account named `%s`!",
+			user.Username)
+		adapter.SendMessage(info.ID, message)
+	}
 
 	request := data.CommandRequest{
 		CommandEntry: command,
@@ -202,6 +240,53 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	}
 
 	return &request, nil
+}
+
+// findOrMakeCogUser ...
+func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
+	da, err := dal.DataAccessInterface()
+	if err != nil {
+		return rest.User{}, false, err
+	}
+
+	exists := true
+	user, err := da.UserGetByEmail(info.Email)
+	if err != nil {
+		exists = false
+	}
+
+	if exists {
+		return user, false, nil
+	}
+
+	if !config.GetCogServerConfigs().AllowSelfRegistration {
+		return user, false, ErrSelfRegistrationOff
+	}
+
+	bootstrapped, err := da.UserExists("admin")
+	if err != nil {
+		return rest.User{}, false, err
+	}
+	if !bootstrapped {
+		return rest.User{}, false, ErrCogNotBootstrapped
+	}
+
+	token, err := data.GenerateRandomToken(32)
+	if err != nil {
+		return rest.User{}, false, err
+	}
+
+	// Let's create the user!
+	user = rest.User{
+		Email:    info.Email,
+		FullName: info.RealNameNormalized,
+		Password: token,
+		Username: info.Name,
+	}
+
+	log.Infof("[findOrMakeCogUser] User auto-created: %s (%s)", user.Username, user.Email)
+
+	return user, true, da.UserCreate(user)
 }
 
 // TODO Replace this with something resembling a template. Eventually.

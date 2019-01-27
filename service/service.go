@@ -7,17 +7,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clockworksoul/cog2/config"
 	"github.com/clockworksoul/cog2/dal"
-	"github.com/clockworksoul/cog2/dal/postgres"
+	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	dataAccessLayerInitialized bool
-	dataAccessLayer            dal.DataAccess
+	dataAccessLayer dal.DataAccess
 )
 
 // RequestEvent represents a request of a service endpoint.
@@ -86,7 +84,7 @@ func bootstrapUserWithDefaults(user rest.User) (rest.User, error) {
 
 	// If user doesn't have a defined password, we kindly generate one.
 	if user.Password == "" {
-		password, err := dal.GenerateRandomToken(32)
+		password, err := data.GenerateRandomToken(32)
 		if err != nil {
 			return user, err
 		}
@@ -167,7 +165,13 @@ type RESTServer struct {
 
 // BuildRESTServer builds a RESTServer.
 func BuildRESTServer(addr string) *RESTServer {
-	InitializeDataAccessLayer()
+	<-dal.ListenForInitialization()
+
+	var err error
+	dataAccessLayer, err = dal.DataAccessInterface()
+	if err != nil {
+		log.Fatal("Could not connect to data access layer:", err.Error())
+	}
 
 	requests := make(chan RequestEvent)
 
@@ -193,36 +197,6 @@ func (s *RESTServer) ListenAndServe() error {
 	log.Printf("[RESTServer.ListenAndServe] Cog service is starting on " + s.Addr)
 
 	return s.Server.ListenAndServe()
-}
-
-// InitializeDataAccessLayer will initialize the data access layer, if it
-// isn't already initialized. It is called automatically by BuildRESTServer().
-func InitializeDataAccessLayer() {
-	go func() {
-		var delay time.Duration = 1
-
-		for !dataAccessLayerInitialized {
-			dataAccessLayer = postgres.NewPostgresDataAccess(config.GetDatabaseConfigs())
-			err := dataAccessLayer.Initialize()
-
-			if err != nil {
-				log.Warn("[InitializeDataAccessLayer] Failed to connect to data source: ", err.Error())
-				log.Infof("[InitializeDataAccessLayer] Waiting %d seconds to try again", delay)
-
-				<-time.After(delay * time.Second)
-
-				delay *= 2
-
-				if delay > 60 {
-					delay = 60
-				}
-			} else {
-				dataAccessLayerInitialized = true
-			}
-		}
-
-		log.Info("[InitializeDataAccessLayer] Connection to data source established")
-	}()
 }
 
 // handleAuthenticate handles "GET /authenticate"
