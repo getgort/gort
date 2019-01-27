@@ -212,6 +212,14 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 		return fmt.Errorf("empty username")
 	}
 
+	exists, err := da.UserExists(user.Username)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("no such user: %s", user.Username)
+	}
+
 	db, err := da.connect("cog")
 	defer db.Close()
 	if err != nil {

@@ -203,7 +203,7 @@ func TestUserUpdate(t *testing.T) {
 	}
 
 	// Update user that doesn't exist
-	err = da.UserUpdate(rest.User{Username: "no-such-usere"})
+	err = da.UserUpdate(rest.User{Username: "no-such-user"})
 	if err == nil {
 		t.Error("Expected an error")
 	}

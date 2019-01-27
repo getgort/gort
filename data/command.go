@@ -10,23 +10,23 @@ import (
 // Bundle represents a bundle as defined in the "bundles" section of the
 // config.
 type Bundle struct {
-	Name        string                   `yaml:"name,omitempty"`
-	Description string                   `yaml:"description,omitempty"`
-	Docker      BundleDocker             `yaml:"docker,omitempty"`
-	Commands    map[string]BundleCommand `yaml:"commands,omitempty"`
+	Name        string                   `yaml:",omitempty"`
+	Description string                   `yaml:",omitempty"`
+	Docker      BundleDocker             `yaml:",omitempty"`
+	Commands    map[string]BundleCommand `yaml:",omitempty"`
 }
 
 // BundleDocker represents the "bundles/docker" subsection of the config doc
 type BundleDocker struct {
-	Image string `yaml:"image,omitempty"`
-	Tag   string `yaml:"tag,omitempty"`
+	Image string `yaml:",omitempty"`
+	Tag   string `yaml:",omitempty"`
 }
 
 // BundleCommand represents a bundle command, as defined in the "bundles/commands"
 // section of the config.
 type BundleCommand struct {
-	Description string   `yaml:"description,omitempty"`
-	Executable  []string `yaml:"executable,omitempty"`
+	Description string   `yaml:",omitempty"`
+	Executable  []string `yaml:",omitempty"`
 	Name        string   `yaml:"-"`
 }
 

@@ -22,7 +22,6 @@ RUN go get github.com/docker/docker/api \
     && go get github.com/sirupsen/logrus\
     && go get github.com/spf13/cobra \
     && go get golang.org/x/net/context \
-    && go get gopkg.in/yaml.v1 \
     && go get gopkg.in/yaml.v2
 
 RUN go test -v github.com/clockworksoul/cog2/...
@@ -47,7 +46,6 @@ RUN go get github.com/docker/docker/api \
     && go get github.com/sirupsen/logrus\
     && go get github.com/spf13/cobra \
     && go get golang.org/x/net/context \
-    && go get gopkg.in/yaml.v1 \
     && go get gopkg.in/yaml.v2
 
 RUN GOOS=linux go build -a -installsuffix cgo -o cog2 github.com/clockworksoul/cog2
