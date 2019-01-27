@@ -1,5 +1,7 @@
 # Cog2
 
+**This project is a work in progress under active heavy development. Follow for updates!**
+
 Cog2 is a re-imagining and re-implementation of the current version of Operable's [Cog Slack Bot](https://github.com/operable/cog) (Cog version 1, or Cog1), a chatbot designed from the ground up for chatops.
 
 Cog brings the power of the command line to the place you collaborate with your team all the time -- your chat window. Its open-ended bundle support allows developers to implement functionality in the language of their choice, while powerful access control means you can collaborate around even the most sensitive tasks with confidence. A focus on extensibility and adaptability means that you can respond quickly to the unexpected, without your team losing visibility.
@@ -31,6 +33,19 @@ While some effort will be made to support existing functionality (such as Cog1 b
 
 ## Cog2 design
 A WIP design doc, including rough milestones (but not dates) [can be seen here](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit?usp=sharing). Feel free to add questions or comments.
+
+## Status of this project
+Active heavy development. The date that various [milestones](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit#heading=h.8qveejpms515) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
+
+* Project created: 27 December 2018
+* Milestone 1: 7 January 2019
+* Milestone 2: 21 January 2019
+* Milestone 3: 24 January 2019
+* Milestone 4: *TBD*
+* Milestone 5: *TBD*
+* Milestone 6: *TBD*
+* Release candidate 1: *TBD*
+* Release!: *TBD*
 
 ## How to run
 With Go installed, you can run (for testing) with: `go run . start`. 
