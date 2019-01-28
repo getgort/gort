@@ -10,7 +10,7 @@ import (
 
 // UserList comments to be written...
 func (c *CogClient) UserList() ([]rest.User, error) {
-	url := fmt.Sprintf("%s/v2/user", c.profile.URL.String())
+	url := fmt.Sprintf("%s/v2/users", c.profile.URL.String())
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
 		return []rest.User{}, err
@@ -38,7 +38,7 @@ func (c *CogClient) UserList() ([]rest.User, error) {
 // UserExists simply returns true if a user exists with the specified
 // username; false otherwise.
 func (c *CogClient) UserExists(username string) (bool, error) {
-	url := fmt.Sprintf("%s/v2/user/%s", c.profile.URL.String(), username)
+	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), username)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
 		return false, err
@@ -57,7 +57,7 @@ func (c *CogClient) UserExists(username string) (bool, error) {
 
 // UserGet comments to be written...
 func (c *CogClient) UserGet(username string) (rest.User, error) {
-	url := fmt.Sprintf("%s/v2/user/%s", c.profile.URL.String(), username)
+	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), username)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
 		return rest.User{}, err
@@ -86,14 +86,14 @@ func (c *CogClient) UserGet(username string) (rest.User, error) {
 // this is called with a user whose username exists that user is updated
 // (empty fields will not be overwritten); otherwise a new user is created.
 func (c *CogClient) UserSave(user rest.User) error {
-	url := fmt.Sprintf("%s/v2/user/%s", c.profile.URL.String(), user.Username)
+	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), user.Username)
 
 	bytes, err := json.Marshal(user)
 	if err != nil {
 		return err
 	}
 
-	resp, err := c.doRequest("POST", url, bytes)
+	resp, err := c.doRequest("PUT", url, bytes)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (c *CogClient) UserSave(user rest.User) error {
 
 // UserDelete comments to be written...
 func (c *CogClient) UserDelete(username string) error {
-	url := fmt.Sprintf("%s/v2/user/%s", c.profile.URL.String(), username)
+	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), username)
 
 	resp, err := c.doRequest("DELETE", url, []byte{})
 	if err != nil {
@@ -125,7 +125,7 @@ func (c *CogClient) UserDelete(username string) error {
 
 // UserGroupList comments to be written...
 func (c *CogClient) UserGroupList(username string) ([]rest.Group, error) {
-	url := fmt.Sprintf("%s/v2/user/%s/group", c.profile.URL.String(), username)
+	url := fmt.Sprintf("%s/v2/users/%s/groups", c.profile.URL.String(), username)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
 		return []rest.Group{}, err

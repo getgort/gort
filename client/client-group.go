@@ -10,7 +10,7 @@ import (
 
 // GroupList comments to be written...
 func (c *CogClient) GroupList() ([]rest.Group, error) {
-	url := fmt.Sprintf("%s/v2/group", c.profile.URL.String())
+	url := fmt.Sprintf("%s/v2/groups", c.profile.URL.String())
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
 		return []rest.Group{}, err
@@ -37,7 +37,7 @@ func (c *CogClient) GroupList() ([]rest.Group, error) {
 
 // GroupGet comments to be written...
 func (c *CogClient) GroupGet(groupname string) (rest.Group, error) {
-	url := fmt.Sprintf("%s/v2/group/%s", c.profile.URL.String(), groupname)
+	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), groupname)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
 		return rest.Group{}, err
@@ -64,14 +64,14 @@ func (c *CogClient) GroupGet(groupname string) (rest.Group, error) {
 
 // GroupSave comments to be written...
 func (c *CogClient) GroupSave(group rest.Group) error {
-	url := fmt.Sprintf("%s/v2/group/%s", c.profile.URL.String(), group.Name)
+	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), group.Name)
 
 	bytes, err := json.Marshal(group)
 	if err != nil {
 		return err
 	}
 
-	resp, err := c.doRequest("POST", url, bytes)
+	resp, err := c.doRequest("PUT", url, bytes)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (c *CogClient) GroupSave(group rest.Group) error {
 
 // GroupDelete comments to be written...
 func (c *CogClient) GroupDelete(groupname string) error {
-	url := fmt.Sprintf("%s/v2/group/%s", c.profile.URL.String(), groupname)
+	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), groupname)
 
 	resp, err := c.doRequest("DELETE", url, []byte{})
 	if err != nil {
@@ -104,7 +104,7 @@ func (c *CogClient) GroupDelete(groupname string) error {
 // GroupExists simply returns true if a group exists with the specified
 // groupname; false otherwise.
 func (c *CogClient) GroupExists(groupname string) (bool, error) {
-	url := fmt.Sprintf("%s/v2/group/%s", c.profile.URL.String(), groupname)
+	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), groupname)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
 		return false, err
@@ -123,7 +123,7 @@ func (c *CogClient) GroupExists(groupname string) (bool, error) {
 
 // GroupMemberList comments to be written...
 func (c *CogClient) GroupMemberList(groupname string) ([]rest.User, error) {
-	url := fmt.Sprintf("%s/v2/group/%s/member", c.profile.URL.String(), groupname)
+	url := fmt.Sprintf("%s/v2/groups/%s/members", c.profile.URL.String(), groupname)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
 		return []rest.User{}, err
@@ -150,7 +150,7 @@ func (c *CogClient) GroupMemberList(groupname string) ([]rest.User, error) {
 
 // GroupMemberAdd comments to be written...
 func (c *CogClient) GroupMemberAdd(groupname string, username string) error {
-	url := fmt.Sprintf("%s/v2/group/%s/member/%s", c.profile.URL.String(), groupname, username)
+	url := fmt.Sprintf("%s/v2/groups/%s/members/%s", c.profile.URL.String(), groupname, username)
 	resp, err := c.doRequest("PUT", url, []byte{})
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func (c *CogClient) GroupMemberAdd(groupname string, username string) error {
 
 // GroupMemberDelete comments to be written...
 func (c *CogClient) GroupMemberDelete(groupname string, username string) error {
-	url := fmt.Sprintf("%s/v2/group/%s/member/%s", c.profile.URL.String(), groupname, username)
+	url := fmt.Sprintf("%s/v2/groups/%s/members/%s", c.profile.URL.String(), groupname, username)
 	resp, err := c.doRequest("DELETE", url, []byte{})
 	if err != nil {
 		return err

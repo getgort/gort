@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// handlePostUser handles "DELETE /v2/user/{username}"
+// handleDeleteUser handles "DELETE /v2/users/{username}"
 func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	err := dataAccessLayer.UserDelete(params["username"])
@@ -19,13 +19,13 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handlePostUser handles "DELETE /v2/user/{username}/group/{username}"
+// handleDeleteUserGroup handles "DELETE /v2/users/{username}/groups/{username}"
 func handleDeleteUserGroup(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Not Implemented", http.StatusNotImplemented)
 	return
 }
 
-// handleGetUser handles "GET /v2/user/{username}"
+// handleGetUser handles "GET /v2/users/{username}"
 func handleGetUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
@@ -48,7 +48,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
-// handlePostUser handles "GET /v2/user/{username}/group"
+// handleGetUserGroups handles "GET /v2/users/{username}/groups"
 func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
@@ -71,7 +71,7 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(groups)
 }
 
-// handleGetUsers handles "GET /v2/user"
+// handleGetUsers handles "GET /v2/users"
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := dataAccessLayer.UserList()
 
@@ -83,8 +83,8 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
-// handlePostUser handles "POST /v2/user/{username}"
-func handlePostUser(w http.ResponseWriter, r *http.Request) {
+// handlePutUser handles "POST /v2/users/{username}"
+func handlePutUser(w http.ResponseWriter, r *http.Request) {
 	var user rest.User
 	var err error
 
@@ -116,20 +116,20 @@ func handlePostUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handlePostUser handles "PUT /v2/user/{username}/group/{username}"
+// handlePutUserGroup handles "PUT /v2/users/{username}/groups/{username}"
 func handlePutUserGroup(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Not Implemented", http.StatusNotImplemented)
 	return
 }
 
 func addUserMethodsToRouter(router *mux.Router) {
-	router.HandleFunc("/v2/user", handleGetUsers).Methods("GET")
-	router.HandleFunc("/v2/user/{username}", handleGetUser).Methods("GET")
-	router.HandleFunc("/v2/user/{username}", handlePostUser).Methods("POST")
-	router.HandleFunc("/v2/user/{username}", handleDeleteUser).Methods("DELETE")
+	router.HandleFunc("/v2/users", handleGetUsers).Methods("GET")
+	router.HandleFunc("/v2/users/{username}", handleGetUser).Methods("GET")
+	router.HandleFunc("/v2/users/{username}", handlePutUser).Methods("PUT")
+	router.HandleFunc("/v2/users/{username}", handleDeleteUser).Methods("DELETE")
 
 	// User group membership
-	router.HandleFunc("/v2/user/{username}/group", handleGetUserGroups).Methods("GET")
-	router.HandleFunc("/v2/user/{username}/group/{username}", handleDeleteUserGroup).Methods("DELETE")
-	router.HandleFunc("/v2/user/{username}/group/{username}", handlePutUserGroup).Methods("PUT")
+	router.HandleFunc("/v2/users/{username}/groups", handleGetUserGroups).Methods("GET")
+	router.HandleFunc("/v2/users/{username}/groups/{username}", handleDeleteUserGroup).Methods("DELETE")
+	router.HandleFunc("/v2/users/{username}/groups/{username}", handlePutUserGroup).Methods("PUT")
 }
