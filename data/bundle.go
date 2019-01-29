@@ -10,10 +10,16 @@ import (
 // Bundle represents a bundle as defined in the "bundles" section of the
 // config.
 type Bundle struct {
-	Name        string                   `yaml:",omitempty"`
-	Description string                   `yaml:",omitempty"`
-	Docker      BundleDocker             `yaml:",omitempty"`
-	Commands    map[string]BundleCommand `yaml:",omitempty"`
+	CogBundleVersion string                   `yaml:"cog_bundle_version,omitempty"`
+	Name             string                   `yaml:",omitempty"`
+	Version          string                   `yaml:",omitempty"`
+	Author           string                   `yaml:",omitempty"`
+	Homepage         string                   `yaml:",omitempty"`
+	Description      string                   `yaml:",omitempty"`
+	LongDescription  string                   `yaml:"long_description,omitempty"`
+	Docker           BundleDocker             `yaml:",omitempty"`
+	Permissions      []string                 `yaml:",omitempty"`
+	Commands         map[string]BundleCommand `yaml:",omitempty"`
 }
 
 // BundleDocker represents the "bundles/docker" subsection of the config doc
