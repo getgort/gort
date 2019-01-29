@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/clockworksoul/cog2/data"
+	"github.com/clockworksoul/cog2/dataaccess/errs"
+	"github.com/clockworksoul/cog2/errors"
 
 	_ "github.com/lib/pq" // Load the Postgres drivers
 )
@@ -99,7 +101,7 @@ func (da PostgresDataAccess) cogDatabaseExists(db *sql.DB) (bool, error) {
 	rows, err := db.Query("SELECT datname FROM pg_database WHERE datistemplate = false;")
 	defer rows.Close()
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	datname := ""
@@ -108,7 +110,7 @@ func (da PostgresDataAccess) cogDatabaseExists(db *sql.DB) (bool, error) {
 
 		err = rows.Err()
 		if err != nil {
-			return false, err
+			return false, errors.Wrap(errs.ErrDataAccess, err)
 		}
 
 		rows.Scan(&datname)
@@ -129,10 +131,15 @@ func (da PostgresDataAccess) connect(dbname string) (*sql.DB, error) {
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return db, db.Ping()
+	err = db.Ping()
+	if err != nil {
+		return nil, errors.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return db, nil
 }
 
 func (da PostgresDataAccess) createGroupsTable(db *sql.DB) error {
@@ -144,7 +151,7 @@ func (da PostgresDataAccess) createGroupsTable(db *sql.DB) error {
 
 	_, err = db.Exec(createGroupQuery)
 	if err != nil {
-		return err
+		return errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -161,7 +168,7 @@ func (da PostgresDataAccess) createGroupUsersTable(db *sql.DB) error {
 
 	_, err = db.Exec(createGroupUsersQuery)
 	if err != nil {
-		return err
+		return errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -183,7 +190,7 @@ func (da PostgresDataAccess) createTokensTable(db *sql.DB) error {
 
 	_, err = db.Exec(createTokensQuery)
 	if err != nil {
-		return err
+		return errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -201,7 +208,7 @@ func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
 
 	_, err = db.Exec(createUserQuery)
 	if err != nil {
-		return err
+		return errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -224,7 +231,7 @@ func (da PostgresDataAccess) ensureCogDatabaseExists() error {
 	if !exists {
 		_, err := db.Exec("CREATE DATABASE Cog")
 		if err != nil {
-			return err
+			return errors.Wrap(errs.ErrDataAccess, err)
 		}
 	}
 
@@ -242,7 +249,7 @@ func (da PostgresDataAccess) tableExists(table string, db *sql.DB) (bool, error)
 		err = rows.Err()
 
 		if err != nil {
-			return false, err
+			return false, errors.Wrap(errs.ErrDataAccess, err)
 		}
 
 		rows.Scan(&result)
@@ -250,6 +257,10 @@ func (da PostgresDataAccess) tableExists(table string, db *sql.DB) (bool, error)
 		if result == table {
 			return true, nil
 		}
+	}
+
+	if err != nil {
+		return false, errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return false, err

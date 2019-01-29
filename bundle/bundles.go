@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 
 	"github.com/clockworksoul/cog2/data"
-	yaml "gopkg.in/yaml.v1"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // loadBundle is called by ...

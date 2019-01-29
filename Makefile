@@ -44,7 +44,6 @@ install:
 	@go get github.com/sirupsen/logrus
 	@go get github.com/spf13/cobra
 	@go get golang.org/x/net/context
-	@go get gopkg.in/yaml.v1
 	@go get gopkg.in/yaml.v2
 
 test_begin:

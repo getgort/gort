@@ -1,11 +1,12 @@
 package postgres
 
 import (
-	"errors"
 	"time"
 
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/cog2/dataaccess/errs"
+	"github.com/clockworksoul/cog2/errors"
 )
 
 // TokenEvaluate will test a token for validity. It returns true if the token
@@ -28,7 +29,7 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 		return rest.Token{}, err
 	}
 	if !exists {
-		return rest.Token{}, errors.New("no such user")
+		return rest.Token{}, errs.ErrNoSuchUser
 	}
 
 	// If a token already exists for this user, automatically invalidate it.
@@ -63,7 +64,7 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 	VALUES ($1, $2, $3, $4);`
 	_, err = db.Exec(query, token.Token, token.User, token.ValidFrom, token.ValidUntil)
 	if err != nil {
-		return rest.Token{}, err
+		return rest.Token{}, errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return token, nil
@@ -81,7 +82,7 @@ func (da PostgresDataAccess) TokenInvalidate(tokenString string) error {
 	query := `DELETE FROM tokens WHERE token=$1;`
 	_, err = db.Exec(query, tokenString)
 	if err != nil {
-		return err
+		return errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -102,9 +103,15 @@ func (da PostgresDataAccess) TokenRetrieveByUser(username string) (rest.Token, e
 		WHERE username=$1`
 
 	token := rest.Token{}
+
 	err = db.
 		QueryRow(query, username).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
+
+	if err != nil {
+		err = errors.Wrap(errs.ErrNoSuchToken, err)
+	}
+
 	token.Duration = token.ValidUntil.Sub(token.ValidFrom)
 
 	return token, err
@@ -128,6 +135,11 @@ func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (rest.Toke
 	err = db.
 		QueryRow(query, tokenString).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
+
+	if err != nil {
+		err = errors.Wrap(errs.ErrNoSuchToken, err)
+	}
+
 	token.Duration = token.ValidUntil.Sub(token.ValidFrom)
 
 	return token, err

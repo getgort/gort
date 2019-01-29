@@ -1,10 +1,10 @@
 package postgres
 
 import (
-	"fmt"
-
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/cog2/dataaccess/errs"
+	"github.com/clockworksoul/cog2/errors"
 )
 
 // UserAuthenticate authenticates a username/password combination.
@@ -14,7 +14,7 @@ func (da PostgresDataAccess) UserAuthenticate(username string, password string) 
 		return false, err
 	}
 	if !exists {
-		return false, fmt.Errorf("no such user: %s", username)
+		return false, errs.ErrNoSuchUser
 	}
 
 	db, err := da.connect("cog")
@@ -29,6 +29,9 @@ func (da PostgresDataAccess) UserAuthenticate(username string, password string) 
 
 	var hash string
 	err = db.QueryRow(query, username).Scan(&hash)
+	if err != nil {
+		err = errors.Wrap(errs.ErrNoSuchUser, err)
+	}
 
 	return data.CompareHashAndPassword(hash, password), err
 }
@@ -37,7 +40,7 @@ func (da PostgresDataAccess) UserAuthenticate(username string, password string) 
 // returned if the username is empty or if a user already exists.
 func (da PostgresDataAccess) UserCreate(user rest.User) error {
 	if user.Username == "" {
-		return fmt.Errorf("empty username")
+		return errs.ErrEmptyUserName
 	}
 
 	exists, err := da.UserExists(user.Username)
@@ -45,7 +48,7 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 		return err
 	}
 	if exists {
-		return fmt.Errorf("user %s already exists", user.Username)
+		return errs.ErrUserExists
 	}
 
 	db, err := da.connect("cog")
@@ -65,6 +68,9 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 	query := `INSERT INTO users (email, full_name, password_hash, username)
 		 VALUES ($1, $2, $3, $4);`
 	_, err = db.Exec(query, user.Email, user.FullName, hash, user.Username)
+	if err != nil {
+		err = errors.Wrap(errs.ErrDataAccess, err)
+	}
 
 	return err
 }
@@ -74,12 +80,12 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 // exist.
 func (da PostgresDataAccess) UserDelete(username string) error {
 	if username == "" {
-		return fmt.Errorf("empty username")
+		return errs.ErrEmptyUserName
 	}
 
 	// Thou Shalt Not Delete Admin
 	if username == "admin" {
-		return fmt.Errorf("admin user can't be deleted")
+		return errs.ErrAdminUndeletable
 	}
 
 	exists, err := da.UserExists(username)
@@ -87,7 +93,7 @@ func (da PostgresDataAccess) UserDelete(username string) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("no such user: %s", username)
+		return errs.ErrNoSuchUser
 	}
 
 	db, err := da.connect("cog")
@@ -99,19 +105,19 @@ func (da PostgresDataAccess) UserDelete(username string) error {
 	query := `DELETE FROM groupusers WHERE username=$1;`
 	_, err = db.Exec(query, username)
 	if err != nil {
-		return err
+		return errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = "DELETE FROM tokens WHERE username=$1;"
 	_, err = db.Exec(query, username)
 	if err != nil {
-		return err
+		return errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = "DELETE FROM users WHERE username=$1;"
 	_, err = db.Exec(query, username)
 	if err != nil {
-		return err
+		return errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -131,7 +137,7 @@ func (da PostgresDataAccess) UserExists(username string) (bool, error) {
 
 	err = db.QueryRow(query, username).Scan(&exists)
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(errs.ErrNoSuchUser, err)
 	}
 
 	return exists, nil
@@ -155,6 +161,10 @@ func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
 		QueryRow(query, username).
 		Scan(&user.Email, &user.FullName, &user.Username)
 
+	if err != nil {
+		err = errors.Wrap(errs.ErrNoSuchUser, err)
+	}
+
 	return user, err
 }
 
@@ -175,6 +185,10 @@ func (da PostgresDataAccess) UserGetByEmail(email string) (rest.User, error) {
 	err = db.
 		QueryRow(query, email).
 		Scan(&user.Email, &user.FullName, &user.Username)
+
+	if err != nil {
+		err = errors.Wrap(errs.ErrNoSuchUser, err)
+	}
 
 	return user, err
 }
@@ -198,7 +212,13 @@ func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 
 	for rows.NextResultSet() && rows.Next() {
 		user := rest.User{}
-		rows.Scan(&user.Email, &user.FullName, &user.Username)
+
+		err = rows.Scan(&user.Email, &user.FullName, &user.Username)
+
+		if err != nil {
+			err = errors.Wrap(errs.ErrNoSuchUser, err)
+		}
+
 		users = append(users, user)
 	}
 
@@ -209,7 +229,7 @@ func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 // username is empty or if the user doesn't exist.
 func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 	if user.Username == "" {
-		return fmt.Errorf("empty username")
+		return errs.ErrEmptyUserName
 	}
 
 	exists, err := da.UserExists(user.Username)
@@ -217,7 +237,7 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("no such user: %s", user.Username)
+		return errs.ErrNoSuchUser
 	}
 
 	db, err := da.connect("cog")
@@ -234,6 +254,10 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 	err = db.
 		QueryRow(query, user.Username).
 		Scan(&userOld.Email, &userOld.FullName, &userOld.Username, &userOld.Password)
+
+	if err != nil {
+		err = errors.Wrap(errs.ErrNoSuchUser, err)
+	}
 
 	if user.Email != "" {
 		userOld.Email = user.Email
@@ -256,6 +280,10 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 
 	_, err = db.Exec(query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username)
 
+	if err != nil {
+		err = errors.Wrap(errs.ErrDataAccess, err)
+	}
+
 	return err
 }
 
@@ -272,12 +300,17 @@ func (da PostgresDataAccess) UserGroupList(username string) ([]rest.Group, error
 	query := `SELECT groupname FROM groupusers WHERE username=$1`
 	rows, err := db.Query(query, username)
 	if err != nil {
-		return groups, err
+		return groups, errors.Wrap(errs.ErrDataAccess, err)
 	}
 
 	for rows.NextResultSet() && rows.Next() {
 		group := rest.Group{}
-		rows.Scan(&group.Name)
+
+		err = rows.Scan(&group.Name)
+		if err != nil {
+			err = errors.Wrap(errs.ErrDataAccess, err)
+		}
+
 		groups = append(groups, group)
 	}
 
@@ -287,11 +320,11 @@ func (da PostgresDataAccess) UserGroupList(username string) ([]rest.Group, error
 // UserGroupAdd comments TBD
 func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) error {
 	if username == "" {
-		return fmt.Errorf("empty username")
+		return errs.ErrEmptyUserName
 	}
 
 	if groupname == "" {
-		return fmt.Errorf("empty groupname")
+		return errs.ErrEmptyGroupName
 	}
 
 	exists, err := da.UserExists(username)
@@ -299,7 +332,7 @@ func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) err
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("user %s doesn't exist", username)
+		return errs.ErrNoSuchUser
 	}
 
 	exists, err = da.GroupExists(username)
@@ -307,7 +340,7 @@ func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) err
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("group %s doesn't exist", groupname)
+		return errs.ErrNoSuchGroup
 	}
 
 	db, err := da.connect("cog")
@@ -321,6 +354,9 @@ func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) err
 		WHERE username=$2;`
 
 	_, err = db.Exec(query, groupname, username)
+	if err != nil {
+		err = errors.Wrap(errs.ErrDataAccess, err)
+	}
 
 	return err
 }
@@ -328,11 +364,11 @@ func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) err
 // UserGroupDelete comments TBD
 func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) error {
 	if username == "" {
-		return fmt.Errorf("empty username")
+		return errs.ErrEmptyUserName
 	}
 
 	if groupname == "" {
-		return fmt.Errorf("empty groupname")
+		return errs.ErrEmptyGroupName
 	}
 
 	exists, err := da.UserExists(username)
@@ -340,7 +376,7 @@ func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) 
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("user %s doesn't exist", username)
+		return errs.ErrNoSuchUser
 	}
 
 	exists, err = da.GroupExists(username)
@@ -348,7 +384,7 @@ func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) 
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("group %s doesn't exist", groupname)
+		return errs.ErrNoSuchGroup
 	}
 
 	db, err := da.connect("cog")
@@ -360,6 +396,9 @@ func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) 
 	query := `DELETE FROM groupusers WHERE groupname=$1 AND username=$2;`
 
 	_, err = db.Exec(query, groupname, username)
+	if err != nil {
+		err = errors.Wrap(errs.ErrDataAccess, err)
+	}
 
 	return err
 }
