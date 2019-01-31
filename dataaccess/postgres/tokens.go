@@ -6,7 +6,7 @@ import (
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/clockworksoul/cog2/dataaccess/errs"
-	"github.com/clockworksoul/cog2/errors"
+	cogerr "github.com/clockworksoul/cog2/errors"
 )
 
 // TokenEvaluate will test a token for validity. It returns true if the token
@@ -64,7 +64,7 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 	VALUES ($1, $2, $3, $4);`
 	_, err = db.Exec(query, token.Token, token.User, token.ValidFrom, token.ValidUntil)
 	if err != nil {
-		return rest.Token{}, errors.Wrap(errs.ErrDataAccess, err)
+		return rest.Token{}, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return token, nil
@@ -82,7 +82,7 @@ func (da PostgresDataAccess) TokenInvalidate(tokenString string) error {
 	query := `DELETE FROM tokens WHERE token=$1;`
 	_, err = db.Exec(query, tokenString)
 	if err != nil {
-		return errors.Wrap(errs.ErrDataAccess, err)
+		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -109,7 +109,7 @@ func (da PostgresDataAccess) TokenRetrieveByUser(username string) (rest.Token, e
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 
 	if err != nil {
-		err = errors.Wrap(errs.ErrNoSuchToken, err)
+		err = cogerr.Wrap(errs.ErrNoSuchToken, err)
 	}
 
 	token.Duration = token.ValidUntil.Sub(token.ValidFrom)
@@ -137,7 +137,7 @@ func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (rest.Toke
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 
 	if err != nil {
-		err = errors.Wrap(errs.ErrNoSuchToken, err)
+		err = cogerr.Wrap(errs.ErrNoSuchToken, err)
 	}
 
 	token.Duration = token.ValidUntil.Sub(token.ValidFrom)

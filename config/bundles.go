@@ -7,6 +7,12 @@ import (
 	"github.com/clockworksoul/cog2/data"
 )
 
+var (
+	// ErrInvalidBundleCommandPair is returned by FindCommandEntry when the
+	// command entry string doesn't look like  "command" or "bundle:command".
+	ErrInvalidBundleCommandPair = errors.New("invalid bundle:comand pair")
+)
+
 // FindCommandEntry looks for a command in the configuration. It assumes that
 // command character(s) have already been removed, and expects a string in the
 // format "bundle:command" or "command"; the latter can return multiple values
@@ -25,7 +31,7 @@ func FindCommandEntry(name string) ([]data.CommandEntry, error) {
 		bundleName = split[0]
 		commandName = split[1]
 	default:
-		return nil, errors.New("Invalid bundle:comand pair")
+		return nil, ErrInvalidBundleCommandPair
 	}
 
 	entries := make([]data.CommandEntry, 0)

@@ -9,6 +9,7 @@ import (
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/clockworksoul/cog2/dataaccess"
+	cogerr "github.com/clockworksoul/cog2/errors"
 	"github.com/clockworksoul/cog2/meta"
 	log "github.com/sirupsen/logrus"
 )
@@ -16,10 +17,45 @@ import (
 var (
 	// All existant adapters keyed by name
 	adapterLookup map[string]Adapter
+)
 
+var (
+	// ErrAdapterNameCollision is emitted by startAdapters() if two adapters
+	// have the same name.
+	ErrAdapterNameCollision = errors.New("adapter name collision")
+
+	// ErrAuthenticationFailure is emitted when an AuthenticationErrorEvent
+	// is received.
+	ErrAuthenticationFailure = errors.New("authentication failure")
+
+	// ErrChannelNotFound is returned when OnChannelMessage can't find
+	// information is the originating channel.
+	ErrChannelNotFound = errors.New("channel not found")
+
+	// ErrCogNotBootstrapped is returned by findOrMakeCogUser() if a user
+	// attempts to trigger a command but Cog hasn't yet been bopotstrapped.
+	ErrCogNotBootstrapped = errors.New("Cog hasn't been bootstrapped yet")
+
+	// ErrSelfRegistrationOff is returned by findOrMakeCogUser() if an unknown
+	// user attempts to trigger a command but self-registration is configured
+	// to false.
 	ErrSelfRegistrationOff = errors.New("user doesn't exist and self-registration is off")
 
-	ErrCogNotBootstrapped = errors.New("Cog hasn't been bootstrapped yet")
+	// ErrMultipleCommands is returned by GetCommandEntry when the same command
+	// shortcut matches commands in two or more bundles.
+	ErrMultipleCommands = errors.New("multiple commands match that pattern")
+
+	// ErrNoSuchAdapter is returned by GetAdapter if a requested adapter name
+	// can't be found.
+	ErrNoSuchAdapter = errors.New("no such adapter")
+
+	// ErrNoSuchCommand is returned by GetCommandEntry if a request command
+	// isn't found.
+	ErrNoSuchCommand = errors.New("no such bundle")
+
+	// ErrUserNotFound is throws by several methods if a provider fails to
+	// return requested user information.
+	ErrUserNotFound = errors.New("user not found")
 )
 
 // Adapter represents a connection to a chat provider.
@@ -62,7 +98,7 @@ func GetAdapter(name string) (Adapter, error) {
 		return adapter, nil
 	}
 
-	return nil, fmt.Errorf("no such adapter: %s", name)
+	return nil, ErrNoSuchAdapter
 }
 
 // GetCommandEntry accepts a tokenized parameter slice and returns any
@@ -75,15 +111,16 @@ func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
 	}
 
 	if len(entries) == 0 {
-		return data.CommandEntry{}, fmt.Errorf("No such bundle:command: %s", tokens[0])
+		return data.CommandEntry{}, ErrNoSuchCommand
 	}
 
 	if len(entries) > 1 {
-		return data.CommandEntry{},
-			fmt.Errorf("Multiple commands found: %s:%s vs %s:%s",
-				entries[0].Bundle.Name, entries[0].Command.Name,
-				entries[1].Bundle.Name, entries[1].Command.Name,
-			)
+		log.Warnf("Multiple commands found: %s:%s vs %s:%s",
+			entries[0].Bundle.Name, entries[0].Command.Name,
+			entries[1].Bundle.Name, entries[1].Command.Name,
+		)
+
+		return data.CommandEntry{}, ErrMultipleCommands
 	}
 
 	return entries[0], nil
@@ -117,12 +154,12 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
 	channelinfo, err := event.Adapter.GetChannelInfo(data.ChannelID)
 	if err != nil {
-		return nil, fmt.Errorf("Could not find channel: " + err.Error())
+		return nil, cogerr.Wrap(ErrChannelNotFound, err)
 	}
 
 	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("Could not find user: " + err.Error())
+		return nil, cogerr.Wrap(ErrUserNotFound, err)
 	}
 
 	rawCommandText := data.Text
@@ -153,7 +190,7 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
 	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("Could not find user: " + err.Error())
+		return nil, cogerr.Wrap(ErrUserNotFound, err)
 	}
 
 	rawCommandText := data.Text
@@ -244,25 +281,31 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 
 // findOrMakeCogUser ...
 func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
+	// Get the data access interface.
 	da, err := dataaccess.Get()
 	if err != nil {
 		return rest.User{}, false, err
 	}
 
+	// Try to figure out what user we're working with here.
 	exists := true
 	user, err := da.UserGetByEmail(info.Email)
 	if err != nil {
 		exists = false
 	}
 
+	// It already exists. Exist.
 	if exists {
 		return user, false, nil
 	}
 
+	// Now we know it doesn't exist. If self-registration is off, exit with
+	// an error.
 	if !config.GetCogServerConfigs().AllowSelfRegistration {
 		return user, false, ErrSelfRegistrationOff
 	}
 
+	// We can create the user... unless the instance hasn't been bootstrapped.
 	bootstrapped, err := da.UserExists("admin")
 	if err != nil {
 		return rest.User{}, false, err
@@ -271,7 +314,8 @@ func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
 		return rest.User{}, false, ErrCogNotBootstrapped
 	}
 
-	token, err := data.GenerateRandomToken(32)
+	// Generate a random password for the auto-created user.
+	randomPassword, err := data.GenerateRandomToken(32)
 	if err != nil {
 		return rest.User{}, false, err
 	}
@@ -280,7 +324,7 @@ func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
 	user = rest.User{
 		Email:    info.Email,
 		FullName: info.RealNameNormalized,
-		Password: token,
+		Password: randomPassword,
 		Username: info.Name,
 	}
 
@@ -317,7 +361,7 @@ func startAdapters() (<-chan *ProviderEvent, chan error) {
 
 	for _, sp := range config.GetSlackProviders() {
 		if _, ok := adapterLookup[sp.Name]; ok {
-			adapterErrors <- fmt.Errorf("adapter name collision: %s", sp.Name)
+			adapterErrors <- ErrAdapterNameCollision
 			continue
 		}
 
@@ -343,7 +387,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			OnConnected(event, ev)
 
 		case *AuthenticationErrorEvent:
-			adapterErrors <- fmt.Errorf(ev.Msg)
+			adapterErrors <- cogerr.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
 
 		case *ChannelMessageEvent:
 			request, err := OnChannelMessage(event, ev)

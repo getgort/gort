@@ -4,7 +4,7 @@ import (
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/clockworksoul/cog2/dataaccess/errs"
-	"github.com/clockworksoul/cog2/errors"
+	cogerr "github.com/clockworksoul/cog2/errors"
 )
 
 // UserAuthenticate authenticates a username/password combination.
@@ -30,7 +30,7 @@ func (da PostgresDataAccess) UserAuthenticate(username string, password string) 
 	var hash string
 	err = db.QueryRow(query, username).Scan(&hash)
 	if err != nil {
-		err = errors.Wrap(errs.ErrNoSuchUser, err)
+		err = cogerr.Wrap(errs.ErrNoSuchUser, err)
 	}
 
 	return data.CompareHashAndPassword(hash, password), err
@@ -69,7 +69,7 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 		 VALUES ($1, $2, $3, $4);`
 	_, err = db.Exec(query, user.Email, user.FullName, hash, user.Username)
 	if err != nil {
-		err = errors.Wrap(errs.ErrDataAccess, err)
+		err = cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return err
@@ -105,19 +105,19 @@ func (da PostgresDataAccess) UserDelete(username string) error {
 	query := `DELETE FROM groupusers WHERE username=$1;`
 	_, err = db.Exec(query, username)
 	if err != nil {
-		return errors.Wrap(errs.ErrDataAccess, err)
+		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = "DELETE FROM tokens WHERE username=$1;"
 	_, err = db.Exec(query, username)
 	if err != nil {
-		return errors.Wrap(errs.ErrDataAccess, err)
+		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = "DELETE FROM users WHERE username=$1;"
 	_, err = db.Exec(query, username)
 	if err != nil {
-		return errors.Wrap(errs.ErrDataAccess, err)
+		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -137,7 +137,7 @@ func (da PostgresDataAccess) UserExists(username string) (bool, error) {
 
 	err = db.QueryRow(query, username).Scan(&exists)
 	if err != nil {
-		return false, errors.Wrap(errs.ErrNoSuchUser, err)
+		return false, cogerr.Wrap(errs.ErrNoSuchUser, err)
 	}
 
 	return exists, nil
@@ -162,7 +162,7 @@ func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
 		Scan(&user.Email, &user.FullName, &user.Username)
 
 	if err != nil {
-		err = errors.Wrap(errs.ErrNoSuchUser, err)
+		err = cogerr.Wrap(errs.ErrNoSuchUser, err)
 	}
 
 	return user, err
@@ -187,7 +187,7 @@ func (da PostgresDataAccess) UserGetByEmail(email string) (rest.User, error) {
 		Scan(&user.Email, &user.FullName, &user.Username)
 
 	if err != nil {
-		err = errors.Wrap(errs.ErrNoSuchUser, err)
+		err = cogerr.Wrap(errs.ErrNoSuchUser, err)
 	}
 
 	return user, err
@@ -216,7 +216,7 @@ func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 		err = rows.Scan(&user.Email, &user.FullName, &user.Username)
 
 		if err != nil {
-			err = errors.Wrap(errs.ErrNoSuchUser, err)
+			err = cogerr.Wrap(errs.ErrNoSuchUser, err)
 		}
 
 		users = append(users, user)
@@ -256,7 +256,7 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 		Scan(&userOld.Email, &userOld.FullName, &userOld.Username, &userOld.Password)
 
 	if err != nil {
-		err = errors.Wrap(errs.ErrNoSuchUser, err)
+		err = cogerr.Wrap(errs.ErrNoSuchUser, err)
 	}
 
 	if user.Email != "" {
@@ -281,7 +281,7 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 	_, err = db.Exec(query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username)
 
 	if err != nil {
-		err = errors.Wrap(errs.ErrDataAccess, err)
+		err = cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return err
@@ -300,7 +300,7 @@ func (da PostgresDataAccess) UserGroupList(username string) ([]rest.Group, error
 	query := `SELECT groupname FROM groupusers WHERE username=$1`
 	rows, err := db.Query(query, username)
 	if err != nil {
-		return groups, errors.Wrap(errs.ErrDataAccess, err)
+		return groups, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	for rows.NextResultSet() && rows.Next() {
@@ -308,7 +308,7 @@ func (da PostgresDataAccess) UserGroupList(username string) ([]rest.Group, error
 
 		err = rows.Scan(&group.Name)
 		if err != nil {
-			err = errors.Wrap(errs.ErrDataAccess, err)
+			err = cogerr.Wrap(errs.ErrDataAccess, err)
 		}
 
 		groups = append(groups, group)
@@ -355,7 +355,7 @@ func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) err
 
 	_, err = db.Exec(query, groupname, username)
 	if err != nil {
-		err = errors.Wrap(errs.ErrDataAccess, err)
+		err = cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return err
@@ -397,7 +397,7 @@ func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) 
 
 	_, err = db.Exec(query, groupname, username)
 	if err != nil {
-		err = errors.Wrap(errs.ErrDataAccess, err)
+		err = cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return err

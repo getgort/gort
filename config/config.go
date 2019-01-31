@@ -2,13 +2,14 @@ package config
 
 import (
 	"crypto/md5"
-	"fmt"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
 	"time"
 
 	"github.com/clockworksoul/cog2/data"
+	cogerr "github.com/clockworksoul/cog2/errors"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -37,6 +38,18 @@ var (
 	lastReloadWorked     = true // Used to keep prevent log spam
 	md5sum               = []byte{}
 	stateChangeListeners = make([]chan State, 0)
+
+	// ErrConfigFileNotFound is returned by Initialize() if the specified
+	// config file doesn't exist.
+	ErrConfigFileNotFound = errors.New("config file doesn't exist")
+
+	// ErrHashFailure can be returned by Initialize() or internal methods if
+	// there's an error while generating a hash for the configuration file.
+	ErrHashFailure = errors.New("failed to generate config file hash")
+
+	// ErrConfigUnloadable can be returned by Initialize() or internal
+	// methods if the config file exists but can't be loaded.
+	ErrConfigUnloadable = errors.New("can't load config file")
 )
 
 func init() {
@@ -115,7 +128,7 @@ func Initialize(file string) error {
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		updateConfigState(StateConfigError)
-		return fmt.Errorf("file %s does not exist", configFile)
+		return cogerr.Wrap(ErrConfigFileNotFound, err)
 	}
 
 	return reloadConfiguration()
@@ -144,13 +157,13 @@ func Updates() <-chan State {
 func getMd5Sum(file string) ([]byte, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 	defer f.Close()
 
 	hasher := md5.New()
 	if _, err := io.Copy(hasher, f); err != nil {
-		return []byte{}, err
+		return []byte{}, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 
 	hashBytes := hasher.Sum(nil)
@@ -164,14 +177,14 @@ func loadConfiguration(file string) (*data.CogConfig, error) {
 	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, err
+		return nil, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 
 	var config data.CogConfig
 
 	err = yaml.Unmarshal(dat, &config)
 	if err != nil {
-		return nil, err
+		return nil, cogerr.Wrap(cogerr.ErrUnmarshal, err)
 	}
 
 	return &config, nil
@@ -183,7 +196,7 @@ func loadConfiguration(file string) (*data.CogConfig, error) {
 func reloadConfiguration() error {
 	sum, err := getMd5Sum(configFile)
 	if err != nil {
-		return fmt.Errorf("Failed hash file %s: %s", configFile, err.Error())
+		return cogerr.Wrap(ErrHashFailure, err)
 	}
 
 	if !slicesAreEqual(sum, md5sum) {
@@ -195,7 +208,7 @@ func reloadConfiguration() error {
 				updateConfigState(StateConfigError)
 			}
 
-			return fmt.Errorf("Failed to load config %s: %s", configFile, err.Error())
+			return cogerr.Wrap(ErrConfigUnloadable, err)
 		}
 
 		md5sum = sum
@@ -210,7 +223,8 @@ func reloadConfiguration() error {
 	return nil
 }
 
-// slicesAreEqual compares two []bytes and returns true if they're identical.
+// slicesAreEqual compares two hashcode []bytes and returns true if they're
+// identical.
 func slicesAreEqual(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false

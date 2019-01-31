@@ -4,18 +4,27 @@ import (
 	"errors"
 )
 
-// ErrDataAccessCantInitialize indicates that the data layer can't be initialized.
-var ErrDataAccessCantInitialize = errors.New("can't initialize data access layer")
+var (
+	// ErrAdminUndeletable is returned when an attempt is made to delete an
+	// admin user/account/etc.
+	ErrAdminUndeletable = errors.New("admin can't be deleted")
 
-// ErrDataAccessCantConnect indicates that an error has been reported by the data store.
-var ErrDataAccessCantConnect = errors.New("can't connect to the data store")
+	// ErrDataAccess that an error has been reported by the data store.
+	ErrDataAccess = errors.New("error reported by the data store")
 
-// ErrDataAccessindicates that an error has been reported by the data store.
-var ErrDataAccess = errors.New("error reported by the data store")
+	// ErrDataAccessCantConnect indicates that an error has been reported by the
+	// data store.
+	ErrDataAccessCantConnect = errors.New("can't connect to the data store")
 
-// ErrNotImplemented indicates that the DAL implementation isn't complete for
-// the method.
-var ErrNotImplemented = errors.New("method not implemented")
+	// ErrDataAccessCantInitialize indicates that the data layer can't be
+	// initialized.
+	ErrDataAccessCantInitialize = errors.New("can't initialize data access layer")
 
-// ErrAdminUndeletable ...
-var ErrAdminUndeletable = errors.New("admin can't be deleted")
+	// ErrNotImplemented indicates that the DAL implementation isn't complete for
+	// the invoked method.
+	ErrNotImplemented = errors.New("method not implemented")
+
+	// ErrDataAccessNotInitialized indicates that the data layer has not been
+	// initialized.
+	ErrDataAccessNotInitialized = errors.New("data access layer nit initialized")
+)
