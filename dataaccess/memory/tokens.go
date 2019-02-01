@@ -1,11 +1,11 @@
 package memory
 
 import (
-	"errors"
 	"time"
 
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/cog2/dataaccess/errs"
 )
 
 var (
@@ -38,7 +38,13 @@ func (da InMemoryDataAccess) TokenGenerate(username string, duration time.Durati
 		return rest.Token{}, err
 	}
 	if !exists {
-		return rest.Token{}, errors.New("no such user")
+		return rest.Token{}, errs.ErrNoSuchUser
+	}
+
+	// If a token already exists for this user, automatically invalidate it.
+	token, err := da.TokenRetrieveByUser(username)
+	if err == nil {
+		da.TokenInvalidate(token.Token)
 	}
 
 	tokenString, err := data.GenerateRandomToken(64)
@@ -46,10 +52,10 @@ func (da InMemoryDataAccess) TokenGenerate(username string, duration time.Durati
 		return rest.Token{}, err
 	}
 
-	validFrom := time.Now()
+	validFrom := time.Now().UTC()
 	validUntil := validFrom.Add(duration)
 
-	token := rest.Token{
+	token = rest.Token{
 		Duration:   duration,
 		Token:      tokenString,
 		User:       username,
@@ -84,7 +90,7 @@ func (da InMemoryDataAccess) TokenRetrieveByUser(username string) (rest.Token, e
 		return token, nil
 	}
 
-	return rest.Token{}, errors.New("no token for given user")
+	return rest.Token{}, errs.ErrNoSuchToken
 }
 
 // TokenRetrieveByToken retrieves the token by its value. An error is returned
@@ -94,5 +100,5 @@ func (da InMemoryDataAccess) TokenRetrieveByToken(tokenString string) (rest.Toke
 		return token, nil
 	}
 
-	return rest.Token{}, errors.New("no such token")
+	return rest.Token{}, errs.ErrNoSuchToken
 }

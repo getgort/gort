@@ -1,9 +1,8 @@
 package memory
 
 import (
-	"fmt"
-
 	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/cog2/dataaccess/errs"
 )
 
 // UserAuthenticate authenticates a username/password combination.
@@ -13,7 +12,7 @@ func (da InMemoryDataAccess) UserAuthenticate(username string, password string) 
 		return false, err
 	}
 	if !exists {
-		return false, fmt.Errorf("no such user: %s", username)
+		return false, errs.ErrNoSuchUser
 	}
 
 	user, err := da.UserGet(username)
@@ -28,7 +27,7 @@ func (da InMemoryDataAccess) UserAuthenticate(username string, password string) 
 // returned if the username is empty or if a user already exists.
 func (da InMemoryDataAccess) UserCreate(user rest.User) error {
 	if user.Username == "" {
-		return fmt.Errorf("empty username")
+		return errs.ErrEmptyUserName
 	}
 
 	exists, err := da.UserExists(user.Username)
@@ -36,7 +35,7 @@ func (da InMemoryDataAccess) UserCreate(user rest.User) error {
 		return err
 	}
 	if exists {
-		return fmt.Errorf("user %s already exists", user.Username)
+		return errs.ErrUserExists
 	}
 
 	da.users[user.Username] = &user
@@ -49,7 +48,12 @@ func (da InMemoryDataAccess) UserCreate(user rest.User) error {
 // exist.
 func (da InMemoryDataAccess) UserDelete(username string) error {
 	if username == "" {
-		return fmt.Errorf("empty username")
+		return errs.ErrEmptyUserName
+	}
+
+	// Thou Shalt Not Delete Admin
+	if username == "admin" {
+		return errs.ErrAdminUndeletable
 	}
 
 	exists, err := da.UserExists(username)
@@ -57,7 +61,7 @@ func (da InMemoryDataAccess) UserDelete(username string) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("no such user: %s", username)
+		return errs.ErrNoSuchUser
 	}
 
 	delete(da.users, username)
@@ -77,7 +81,7 @@ func (da InMemoryDataAccess) UserExists(username string) (bool, error) {
 // username parameter is empty or if the user doesn't exist.
 func (da InMemoryDataAccess) UserGet(username string) (rest.User, error) {
 	if username == "" {
-		return rest.User{}, fmt.Errorf("empty username")
+		return rest.User{}, errs.ErrEmptyUserName
 	}
 
 	exists, err := da.UserExists(username)
@@ -85,7 +89,7 @@ func (da InMemoryDataAccess) UserGet(username string) (rest.User, error) {
 		return rest.User{}, err
 	}
 	if !exists {
-		return rest.User{}, fmt.Errorf("no such user: %s", username)
+		return rest.User{}, errs.ErrNoSuchUser
 	}
 
 	user := da.users[username]
@@ -96,7 +100,7 @@ func (da InMemoryDataAccess) UserGet(username string) (rest.User, error) {
 // UserGetByEmail returns a user from the data store. An error is returned if
 // the email parameter is empty or if the user doesn't exist.
 func (da InMemoryDataAccess) UserGetByEmail(email string) (rest.User, error) {
-	return rest.User{}, fmt.Errorf("InMemoryDataAccess: not yet implemented")
+	return rest.User{}, errs.ErrNotImplemented
 }
 
 // UserList returns a list of all known users in the datastore.
@@ -117,7 +121,7 @@ func (da InMemoryDataAccess) UserList() ([]rest.User, error) {
 // TODO Should we let this create users that don't exist?
 func (da InMemoryDataAccess) UserUpdate(user rest.User) error {
 	if user.Username == "" {
-		return fmt.Errorf("empty username")
+		return errs.ErrEmptyUserName
 	}
 
 	exists, err := da.UserExists(user.Username)
@@ -125,7 +129,7 @@ func (da InMemoryDataAccess) UserUpdate(user rest.User) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("user %s doesn't exist", user.Username)
+		return errs.ErrNoSuchUser
 	}
 
 	da.users[user.Username] = &user
@@ -135,15 +139,15 @@ func (da InMemoryDataAccess) UserUpdate(user rest.User) error {
 
 // UserGroupList comments TBD
 func (da InMemoryDataAccess) UserGroupList(user string) ([]rest.Group, error) {
-	return []rest.Group{}, fmt.Errorf("InMemoryDataAccess: not yet implemented")
+	return []rest.Group{}, errs.ErrNotImplemented
 }
 
 // UserGroupAdd comments TBD
 func (da InMemoryDataAccess) UserGroupAdd(user string, group string) error {
-	return fmt.Errorf("InMemoryDataAccess: not yet implemented")
+	return errs.ErrNotImplemented
 }
 
 // UserGroupDelete comments TBD
 func (da InMemoryDataAccess) UserGroupDelete(user string, group string) error {
-	return fmt.Errorf("InMemoryDataAccess: not yet implemented")
+	return errs.ErrNotImplemented
 }

@@ -5,10 +5,7 @@ import (
 	"testing"
 
 	"github.com/clockworksoul/cog2/data/rest"
-)
-
-var (
-	da = NewInMemoryDataAccess()
+	"github.com/clockworksoul/cog2/dataaccess/errs"
 )
 
 func TestGroupExists(t *testing.T) {
@@ -20,35 +17,51 @@ func TestGroupExists(t *testing.T) {
 	}
 
 	// Now we add a group to find.
-	da.groups["test-exists"] = &rest.Group{Name: "test-exists"}
-	defer delete(da.groups, "test-exists")
+	da.GroupCreate(rest.Group{Name: "test-exists"})
+	defer da.GroupDelete("test-exists")
 
 	exists, _ = da.GroupExists("test-exists")
 	if !exists {
 		t.Error("Group should exist now")
 	}
 }
+
 func TestGroupCreate(t *testing.T) {
 	var err error
 	var group rest.Group
 
 	// Expect an error
 	err = da.GroupCreate(group)
-	if err == nil {
-		t.Error("Expected an error")
-	}
+	expectErr(t, err, errs.ErrEmptyGroupName)
 
 	// Expect no error
 	err = da.GroupCreate(rest.Group{Name: "test-create"})
-	defer delete(da.groups, "test-create")
-	if err != nil {
-		t.Error("Expected no error")
-	}
+	defer da.GroupDelete("test-create")
+	expectNoErr(t, err)
 
 	// Expect an error
 	err = da.GroupCreate(rest.Group{Name: "test-create"})
-	if err == nil {
-		t.Error("Expected no error")
+	expectErr(t, err, errs.ErrGroupExists)
+}
+
+func TestGroupDelete(t *testing.T) {
+	// Delete blank group
+	err := da.GroupDelete("")
+	expectErr(t, err, errs.ErrEmptyGroupName)
+
+	// Delete group that doesn't exist
+	err = da.GroupDelete("no-such-group")
+	expectErr(t, err, errs.ErrNoSuchGroup)
+
+	da.GroupCreate(rest.Group{Name: "test-delete"}) // This has its own test
+	defer da.GroupDelete("test-delete")
+
+	err = da.GroupDelete("test-delete")
+	expectNoErr(t, err)
+
+	exists, _ := da.GroupExists("test-delete")
+	if exists {
+		t.Error("Shouldn't exist anymore!")
 	}
 }
 
@@ -58,18 +71,14 @@ func TestGroupGet(t *testing.T) {
 
 	// Expect an error
 	_, err = da.GroupGet("")
-	if err == nil {
-		t.Error("Expected an error")
-	}
+	expectErr(t, err, errs.ErrEmptyGroupName)
 
 	// Expect an error
 	_, err = da.GroupGet("test-get")
-	if err == nil {
-		t.Error("Expected an error")
-	}
+	expectErr(t, err, errs.ErrNoSuchGroup)
 
-	da.groups["test-get"] = &rest.Group{Name: "test-get"}
-	defer delete(da.groups, "test-get")
+	da.GroupCreate(rest.Group{Name: "test-get"})
+	defer da.GroupDelete("test-get")
 
 	// da.Group should exist now
 	exists, _ := da.GroupExists("test-get")
@@ -79,9 +88,7 @@ func TestGroupGet(t *testing.T) {
 
 	// Expect no error
 	group, err = da.GroupGet("test-get")
-	if err != nil {
-		t.Error("Expected no error")
-	}
+	expectNoErr(t, err)
 	if group.Name != "test-get" {
 		t.Errorf("Group name mismatch: %q is not \"test-get\"", group.Name)
 	}
@@ -89,16 +96,16 @@ func TestGroupGet(t *testing.T) {
 
 func TestGroupList(t *testing.T) {
 	da.GroupCreate(rest.Group{Name: "test-list-0"})
+	defer da.GroupDelete("test-list-0")
 	da.GroupCreate(rest.Group{Name: "test-list-1"})
+	defer da.GroupDelete("test-list-1")
 	da.GroupCreate(rest.Group{Name: "test-list-2"})
+	defer da.GroupDelete("test-list-2")
 	da.GroupCreate(rest.Group{Name: "test-list-3"})
-
-	defer func() { da.groups = make(map[string]*rest.Group) }()
+	defer da.GroupDelete("test-list-3")
 
 	groups, err := da.GroupList()
-	if err != nil {
-		t.Error("Expected no error")
-	}
+	expectNoErr(t, err)
 
 	if len(groups) != 4 {
 		t.Errorf("Expected len(groups) = 4; got %d", len(groups))
@@ -111,53 +118,21 @@ func TestGroupList(t *testing.T) {
 	}
 }
 
-func TestGroupDelete(t *testing.T) {
-	// Delete blank group
-	err := da.GroupDelete("")
-	if err == nil {
-		t.Error("Expected an error")
-	}
-
-	// Delete group that doesn't exist
-	err = da.GroupDelete("no-such-group")
-	if err == nil {
-		t.Error("Expected an error")
-	}
-
-	group := rest.Group{Name: "test-delete"}
-	da.GroupCreate(group) // This has its own test
-
-	err = da.GroupDelete("test-delete")
-	if err != nil {
-		t.Error("Expected no error")
-	}
-
-	exists, _ := da.GroupExists("test-delete")
-	if exists {
-		t.Error("Shouldn't exist anymore!")
-	}
-}
 func TestGroupAddUser(t *testing.T) {
 	err := da.GroupAddUser("foo", "bar")
-	if err == nil {
-		t.Error("Expected an error")
-	}
+	expectErr(t, err, errs.ErrNoSuchGroup)
 
 	da.GroupCreate(rest.Group{Name: "foo"})
 	defer da.GroupDelete("foo")
 
 	err = da.GroupAddUser("foo", "bar")
-	if err == nil {
-		t.Error("Expected an error")
-	}
+	expectErr(t, err, errs.ErrNoSuchUser)
 
-	da.UserCreate(rest.User{Username: "bar"})
+	da.UserCreate(rest.User{Username: "bar", Email: "bar"})
 	defer da.UserDelete("bar")
 
 	err = da.GroupAddUser("foo", "bar")
-	if err != nil {
-		t.Error("Expected no error")
-	}
+	expectNoErr(t, err)
 
 	group, _ := da.GroupGet("foo")
 
@@ -178,14 +153,10 @@ func TestGroupRemoveUser(t *testing.T) {
 	defer da.UserDelete("bat")
 
 	err := da.GroupAddUser("foo", "bat")
-	if err != nil {
-		t.Error("Expected no error")
-	}
+	expectNoErr(t, err)
 
 	group, err := da.GroupGet("foo")
-	if err != nil {
-		t.Error("Expected no error")
-	}
+	expectNoErr(t, err)
 
 	if len(group.Users) != 1 {
 		t.Error("Users list empty")
@@ -196,14 +167,10 @@ func TestGroupRemoveUser(t *testing.T) {
 	}
 
 	err = da.GroupRemoveUser("foo", "bat")
-	if err != nil {
-		t.Error("Expected no error")
-	}
+	expectNoErr(t, err)
 
 	group, err = da.GroupGet("foo")
-	if err != nil {
-		t.Error("Expected no error")
-	}
+	expectNoErr(t, err)
 
 	if len(group.Users) != 0 {
 		fmt.Println(group.Users)

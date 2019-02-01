@@ -5,24 +5,22 @@ import (
 	"time"
 
 	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/cog2/dataaccess/errs"
 )
 
 func TestTokenGenerate(t *testing.T) {
 	err := da.UserCreate(rest.User{Username: "test_generate"})
 	defer da.UserDelete("test_generate")
-	if err != nil {
-		t.Error(err)
-	}
+	expectNoErr(t, err)
 
 	token, err := da.TokenGenerate("test_generate", 10*time.Minute)
-	if err != nil {
-		t.Error(err)
-	}
+	defer da.TokenInvalidate(token.Token)
+	expectNoErr(t, err)
 
 	t.Logf("%s\n", token.Token)
 
 	if token.Duration != 10*time.Minute {
-		t.Error("Duration mismatch")
+		t.Errorf("Duration mismatch: %v vs %v\n", token.Duration, 10*time.Minute)
 	}
 
 	if token.User != "test_generate" {
@@ -36,69 +34,52 @@ func TestTokenGenerate(t *testing.T) {
 
 func TestTokenRetrieveByUser(t *testing.T) {
 	_, err := da.TokenRetrieveByUser("no-such-user")
-	if err == nil {
-		t.Error("Expected an error")
-	}
+	expectErr(t, err, errs.ErrNoSuchToken)
 
-	err = da.UserCreate(rest.User{Username: "test_uretrieve"})
+	err = da.UserCreate(rest.User{Username: "test_uretrieve", Email: "test_uretrieve"})
 	defer da.UserDelete("test_uretrieve")
-	if err != nil {
-		t.Error(err)
-	}
+	expectNoErr(t, err)
 
 	token, err := da.TokenGenerate("test_uretrieve", 10*time.Minute)
-	if err != nil {
-		t.Error(err)
-	}
+	defer da.TokenInvalidate(token.Token)
+	expectNoErr(t, err)
 
 	rtoken, err := da.TokenRetrieveByUser("test_uretrieve")
-	if err != nil {
-		t.Error(err)
-	}
+	expectNoErr(t, err)
 
-	if token != rtoken {
+	if token.Token != rtoken.Token {
 		t.Error("token mismatch")
 	}
 }
 
 func TestTokenRetrieveByToken(t *testing.T) {
 	_, err := da.TokenRetrieveByToken("no-such-token")
-	if err == nil {
-		t.Error("Expected an error")
-	}
+	expectErr(t, err, errs.ErrNoSuchToken)
 
-	err = da.UserCreate(rest.User{Username: "test_tretrieve"})
+	err = da.UserCreate(rest.User{Username: "test_tretrieve", Email: "test_tretrieve"})
 	defer da.UserDelete("test_tretrieve")
-	if err != nil {
-		t.Error(err)
-	}
+	expectNoErr(t, err)
 
 	token, err := da.TokenGenerate("test_tretrieve", 10*time.Minute)
-	if err != nil {
-		t.Error(err)
-	}
+	defer da.TokenInvalidate(token.Token)
+	expectNoErr(t, err)
 
 	rtoken, err := da.TokenRetrieveByToken(token.Token)
-	if err != nil {
-		t.Error(err)
-	}
+	expectNoErr(t, err)
 
-	if token != rtoken {
+	if token.Token != rtoken.Token {
 		t.Error("token mismatch")
 	}
 }
 
 func TestTokenExpiry(t *testing.T) {
-	err := da.UserCreate(rest.User{Username: "test_expires"})
+	err := da.UserCreate(rest.User{Username: "test_expires", Email: "test_expires"})
 	defer da.UserDelete("test_expires")
-	if err != nil {
-		t.Error(err)
-	}
+	expectNoErr(t, err)
 
 	token, err := da.TokenGenerate("test_expires", 1*time.Second)
-	if err != nil {
-		t.Error(err)
-	}
+	defer da.TokenInvalidate(token.Token)
+	expectNoErr(t, err)
 
 	if token.IsExpired() {
 		t.Error("Expected token to be unexpired")
@@ -112,25 +93,20 @@ func TestTokenExpiry(t *testing.T) {
 }
 
 func TestTokenInvalidate(t *testing.T) {
-	err := da.UserCreate(rest.User{Username: "test_invalidate"})
+	err := da.UserCreate(rest.User{Username: "test_invalidate", Email: "test_invalidate"})
 	defer da.UserDelete("test_invalidate")
-	if err != nil {
-		t.Error(err)
-	}
+	expectNoErr(t, err)
 
 	token, err := da.TokenGenerate("test_invalidate", 10*time.Minute)
-	if err != nil {
-		t.Error(err)
-	}
+	defer da.TokenInvalidate(token.Token)
+	expectNoErr(t, err)
 
 	if !da.TokenEvaluate(token.Token) {
 		t.Error("Expected token to be valid")
 	}
 
 	err = da.TokenInvalidate(token.Token)
-	if err != nil {
-		t.Error(err)
-	}
+	expectNoErr(t, err)
 
 	if da.TokenEvaluate(token.Token) {
 		t.Error("Expected token to be invalid")
