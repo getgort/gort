@@ -11,6 +11,13 @@ import (
 type DataAccess interface {
 	Initialize() error
 
+	// BundleCreate(bundle data.Bundle) error
+	// BundleDelete(bundlename string) error
+	// BundleExists(bundlename string) (bool, error)
+	// BundleGet(bundlename string) (data.Bundle, error)
+	// BundleList() ([]data.Bundle, error)
+	// BundleUpdate(bundle data.Bundle) error
+
 	GroupAddUser(groupname string, username string) error
 	GroupCreate(group rest.Group) error
 	GroupDelete(groupname string) error

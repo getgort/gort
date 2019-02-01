@@ -12,8 +12,24 @@ func (da PostgresDataAccess) GroupAddUser(groupname string, username string) err
 		return errs.ErrEmptyGroupName
 	}
 
+	exists, err := da.GroupExists(groupname)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errs.ErrNoSuchGroup
+	}
+
 	if username == "" {
 		return errs.ErrEmptyUserName
+	}
+
+	exists, err = da.UserExists(username)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errs.ErrNoSuchUser
 	}
 
 	db, err := da.connect("cog")
@@ -121,6 +137,10 @@ func (da PostgresDataAccess) GroupExists(groupname string) (bool, error) {
 
 // GroupGet gets a specific group.
 func (da PostgresDataAccess) GroupGet(groupname string) (rest.Group, error) {
+	if groupname == "" {
+		return rest.Group{}, errs.ErrEmptyGroupName
+	}
+
 	db, err := da.connect("cog")
 	defer db.Close()
 	if err != nil {

@@ -26,5 +26,5 @@ var (
 
 	// ErrDataAccessNotInitialized indicates that the data layer has not been
 	// initialized.
-	ErrDataAccessNotInitialized = errors.New("data access layer nit initialized")
+	ErrDataAccessNotInitialized = errors.New("data access layer not initialized")
 )

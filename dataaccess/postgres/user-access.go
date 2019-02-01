@@ -137,7 +137,7 @@ func (da PostgresDataAccess) UserExists(username string) (bool, error) {
 
 	err = db.QueryRow(query, username).Scan(&exists)
 	if err != nil {
-		return false, cogerr.Wrap(errs.ErrNoSuchUser, err)
+		return false, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return exists, nil
@@ -146,6 +146,10 @@ func (da PostgresDataAccess) UserExists(username string) (bool, error) {
 // UserGet returns a user from the data store. An error is returned if the
 // username parameter is empty or if the user doesn't exist.
 func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
+	if username == "" {
+		return rest.User{}, errs.ErrEmptyUserName
+	}
+
 	db, err := da.connect("cog")
 	defer db.Close()
 	if err != nil {
@@ -160,7 +164,6 @@ func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
 	err = db.
 		QueryRow(query, username).
 		Scan(&user.Email, &user.FullName, &user.Username)
-
 	if err != nil {
 		err = cogerr.Wrap(errs.ErrNoSuchUser, err)
 	}
@@ -185,7 +188,6 @@ func (da PostgresDataAccess) UserGetByEmail(email string) (rest.User, error) {
 	err = db.
 		QueryRow(query, email).
 		Scan(&user.Email, &user.FullName, &user.Username)
-
 	if err != nil {
 		err = cogerr.Wrap(errs.ErrNoSuchUser, err)
 	}
@@ -214,7 +216,6 @@ func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 		user := rest.User{}
 
 		err = rows.Scan(&user.Email, &user.FullName, &user.Username)
-
 		if err != nil {
 			err = cogerr.Wrap(errs.ErrNoSuchUser, err)
 		}
