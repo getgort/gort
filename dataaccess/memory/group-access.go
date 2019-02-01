@@ -163,7 +163,7 @@ func (da InMemoryDataAccess) GroupUpdate(group rest.Group) error {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.UserExists(group.Name)
+	exists, err := da.GroupExists(group.Name)
 	if err != nil {
 		return err
 	}
