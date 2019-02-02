@@ -207,18 +207,48 @@ func TestBundleGet(t *testing.T) {
 	}
 }
 
-func compareStringSlices(s1, s2 []string) error {
-	if len(s1) != len(s2) {
-		return fmt.Errorf("different length slices: %d vs %d", len(s1), len(s2))
-	}
+func TestBundleList(t *testing.T) {
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete("test-list-0", "0.0")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete("test-list-0", "0.1")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete("test-list-1", "0.0")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete("test-list-1", "0.1")
 
-	for i := 0; i < len(s1); i++ {
-		if s1[i] != s2[i] {
-			return fmt.Errorf("value mismatch: %q vs %q", s1[i], s2[i])
+	bundles, err := da.BundleList()
+	expectNoErr(t, err)
+
+	if len(bundles) != 4 {
+		for i, u := range bundles {
+			t.Logf("Bundle %d: %v\n", i+1, u)
 		}
-	}
 
-	return nil
+		t.Errorf("Expected len(bundles) = 4; got %d", len(bundles))
+	}
+}
+
+func TestBundleListVersions(t *testing.T) {
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete("test-list-0", "0.0")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete("test-list-0", "0.1")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete("test-list-1", "0.0")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete("test-list-1", "0.1")
+
+	bundles, err := da.BundleListVersions("test-list-0")
+	expectNoErr(t, err)
+
+	if len(bundles) != 2 {
+		for i, u := range bundles {
+			t.Logf("Bundle %d: %v\n", i+1, u)
+		}
+
+		t.Errorf("Expected len(bundles) = 2; got %d", len(bundles))
+	}
 }
 
 // Returns: matches?, mismatching field name, expected field value, got field value, error
@@ -245,4 +275,18 @@ func compareFields(ob1 interface{}, ob2 interface{}, fields ...string) (bool, st
 	}
 
 	return true, "", "", "", nil
+}
+
+func compareStringSlices(s1, s2 []string) error {
+	if len(s1) != len(s2) {
+		return fmt.Errorf("different length slices: %d vs %d", len(s1), len(s2))
+	}
+
+	for i := 0; i < len(s1); i++ {
+		if s1[i] != s2[i] {
+			return fmt.Errorf("value mismatch: %q vs %q", s1[i], s2[i])
+		}
+	}
+
+	return nil
 }

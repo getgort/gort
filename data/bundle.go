@@ -11,34 +11,34 @@ import (
 // Bundle represents a bundle as defined in the "bundles" section of the
 // config.
 type Bundle struct {
-	CogBundleVersion int                      `yaml:"cog_bundle_version,omitempty"`
-	Name             string                   `yaml:",omitempty"`
-	Version          string                   `yaml:",omitempty"`
-	Active           bool                     `yaml:"-"`
-	Author           string                   `yaml:",omitempty"`
-	Homepage         string                   `yaml:",omitempty"`
-	Description      string                   `yaml:",omitempty"`
-	InstalledOn      time.Time                `yaml:"-"`
-	InstalledBy      string                   `yaml:"-"`
-	LongDescription  string                   `yaml:"long_description,omitempty"`
-	Docker           BundleDocker             `yaml:",omitempty"`
-	Permissions      []string                 `yaml:",omitempty"`
-	Commands         map[string]BundleCommand `yaml:",omitempty"`
+	CogBundleVersion int                      `yaml:"cog_bundle_version,omitempty" json:"cog_bundle_version,omitempty"`
+	Name             string                   `yaml:",omitempty" json:"name,omitempty"`
+	Version          string                   `yaml:",omitempty" json:"version,omitempty"`
+	Active           bool                     `yaml:"-" json:"-"`
+	Author           string                   `yaml:",omitempty" json:"author,omitempty"`
+	Homepage         string                   `yaml:",omitempty" json:"homepage,omitempty"`
+	Description      string                   `yaml:",omitempty" json:"description,omitempty"`
+	InstalledOn      time.Time                `yaml:"-" json:"-"`
+	InstalledBy      string                   `yaml:"-" json:"-"`
+	LongDescription  string                   `yaml:"long_description,omitempty" json:"long_description,omitempty"`
+	Docker           BundleDocker             `yaml:",omitempty" json:"docker,omitempty"`
+	Permissions      []string                 `yaml:",omitempty" json:"permissions,omitempty"`
+	Commands         map[string]BundleCommand `yaml:",omitempty" json:"commands,omitempty"`
 }
 
 // BundleDocker represents the "bundles/docker" subsection of the config doc
 type BundleDocker struct {
-	Image string `yaml:",omitempty"`
-	Tag   string `yaml:",omitempty"`
+	Image string `yaml:",omitempty" json:"image,omitempty"`
+	Tag   string `yaml:",omitempty" json:"tag,omitempty"`
 }
 
 // BundleCommand represents a bundle command, as defined in the "bundles/commands"
 // section of the config.
 type BundleCommand struct {
-	Description string   `yaml:",omitempty"`
-	Executable  string   `yaml:",omitempty"`
-	Name        string   `yaml:"-"`
-	Rules       []string `yaml:",omitempty"`
+	Description string   `yaml:",omitempty" json:"description,omitempty"`
+	Executable  string   `yaml:",omitempty" json:"executable,omitempty"`
+	Name        string   `yaml:"-" json:"-"`
+	Rules       []string `yaml:",omitempty" json:"rules,omitempty"`
 }
 
 // CommandEntry conveniently wraps a bundle and one command within that bundle.

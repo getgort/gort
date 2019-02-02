@@ -94,6 +94,19 @@ func (da InMemoryDataAccess) BundleList() ([]data.Bundle, error) {
 	return list, nil
 }
 
+// BundleListVersions TBD
+func (da InMemoryDataAccess) BundleListVersions(name string) ([]data.Bundle, error) {
+	list := make([]data.Bundle, 0)
+
+	for _, g := range da.bundles {
+		if g.Name == name {
+			list = append(list, *g)
+		}
+	}
+
+	return list, nil
+}
+
 // BundleUpdate TBD
 func (da InMemoryDataAccess) BundleUpdate(bundle data.Bundle) error {
 	if bundle.Name == "" {

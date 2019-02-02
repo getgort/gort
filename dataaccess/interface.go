@@ -17,6 +17,7 @@ type DataAccess interface {
 	BundleExists(name string, version string) (bool, error)
 	BundleGet(name string, version string) (data.Bundle, error)
 	BundleList() ([]data.Bundle, error)
+	BundleListVersions(name string) ([]data.Bundle, error)
 	BundleUpdate(bundle data.Bundle) error
 
 	GroupAddUser(groupname string, username string) error

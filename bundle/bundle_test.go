@@ -1,6 +1,7 @@
 package bundle
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 )
 
 func TestInputOutputHumanEyeball(t *testing.T) {
-	bundle, err := loadBundle("../test-bundle.yml")
+	bundle, err := loadBundle("../testing/test-bundle.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -20,4 +21,18 @@ func TestInputOutputHumanEyeball(t *testing.T) {
 	}
 
 	fmt.Println(string(y))
+}
+func TestInputOutputHumanEyeballJSON(t *testing.T) {
+	bundle, err := loadBundle("../testing/test-bundle.yml")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	j, err := json.MarshalIndent(bundle, "", "  ")
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return
+	}
+
+	fmt.Println(string(j))
 }

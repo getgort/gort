@@ -207,6 +207,50 @@ func TestBundleGet(t *testing.T) {
 	}
 }
 
+func TestBundleList(t *testing.T) {
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete("test-list-0", "0.0")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete("test-list-0", "0.1")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete("test-list-1", "0.0")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete("test-list-1", "0.1")
+
+	bundles, err := da.BundleList()
+	expectNoErr(t, err)
+
+	if len(bundles) != 4 {
+		for i, u := range bundles {
+			t.Logf("Bundle %d: %v\n", i+1, u)
+		}
+
+		t.Errorf("Expected len(bundles) = 4; got %d", len(bundles))
+	}
+}
+
+func TestBundleListVersions(t *testing.T) {
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete("test-list-0", "0.0")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete("test-list-0", "0.1")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete("test-list-1", "0.0")
+	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete("test-list-1", "0.1")
+
+	bundles, err := da.BundleListVersions("test-list-0")
+	expectNoErr(t, err)
+
+	if len(bundles) != 2 {
+		for i, u := range bundles {
+			t.Logf("Bundle %d: %v\n", i+1, u)
+		}
+
+		t.Errorf("Expected len(bundles) = 2; got %d", len(bundles))
+	}
+}
+
 // Returns: matches?, mismatching field name, expected field value, got field value, error
 func compareFields(ob1 interface{}, ob2 interface{}, fields ...string) (bool, string, string, string, error) {
 	v1 := reflect.ValueOf(ob1)

@@ -10,6 +10,8 @@ import (
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/clockworksoul/cog2/dataaccess"
+	"github.com/clockworksoul/cog2/dataaccess/errs"
+	cogerr "github.com/clockworksoul/cog2/errors"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -250,6 +252,76 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(token)
+}
+
+func respondAndLogError(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	msg := err.Error()
+
+	switch {
+	// A required field is empty or missing
+	case cogerr.ErrEquals(err, errs.ErrEmptyBundleName):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrEmptyBundleVersion):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrEmptyGroupName):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrEmptyUserName):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrFieldRequired):
+		status = http.StatusExpectationFailed
+
+	// Requested resource doesn't exist
+	case cogerr.ErrEquals(err, errs.ErrNoSuchBundle):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrNoSuchGroup):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrNoSuchToken):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrNoSuchUser):
+		status = http.StatusNotFound
+
+	// Nope
+	case cogerr.ErrEquals(err, errs.ErrAdminUndeletable):
+		status = http.StatusForbidden
+
+	// Can't insert over something that already exists
+	case cogerr.ErrEquals(err, errs.ErrBundleExists):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrGroupExists):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrUserExists):
+		status = http.StatusConflict
+
+	// Not done yet
+	case cogerr.ErrEquals(err, errs.ErrNotImplemented):
+		status = http.StatusNotImplemented
+
+	// Data access errors
+	case cogerr.ErrEquals(err, errs.ErrDataAccessNotInitialized):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrDataAccessCantInitialize):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrDataAccessCantConnect):
+		fallthrough
+	case cogerr.ErrEquals(err, errs.ErrDataAccess):
+		status = http.StatusInternalServerError
+		log.Errorf("%d %s", status, msg)
+
+	// Bad context
+	case cogerr.ErrEquals(err, cogerr.ErrUnmarshal):
+		msg = "Corrupt JSON payload"
+		status = http.StatusNotAcceptable
+
+	// Something else?
+	default:
+		log.Warnf("[%s] unhandled error found: %q",
+			"respondAndLogError", err.Error())
+		status = http.StatusInternalServerError
+		log.Errorf("%d %s", status, msg)
+	}
+
+	http.Error(w, msg, status)
 }
 
 func respondAndLogServerError(w http.ResponseWriter, err error, label string, index int) {

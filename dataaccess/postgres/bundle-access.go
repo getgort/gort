@@ -22,7 +22,7 @@ func (da PostgresDataAccess) BundleCreate(bundle data.Bundle) error {
 		return err
 	}
 
-	exists, err := da.quickBundleExists(db, bundle.Name, bundle.Version)
+	exists, err := da.doBundleExists(db, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (da PostgresDataAccess) BundleCreate(bundle data.Bundle) error {
 	if err != nil {
 		tx.Rollback()
 
-		if strings.Contains(err.Error(), "violates check constraint") {
+		if strings.Contains(err.Error(), "violates") {
 			err = cogerr.Wrap(errs.ErrFieldRequired, err)
 		} else {
 			err = cogerr.Wrap(errs.ErrDataAccess, err)
@@ -144,7 +144,7 @@ func (da PostgresDataAccess) BundleDelete(name, version string) error {
 		return err
 	}
 
-	exists, err := da.quickBundleExists(db, name, version)
+	exists, err := da.doBundleExists(db, name, version)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func (da PostgresDataAccess) BundleExists(name, version string) (bool, error) {
 		return false, err
 	}
 
-	return da.quickBundleExists(db, name, version)
+	return da.doBundleExists(db, name, version)
 }
 
 // BundleGet TBD
@@ -221,6 +221,102 @@ func (da PostgresDataAccess) BundleGet(name, version string) (data.Bundle, error
 		return data.Bundle{}, err
 	}
 
+	return da.doBundleGet(db, name, version)
+}
+
+// BundleList TBD
+func (da PostgresDataAccess) BundleList() ([]data.Bundle, error) {
+	// This is hacky as fuck. I know.
+	// I'll optimize later.
+
+	db, err := da.connect("cog")
+	defer db.Close()
+	if err != nil {
+		return []data.Bundle{}, err
+	}
+
+	query := `SELECT name, version FROM bundles`
+	rows, err := db.Query(query)
+	if err != nil {
+		return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	bundles := make([]data.Bundle, 0)
+	for rows.NextResultSet() && rows.Next() {
+		var name, version string
+
+		err = rows.Scan(&name, &version)
+		if err != nil {
+			return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
+		}
+
+		bundle, err := da.doBundleGet(db, name, version)
+		if err != nil {
+			return []data.Bundle{}, err
+		}
+
+		bundles = append(bundles, bundle)
+	}
+
+	return bundles, nil
+}
+
+// BundleListVersions TBD
+func (da PostgresDataAccess) BundleListVersions(name string) ([]data.Bundle, error) {
+	// This is hacky as fuck. I know.
+	// I'll optimize later.
+
+	db, err := da.connect("cog")
+	defer db.Close()
+	if err != nil {
+		return []data.Bundle{}, err
+	}
+
+	query := `SELECT name, version FROM bundles WHERE name=$1`
+	rows, err := db.Query(query, name)
+	if err != nil {
+		return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	bundles := make([]data.Bundle, 0)
+	for rows.NextResultSet() && rows.Next() {
+		var name, version string
+
+		err = rows.Scan(&name, &version)
+		if err != nil {
+			return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
+		}
+
+		bundle, err := da.doBundleGet(db, name, version)
+		if err != nil {
+			return []data.Bundle{}, err
+		}
+
+		bundles = append(bundles, bundle)
+	}
+
+	return bundles, nil
+}
+
+// BundleUpdate TBD
+func (da PostgresDataAccess) BundleUpdate(bundle data.Bundle) error {
+	return errs.ErrNotImplemented
+}
+
+// BundleExists TBD
+func (da PostgresDataAccess) doBundleExists(db *sql.DB, name string, version string) (bool, error) {
+	query := "SELECT EXISTS(SELECT 1 FROM bundles WHERE name=$1 AND version=$2)"
+	exists := false
+
+	err := db.QueryRow(query, name, version).Scan(&exists)
+	if err != nil {
+		return false, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return exists, nil
+}
+
+func (da PostgresDataAccess) doBundleGet(db *sql.DB, name string, version string) (data.Bundle, error) {
 	query := `SELECT cog_bundle_version, name, version, active, author, homepage,
 			description, long_description, docker_image, docker_tag, 
 			install_timestamp, install_user
@@ -228,7 +324,7 @@ func (da PostgresDataAccess) BundleGet(name, version string) (data.Bundle, error
 		WHERE name=$1 AND version=$2`
 
 	bundle := data.Bundle{}
-	err = db.
+	err := db.
 		QueryRow(query, name, version).
 		Scan(&bundle.CogBundleVersion, &bundle.Name, &bundle.Version,
 			&bundle.Active, &bundle.Author, &bundle.Homepage, &bundle.Description,
@@ -306,27 +402,4 @@ func (da PostgresDataAccess) BundleGet(name, version string) (data.Bundle, error
 	bundle.Commands = commands
 
 	return bundle, nil
-}
-
-// BundleList TBD
-func (da PostgresDataAccess) BundleList() ([]data.Bundle, error) {
-	return []data.Bundle{}, errs.ErrNotImplemented
-}
-
-// BundleUpdate TBD
-func (da PostgresDataAccess) BundleUpdate(bundle data.Bundle) error {
-	return errs.ErrNotImplemented
-}
-
-// BundleExists TBD
-func (da PostgresDataAccess) quickBundleExists(db *sql.DB, name string, version string) (bool, error) {
-	query := "SELECT EXISTS(SELECT 1 FROM bundles WHERE name=$1 AND version=$2)"
-	exists := false
-
-	err := db.QueryRow(query, name, version).Scan(&exists)
-	if err != nil {
-		return false, cogerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	return exists, nil
 }

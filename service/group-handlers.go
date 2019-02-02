@@ -114,7 +114,7 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(group.Users)
 }
 
-// handlePutGroup handles "POST /v2/groups/{groupname}"
+// handlePutGroup handles "PUT /v2/groups/{groupname}"
 func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 	var group rest.Group
 	var err error
@@ -147,7 +147,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handlePutGroupMember handles "POST "/v2/groups/{groupname}/members/{username}""
+// handlePutGroupMember handles "PUT "/v2/groups/{groupname}/members/{username}""
 func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 	var exists bool
 	var err error
