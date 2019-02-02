@@ -13,15 +13,15 @@ var (
 
 func expectErr(t *testing.T, err error, expected error) {
 	if err == nil {
-		t.Error("Expected an error")
+		t.Fatalf("Expected error %q but didn't get one", expected)
 	} else if !cogerr.ErrEquals(err, expected) {
-		t.Errorf("Wrong error:\nExpected: %s\nGot: %s\n", expected.Error(), err.Error())
+		t.Fatalf("Wrong error:\nExpected: %s\nGot: %s\n", expected, err)
 	}
 }
 
 func expectNoErr(t *testing.T, err error) {
 	if err != nil {
-		t.Error("Expected no error. Got:", err.Error())
+		t.Fatal(err)
 	}
 }
 

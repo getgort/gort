@@ -94,6 +94,20 @@ func (da PostgresDataAccess) Initialize() error {
 		}
 	}
 
+	// Check whether the bundles table exists
+	exists, err = da.tableExists("bundles", db)
+	if err != nil {
+		return err
+	}
+
+	// If not, assume none of them do. Create them all.
+	if !exists {
+		err = da.createBundlesTables(db)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -140,6 +154,68 @@ func (da PostgresDataAccess) connect(dbname string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func (da PostgresDataAccess) createBundlesTables(db *sql.DB) error {
+	var err error
+
+	createBundlesQuery := `CREATE TABLE bundles (
+		cog_bundle_version  INT NOT NULL CHECK(cog_bundle_version > 0),
+		name				TEXT NOT NULL CHECK(name <> ''),
+		version				TEXT NOT NULL CHECK(version <> ''),
+		active				BOOLEAN DEFAULT false,
+		author				TEXT,
+		homepage			TEXT,
+		description			TEXT NOT NULL CHECK(description <> ''),
+		long_description	TEXT,
+		docker_image		TEXT,
+		docker_tag			TEXT,
+		install_timestamp	TIMESTAMP WITH TIME ZONE,
+		install_user		TEXT,
+		CONSTRAINT 			unq_bundle UNIQUE(name, version),
+		PRIMARY KEY 		(name, version)
+	);
+
+	ALTER TABLE bundles ALTER COLUMN install_timestamp SET DEFAULT now();
+
+	CREATE TABLE bundle_permissions (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		index				INT NOT NULL CHECK(index >= 0),
+		permission			TEXT,
+		CONSTRAINT			unq_permission UNIQUE(bundle_name, bundle_version, index),
+		PRIMARY KEY			(bundle_name, bundle_version, index),
+		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
+	);
+
+	CREATE TABLE bundle_commands (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		name				TEXT NOT NULL CHECK(name <> ''),
+		description			TEXT NOT NULL CHECK(description <> ''),
+		executable			TEXT NOT NULL CHECK(executable <> ''),
+		CONSTRAINT			unq_command UNIQUE(bundle_name, bundle_version, name),
+		PRIMARY KEY			(bundle_name, bundle_version, name),
+		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
+	);
+
+	CREATE TABLE bundle_command_rules (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		command_name		TEXT NOT NULL,
+		rule				TEXT NOT NULL CHECK(rule <> ''),
+		PRIMARY KEY			(bundle_name, bundle_version, command_name),
+		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
+			REFERENCES bundle_commands(bundle_name, bundle_version, name)
+	);
+	`
+
+	_, err = db.Exec(createBundlesQuery)
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
 }
 
 func (da PostgresDataAccess) createGroupsTable(db *sql.DB) error {

@@ -19,14 +19,14 @@ type Worker struct {
 	DockerClient      *client.Client
 	DockerContext     context.Context
 	DockerHost        string
-	EntryPoint        []string
+	EntryPoint        string
 	ExitStatus        chan int64
 	ExecutionTimeout  time.Duration
 	ImageName         string
 }
 
 // NewWorker will build and returns a new Worker for a single command execution.
-func NewWorker(image string, tag string, entryPoint []string, commandParams ...string) (*Worker, error) {
+func NewWorker(image string, tag string, entryPoint string, commandParams ...string) (*Worker, error) {
 	dcli, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
@@ -78,8 +78,8 @@ func (w *Worker) Start() (<-chan string, error) {
 		Tty:   true,
 	}
 
-	if entryPoint != nil && len(entryPoint) > 0 && entryPoint[0] != "" {
-		cfg.Entrypoint = entryPoint
+	if entryPoint != "" {
+		cfg.Entrypoint = []string{entryPoint}
 	}
 
 	resp, err := cli.ContainerCreate(ctx, &cfg, nil, nil, "")
@@ -107,7 +107,7 @@ func (w *Worker) Start() (<-chan string, error) {
 
 		log.Debugf("[Worker.Start] %s %s %s - Completed in %s",
 			w.ImageName,
-			strings.Join(entryPoint, " "),
+			entryPoint,
 			strings.Join(w.CommandParameters, " "),
 			time.Now().Sub(startTime).String(),
 		)

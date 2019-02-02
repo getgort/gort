@@ -1,4 +1,4 @@
-package memory
+package postgres
 
 import (
 	"fmt"
@@ -207,20 +207,6 @@ func TestBundleGet(t *testing.T) {
 	}
 }
 
-func compareStringSlices(s1, s2 []string) error {
-	if len(s1) != len(s2) {
-		return fmt.Errorf("different length slices: %d vs %d", len(s1), len(s2))
-	}
-
-	for i := 0; i < len(s1); i++ {
-		if s1[i] != s2[i] {
-			return fmt.Errorf("value mismatch: %q vs %q", s1[i], s2[i])
-		}
-	}
-
-	return nil
-}
-
 // Returns: matches?, mismatching field name, expected field value, got field value, error
 func compareFields(ob1 interface{}, ob2 interface{}, fields ...string) (bool, string, string, string, error) {
 	v1 := reflect.ValueOf(ob1)
@@ -245,4 +231,18 @@ func compareFields(ob1 interface{}, ob2 interface{}, fields ...string) (bool, st
 	}
 
 	return true, "", "", "", nil
+}
+
+func compareStringSlices(s1, s2 []string) error {
+	if len(s1) != len(s2) {
+		return fmt.Errorf("different length slices: %d vs %d", len(s1), len(s2))
+	}
+
+	for i := 0; i < len(s1); i++ {
+		if s1[i] != s2[i] {
+			return fmt.Errorf("value mismatch: %q vs %q", s1[i], s2[i])
+		}
+	}
+
+	return nil
 }

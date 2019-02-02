@@ -3,6 +3,7 @@ package data
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 /// The wrappers for the "bundles" section
@@ -10,12 +11,15 @@ import (
 // Bundle represents a bundle as defined in the "bundles" section of the
 // config.
 type Bundle struct {
-	CogBundleVersion string                   `yaml:"cog_bundle_version,omitempty"`
+	CogBundleVersion int                      `yaml:"cog_bundle_version,omitempty"`
 	Name             string                   `yaml:",omitempty"`
 	Version          string                   `yaml:",omitempty"`
+	Active           bool                     `yaml:"-"`
 	Author           string                   `yaml:",omitempty"`
 	Homepage         string                   `yaml:",omitempty"`
 	Description      string                   `yaml:",omitempty"`
+	InstalledOn      time.Time                `yaml:"-"`
+	InstalledBy      string                   `yaml:"-"`
 	LongDescription  string                   `yaml:"long_description,omitempty"`
 	Docker           BundleDocker             `yaml:",omitempty"`
 	Permissions      []string                 `yaml:",omitempty"`
@@ -32,8 +36,9 @@ type BundleDocker struct {
 // section of the config.
 type BundleCommand struct {
 	Description string   `yaml:",omitempty"`
-	Executable  []string `yaml:",omitempty"`
+	Executable  string   `yaml:",omitempty"`
 	Name        string   `yaml:"-"`
+	Rules       []string `yaml:",omitempty"`
 }
 
 // CommandEntry conveniently wraps a bundle and one command within that bundle.

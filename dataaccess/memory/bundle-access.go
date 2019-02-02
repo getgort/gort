@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"fmt"
+
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/dataaccess/errs"
 )
@@ -11,7 +13,11 @@ func (da InMemoryDataAccess) BundleCreate(bundle data.Bundle) error {
 		return errs.ErrEmptyBundleName
 	}
 
-	exists, err := da.BundleExists(bundle.Name)
+	if bundle.CogBundleVersion == 0 || bundle.Version == "" || bundle.Description == "" {
+		return errs.ErrFieldRequired
+	}
+
+	exists, err := da.BundleExists(bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	}
@@ -19,18 +25,22 @@ func (da InMemoryDataAccess) BundleCreate(bundle data.Bundle) error {
 		return errs.ErrBundleExists
 	}
 
-	da.bundles[bundle.Name] = &bundle
+	da.bundles[bundleKey(bundle.Name, bundle.Version)] = &bundle
 
 	return nil
 }
 
 // BundleDelete TBD
-func (da InMemoryDataAccess) BundleDelete(bundlename string) error {
-	if bundlename == "" {
+func (da InMemoryDataAccess) BundleDelete(name, version string) error {
+	if name == "" {
 		return errs.ErrEmptyBundleName
 	}
 
-	exists, err := da.BundleExists(bundlename)
+	if version == "" {
+		return errs.ErrEmptyBundleVersion
+	}
+
+	exists, err := da.BundleExists(name, version)
 	if err != nil {
 		return err
 	}
@@ -38,25 +48,29 @@ func (da InMemoryDataAccess) BundleDelete(bundlename string) error {
 		return errs.ErrNoSuchBundle
 	}
 
-	delete(da.bundles, bundlename)
+	delete(da.bundles, bundleKey(name, version))
 
 	return nil
 }
 
 // BundleExists TBD
-func (da InMemoryDataAccess) BundleExists(bundlename string) (bool, error) {
-	_, exists := da.bundles[bundlename]
+func (da InMemoryDataAccess) BundleExists(name, version string) (bool, error) {
+	_, exists := da.bundles[bundleKey(name, version)]
 
 	return exists, nil
 }
 
 // BundleGet TBD
-func (da InMemoryDataAccess) BundleGet(bundlename string) (data.Bundle, error) {
-	if bundlename == "" {
+func (da InMemoryDataAccess) BundleGet(name, version string) (data.Bundle, error) {
+	if name == "" {
 		return data.Bundle{}, errs.ErrEmptyBundleName
 	}
 
-	exists, err := da.BundleExists(bundlename)
+	if version == "" {
+		return data.Bundle{}, errs.ErrEmptyBundleVersion
+	}
+
+	exists, err := da.BundleExists(name, version)
 	if err != nil {
 		return data.Bundle{}, err
 	}
@@ -64,7 +78,7 @@ func (da InMemoryDataAccess) BundleGet(bundlename string) (data.Bundle, error) {
 		return data.Bundle{}, errs.ErrNoSuchBundle
 	}
 
-	bundle := da.bundles[bundlename]
+	bundle := da.bundles[bundleKey(name, version)]
 
 	return *bundle, nil
 }
@@ -86,7 +100,11 @@ func (da InMemoryDataAccess) BundleUpdate(bundle data.Bundle) error {
 		return errs.ErrEmptyBundleName
 	}
 
-	exists, err := da.BundleExists(bundle.Name)
+	if bundle.Version == "" {
+		return errs.ErrEmptyBundleVersion
+	}
+
+	exists, err := da.BundleExists(bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	}
@@ -94,7 +112,11 @@ func (da InMemoryDataAccess) BundleUpdate(bundle data.Bundle) error {
 		return errs.ErrNoSuchBundle
 	}
 
-	da.bundles[bundle.Name] = &bundle
+	da.bundles[bundleKey(bundle.Name, bundle.Version)] = &bundle
 
 	return nil
+}
+
+func bundleKey(name, version string) string {
+	return fmt.Sprintf("%q::%q", name, version)
 }

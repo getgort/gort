@@ -13,9 +13,9 @@ type DataAccess interface {
 	Initialize() error
 
 	BundleCreate(bundle data.Bundle) error
-	BundleDelete(bundlename string) error
-	BundleExists(bundlename string) (bool, error)
-	BundleGet(bundlename string) (data.Bundle, error)
+	BundleDelete(name string, version string) error
+	BundleExists(name string, version string) (bool, error)
+	BundleGet(name string, version string) (data.Bundle, error)
 	BundleList() ([]data.Bundle, error)
 	BundleUpdate(bundle data.Bundle) error
 
