@@ -10,10 +10,13 @@ import (
 )
 
 // BundleCreate TBD
-// TODO This func is a hot mess. Break it up and tidy it.
 func (da PostgresDataAccess) BundleCreate(bundle data.Bundle) error {
 	if bundle.Name == "" {
 		return errs.ErrEmptyBundleName
+	}
+
+	if bundle.Version == "" {
+		return errs.ErrEmptyBundleVersion
 	}
 
 	db, err := da.connect("cog")
@@ -25,8 +28,7 @@ func (da PostgresDataAccess) BundleCreate(bundle data.Bundle) error {
 	exists, err := da.doBundleExists(db, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
-	}
-	if exists {
+	} else if exists {
 		return errs.ErrBundleExists
 	}
 
@@ -35,88 +37,25 @@ func (da PostgresDataAccess) BundleCreate(bundle data.Bundle) error {
 		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	query := `INSERT INTO bundles (cog_bundle_version, name, version, active, author, 
-								   homepage, description, long_description, docker_image,
-								   docker_tag, install_user)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`
-
-	_, err = tx.Exec(query, bundle.CogBundleVersion, bundle.Name, bundle.Version,
-		bundle.Active, bundle.Author, bundle.Homepage, bundle.Description,
-		bundle.LongDescription, bundle.Docker.Image, bundle.Docker.Tag, bundle.InstalledBy)
+	// Save bundle
+	err = da.doInsertBundle(tx, bundle)
 	if err != nil {
 		tx.Rollback()
-
-		if strings.Contains(err.Error(), "violates") {
-			err = cogerr.Wrap(errs.ErrFieldRequired, err)
-		} else {
-			err = cogerr.Wrap(errs.ErrDataAccess, err)
-		}
-
 		return err
 	}
 
 	// Save permissions
-	//
-	query = `INSERT INTO bundle_permissions
-		(bundle_name, bundle_version, index, permission)
-		VALUES ($1, $2, $3, $4);`
-
-	for i, perm := range bundle.Permissions {
-		_, err = tx.Exec(query, bundle.Name, bundle.Version, i, perm)
-		if err != nil {
-			tx.Rollback()
-
-			if strings.Contains(err.Error(), "violates") {
-				err = cogerr.Wrap(errs.ErrFieldRequired, err)
-			} else {
-				err = cogerr.Wrap(errs.ErrDataAccess, err)
-			}
-
-			return err
-		}
+	err = da.doInsertBundlePermissions(tx, bundle)
+	if err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	// Save commands
-	//
-	query = `INSERT INTO bundle_commands
-		(bundle_name, bundle_version, name, description, executable)
-		VALUES ($1, $2, $3, $4, $5);`
-
-	for name, cmd := range bundle.Commands {
-		_, err = tx.Exec(query, bundle.Name, bundle.Version, name,
-			cmd.Description, cmd.Executable)
-
-		if err != nil {
-			tx.Rollback()
-
-			if strings.Contains(err.Error(), "violates") {
-				err = cogerr.Wrap(errs.ErrFieldRequired, err)
-			} else {
-				err = cogerr.Wrap(errs.ErrDataAccess, err)
-			}
-
-			return err
-		}
-
-		for _, rule := range cmd.Rules {
-			ruleQuery := `INSERT INTO bundle_command_rules
-				(bundle_name, bundle_version, command_name, rule)
-				VALUES ($1, $2, $3, $4);`
-
-			_, err = tx.Exec(ruleQuery, bundle.Name, bundle.Version, name, rule)
-
-			if err != nil {
-				tx.Rollback()
-
-				if strings.Contains(err.Error(), "violates") {
-					err = cogerr.Wrap(errs.ErrFieldRequired, err)
-				} else {
-					err = cogerr.Wrap(errs.ErrDataAccess, err)
-				}
-
-				return err
-			}
-		}
+	err = da.doInsertBundleCommands(tx, bundle)
+	if err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	err = tx.Commit()
@@ -147,8 +86,7 @@ func (da PostgresDataAccess) BundleDelete(name, version string) error {
 	exists, err := da.doBundleExists(db, name, version)
 	if err != nil {
 		return err
-	}
-	if !exists {
+	} else if !exists {
 		return errs.ErrNoSuchBundle
 	}
 
@@ -157,29 +95,7 @@ func (da PostgresDataAccess) BundleDelete(name, version string) error {
 		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	query := "DELETE FROM bundle_command_rules WHERE bundle_name=$1 AND bundle_version=$2;"
-	_, err = tx.Exec(query, name, version)
-	if err != nil {
-		tx.Rollback()
-		return cogerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	query = "DELETE FROM bundle_permissions WHERE bundle_name=$1 AND bundle_version=$2;"
-	_, err = tx.Exec(query, name, version)
-	if err != nil {
-		tx.Rollback()
-		return cogerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	query = "DELETE FROM bundle_commands WHERE bundle_name=$1 AND bundle_version=$2;"
-	_, err = tx.Exec(query, name, version)
-	if err != nil {
-		tx.Rollback()
-		return cogerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	query = "DELETE FROM bundles WHERE name=$1 AND version=$2;"
-	_, err = tx.Exec(query, name, version)
+	err = da.doDeleteBundle(tx, name, version)
 	if err != nil {
 		tx.Rollback()
 		return cogerr.Wrap(errs.ErrDataAccess, err)
@@ -221,7 +137,7 @@ func (da PostgresDataAccess) BundleGet(name, version string) (data.Bundle, error
 		return data.Bundle{}, err
 	}
 
-	return da.doBundleGet(db, name, version)
+	return da.doGetBundle(db, name, version)
 }
 
 // BundleList TBD
@@ -250,7 +166,7 @@ func (da PostgresDataAccess) BundleList() ([]data.Bundle, error) {
 			return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
 		}
 
-		bundle, err := da.doBundleGet(db, name, version)
+		bundle, err := da.doGetBundle(db, name, version)
 		if err != nil {
 			return []data.Bundle{}, err
 		}
@@ -287,7 +203,7 @@ func (da PostgresDataAccess) BundleListVersions(name string) ([]data.Bundle, err
 			return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
 		}
 
-		bundle, err := da.doBundleGet(db, name, version)
+		bundle, err := da.doGetBundle(db, name, version)
 		if err != nil {
 			return []data.Bundle{}, err
 		}
@@ -300,7 +216,45 @@ func (da PostgresDataAccess) BundleListVersions(name string) ([]data.Bundle, err
 
 // BundleUpdate TBD
 func (da PostgresDataAccess) BundleUpdate(bundle data.Bundle) error {
-	return errs.ErrNotImplemented
+	if bundle.Name == "" {
+		return errs.ErrEmptyBundleName
+	}
+
+	if bundle.Version == "" {
+		return errs.ErrEmptyBundleVersion
+	}
+
+	db, err := da.connect("cog")
+	defer db.Close()
+	if err != nil {
+		return err
+	}
+
+	exists, err := da.doBundleExists(db, bundle.Name, bundle.Version)
+	if err != nil {
+		return err
+	} else if !exists {
+		return errs.ErrNoSuchBundle
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	err = da.doDeleteBundle(tx, bundle.Name, bundle.Version)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = da.doInsertBundle(tx, bundle)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
 }
 
 // BundleExists TBD
@@ -316,7 +270,35 @@ func (da PostgresDataAccess) doBundleExists(db *sql.DB, name string, version str
 	return exists, nil
 }
 
-func (da PostgresDataAccess) doBundleGet(db *sql.DB, name string, version string) (data.Bundle, error) {
+func (da PostgresDataAccess) doDeleteBundle(tx *sql.Tx, name string, version string) error {
+	query := "DELETE FROM bundle_command_rules WHERE bundle_name=$1 AND bundle_version=$2;"
+	_, err := tx.Exec(query, name, version)
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	query = "DELETE FROM bundle_permissions WHERE bundle_name=$1 AND bundle_version=$2;"
+	_, err = tx.Exec(query, name, version)
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	query = "DELETE FROM bundle_commands WHERE bundle_name=$1 AND bundle_version=$2;"
+	_, err = tx.Exec(query, name, version)
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	query = "DELETE FROM bundles WHERE name=$1 AND version=$2;"
+	_, err = tx.Exec(query, name, version)
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) doGetBundle(db *sql.DB, name string, version string) (data.Bundle, error) {
 	query := `SELECT cog_bundle_version, name, version, active, author, homepage,
 			description, long_description, docker_image, docker_tag, 
 			install_timestamp, install_user
@@ -402,4 +384,101 @@ func (da PostgresDataAccess) doBundleGet(db *sql.DB, name string, version string
 	bundle.Commands = commands
 
 	return bundle, nil
+}
+
+func (da PostgresDataAccess) doInsertBundle(tx *sql.Tx, bundle data.Bundle) error {
+	query := `INSERT INTO bundles (cog_bundle_version, name, version, active, author, 
+		homepage, description, long_description, docker_image,
+		docker_tag, install_user)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`
+
+	_, err := tx.Exec(query, bundle.CogBundleVersion, bundle.Name, bundle.Version,
+		bundle.Active, bundle.Author, bundle.Homepage, bundle.Description,
+		bundle.LongDescription, bundle.Docker.Image, bundle.Docker.Tag, bundle.InstalledBy)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "violates") {
+			err = cogerr.Wrap(errs.ErrFieldRequired, err)
+		} else {
+			err = cogerr.Wrap(errs.ErrDataAccess, err)
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) doInsertBundleCommandRules(
+	tx *sql.Tx, bundle data.Bundle, command data.BundleCommand) error {
+
+	query := `INSERT INTO bundle_command_rules
+		(bundle_name, bundle_version, command_name, rule)
+		VALUES ($1, $2, $3, $4);`
+
+	for _, rule := range command.Rules {
+		_, err := tx.Exec(query, bundle.Name, bundle.Version, command.Name, rule)
+		if err != nil {
+			if strings.Contains(err.Error(), "violates") {
+				err = cogerr.Wrap(errs.ErrFieldRequired, err)
+			} else {
+				err = cogerr.Wrap(errs.ErrDataAccess, err)
+			}
+
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) doInsertBundleCommands(tx *sql.Tx, bundle data.Bundle) error {
+	query := `INSERT INTO bundle_commands
+		(bundle_name, bundle_version, name, description, executable)
+		VALUES ($1, $2, $3, $4, $5);`
+
+	for name, cmd := range bundle.Commands {
+		cmd.Name = name
+
+		_, err := tx.Exec(query, bundle.Name, bundle.Version,
+			cmd.Name, cmd.Description, cmd.Executable)
+
+		if err != nil {
+			if strings.Contains(err.Error(), "violates") {
+				err = cogerr.Wrap(errs.ErrFieldRequired, err)
+			} else {
+				err = cogerr.Wrap(errs.ErrDataAccess, err)
+			}
+
+			return err
+		}
+
+		err = da.doInsertBundleCommandRules(tx, bundle, cmd)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) doInsertBundlePermissions(tx *sql.Tx, bundle data.Bundle) error {
+	query := `INSERT INTO bundle_permissions
+		(bundle_name, bundle_version, index, permission)
+		VALUES ($1, $2, $3, $4);`
+
+	for i, perm := range bundle.Permissions {
+		_, err := tx.Exec(query, bundle.Name, bundle.Version, i, perm)
+		if err != nil {
+			if strings.Contains(err.Error(), "violates") {
+				err = cogerr.Wrap(errs.ErrFieldRequired, err)
+			} else {
+				err = cogerr.Wrap(errs.ErrDataAccess, err)
+			}
+
+			return err
+		}
+	}
+
+	return nil
 }

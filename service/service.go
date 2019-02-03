@@ -214,8 +214,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	user := rest.User{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Missing user data", http.StatusBadRequest)
-		log.Errorf("[handleAuthenticate.1] %s", "Missing user data")
+		respondAndLogError(w, cogerr.ErrUnmarshal)
 		return
 	}
 
@@ -236,7 +235,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 	authenticated, err := dataAccessLayer.UserAuthenticate(username, password)
 	if err != nil {
-		respondAndLogServerError(w, err, "handleAuthenticate", 4)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -247,7 +246,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 	token, err := dataAccessLayer.TokenGenerate(username, 10*time.Minute)
 	if err != nil {
-		respondAndLogServerError(w, err, "handleAuthenticate", 5)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -324,16 +323,11 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 	http.Error(w, msg, status)
 }
 
-func respondAndLogServerError(w http.ResponseWriter, err error, label string, index int) {
-	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	log.Errorf("[%s.%d] %s", label, index, err.Error())
-}
-
 // handleBootstrap handles "POST /bootstrap"
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	users, err := dataAccessLayer.UserList()
 	if err != nil {
-		respondAndLogServerError(w, err, "handleBootstrap", 1)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -349,22 +343,21 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	user := rest.User{}
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Missing user data", http.StatusBadRequest)
-		log.Errorf("[handleBootstrap.3] %s", "Missing user data")
+		respondAndLogError(w, cogerr.ErrUnmarshal)
 		return
 	}
 
 	// Set user defaults where necessary.
 	user, err = bootstrapUserWithDefaults(user)
 	if err != nil {
-		respondAndLogServerError(w, err, "handleBootstrap", 4)
+		respondAndLogError(w, err)
 		return
 	}
 
 	// Persist our shiny new user to the database.
 	err = dataAccessLayer.UserCreate(user)
 	if err != nil {
-		respondAndLogServerError(w, err, "handleBootstrap", 5)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -372,21 +365,21 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	group := rest.Group{Name: "admin"}
 	err = dataAccessLayer.GroupCreate(group)
 	if err != nil {
-		respondAndLogServerError(w, err, "handleBootstrap", 6)
+		respondAndLogError(w, err)
 		return
 	}
 
 	// Add the admin user to the admin group.
 	err = dataAccessLayer.GroupAddUser(group.Name, user.Username)
 	if err != nil {
-		respondAndLogServerError(w, err, "handleBootstrap", 7)
+		respondAndLogError(w, err)
 		return
 	}
 
 	json.NewEncoder(w).Encode(user)
 }
 
-// handleHealthz handles "GET /healthz}"
+// handleHealthz handles "GET /healthz"
 // TODO Can we make this more meaningful?
 func handleHealthz(w http.ResponseWriter, r *http.Request) {
 	m := map[string]bool{"healthy": true}

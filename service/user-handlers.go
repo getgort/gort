@@ -14,7 +14,7 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	err := dataAccessLayer.UserDelete(params["username"])
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 }
@@ -31,7 +31,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.UserExists(params["username"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 	if !exists {
@@ -41,7 +41,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := dataAccessLayer.UserGet(params["username"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -54,7 +54,7 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.UserExists(params["username"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 	if !exists {
@@ -64,7 +64,7 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 
 	groups, err := dataAccessLayer.UserGroupList(params["username"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -76,7 +76,7 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := dataAccessLayer.UserList()
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -100,7 +100,7 @@ func handlePutUser(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.UserExists(user.Username)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -111,7 +111,7 @@ func handlePutUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/clockworksoul/cog2/data/rest"
+	cogerr "github.com/clockworksoul/cog2/errors"
 	"github.com/gorilla/mux"
 )
 
@@ -13,9 +14,8 @@ func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
 	err := dataAccessLayer.GroupDelete(params["groupname"])
-
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 }
@@ -31,7 +31,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 
 	exists, err = dataAccessLayer.GroupExists(groupname)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 	if !exists {
@@ -41,7 +41,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 
 	exists, err = dataAccessLayer.UserExists(username)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 	if !exists {
@@ -51,7 +51,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 
 	err = dataAccessLayer.GroupRemoveUser(groupname, username)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 	}
 }
 
@@ -61,7 +61,7 @@ func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.GroupExists(params["groupname"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 	if !exists {
@@ -71,7 +71,7 @@ func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 
 	group, err := dataAccessLayer.GroupGet(params["groupname"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -83,7 +83,7 @@ func handleGetGroups(w http.ResponseWriter, r *http.Request) {
 	groups, err := dataAccessLayer.GroupList()
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.GroupExists(groupname)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 	if !exists {
@@ -107,7 +107,7 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 
 	group, err := dataAccessLayer.GroupGet(groupname)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -123,7 +123,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&group)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotAcceptable)
+		respondAndLogError(w, cogerr.ErrUnmarshal)
 		return
 	}
 
@@ -131,7 +131,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.GroupExists(group.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 
@@ -143,7 +143,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 	}
 }
 
@@ -158,7 +158,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 
 	exists, err = dataAccessLayer.GroupExists(groupname)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 	if !exists {
@@ -168,7 +168,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 
 	exists, err = dataAccessLayer.UserExists(username)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 		return
 	}
 	if !exists {
@@ -178,7 +178,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 
 	err = dataAccessLayer.GroupAddUser(groupname, username)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondAndLogError(w, err)
 	}
 }
 
