@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/clockworksoul/cog2/data/rest"
+	cogerr "github.com/clockworksoul/cog2/errors"
 )
 
 // Authenticate requests a new authentication token from the Cog service.
@@ -19,12 +20,12 @@ func (c *CogClient) Authenticate() (rest.Token, error) {
 
 	postBytes, err := json.Marshal(c.profile.User())
 	if err != nil {
-		return rest.Token{}, err
+		return rest.Token{}, cogerr.Wrap(cogerr.ErrMarshal, err)
 	}
 
 	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
 	if err != nil {
-		return rest.Token{}, err
+		return rest.Token{}, cogerr.Wrap(ErrConnectionFailed, err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -34,30 +35,30 @@ func (c *CogClient) Authenticate() (rest.Token, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return rest.Token{}, err
+		return rest.Token{}, cogerr.Wrap(ErrResponseReadFailure, err)
 	}
 
 	token := rest.Token{}
 	err = json.Unmarshal(body, &token)
 	if err != nil {
-		return rest.Token{}, err
+		return rest.Token{}, cogerr.Wrap(cogerr.ErrUnmarshal, err)
 	}
 
 	// Save the token to disk
 	file, err := c.getCogTokenFilename()
 	if err != nil {
-		return token, err
+		return token, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 
 	f, err := os.Create(file)
 	defer f.Close()
 	if err != nil {
-		return token, err
+		return token, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 
 	_, err = f.Write(body)
 	if err != nil {
-		return token, err
+		return token, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 
 	return token, nil

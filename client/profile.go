@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/clockworksoul/cog2/data/rest"
+	cogerr "github.com/clockworksoul/cog2/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -69,18 +70,18 @@ func loadClientProfile() (Profile, error) {
 
 	// An actual error
 	if err != nil {
-		return profile, err
+		return profile, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 
 	// The file exists!
 	bytes, err := ioutil.ReadFile(profileFile)
 	if err != nil {
-		return profile, err
+		return profile, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 
 	err = yaml.Unmarshal(bytes, &profile)
 	if err != nil {
-		return profile, err
+		return profile, cogerr.Wrap(cogerr.ErrUnmarshal, err)
 	}
 
 	// Ensure that the URL field gets set.

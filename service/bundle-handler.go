@@ -16,7 +16,7 @@ func handleGetBundles(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	} else if len(bundles) == 0 {
-		http.Error(w, err.Error(), http.StatusNoContent)
+		http.Error(w, "No bundles found", http.StatusNoContent)
 		return
 	}
 
@@ -33,7 +33,7 @@ func handleGetBundleVersions(w http.ResponseWriter, r *http.Request) {
 		respondAndLogError(w, err)
 		return
 	} else if len(bundles) == 0 {
-		http.Error(w, err.Error(), http.StatusNoContent)
+		http.Error(w, "No bundles found", http.StatusNoContent)
 		return
 	}
 

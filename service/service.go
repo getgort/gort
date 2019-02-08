@@ -187,8 +187,9 @@ func BuildRESTServer(addr string) *RESTServer {
 	router.Use(buildLoggingMiddleware(requests), tokenObservingMiddleware)
 
 	addHealthzMethodToRouter(router)
-	addUserMethodsToRouter(router)
+	addBundleMethodsToRouter(router)
 	addGroupMethodsToRouter(router)
+	addUserMethodsToRouter(router)
 
 	server := &http.Server{Addr: addr, Handler: router}
 

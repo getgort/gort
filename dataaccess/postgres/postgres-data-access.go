@@ -294,10 +294,10 @@ func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
 // and creates the empty database if it doesn't.
 func (da PostgresDataAccess) ensureCogDatabaseExists() error {
 	db, err := da.connect("postgres")
-	defer db.Close()
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	exists, err := da.cogDatabaseExists(db)
 	if err != nil {
