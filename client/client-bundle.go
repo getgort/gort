@@ -56,8 +56,8 @@ func (c *CogClient) BundleList() ([]data.Bundle, error) {
 	return bundles, nil
 }
 
-// BundleSave comments to be written...
-func (c *CogClient) BundleSave(bundle data.Bundle) error {
+// BundleInstall comments to be written...
+func (c *CogClient) BundleInstall(bundle data.Bundle) error {
 	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s",
 		c.profile.URL.String(), bundle.Name, bundle.Version)
 
@@ -67,6 +67,24 @@ func (c *CogClient) BundleSave(bundle data.Bundle) error {
 	}
 
 	resp, err := c.doRequest("PUT", url, bytes)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return getResponseError(resp)
+	}
+
+	return nil
+}
+
+// BundleUninstall comments to be written...
+func (c *CogClient) BundleUninstall(bundlename string, version string) error {
+	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s",
+		c.profile.URL.String(), bundlename, version)
+
+	resp, err := c.doRequest("DELETE", url, []byte{})
 	if err != nil {
 		return err
 	}
