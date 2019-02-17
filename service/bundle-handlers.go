@@ -86,6 +86,7 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 	err = dataAccessLayer.BundleCreate(bundle)
 	if err != nil {
 		respondAndLogError(w, err)
+		return
 	}
 }
 

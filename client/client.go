@@ -27,9 +27,13 @@ var (
 	// ErrConnectionFailed is a failure for a client to connect to the Cog service.
 	ErrConnectionFailed = errors.New("failure to connect to the Cog service")
 
+	// ErrResourceExists is returned if a client tries to put a resource that
+	// already exists.
 	ErrResourceExists = errors.New("resource already exists")
 
-	ErrResourceNotFound = errors.New("resource doesn't exists")
+	// ErrResourceNotFound is returned if a client tries to get or update a
+	// resource that doesn't exist.
+	ErrResourceNotFound = errors.New("resource doesn't exist")
 
 	// ErrResponseReadFailure indicates an error in reading a server response.
 	ErrResponseReadFailure = errors.New("error reading a server response")

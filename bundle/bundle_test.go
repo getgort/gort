@@ -9,7 +9,7 @@ import (
 )
 
 func TestInputOutputHumanEyeball(t *testing.T) {
-	bundle, err := loadBundle("../testing/test-bundle.yml")
+	bundle, err := LoadBundle("../testing/test-bundle.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -23,7 +23,7 @@ func TestInputOutputHumanEyeball(t *testing.T) {
 	fmt.Println(string(y))
 }
 func TestInputOutputHumanEyeballJSON(t *testing.T) {
-	bundle, err := loadBundle("../testing/test-bundle.yml")
+	bundle, err := LoadBundle("../testing/test-bundle.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}
