@@ -179,34 +179,21 @@ func updateDALState(newState State) {
 }
 
 // updateDALStateTryEmit will attempt to emit to a listener. If the channel is
-// closed or the send times out, it is removed from the listeners list.
+// closed, it is removed from the listeners list. Blocking channels are ignored.
 func updateDALStateTryEmit(ch chan State, newState State) {
 	defer func() {
 		if r := recover(); r != nil {
+			// The channel was closed.
 			badListenerEvents <- ch
 		}
 	}()
 
-	var ok = false // If not set to true, updateDALStateEmitTimeout() closes the channel
-	go updateDALStateEmitTimeout(ch, &ok, time.Second)
-	ch <- newState
-	ok = true
-}
-
-// updateDALStateEmitTimeout is called by updateDALStateTryEmit. If ok isn't true
-// after duration, ch is closed.
-func updateDALStateEmitTimeout(ch chan State, ok *bool, duration time.Duration) {
-	defer func() {
-		if r := recover(); r != nil {
-			badListenerEvents <- ch
-		}
-	}()
-
-	<-time.After(duration)
-
-	if !*ok {
-		log.Tracef("[updateDALStateEmitTimeout] Timing out write")
-		close(ch)
+	select {
+	case ch <- newState:
+		// Everything is good
+	default:
+		// Channel is blocking. Ignore for now.
+		// Eventually GC should close it and we can remove.
 	}
 }
 

@@ -252,7 +252,7 @@ func updateConfigState(newState State) {
 }
 
 // updateConfigStateTryEmit will attempt to emit to a listener. If the channel is
-// closed or the send times out, it is removed from the listeners list.
+// closed, it is removed from the listeners list. Blocking channels are ignored.
 func updateConfigStateTryEmit(ch chan State, newState State) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -260,25 +260,12 @@ func updateConfigStateTryEmit(ch chan State, newState State) {
 		}
 	}()
 
-	var ok = false // If not set to true, updateConfigStateEmitTimeout() closes the channel
-	go updateConfigStateEmitTimeout(ch, &ok, time.Second)
-	ch <- newState
-	ok = true
-}
-
-// updateConfigStateEmitTimeout is called by updateConfigStateTryEmit. If ok isn't true
-// after duration, ch is closed.
-func updateConfigStateEmitTimeout(ch chan State, ok *bool, duration time.Duration) {
-	defer func() {
-		if r := recover(); r != nil {
-			badListenerEvents <- ch
-		}
-	}()
-
-	<-time.After(duration)
-
-	if !*ok {
-		close(ch)
+	select {
+	case ch <- newState:
+		// Everything is good
+	default:
+		// Channel is blocking. Ignore for now.
+		// Eventually GC should close it and we can remove.
 	}
 }
 
