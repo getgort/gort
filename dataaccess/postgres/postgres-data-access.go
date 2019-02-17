@@ -178,12 +178,20 @@ func (da PostgresDataAccess) createBundlesTables(db *sql.DB) error {
 
 	ALTER TABLE bundles ALTER COLUMN install_timestamp SET DEFAULT now();
 
+	CREATE TABLE bundle_enabled (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		CONSTRAINT			unq_bundle_enabled UNIQUE(bundle_name),
+		PRIMARY KEY			(bundle_name),
+		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
+	);
+
 	CREATE TABLE bundle_permissions (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		index				INT NOT NULL CHECK(index >= 0),
 		permission			TEXT,
-		CONSTRAINT			unq_permission UNIQUE(bundle_name, bundle_version, index),
+		CONSTRAINT			unq_bundle_permission UNIQUE(bundle_name, bundle_version, index),
 		PRIMARY KEY			(bundle_name, bundle_version, index),
 		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
 	);
@@ -194,7 +202,7 @@ func (da PostgresDataAccess) createBundlesTables(db *sql.DB) error {
 		name				TEXT NOT NULL CHECK(name <> ''),
 		description			TEXT NOT NULL CHECK(description <> ''),
 		executable			TEXT NOT NULL CHECK(executable <> ''),
-		CONSTRAINT			unq_command UNIQUE(bundle_name, bundle_version, name),
+		CONSTRAINT			unq_bundle_command UNIQUE(bundle_name, bundle_version, name),
 		PRIMARY KEY			(bundle_name, bundle_version, name),
 		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
 	);

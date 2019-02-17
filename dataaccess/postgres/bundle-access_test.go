@@ -75,6 +75,39 @@ func TestBundleCreateMissingRequired(t *testing.T) {
 	bundle.Description = originalDescription
 }
 
+func TestBundleEnable(t *testing.T) {
+	bundle, err := getTestBundle()
+	expectNoErr(t, err)
+	bundle.Name = "test-enable"
+
+	err = da.BundleCreate(bundle)
+	expectNoErr(t, err)
+	defer da.BundleDelete(bundle.Name, bundle.Version)
+
+	// No version should be enabled
+	enabled, err := da.BundleEnabledVersion(bundle.Name)
+	expectNoErr(t, err)
+	if enabled != "" {
+		t.Error("Expected no version to be enabled")
+	}
+
+	// Enable and verify
+	err = da.BundleEnable(bundle.Name, bundle.Version)
+	expectNoErr(t, err)
+
+	enabled, err = da.BundleEnabledVersion(bundle.Name)
+	expectNoErr(t, err)
+	if enabled != bundle.Version {
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
+			bundle.Version, enabled)
+		t.FailNow()
+	}
+
+	// Should now delete cleanly
+	err = da.BundleDelete(bundle.Name, bundle.Version)
+	expectNoErr(t, err)
+}
+
 func TestBundleExists(t *testing.T) {
 	var exists bool
 
