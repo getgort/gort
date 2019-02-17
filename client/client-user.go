@@ -8,31 +8,21 @@ import (
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
-// UserList comments to be written...
-func (c *CogClient) UserList() ([]rest.User, error) {
-	url := fmt.Sprintf("%s/v2/users", c.profile.URL.String())
-	resp, err := c.doRequest("GET", url, []byte{})
+// UserDelete comments to be written...
+func (c *CogClient) UserDelete(username string) error {
+	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), username)
+
+	resp, err := c.doRequest("DELETE", url, []byte{})
 	if err != nil {
-		return []rest.User{}, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return []rest.User{}, getResponseError(resp)
+		return getResponseError(resp)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return []rest.User{}, err
-	}
-
-	users := []rest.User{}
-	err = json.Unmarshal(body, &users)
-	if err != nil {
-		return []rest.User{}, err
-	}
-
-	return users, nil
+	return nil
 }
 
 // UserExists simply returns true if a user exists with the specified
@@ -82,47 +72,6 @@ func (c *CogClient) UserGet(username string) (rest.User, error) {
 	return user, nil
 }
 
-// UserSave will create or update a user. Note the the key is the username: if
-// this is called with a user whose username exists that user is updated
-// (empty fields will not be overwritten); otherwise a new user is created.
-func (c *CogClient) UserSave(user rest.User) error {
-	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), user.Username)
-
-	bytes, err := json.Marshal(user)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.doRequest("PUT", url, bytes)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return getResponseError(resp)
-	}
-
-	return nil
-}
-
-// UserDelete comments to be written...
-func (c *CogClient) UserDelete(username string) error {
-	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), username)
-
-	resp, err := c.doRequest("DELETE", url, []byte{})
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return getResponseError(resp)
-	}
-
-	return nil
-}
-
 // UserGroupList comments to be written...
 func (c *CogClient) UserGroupList(username string) ([]rest.Group, error) {
 	url := fmt.Sprintf("%s/v2/users/%s/groups", c.profile.URL.String(), username)
@@ -148,4 +97,55 @@ func (c *CogClient) UserGroupList(username string) ([]rest.Group, error) {
 	}
 
 	return user, nil
+}
+
+// UserList comments to be written...
+func (c *CogClient) UserList() ([]rest.User, error) {
+	url := fmt.Sprintf("%s/v2/users", c.profile.URL.String())
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return []rest.User{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return []rest.User{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []rest.User{}, err
+	}
+
+	users := []rest.User{}
+	err = json.Unmarshal(body, &users)
+	if err != nil {
+		return []rest.User{}, err
+	}
+
+	return users, nil
+}
+
+// UserSave will create or update a user. Note the the key is the username: if
+// this is called with a user whose username exists that user is updated
+// (empty fields will not be overwritten); otherwise a new user is created.
+func (c *CogClient) UserSave(user rest.User) error {
+	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), user.Username)
+
+	bytes, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.doRequest("PUT", url, bytes)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return getResponseError(resp)
+	}
+
+	return nil
 }

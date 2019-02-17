@@ -8,82 +8,6 @@ import (
 	"github.com/clockworksoul/cog2/data/rest"
 )
 
-// GroupList comments to be written...
-func (c *CogClient) GroupList() ([]rest.Group, error) {
-	url := fmt.Sprintf("%s/v2/groups", c.profile.URL.String())
-	resp, err := c.doRequest("GET", url, []byte{})
-	if err != nil {
-		return []rest.Group{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return []rest.Group{}, getResponseError(resp)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return []rest.Group{}, err
-	}
-
-	groups := []rest.Group{}
-	err = json.Unmarshal(body, &groups)
-	if err != nil {
-		return []rest.Group{}, err
-	}
-
-	return groups, nil
-}
-
-// GroupGet comments to be written...
-func (c *CogClient) GroupGet(groupname string) (rest.Group, error) {
-	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), groupname)
-	resp, err := c.doRequest("GET", url, []byte{})
-	if err != nil {
-		return rest.Group{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return rest.Group{}, getResponseError(resp)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return rest.Group{}, err
-	}
-
-	group := rest.Group{}
-	err = json.Unmarshal(body, &group)
-	if err != nil {
-		return rest.Group{}, err
-	}
-
-	return group, nil
-}
-
-// GroupSave comments to be written...
-func (c *CogClient) GroupSave(group rest.Group) error {
-	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), group.Name)
-
-	bytes, err := json.Marshal(group)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.doRequest("PUT", url, bytes)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return getResponseError(resp)
-	}
-
-	return nil
-}
-
 // GroupDelete comments to be written...
 func (c *CogClient) GroupDelete(groupname string) error {
 	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), groupname)
@@ -121,6 +45,92 @@ func (c *CogClient) GroupExists(groupname string) (bool, error) {
 	}
 }
 
+// GroupGet comments to be written...
+func (c *CogClient) GroupGet(groupname string) (rest.Group, error) {
+	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), groupname)
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return rest.Group{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return rest.Group{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return rest.Group{}, err
+	}
+
+	group := rest.Group{}
+	err = json.Unmarshal(body, &group)
+	if err != nil {
+		return rest.Group{}, err
+	}
+
+	return group, nil
+}
+
+// GroupList comments to be written...
+func (c *CogClient) GroupList() ([]rest.Group, error) {
+	url := fmt.Sprintf("%s/v2/groups", c.profile.URL.String())
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return []rest.Group{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return []rest.Group{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []rest.Group{}, err
+	}
+
+	groups := []rest.Group{}
+	err = json.Unmarshal(body, &groups)
+	if err != nil {
+		return []rest.Group{}, err
+	}
+
+	return groups, nil
+}
+
+// GroupMemberAdd comments to be written...
+func (c *CogClient) GroupMemberAdd(groupname string, username string) error {
+	url := fmt.Sprintf("%s/v2/groups/%s/members/%s", c.profile.URL.String(), groupname, username)
+	resp, err := c.doRequest("PUT", url, []byte{})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return getResponseError(resp)
+	}
+
+	return nil
+}
+
+// GroupMemberDelete comments to be written...
+func (c *CogClient) GroupMemberDelete(groupname string, username string) error {
+	url := fmt.Sprintf("%s/v2/groups/%s/members/%s", c.profile.URL.String(), groupname, username)
+	resp, err := c.doRequest("DELETE", url, []byte{})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return getResponseError(resp)
+	}
+
+	return nil
+}
+
 // GroupMemberList comments to be written...
 func (c *CogClient) GroupMemberList(groupname string) ([]rest.User, error) {
 	url := fmt.Sprintf("%s/v2/groups/%s/members", c.profile.URL.String(), groupname)
@@ -148,26 +158,16 @@ func (c *CogClient) GroupMemberList(groupname string) ([]rest.User, error) {
 	return users, nil
 }
 
-// GroupMemberAdd comments to be written...
-func (c *CogClient) GroupMemberAdd(groupname string, username string) error {
-	url := fmt.Sprintf("%s/v2/groups/%s/members/%s", c.profile.URL.String(), groupname, username)
-	resp, err := c.doRequest("PUT", url, []byte{})
+// GroupSave comments to be written...
+func (c *CogClient) GroupSave(group rest.Group) error {
+	url := fmt.Sprintf("%s/v2/groups/%s", c.profile.URL.String(), group.Name)
+
+	bytes, err := json.Marshal(group)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return getResponseError(resp)
-	}
-
-	return nil
-}
-
-// GroupMemberDelete comments to be written...
-func (c *CogClient) GroupMemberDelete(groupname string, username string) error {
-	url := fmt.Sprintf("%s/v2/groups/%s/members/%s", c.profile.URL.String(), groupname, username)
-	resp, err := c.doRequest("DELETE", url, []byte{})
+	resp, err := c.doRequest("PUT", url, bytes)
 	if err != nil {
 		return err
 	}
