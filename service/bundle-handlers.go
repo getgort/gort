@@ -15,6 +15,7 @@ import (
 // handleGetBundles handles "GET /v2/bundles"
 func handleGetBundles(w http.ResponseWriter, r *http.Request) {
 	bundles, err := dataAccessLayer.BundleList()
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -163,7 +163,6 @@ func (da PostgresDataAccess) createBundlesTables(db *sql.DB) error {
 		cog_bundle_version  INT NOT NULL CHECK(cog_bundle_version > 0),
 		name				TEXT NOT NULL CHECK(name <> ''),
 		version				TEXT NOT NULL CHECK(version <> ''),
-		active				BOOLEAN DEFAULT false,
 		author				TEXT,
 		homepage			TEXT,
 		description			TEXT NOT NULL CHECK(description <> ''),

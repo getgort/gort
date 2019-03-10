@@ -21,7 +21,8 @@ func expectErr(t *testing.T, err error, expected error) {
 
 func expectNoErr(t *testing.T, err error) {
 	if err != nil {
-		t.Fatal(err)
+		// t.Fatal(err)
+		panic(err)
 	}
 }
 

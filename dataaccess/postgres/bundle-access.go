@@ -25,16 +25,16 @@ func (da PostgresDataAccess) BundleCreate(bundle data.Bundle) error {
 		return err
 	}
 
-	exists, err := da.doBundleExists(db, bundle.Name, bundle.Version)
+	tx, err := db.Begin()
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	exists, err := da.doBundleExists(tx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	} else if exists {
 		return errs.ErrBundleExists
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	// Save bundle
@@ -83,16 +83,16 @@ func (da PostgresDataAccess) BundleDelete(name, version string) error {
 		return err
 	}
 
-	exists, err := da.doBundleExists(db, name, version)
+	tx, err := db.Begin()
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	exists, err := da.doBundleExists(tx, name, version)
 	if err != nil {
 		return err
 	} else if !exists {
 		return errs.ErrNoSuchBundle
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	err = da.doBundleDisable(tx, name, version)
@@ -208,7 +208,12 @@ func (da PostgresDataAccess) BundleExists(name, version string) (bool, error) {
 		return false, err
 	}
 
-	return da.doBundleExists(db, name, version)
+	tx, err := db.Begin()
+	if err != nil {
+		return false, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return da.doBundleExists(tx, name, version)
 }
 
 // BundleGet TBD
@@ -227,7 +232,22 @@ func (da PostgresDataAccess) BundleGet(name, version string) (data.Bundle, error
 		return data.Bundle{}, err
 	}
 
-	return da.doBundleGet(db, name, version)
+	tx, err := db.Begin()
+	if err != nil {
+		return data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	b, err := da.doBundleGet(tx, name, version)
+	if err != nil {
+		return data.Bundle{}, err
+	}
+
+	return b, err
+}
+
+type bundleData struct {
+	Name    string
+	Version string
 }
 
 // BundleList TBD
@@ -241,29 +261,46 @@ func (da PostgresDataAccess) BundleList() ([]data.Bundle, error) {
 		return []data.Bundle{}, err
 	}
 
-	query := `SELECT name, version FROM bundles`
-	rows, err := db.Query(query)
+	tx, err := db.Begin()
 	if err != nil {
+		tx.Rollback()
 		return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	bundles := make([]data.Bundle, 0)
-	for rows.NextResultSet() && rows.Next() {
-		var name, version string
+	query := `SELECT name, version FROM bundles`
+	rows, err := tx.Query(query)
+	if err != nil {
+		tx.Rollback()
+		return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
 
-		err = rows.Scan(&name, &version)
+	bds := make([]bundleData, 0)
+	for rows.NextResultSet() && rows.Next() {
+		var bd bundleData
+
+		err = rows.Scan(&bd.Name, &bd.Version)
 		if err != nil {
+			rows.Close()
+			tx.Rollback()
 			return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
 		}
 
-		bundle, err := da.doBundleGet(db, name, version)
+		bds = append(bds, bd)
+	}
+	rows.Close()
+
+	bundles := make([]data.Bundle, 0)
+	for _, bd := range bds {
+		bundle, err := da.doBundleGet(tx, bd.Name, bd.Version)
 		if err != nil {
+			tx.Rollback()
 			return []data.Bundle{}, err
 		}
 
 		bundles = append(bundles, bundle)
 	}
 
+	tx.Commit()
 	return bundles, nil
 }
 
@@ -278,23 +315,39 @@ func (da PostgresDataAccess) BundleListVersions(name string) ([]data.Bundle, err
 		return []data.Bundle{}, err
 	}
 
-	query := `SELECT name, version FROM bundles WHERE name=$1`
-	rows, err := db.Query(query, name)
+	tx, err := db.Begin()
 	if err != nil {
+		tx.Rollback()
 		return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	bundles := make([]data.Bundle, 0)
-	for rows.NextResultSet() && rows.Next() {
-		var name, version string
+	query := `SELECT name, version FROM bundles WHERE name=$1`
+	rows, err := tx.Query(query, name)
+	if err != nil {
+		tx.Rollback()
+		return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
 
-		err = rows.Scan(&name, &version)
+	bds := make([]bundleData, 0)
+	for rows.NextResultSet() && rows.Next() {
+		var bd bundleData
+
+		err = rows.Scan(&bd.Name, &bd.Version)
 		if err != nil {
+			rows.Close()
+			tx.Rollback()
 			return []data.Bundle{}, cogerr.Wrap(errs.ErrDataAccess, err)
 		}
 
-		bundle, err := da.doBundleGet(db, name, version)
+		bds = append(bds, bd)
+	}
+	rows.Close()
+
+	bundles := make([]data.Bundle, 0)
+	for _, bd := range bds {
+		bundle, err := da.doBundleGet(tx, bd.Name, bd.Version)
 		if err != nil {
+			tx.Rollback()
 			return []data.Bundle{}, err
 		}
 
@@ -320,16 +373,16 @@ func (da PostgresDataAccess) BundleUpdate(bundle data.Bundle) error {
 		return err
 	}
 
-	exists, err := da.doBundleExists(db, bundle.Name, bundle.Version)
+	tx, err := db.Begin()
+	if err != nil {
+		return cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	exists, err := da.doBundleExists(tx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	} else if !exists {
 		return errs.ErrNoSuchBundle
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	err = da.doBundleDelete(tx, bundle.Name, bundle.Version)
@@ -433,11 +486,11 @@ func (da PostgresDataAccess) doBundleEnabledVersion(tx *sql.Tx, name string) (st
 }
 
 // BundleExists TBD
-func (da PostgresDataAccess) doBundleExists(db *sql.DB, name string, version string) (bool, error) {
+func (da PostgresDataAccess) doBundleExists(tx *sql.Tx, name string, version string) (bool, error) {
 	query := "SELECT EXISTS(SELECT 1 FROM bundles WHERE name=$1 AND version=$2)"
 	exists := false
 
-	err := db.QueryRow(query, name, version).Scan(&exists)
+	err := tx.QueryRow(query, name, version).Scan(&exists)
 	if err != nil {
 		return false, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -445,31 +498,37 @@ func (da PostgresDataAccess) doBundleExists(db *sql.DB, name string, version str
 	return exists, nil
 }
 
-func (da PostgresDataAccess) doBundleGet(db *sql.DB, name string, version string) (data.Bundle, error) {
-	query := `SELECT cog_bundle_version, name, version, active, author, homepage,
+func (da PostgresDataAccess) doBundleGet(tx *sql.Tx, name string, version string) (data.Bundle, error) {
+	query := `SELECT cog_bundle_version, name, version, author, homepage,
 			description, long_description, docker_image, docker_tag, 
 			install_timestamp, install_user
 		FROM bundles
 		WHERE name=$1 AND version=$2`
 
 	bundle := data.Bundle{}
-	err := db.
-		QueryRow(query, name, version).
-		Scan(&bundle.CogBundleVersion, &bundle.Name, &bundle.Version,
-			&bundle.Active, &bundle.Author, &bundle.Homepage, &bundle.Description,
-			&bundle.LongDescription, &bundle.Docker.Image, &bundle.Docker.Tag,
-			&bundle.InstalledOn, &bundle.InstalledBy)
+	row := tx.QueryRow(query, name, version)
+	err := row.Scan(&bundle.CogBundleVersion, &bundle.Name, &bundle.Version,
+		&bundle.Author, &bundle.Homepage, &bundle.Description,
+		&bundle.LongDescription, &bundle.Docker.Image, &bundle.Docker.Tag,
+		&bundle.InstalledOn, &bundle.InstalledBy)
 	if err != nil {
 		return bundle, cogerr.Wrap(errs.ErrNoSuchBundle, err)
 	}
+
+	enabledVersion, err := da.doBundleEnabledVersion(tx, name)
+	if err != nil {
+		return bundle, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
+	bundle.Enabled = (bundle.Version == enabledVersion)
 
 	// Load permissions
 	query = `SELECT permission
 		FROM bundle_permissions
 		WHERE bundle_name=$1 AND bundle_version=$2
 		ORDER BY index`
-	rows, err := db.Query(query, name, version)
+	rows, err := tx.Query(query, name, version)
 	if err != nil {
+		rows.Close()
 		return bundle, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
@@ -484,18 +543,22 @@ func (da PostgresDataAccess) doBundleGet(db *sql.DB, name string, version string
 
 		permissions = append(permissions, perm)
 	}
+	rows.Close()
+
 	bundle.Permissions = permissions
 
 	// Load commands
+	commands := make(map[string]data.BundleCommand, 0)
+	bundle.Commands = commands
+
 	query = `SELECT name, description, executable
 		FROM bundle_commands
 		WHERE bundle_name=$1 AND bundle_version=$2`
-	rows, err = db.Query(query, name, version)
+	rows, err = tx.Query(query, name, version)
 	if err != nil {
 		return bundle, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	commands := make(map[string]data.BundleCommand, 0)
 	for rows.NextResultSet() && rows.Next() {
 		command := data.BundleCommand{}
 
@@ -504,44 +567,48 @@ func (da PostgresDataAccess) doBundleGet(db *sql.DB, name string, version string
 			return bundle, cogerr.Wrap(errs.ErrDataAccess, err)
 		}
 
+		commands[command.Name] = command
+	}
+	rows.Close()
+
+	for key, command := range commands {
 		cmdQuery := `SELECT rule
 			FROM bundle_command_rules
 			WHERE bundle_name=$1 AND bundle_version=$2 AND command_name=$3`
-		cmdRows, err := db.Query(cmdQuery, name, version, command.Name)
+
+		rows, err = tx.Query(cmdQuery, name, version, command.Name)
 		if err != nil {
 			return bundle, cogerr.Wrap(errs.ErrDataAccess, err)
 		}
 
 		rules := make([]string, 0)
-		for cmdRows.NextResultSet() && cmdRows.Next() {
+		for rows.NextResultSet() && rows.Next() {
 			var rule string
 
-			err = cmdRows.Scan(&rule)
+			err = rows.Scan(&rule)
 			if err != nil {
 				return bundle, cogerr.Wrap(errs.ErrDataAccess, err)
 			}
-
 			rules = append(rules, rule)
 		}
+		rows.Close()
 
 		command.Rules = rules
-		commands[command.Name] = command
+		commands[key] = command
 	}
-
-	bundle.Commands = commands
 
 	return bundle, nil
 }
 
 func (da PostgresDataAccess) doBundleInsert(tx *sql.Tx, bundle data.Bundle) error {
-	query := `INSERT INTO bundles (cog_bundle_version, name, version, active, author, 
+	query := `INSERT INTO bundles (cog_bundle_version, name, version, author, 
 		homepage, description, long_description, docker_image,
 		docker_tag, install_user)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`
 
 	_, err := tx.Exec(query, bundle.CogBundleVersion, bundle.Name, bundle.Version,
-		bundle.Active, bundle.Author, bundle.Homepage, bundle.Description,
-		bundle.LongDescription, bundle.Docker.Image, bundle.Docker.Tag, bundle.InstalledBy)
+		bundle.Author, bundle.Homepage, bundle.Description, bundle.LongDescription,
+		bundle.Docker.Image, bundle.Docker.Tag, bundle.InstalledBy)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "violates") {

@@ -14,12 +14,12 @@ type Bundle struct {
 	CogBundleVersion int                      `yaml:"cog_bundle_version,omitempty" json:"cog_bundle_version,omitempty"`
 	Name             string                   `yaml:",omitempty" json:"name,omitempty"`
 	Version          string                   `yaml:",omitempty" json:"version,omitempty"`
-	Active           bool                     `yaml:"-" json:"-"`
+	Enabled          bool                     `yaml:",omitempty" json:"enabled"`
 	Author           string                   `yaml:",omitempty" json:"author,omitempty"`
 	Homepage         string                   `yaml:",omitempty" json:"homepage,omitempty"`
 	Description      string                   `yaml:",omitempty" json:"description,omitempty"`
-	InstalledOn      time.Time                `yaml:"-" json:"-"`
-	InstalledBy      string                   `yaml:"-" json:"-"`
+	InstalledOn      time.Time                `yaml:",omitempty" json:"installed_on,omitempty"`
+	InstalledBy      string                   `yaml:",omitempty" json:"installed_by,omitempty"`
 	LongDescription  string                   `yaml:"long_description,omitempty" json:"long_description,omitempty"`
 	Docker           BundleDocker             `yaml:",omitempty" json:"docker,omitempty"`
 	Permissions      []string                 `yaml:",omitempty" json:"permissions,omitempty"`

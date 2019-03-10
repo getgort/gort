@@ -181,7 +181,7 @@ func TestBundleGet(t *testing.T) {
 	bundleCreate.Name = "test-get"
 
 	// Set some values to non-defaults
-	bundleCreate.Active = true
+	bundleCreate.Enabled = true
 
 	// Save the test bundle. Expect no error.
 	err = da.BundleCreate(bundleCreate)
@@ -200,7 +200,7 @@ func TestBundleGet(t *testing.T) {
 
 	matches, mismatch, expected, got, err := compareFields(
 		bundleCreate, bundleGet,
-		"CogBundleVersion", "Name", "Version", "Active", "Author", "Homepage",
+		"CogBundleVersion", "Name", "Version", "Author", "Homepage",
 		"Description", "LongDescription", "InstalledBy")
 	expectNoErr(t, err)
 	if err == nil && !matches {
@@ -235,6 +235,10 @@ func TestBundleGet(t *testing.T) {
 
 		err = compareStringSlices(bundleCreate.Commands[k].Rules, bundleGet.Commands[k].Rules)
 		if err != nil {
+
+			t.Log("EXPECTED:", bundleCreate.Commands[k])
+			t.Log("GOT:", bundleGet.Commands[k])
+
 			t.Errorf("Create/Got mismatch on command rules: %s", err)
 		}
 	}
