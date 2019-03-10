@@ -99,12 +99,12 @@ func (c *CogClient) Bootstrap(user rest.User) (rest.User, error) {
 
 	postBytes, err := json.Marshal(user)
 	if err != nil {
-		return rest.User{}, err
+		return rest.User{}, cogerr.Wrap(cogerr.ErrMarshal, err)
 	}
 
 	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
 	if err != nil {
-		return rest.User{}, err
+		return rest.User{}, cogerr.Wrap(ErrConnectionFailed, err)
 	}
 	defer resp.Body.Close()
 
@@ -123,13 +123,13 @@ func (c *CogClient) Bootstrap(user rest.User) (rest.User, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return rest.User{}, err
+		return rest.User{}, cogerr.Wrap(cogerr.ErrIO, err)
 	}
 
 	// Re-using "user" instance. Sorry.
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		return rest.User{}, err
+		return rest.User{}, cogerr.Wrap(cogerr.ErrUnmarshal, err)
 	}
 
 	// Update the client profile file
