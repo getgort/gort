@@ -229,32 +229,46 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
 	params := TokenizeParameters(rawCommand)
 
+	info, err := adapter.GetUserInfo(userID)
+	if err != nil {
+		return nil, err
+	}
+
 	command, err := GetCommandEntry(params)
 	if err != nil {
+		switch {
+		case cogerr.ErrEquals(err, ErrNoSuchCommand):
+			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
+				"If this is not expected, you should contact a Cog administrator.",
+				params[0])
+			adapter.SendErrorMessage(channelID, "No Such Command", msg)
+		default:
+			msg := formatCommandErrorMessage(command, params, err.Error())
+			adapter.SendErrorMessage(channelID, "Error", msg)
+		}
+
 		return nil, err
 	}
 
 	log.Debugf("[TriggerCommand] Found matching command: %s:%s",
 		command.Bundle.Name, command.Command.Name)
 
-	info, err := adapter.GetUserInfo(userID)
-	if err != nil {
-		return nil, err
-	}
-
 	user, autocreated, err := findOrMakeCogUser(info)
 	if err != nil {
 		switch {
-		case err == ErrSelfRegistrationOff:
-			message := "I'm terribly sorry, but either I don't " +
+		case cogerr.ErrEquals(err, ErrSelfRegistrationOff):
+			msg := "I'm terribly sorry, but either I don't " +
 				"have a Cog account for you, or your Slack chat handle has " +
 				"not been registered. Currently, only registered users can " +
 				"interact with me.\n\n\nYou'll need to ask a Cog " +
 				"administrator to fix this situation and to register your " +
 				"Slack handle."
-			adapter.SendMessage(info.ID, message)
-		case err == ErrCogNotBootstrapped:
-			fallthrough
+			adapter.SendErrorMessage(channelID, "No Such Account", msg)
+		case cogerr.ErrEquals(err, ErrCogNotBootstrapped):
+			msg := "Cog doesn't appear to have been bootstrapped yet! Please " +
+				"use `cogctl` to properly bootstrap Cog environment before " +
+				"proceeding."
+			adapter.SendErrorMessage(channelID, "Not Bootstrapped?", msg)
 		default:
 			msg := formatCommandErrorMessage(command, params, err.Error())
 			adapter.SendErrorMessage(channelID, "Error", msg)
