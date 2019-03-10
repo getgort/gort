@@ -41,9 +41,66 @@ func (c *CogClient) BundleExists(bundlename string, version string) (bool, error
 	}
 }
 
+// BundleGet comments to be written...
+func (c *CogClient) BundleGet(bundlename string, version string) (data.Bundle, error) {
+	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s",
+		c.profile.URL.String(), bundlename, version)
+
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return data.Bundle{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return data.Bundle{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return data.Bundle{}, err
+	}
+
+	bundle := data.Bundle{}
+	err = json.Unmarshal(body, &bundle)
+	if err != nil {
+		return data.Bundle{}, err
+	}
+
+	return bundle, nil
+}
+
 // BundleList comments to be written...
 func (c *CogClient) BundleList() ([]data.Bundle, error) {
 	url := fmt.Sprintf("%s/v2/bundles", c.profile.URL.String())
+
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return []data.Bundle{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return []data.Bundle{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []data.Bundle{}, err
+	}
+
+	bundles := []data.Bundle{}
+	err = json.Unmarshal(body, &bundles)
+	if err != nil {
+		return []data.Bundle{}, err
+	}
+
+	return bundles, nil
+}
+
+// BundleListVersions comments to be written...
+func (c *CogClient) BundleListVersions(bundlename string) ([]data.Bundle, error) {
+	url := fmt.Sprintf("%s/v2/bundles/%s/versions", c.profile.URL.String(), bundlename)
 
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {

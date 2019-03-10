@@ -153,9 +153,7 @@ func addBundleMethodsToRouter(router *mux.Router) {
 	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handlePutBundleVersion).Methods("PUT")
 	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handleDeleteBundleVersion).Methods("DELETE")
 
-	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handlePatchBundleVersion).
-		Methods("PATCH").
+	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handlePatchBundleVersion).Methods("PATCH")
+	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handlePatchBundleVersion).Methods("PATCH").
 		Queries("enabled", "")
-	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handlePatchBundleVersion).
-		Methods("PATCH")
 }

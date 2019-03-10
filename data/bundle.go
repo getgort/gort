@@ -6,7 +6,13 @@ import (
 	"time"
 )
 
-/// The wrappers for the "bundles" section
+// BundleInfo wraps a minimal amount of data abount a bundle.
+type BundleInfo struct {
+	Name           string
+	Versions       []string
+	Enabled        bool
+	EnabledVersion Bundle
+}
 
 // Bundle represents a bundle as defined in the "bundles" section of the
 // config.
