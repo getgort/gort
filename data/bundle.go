@@ -24,7 +24,7 @@ type Bundle struct {
 	Author           string                   `yaml:",omitempty" json:"author,omitempty"`
 	Homepage         string                   `yaml:",omitempty" json:"homepage,omitempty"`
 	Description      string                   `yaml:",omitempty" json:"description,omitempty"`
-	InstalledOn      time.Time                `yaml:",omitempty" json:"installed_on,omitempty"`
+	InstalledOn      time.Time                `yaml:"-" json:"installed_on,omitempty"`
 	InstalledBy      string                   `yaml:",omitempty" json:"installed_by,omitempty"`
 	LongDescription  string                   `yaml:"long_description,omitempty" json:"long_description,omitempty"`
 	Docker           BundleDocker             `yaml:",omitempty" json:"docker,omitempty"`
