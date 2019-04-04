@@ -241,11 +241,11 @@ func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *Info) *
 	template := "[SlackAdapter.OnLatencyReport] High latency detected: %s"
 
 	switch {
-	case millis > 1000 && millis < 1500:
+	case millis >= 1000 && millis < 1500:
 		log.Debugf(template, event.Value.String())
-	case millis > 1500 && millis < 2000:
+	case millis >= 1500 && millis < 2000:
 		log.Infof(template, event.Value.String())
-	case millis > 2000:
+	case millis >= 2000:
 		log.Warnf(template, event.Value.String())
 	}
 
