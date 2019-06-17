@@ -21,7 +21,6 @@ help:
 	#
 	# Dev commands:
 	# make clean          - Remove generated files
-	# make install        - Install requirements (none atm)
 	# make test           - Run Go tests
 	# make build          - Build go binary
 	#
@@ -34,18 +33,6 @@ help:
 
 clean:
 	if [ -d "bin" ]; then rm -R bin; fi
-
-install:
-	@echo TODO Start using Go modules!
-	@go get github.com/docker/docker/api
-	@go get github.com/docker/docker/client
-	@go get github.com/gorilla/mux
-	@go get github.com/nlopes/slack
-	@go get github.com/sirupsen/logrus
-	@go get github.com/spf13/cobra
-	@go get golang.org/x/crypto/bcrypt
-	@go get golang.org/x/net/context
-	@go get gopkg.in/yaml.v2
 
 test_begin:
 	@docker stop foo_postgres | true

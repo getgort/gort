@@ -6,50 +6,17 @@
 #
 FROM golang:1.12 as test
 
-WORKDIR /go/bin/
-
-RUN rm -Rf /go/src 
-
-COPY . /go/src/github.com/clockworksoul/cog2
-
-# TODO Start using Go modules!
-RUN go get github.com/docker/docker/api \
-    && go get github.com/docker/docker/client \
-    && go get github.com/gorilla/mux \
-    && go get github.com/lib/pq \
-    && go get github.com/mitchellh/go-homedir \
-    && go get github.com/nlopes/slack \
-    && go get github.com/sirupsen/logrus\
-    && go get github.com/spf13/cobra \
-	  && go get golang.org/x/crypto/bcrypt \
-    && go get golang.org/x/net/context \
-    && go get gopkg.in/yaml.v2
-
-RUN go test -v github.com/clockworksoul/cog2/...
+COPY . /cog2
+WORKDIR /cog2
+RUN go test -v ./...
 
 # Part 2: Compile the binary in a containerized Golang environment
 #
 FROM golang:1.12 as builder
 
-WORKDIR /go/bin/
-
-RUN rm -Rf /go/src 
-
-COPY . /go/src/github.com/clockworksoul/cog2
-
-# TODO Start using Go modules!
-RUN go get github.com/docker/docker/api \
-    && go get github.com/docker/docker/client \
-    && go get github.com/gorilla/mux \
-    && go get github.com/lib/pq \
-    && go get github.com/mitchellh/go-homedir \
-    && go get github.com/nlopes/slack \
-    && go get github.com/sirupsen/logrus\
-    && go get github.com/spf13/cobra \
-    && go get golang.org/x/net/context \
-    && go get gopkg.in/yaml.v2
-
-RUN GOOS=linux go build -a -installsuffix cgo -o cog2 github.com/clockworksoul/cog2
+COPY . /cog2
+WORKDIR /cog2
+RUN GOOS=linux go build -a -installsuffix cgo -o cog2 .
 
 # Part 3: Build the Cog2 image proper
 #
