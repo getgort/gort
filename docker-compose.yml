@@ -13,7 +13,7 @@ services:
       - cogNetwork
 
   postgres:
-    image: postgres:10
+    image: postgres:11
     environment:
       - POSTGRES_USER=cog
       - POSTGRES_PASSWORD="veryKleverPassw0rd!"

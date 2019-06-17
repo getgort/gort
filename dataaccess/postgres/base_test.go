@@ -38,5 +38,6 @@ func TestDataAccessInit(t *testing.T) {
 	da = NewPostgresDataAccess(configs)
 
 	err := da.Initialize()
+
 	expectNoErr(t, err)
 }

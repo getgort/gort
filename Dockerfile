@@ -4,7 +4,7 @@
 
 # Part 1: Execute the tests in a containerized Golang environment
 #
-FROM golang:1.11 as test
+FROM golang:1.12 as test
 
 WORKDIR /go/bin/
 
@@ -21,6 +21,7 @@ RUN go get github.com/docker/docker/api \
     && go get github.com/nlopes/slack \
     && go get github.com/sirupsen/logrus\
     && go get github.com/spf13/cobra \
+	  && go get golang.org/x/crypto/bcrypt \
     && go get golang.org/x/net/context \
     && go get gopkg.in/yaml.v2
 
@@ -28,7 +29,7 @@ RUN go test -v github.com/clockworksoul/cog2/...
 
 # Part 2: Compile the binary in a containerized Golang environment
 #
-FROM golang:1.11 as builder
+FROM golang:1.12 as builder
 
 WORKDIR /go/bin/
 

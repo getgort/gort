@@ -43,13 +43,14 @@ install:
 	@go get github.com/nlopes/slack
 	@go get github.com/sirupsen/logrus
 	@go get github.com/spf13/cobra
+	@go get golang.org/x/crypto/bcrypt
 	@go get golang.org/x/net/context
 	@go get gopkg.in/yaml.v2
 
 test_begin:
 	@docker stop foo_postgres | true
 	@docker rm foo_postgres | true
-	@docker run -d -e POSTGRES_USER=cog -e POSTGRES_PASSWORD=password -p 5432:5432 --name foo_postgres postgres:10
+	@docker run -d -e POSTGRES_USER=cog -e POSTGRES_PASSWORD=password -p 5432:5432 --name foo_postgres postgres:11
 	
 test: test_begin
 	@docker build --target test -t foo_$(PROJECT)_foo --network host .
