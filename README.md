@@ -1,3 +1,5 @@
+## This project is temporarily paused while I write my book. I will pick it up somewhere around Q2 2020.
+
 # Cog2
 
 **This project is a work in progress under active heavy development. Follow for updates!**
