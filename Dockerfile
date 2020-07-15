@@ -4,7 +4,7 @@
 
 # Part 1: Execute the tests in a containerized Golang environment
 #
-FROM golang:1.12 as test
+FROM golang:1.14 as test
 
 COPY . /cog2
 WORKDIR /cog2
@@ -12,7 +12,7 @@ RUN go test -v ./...
 
 # Part 2: Compile the binary in a containerized Golang environment
 #
-FROM golang:1.12 as builder
+FROM golang:1.14 as builder
 
 COPY . /cog2
 WORKDIR /cog2
@@ -35,7 +35,7 @@ RUN apt update                                              \
 
 RUN ssh-keygen -b 2048 -f /root/.ssh/id_rsa -P ''
 
-COPY --from=builder /go/bin/cog2 .
+COPY --from=builder /cog2/cog2 .
 
 EXPOSE 4000
 
