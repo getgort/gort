@@ -53,6 +53,81 @@ func (da InMemoryDataAccess) BundleDelete(name, version string) error {
 	return nil
 }
 
+// BundleDisable TBD
+func (da InMemoryDataAccess) BundleDisable(name, version string) error {
+	if name == "" {
+		return errs.ErrEmptyBundleName
+	}
+
+	if version == "" {
+		return errs.ErrEmptyBundleVersion
+	}
+
+	exists, err := da.BundleExists(name, version)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errs.ErrNoSuchBundle
+	}
+
+	bundle := da.bundles[bundleKey(name, version)]
+	bundle.Enabled = false
+
+	return nil
+}
+
+// BundleEnable TBD
+func (da InMemoryDataAccess) BundleEnable(name, version string) error {
+	if name == "" {
+		return errs.ErrEmptyBundleName
+	}
+
+	if version == "" {
+		return errs.ErrEmptyBundleVersion
+	}
+
+	exists, err := da.BundleExists(name, version)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errs.ErrNoSuchBundle
+	}
+
+	bundle := da.bundles[bundleKey(name, version)]
+	bundle.Enabled = true
+
+	return nil
+}
+
+// BundleEnabledVersion TBD
+func (da InMemoryDataAccess) BundleEnabledVersion(name string) (string, error) {
+	if name == "" {
+		return "", errs.ErrEmptyBundleName
+	}
+
+	exists := false
+
+	for _, v := range da.bundles {
+		if v.Name != name {
+			continue
+		}
+
+		exists = true
+
+		if v.Enabled {
+			return v.Version, nil
+		}
+	}
+
+	if !exists {
+		return "", errs.ErrNoSuchBundle
+	}
+
+	return "", nil
+}
+
 // BundleExists TBD
 func (da InMemoryDataAccess) BundleExists(name, version string) (bool, error) {
 	_, exists := da.bundles[bundleKey(name, version)]
