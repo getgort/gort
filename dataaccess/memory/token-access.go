@@ -20,7 +20,7 @@ func init() {
 
 // TokenEvaluate will test a token for validity. It returns true if the token
 // exists and is still within its valid period; false otherwise.
-func (da InMemoryDataAccess) TokenEvaluate(tokenString string) bool {
+func (da *InMemoryDataAccess) TokenEvaluate(tokenString string) bool {
 	token, err := da.TokenRetrieveByToken(tokenString)
 	if err != nil {
 		return false
@@ -32,7 +32,7 @@ func (da InMemoryDataAccess) TokenEvaluate(tokenString string) bool {
 // TokenGenerate generates a new token for the given user with a specified
 // expiration duration. Any existing token for this user will be automatically
 // invalidated. If the user doesn't exist an error is returned.
-func (da InMemoryDataAccess) TokenGenerate(username string, duration time.Duration) (rest.Token, error) {
+func (da *InMemoryDataAccess) TokenGenerate(username string, duration time.Duration) (rest.Token, error) {
 	exists, err := da.UserExists(username)
 	if err != nil {
 		return rest.Token{}, err
@@ -71,7 +71,7 @@ func (da InMemoryDataAccess) TokenGenerate(username string, duration time.Durati
 
 // TokenInvalidate immediately invalidates the specified token. An error is
 // returned if the token doesn't exist.
-func (da InMemoryDataAccess) TokenInvalidate(tokenString string) error {
+func (da *InMemoryDataAccess) TokenInvalidate(tokenString string) error {
 	token, err := da.TokenRetrieveByToken(tokenString)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (da InMemoryDataAccess) TokenInvalidate(tokenString string) error {
 
 // TokenRetrieveByUser retrieves the token associated with a username. An
 // error is returned if no such token (or user) exists.
-func (da InMemoryDataAccess) TokenRetrieveByUser(username string) (rest.Token, error) {
+func (da *InMemoryDataAccess) TokenRetrieveByUser(username string) (rest.Token, error) {
 	if token, ok := tokensByUser[username]; ok {
 		return token, nil
 	}
@@ -95,7 +95,7 @@ func (da InMemoryDataAccess) TokenRetrieveByUser(username string) (rest.Token, e
 
 // TokenRetrieveByToken retrieves the token by its value. An error is returned
 // if no such token exists.
-func (da InMemoryDataAccess) TokenRetrieveByToken(tokenString string) (rest.Token, error) {
+func (da *InMemoryDataAccess) TokenRetrieveByToken(tokenString string) (rest.Token, error) {
 	if token, ok := tokensByValue[tokenString]; ok {
 		return token, nil
 	}

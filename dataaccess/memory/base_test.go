@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	da InMemoryDataAccess
+	da *InMemoryDataAccess
 )
 
 func expectErr(t *testing.T, err error, expected error) {

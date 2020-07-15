@@ -6,7 +6,7 @@ import (
 )
 
 // GroupAddUser adds a user to a group
-func (da InMemoryDataAccess) GroupAddUser(groupname string, username string) error {
+func (da *InMemoryDataAccess) GroupAddUser(groupname string, username string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -39,7 +39,7 @@ func (da InMemoryDataAccess) GroupAddUser(groupname string, username string) err
 }
 
 // GroupCreate creates a new user group.
-func (da InMemoryDataAccess) GroupCreate(group rest.Group) error {
+func (da *InMemoryDataAccess) GroupCreate(group rest.Group) error {
 	if group.Name == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -58,7 +58,7 @@ func (da InMemoryDataAccess) GroupCreate(group rest.Group) error {
 }
 
 // GroupDelete delete a group.
-func (da InMemoryDataAccess) GroupDelete(groupname string) error {
+func (da *InMemoryDataAccess) GroupDelete(groupname string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -82,14 +82,14 @@ func (da InMemoryDataAccess) GroupDelete(groupname string) error {
 }
 
 // GroupExists is used to determine whether a group exists in the data store.
-func (da InMemoryDataAccess) GroupExists(groupname string) (bool, error) {
+func (da *InMemoryDataAccess) GroupExists(groupname string) (bool, error) {
 	_, exists := da.groups[groupname]
 
 	return exists, nil
 }
 
 // GroupGet gets a specific group.
-func (da InMemoryDataAccess) GroupGet(groupname string) (rest.Group, error) {
+func (da *InMemoryDataAccess) GroupGet(groupname string) (rest.Group, error) {
 	if groupname == "" {
 		return rest.Group{}, errs.ErrEmptyGroupName
 	}
@@ -108,13 +108,13 @@ func (da InMemoryDataAccess) GroupGet(groupname string) (rest.Group, error) {
 }
 
 // GroupGrantRole grants one or more roles to a group.
-func (da InMemoryDataAccess) GroupGrantRole() error {
+func (da *InMemoryDataAccess) GroupGrantRole() error {
 	return errs.ErrNotImplemented
 }
 
 // GroupList returns a list of all known groups in the datastore.
 // Passwords are not included. Nice try.
-func (da InMemoryDataAccess) GroupList() ([]rest.Group, error) {
+func (da *InMemoryDataAccess) GroupList() ([]rest.Group, error) {
 	list := make([]rest.Group, 0)
 
 	for _, g := range da.groups {
@@ -125,7 +125,7 @@ func (da InMemoryDataAccess) GroupList() ([]rest.Group, error) {
 }
 
 // GroupRemoveUser removes one or more users from a group.
-func (da InMemoryDataAccess) GroupRemoveUser(groupname string, username string) error {
+func (da *InMemoryDataAccess) GroupRemoveUser(groupname string, username string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -151,14 +151,14 @@ func (da InMemoryDataAccess) GroupRemoveUser(groupname string, username string) 
 }
 
 // GroupRevokeRole revokes one or more roles from a group.
-func (da InMemoryDataAccess) GroupRevokeRole() error {
+func (da *InMemoryDataAccess) GroupRevokeRole() error {
 	return errs.ErrNotImplemented
 }
 
 // GroupUpdate is used to update an existing group. An error is returned if the
 // groupname is empty or if the group doesn't exist.
 // TODO Should we let this create groups that don't exist?
-func (da InMemoryDataAccess) GroupUpdate(group rest.Group) error {
+func (da *InMemoryDataAccess) GroupUpdate(group rest.Group) error {
 	if group.Name == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -177,16 +177,16 @@ func (da InMemoryDataAccess) GroupUpdate(group rest.Group) error {
 }
 
 // GroupUserList comments TBD
-func (da InMemoryDataAccess) GroupUserList(group string) ([]rest.User, error) {
+func (da *InMemoryDataAccess) GroupUserList(group string) ([]rest.User, error) {
 	return []rest.User{}, errs.ErrNotImplemented
 }
 
 // GroupUserAdd comments TBD
-func (da InMemoryDataAccess) GroupUserAdd(group string, user string) error {
+func (da *InMemoryDataAccess) GroupUserAdd(group string, user string) error {
 	return errs.ErrNotImplemented
 }
 
 // GroupUserDelete comments TBD
-func (da InMemoryDataAccess) GroupUserDelete(group string, user string) error {
+func (da *InMemoryDataAccess) GroupUserDelete(group string, user string) error {
 	return errs.ErrNotImplemented
 }

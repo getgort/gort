@@ -14,17 +14,17 @@ type InMemoryDataAccess struct {
 }
 
 // NewInMemoryDataAccess returns a new InMemoryDataAccess instance.
-func NewInMemoryDataAccess() InMemoryDataAccess {
+func NewInMemoryDataAccess() *InMemoryDataAccess {
 	da := InMemoryDataAccess{
 		bundles: make(map[string]*data.Bundle),
 		groups:  make(map[string]*rest.Group),
 		users:   make(map[string]*rest.User),
 	}
 
-	return da
+	return &da
 }
 
 // Initialize initializes an InMemoryDataAccess instance.
-func (da InMemoryDataAccess) Initialize() error {
+func (da *InMemoryDataAccess) Initialize() error {
 	return nil
 }
