@@ -9,6 +9,7 @@ import (
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/data/rest"
 	"github.com/clockworksoul/cog2/dataaccess"
+	"github.com/clockworksoul/cog2/dataaccess/errs"
 	cogerr "github.com/clockworksoul/cog2/errors"
 	"github.com/clockworksoul/cog2/meta"
 	log "github.com/sirupsen/logrus"
@@ -304,8 +305,10 @@ func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
 	// Try to figure out what user we're working with here.
 	exists := true
 	user, err := da.UserGetByEmail(info.Email)
-	if err != nil {
+	if err == errs.ErrNoSuchUser {
 		exists = false
+	} else if err != nil {
+		return user, false, err
 	}
 
 	// It already exists. Exist.

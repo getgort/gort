@@ -100,7 +100,13 @@ func (da *InMemoryDataAccess) UserGet(username string) (rest.User, error) {
 // UserGetByEmail returns a user from the data store. An error is returned if
 // the email parameter is empty or if the user doesn't exist.
 func (da *InMemoryDataAccess) UserGetByEmail(email string) (rest.User, error) {
-	return rest.User{}, errs.ErrNotImplemented
+	for _, v := range da.users {
+		if v.Email == email {
+			return *v, nil
+		}
+	}
+
+	return rest.User{}, errs.ErrNoSuchUser
 }
 
 // UserList returns a list of all known users in the datastore.

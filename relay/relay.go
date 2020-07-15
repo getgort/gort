@@ -39,7 +39,10 @@ func handleRequest(commandRequest data.CommandRequest) data.CommandResponse {
 
 	if response.Status != 0 {
 		response.Title = "Command Error"
-		response.Output = []string{"Command Error"}
+
+		if len(response.Output) == 0 {
+			response.Output = []string{"Unknown command error"}
+		}
 	}
 
 	return response
