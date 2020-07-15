@@ -3,7 +3,6 @@ package relay
 import (
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/worker"
-	log "github.com/sirupsen/logrus"
 )
 
 func handleRequest(commandRequest data.CommandRequest) data.CommandResponse {
@@ -17,7 +16,7 @@ func handleRequest(commandRequest data.CommandRequest) data.CommandResponse {
 		response.Status = 126
 		response.Error = err
 		response.Title = "Failed to spawn worker"
-		response.Output = []string{ err.Error() }
+		response.Output = []string{err.Error()}
 		return response
 	}
 
@@ -26,7 +25,7 @@ func handleRequest(commandRequest data.CommandRequest) data.CommandResponse {
 		response.Status = 126
 		response.Error = err
 		response.Title = "Failed to start worker"
-		response.Output = []string{ err.Error() }
+		response.Output = []string{err.Error()}
 		return response
 	}
 
@@ -40,7 +39,7 @@ func handleRequest(commandRequest data.CommandRequest) data.CommandResponse {
 
 	if response.Status != 0 {
 		response.Title = "Command Error"
-		response.Output = []string{ "Command Error" }
+		response.Output = []string{"Command Error"}
 	}
 
 	return response
