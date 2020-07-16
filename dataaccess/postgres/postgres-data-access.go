@@ -112,26 +112,26 @@ func (da PostgresDataAccess) Initialize() error {
 }
 
 func (da PostgresDataAccess) cogDatabaseExists(db *sql.DB) (bool, error) {
-	rows, err := db.Query("SELECT datname FROM pg_database WHERE datistemplate = false;")
+	rows, err := db.Query("SELECT datname " +
+		"FROM pg_database " +
+		"WHERE datistemplate = false AND datname = 'cog'")
 	defer rows.Close()
 	if err != nil {
 		return false, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	datname := ""
-	for rows.NextResultSet() {
-		rows.Next()
 
-		err = rows.Err()
-		if err != nil {
-			return false, cogerr.Wrap(errs.ErrDataAccess, err)
-		}
-
+	for rows.Next() {
 		rows.Scan(&datname)
 
 		if datname == "cog" {
 			return true, nil
 		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return false, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return false, nil
@@ -326,15 +326,11 @@ func (da PostgresDataAccess) tableExists(table string, db *sql.DB) (bool, error)
 
 	rows, err := db.Query(fmt.Sprintf("SELECT to_regclass('public.%s');", table))
 	defer rows.Close()
+	if err != nil {
+		return false, cogerr.Wrap(errs.ErrDataAccess, err)
+	}
 
-	for rows.NextResultSet() {
-		rows.Next()
-		err = rows.Err()
-
-		if err != nil {
-			return false, cogerr.Wrap(errs.ErrDataAccess, err)
-		}
-
+	for rows.Next() {
 		rows.Scan(&result)
 
 		if result == table {
@@ -342,7 +338,7 @@ func (da PostgresDataAccess) tableExists(table string, db *sql.DB) (bool, error)
 		}
 	}
 
-	if err != nil {
+	if err := rows.Err(); err != nil {
 		return false, cogerr.Wrap(errs.ErrDataAccess, err)
 	}
 

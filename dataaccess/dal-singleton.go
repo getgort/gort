@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/clockworksoul/cog2/config"
-	"github.com/clockworksoul/cog2/dataaccess/memory"
+	"github.com/clockworksoul/cog2/dataaccess/postgres"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -106,9 +106,9 @@ func initializeDataAccess() {
 		updateDALState(StateInitializing)
 
 		for currentState != StateInitialized {
-			// dbConfigs := config.GetDatabaseConfigs()
-			// dataAccessLayer = postgres.NewPostgresDataAccess(dbConfigs) // hard-coded for now
-			dataAccessLayer = memory.NewInMemoryDataAccess()
+			dbConfigs := config.GetDatabaseConfigs()
+			dataAccessLayer = postgres.NewPostgresDataAccess(dbConfigs) // hard-coded for now
+			// dataAccessLayer = memory.NewInMemoryDataAccess()
 
 			err := dataAccessLayer.Initialize()
 
