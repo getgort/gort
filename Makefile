@@ -47,7 +47,7 @@ test: test_begin
 
 build: clean
 	mkdir -p bin
-	@go build -a -installsuffix cog -o bin/$(PROJECT) $(GIT_REPOSITORY)
+	@go build -a -installsuffix cgo -o bin/$(PROJECT) $(GIT_REPOSITORY)
 
 image: test_begin
 	@docker build --target image -t $(IMAGE_NAME):$(IMAGE_TAG) --network host .
