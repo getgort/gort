@@ -1,4 +1,4 @@
-## This project is temporarily paused while I write my book. I will pick it up somewhere around Q2 2020.
+## This project is temporarily paused while I write my book. I will pick it up somewhere around Q2 2021.
 
 # Cog2
 
