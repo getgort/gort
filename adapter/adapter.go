@@ -35,7 +35,7 @@ var (
 
 	// ErrCogNotBootstrapped is returned by findOrMakeCogUser() if a user
 	// attempts to trigger a command but Cog hasn't yet been bopotstrapped.
-	ErrCogNotBootstrapped = errors.New("Cog hasn't been bootstrapped yet")
+	ErrCogNotBootstrapped = errors.New("cog hasn't been bootstrapped yet")
 
 	// ErrSelfRegistrationOff is returned by findOrMakeCogUser() if an unknown
 	// user attempts to trigger a command but self-registration is configured

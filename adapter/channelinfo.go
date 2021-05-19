@@ -1,6 +1,6 @@
 package adapter
 
-import "github.com/nlopes/slack"
+import "github.com/slack-go/slack"
 
 // ChannelInfo contains the basic information for a single channel in any provider.
 type ChannelInfo struct {

@@ -27,7 +27,7 @@ type Worker struct {
 
 // NewWorker will build and returns a new Worker for a single command execution.
 func NewWorker(image string, tag string, entryPoint string, commandParams ...string) (*Worker, error) {
-	dcli, err := client.NewEnvClient()
+	dcli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (w *Worker) Start() (<-chan string, error) {
 		cfg.Entrypoint = []string{entryPoint}
 	}
 
-	resp, err := cli.ContainerCreate(ctx, &cfg, nil, nil, "")
+	resp, err := cli.ContainerCreate(ctx, &cfg, nil, nil, nil, "")
 	if err != nil {
 		return nil, err
 	}
@@ -105,11 +105,11 @@ func (w *Worker) Start() (<-chan string, error) {
 		chwait, _ := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 		ok := <-chwait
 
-		log.Debugf("[Worker.Start] %s %s %s - Completed in %s",
+		log.Debugf("[Worker.Start] %s %s %s - Completed in %v",
 			w.ImageName,
 			entryPoint,
 			strings.Join(w.CommandParameters, " "),
-			time.Now().Sub(startTime).String(),
+			time.Since(startTime),
 		)
 
 		w.ExitStatus <- ok.StatusCode
@@ -203,7 +203,7 @@ func (w *Worker) pullImage(force bool) error {
 			_, e = reader.Read(bytes)
 		}
 
-		log.Debugf("[Worker.pullImage] Image %s pulled in %s", imageName, time.Now().Sub(startTime).String())
+		log.Debugf("[Worker.pullImage] Image %s pulled in %v", imageName, time.Since(startTime))
 	}
 
 	return nil

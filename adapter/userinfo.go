@@ -1,7 +1,7 @@
 package adapter
 
 import (
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 // UserInfo contains the basic information for a single user in any chat provider.

@@ -10,13 +10,15 @@ services:
       - ./test.yml:/config.yml
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - cogNetwork
+      - cog
 
   postgres:
     image: postgres:11
     environment:
       - POSTGRES_USER=cog
-      - POSTGRES_PASSWORD="veryKleverPassw0rd!"
+      - POSTGRES_PASSWORD=veryKleverPassw0rd
+    networks:
+      - cog
       
 networks:
-  cogNetwork:
+  cog:

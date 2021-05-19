@@ -5,13 +5,13 @@ import (
 	"regexp"
 
 	"github.com/clockworksoul/cog2/data"
-	"github.com/nlopes/slack"
 	log "github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
 )
 
 var (
-	linkMarkdownRegexShort = regexp.MustCompile("<([a-zA-Z0-9]*://[a-zA-Z0-9\\.]*)>")
-	linkMarkdownRegexLong  = regexp.MustCompile("<([a-zA-Z0-9]*://[a-zA-Z0-9\\.]*)\\|([a-zA-Z0-9\\.]*)>")
+	linkMarkdownRegexShort = regexp.MustCompile(`<([a-zA-Z0-9]*://[a-zA-Z0-9\.]*)>`)
+	linkMarkdownRegexLong  = regexp.MustCompile(`<([a-zA-Z0-9]*://[a-zA-Z0-9\.]*)\|([a-zA-Z0-9\.]*)>`)
 )
 
 // SlackAdapter is the Slack provider implementation of a relay, which knows how
@@ -39,7 +39,7 @@ func NewSlackAdapter(provider data.SlackProvider) SlackAdapter {
 
 // GetChannelInfo returns the ChannelInfo for a requested channel.
 func (s SlackAdapter) GetChannelInfo(channelID string) (*ChannelInfo, error) {
-	ch, err := s.rtm.GetChannelInfo(channelID)
+	ch, err := s.rtm.GetConversationInfo(channelID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (s SlackAdapter) GetName() string {
 // GetPresentChannels returns a slice of channel ID strings that the Adapter
 // is present in. This is expensive. Don't use it often.
 func (s SlackAdapter) GetPresentChannels(userID string) ([]*ChannelInfo, error) {
-	allChannels, err := s.rtm.GetChannels(true)
+	allChannels, _, err := s.rtm.GetConversations(&slack.GetConversationsParameters{})
 	if err != nil {
 		return nil, err
 	}
