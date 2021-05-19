@@ -11,7 +11,7 @@ import (
 	"github.com/clockworksoul/cog2/data"
 	cogerr "github.com/clockworksoul/cog2/errors"
 	log "github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 const (

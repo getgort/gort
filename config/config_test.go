@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 func TestInputOutputHumanEyeball(t *testing.T) {

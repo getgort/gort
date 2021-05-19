@@ -5,7 +5,7 @@ import (
 
 	"github.com/clockworksoul/cog2/data"
 	cogerr "github.com/clockworksoul/cog2/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // LoadBundle is called by ...

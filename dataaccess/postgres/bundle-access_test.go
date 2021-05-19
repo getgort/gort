@@ -8,7 +8,7 @@ import (
 
 	"github.com/clockworksoul/cog2/data"
 	"github.com/clockworksoul/cog2/dataaccess/errs"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 
 	cogerr "github.com/clockworksoul/cog2/errors"
 )

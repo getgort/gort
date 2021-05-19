@@ -7,7 +7,7 @@ import (
 
 	"github.com/clockworksoul/cog2/data/rest"
 	cogerr "github.com/clockworksoul/cog2/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // Profile represents a set of user profiles from a $HOME/.cog/profiles file
