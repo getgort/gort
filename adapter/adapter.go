@@ -17,11 +17,11 @@ import (
 
 var (
 	// All existant adapters keyed by name
-	adapterLookup map[string]Adapter
+	adapterLookup = map[string]Adapter{}
 )
 
 var (
-	// ErrAdapterNameCollision is emitted by startAdapters() if two adapters
+	// ErrAdapterNameCollision is emitted by AddAdapter() if two adapters
 	// have the same name.
 	ErrAdapterNameCollision = errors.New("adapter name collision")
 
@@ -61,10 +61,6 @@ var (
 
 // Adapter represents a connection to a chat provider.
 type Adapter interface {
-	// GetBotUser returns the info for the user associated with this bot in
-	// its respective provider.
-	GetBotUser() *UserInfo
-
 	// GetChannelInfo provides info on a specific provider channel accessible
 	// to the adapter.
 	GetChannelInfo(channelID string) (*ChannelInfo, error)
@@ -79,8 +75,8 @@ type Adapter interface {
 	// to the adapter.
 	GetUserInfo(userID string) (*UserInfo, error)
 
-	// Listen causes the Adapter to ititiate a connection to its provider and
-	// begin relaying back events via the returned channel.
+	// Listen causes the Adapter to initiate a connection to its provider and
+	// begin relaying back events (including errors) via the returned channel.
 	Listen() <-chan *ProviderEvent
 
 	// SendErrorMessage sends an error message to a specified channel.
@@ -90,6 +86,19 @@ type Adapter interface {
 	// SendMessage sends a standard output message to a specified channel.
 	// TODO Create a MessageBuilder at some point to replace this.
 	SendMessage(channel string, message string) error
+}
+
+// AddAdapter adds an adapter.
+func AddAdapter(a Adapter) {
+	name := a.GetName()
+
+	// No name? Generate a temporary name from the type
+	if name == "" {
+		name = fmt.Sprintf("%T", a)
+	}
+
+	log.Debugf("[adapter.AddAdapter] Adapter %s added", name)
+	adapterLookup[name] = a
 }
 
 // GetAdapter returns the requested adapter instance, if one exists.
@@ -211,6 +220,8 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 // StartListening instructs all relays to establish connections, receives all
 // events from all relays, and forwards them to the various On* handler functions.
 func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, <-chan error) {
+	log.Debug("[adapter.StartListening] Instructing relays to establish connections")
+
 	commandRequests := make(chan data.CommandRequest)
 	commandResponses := make(chan data.CommandResponse)
 
@@ -371,25 +382,19 @@ func formatCommandErrorMessage(command data.CommandEntry, params []string, outpu
 }
 
 func startAdapters() (<-chan *ProviderEvent, chan error) {
-	adapterLookup = make(map[string]Adapter)
-
 	allEvents := make(chan *ProviderEvent)
+
+	// TODO This isn't currently used. Use this, or remove it.
 	adapterErrors := make(chan error, len(config.GetSlackProviders()))
 
-	for _, sp := range config.GetSlackProviders() {
-		if _, ok := adapterLookup[sp.Name]; ok {
-			adapterErrors <- ErrAdapterNameCollision
-			continue
-		}
+	for k, a := range adapterLookup {
+		log.Debugf("[adapter.startAdapters] Starting adapter %s", k)
 
-		adapter := NewSlackAdapter(sp)
-		adapterLookup[sp.Name] = adapter
-
-		go func() {
+		go func(adapter Adapter) {
 			for event := range adapter.Listen() {
 				allEvents <- event
 			}
-		}()
+		}(a)
 	}
 
 	return allEvents, adapterErrors

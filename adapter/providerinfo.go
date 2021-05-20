@@ -12,18 +12,15 @@ type ProviderInfo struct {
 }
 
 // NewProviderInfoFromConfig can create a ProviderInfo from a data.Provider instance.
-func NewProviderInfoFromConfig(ap data.Provider) *ProviderInfo {
-	return (&ProviderInfo{}).SetProviderInfo(ap)
-}
+func NewProviderInfoFromConfig(provider data.Provider) *ProviderInfo {
+	p := &ProviderInfo{}
 
-// SetProviderInfo can set a ProviderInfo from a data.Provider instance.
-func (p *ProviderInfo) SetProviderInfo(provider data.Provider) *ProviderInfo {
 	switch ap := provider.(type) {
 	case data.SlackProvider:
 		p.Type = "slack"
 		p.Name = ap.Name
 	default:
-		log.Errorf("[ProviderInfo.SetProviderInfo] Unsupported provider type: %T", ap)
+		log.Errorf("[ProviderInfo.NewProviderInfoFromConfig] Unsupported provider type: %T", ap)
 	}
 
 	return p

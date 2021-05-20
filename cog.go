@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/clockworksoul/cog2/adapter"
+	"github.com/clockworksoul/cog2/adapter/slack"
 	"github.com/clockworksoul/cog2/config"
 	"github.com/clockworksoul/cog2/meta"
 	"github.com/clockworksoul/cog2/relay"
@@ -50,6 +51,7 @@ func initializeCommands() {
 	startCmd.Flags().StringVarP(
 		&configfile,
 		"config", "c", "config.yml", "The location of the config file to use")
+
 	startCmd.Flags().CountVarP(
 		&verboseCount,
 		"verbose", "v", "Verbose mode (can be used multiple times)")
@@ -80,6 +82,20 @@ func initializeLogger(verbose int) {
 	}
 }
 
+func installAdapters() error {
+	log.Infof("[installAdapters] Installing %d adapter(s)", len(config.GetSlackProviders()))
+
+	if len(config.GetSlackProviders()) == 0 {
+		return fmt.Errorf("no adapters configured")
+	}
+
+	for _, sp := range config.GetSlackProviders() {
+		adapter.AddAdapter(slack.NewAdapter(sp))
+	}
+
+	return nil
+}
+
 func startCog() error {
 	initializeLogger(verboseCount)
 
@@ -87,6 +103,11 @@ func startCog() error {
 
 	// Load the Cog configuration.
 	err := initializeConfig(configfile)
+	if err != nil {
+		return err
+	}
+
+	err = installAdapters()
 	if err != nil {
 		return err
 	}

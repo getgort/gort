@@ -1,9 +1,12 @@
-package adapter
+package slack
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
+	"strings"
 
+	"github.com/clockworksoul/cog2/adapter"
 	"github.com/clockworksoul/cog2/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
@@ -18,27 +21,13 @@ var (
 // to receive events from the Slack API, translate them into Cog2 events, and
 // forward them along.
 type SlackAdapter struct {
-	Adapter
-
 	client   *slack.Client
 	provider data.SlackProvider
 	rtm      *slack.RTM
 }
 
-// NewSlackAdapter will construct a SlackAdapter instance for a given provider configuration.
-func NewSlackAdapter(provider data.SlackProvider) SlackAdapter {
-	client := slack.New(provider.APIToken)
-	rtm := client.NewRTM()
-
-	return SlackAdapter{
-		client:   client,
-		provider: provider,
-		rtm:      rtm,
-	}
-}
-
 // GetChannelInfo returns the ChannelInfo for a requested channel.
-func (s SlackAdapter) GetChannelInfo(channelID string) (*ChannelInfo, error) {
+func (s SlackAdapter) GetChannelInfo(channelID string) (*adapter.ChannelInfo, error) {
 	ch, err := s.rtm.GetConversationInfo(channelID, false)
 	if err != nil {
 		return nil, err
@@ -54,13 +43,13 @@ func (s SlackAdapter) GetName() string {
 
 // GetPresentChannels returns a slice of channel ID strings that the Adapter
 // is present in. This is expensive. Don't use it often.
-func (s SlackAdapter) GetPresentChannels(userID string) ([]*ChannelInfo, error) {
+func (s SlackAdapter) GetPresentChannels(userID string) ([]*adapter.ChannelInfo, error) {
 	allChannels, _, err := s.rtm.GetConversations(&slack.GetConversationsParameters{})
 	if err != nil {
 		return nil, err
 	}
 
-	channels := make([]*ChannelInfo, 0)
+	channels := make([]*adapter.ChannelInfo, 0)
 
 	// A nested loop. It's terrible. It's hacky. I know.
 	for _, ch := range allChannels {
@@ -69,10 +58,7 @@ func (s SlackAdapter) GetPresentChannels(userID string) ([]*ChannelInfo, error) 
 	inner:
 		for _, memberID := range members {
 			if userID == memberID {
-				channels = append(
-					channels,
-					newChannelInfoFromSlackChannel(&ch),
-				)
+				channels = append(channels, newChannelInfoFromSlackChannel(&ch))
 				break inner
 			}
 		}
@@ -82,7 +68,7 @@ func (s SlackAdapter) GetPresentChannels(userID string) ([]*ChannelInfo, error) 
 }
 
 // GetUserInfo returns the UserInfo for a requested user.
-func (s SlackAdapter) GetUserInfo(userID string) (*UserInfo, error) {
+func (s SlackAdapter) GetUserInfo(userID string) (*adapter.UserInfo, error) {
 	u, err := s.rtm.GetUserInfo(userID)
 	if err != nil {
 		return nil, err
@@ -91,24 +77,88 @@ func (s SlackAdapter) GetUserInfo(userID string) (*UserInfo, error) {
 	return newUserInfoFromSlackUser(u), nil
 }
 
+func getFields(name string, i interface{}) map[string]interface{} {
+	merge := func(m, n map[string]interface{}) map[string]interface{} {
+		for k, v := range n {
+			m[k] = v
+		}
+		return m
+	}
+
+	value := reflect.ValueOf(i)
+
+	if value.IsZero() {
+		return map[string]interface{}{}
+	}
+
+	switch value.Kind() {
+	case reflect.Interface:
+		fallthrough
+
+	case reflect.Ptr:
+		if value.IsNil() {
+			return map[string]interface{}{}
+		}
+
+		v := value.Elem()
+		if !v.CanInterface() {
+			return map[string]interface{}{}
+		}
+
+		return getFields(name, v.Interface())
+
+	case reflect.Struct:
+		m := map[string]interface{}{}
+		t := value.Type()
+
+		fmt.Println("GOT TYPE:", t.Name())
+
+		for i := 0; i < t.NumField(); i++ {
+			fv := value.Field(i)
+			fn := t.Field(i).Name
+
+			if !fv.CanInterface() {
+				continue
+			}
+
+			m = merge(m, getFields(strings.ToLower(fn), fv.Interface()))
+		}
+
+		return m
+
+	default:
+		return map[string]interface{}{name: i}
+	}
+}
+
 // Listen instructs the relay to begin listening to the provider that it's attached to.
 // It exits immediately, returning a channel that emits ProviderEvents.
-func (s SlackAdapter) Listen() <-chan *ProviderEvent {
-	events := make(chan *ProviderEvent)
+func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
+	events := make(chan *adapter.ProviderEvent)
 
 	log.Infof("[SlackAdapter.Listen] Connecting to Slack provider %s...", s.provider.Name)
 
 	go s.rtm.ManageConnection()
 
 	go func() {
-		info := &Info{
-			Provider: NewProviderInfoFromConfig(s.provider),
-			User:     &UserInfo{},
+		info := &adapter.Info{
+			Provider: adapter.NewProviderInfoFromConfig(s.provider),
+			User:     &adapter.UserInfo{},
 		}
 
 	eventLoop:
 		for msg := range s.rtm.IncomingEvents {
-			log.Tracef("[SlackAdapter.Listen] %s %v", msg.Type, msg.Data)
+			e := log.WithField("type", msg.Type)
+
+			if log.IsLevelEnabled(log.TraceLevel) {
+				fields := getFields("", msg.Data)
+
+				for k, v := range fields {
+					e = e.WithField(k, v)
+				}
+			}
+
+			e.Tracef("[SlackAdapter.Listen] Incoming message")
 
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
@@ -121,7 +171,7 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 					continue eventLoop
 				}
 
-				info.User.setFromSlackUser(suser)
+				info.User = newUserInfoFromSlackUser(suser)
 
 				events <- s.OnConnected(ev, info)
 
@@ -172,11 +222,11 @@ func (s SlackAdapter) Listen() <-chan *ProviderEvent {
 }
 
 // OnChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.
-func (s *SlackAdapter) OnChannelMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnChannelMessage(event *slack.MessageEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
 		"channel_message",
 		info,
-		&ChannelMessageEvent{
+		&adapter.ChannelMessageEvent{
 			ChannelID: event.Channel,
 			Text:      ScrubMarkdown(event.Msg.Text),
 			UserID:    event.Msg.User,
@@ -185,29 +235,29 @@ func (s *SlackAdapter) OnChannelMessage(event *slack.MessageEvent, info *Info) *
 }
 
 // OnConnected is called when the Slack API emits a ConnectedEvent.
-func (s *SlackAdapter) OnConnected(event *slack.ConnectedEvent, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnConnected(event *slack.ConnectedEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
 		"connected",
 		info,
-		&ConnectedEvent{},
+		&adapter.ConnectedEvent{},
 	)
 }
 
 // OnConnectionError is called when the Slack API emits an ConnectionErrorEvent.
-func (s *SlackAdapter) OnConnectionError(event *slack.ConnectionErrorEvent, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnConnectionError(event *slack.ConnectionErrorEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
 		"connection_error",
 		info,
-		&ErrorEvent{Msg: event.Error()},
+		&adapter.ErrorEvent{Msg: event.Error()},
 	)
 }
 
 // OnDirectMessage is called when the Slack API emits an MessageEvent for a direct message.
-func (s *SlackAdapter) OnDirectMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnDirectMessage(event *slack.MessageEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
 		"direct_message",
 		info,
-		&DirectMessageEvent{
+		&adapter.DirectMessageEvent{
 			ChannelID: event.Channel,
 			Text:      ScrubMarkdown(event.Msg.Text),
 			UserID:    event.Msg.User,
@@ -216,27 +266,27 @@ func (s *SlackAdapter) OnDirectMessage(event *slack.MessageEvent, info *Info) *P
 }
 
 // OnDisconnected is called when the Slack API emits a DisconnectedEvent.
-func (s *SlackAdapter) OnDisconnected(event *slack.DisconnectedEvent, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnDisconnected(event *slack.DisconnectedEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
 		"disconnected",
 		info,
-		&DisconnectedEvent{Intentional: event.Intentional},
+		&adapter.DisconnectedEvent{Intentional: event.Intentional},
 	)
 }
 
 // OnInvalidAuth is called when the Slack API emits an InvalidAuthEvent.
-func (s *SlackAdapter) OnInvalidAuth(event *slack.InvalidAuthEvent, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnInvalidAuth(event *slack.InvalidAuthEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
 		"authentication_error",
 		info,
-		&AuthenticationErrorEvent{
+		&adapter.AuthenticationErrorEvent{
 			Msg: fmt.Sprintf("Connection failed to %s: invalid credentials", s.provider.Name),
 		},
 	)
 }
 
 // OnLatencyReport is called when the Slack API emits a LatencyReport.
-func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *adapter.Info) *adapter.ProviderEvent {
 	millis := event.Value.Nanoseconds() / 1000000
 	template := "[SlackAdapter.OnLatencyReport] High latency detected: %s"
 
@@ -253,7 +303,7 @@ func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *Info) *
 }
 
 // OnMessage is called when the Slack API emits a MessageEvent.
-func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *adapter.Info) *adapter.ProviderEvent {
 	switch event.Msg.SubType {
 	case "": // Just a plain message. Handle accordingly.
 		if event.Channel[0] == 'D' {
@@ -277,11 +327,11 @@ func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *Info) *Provide
 }
 
 // OnRTMError is called when the Slack API emits an RTMError.
-func (s *SlackAdapter) OnRTMError(event *slack.RTMError, info *Info) *ProviderEvent {
+func (s *SlackAdapter) OnRTMError(event *slack.RTMError, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
 		"error",
 		info,
-		&ErrorEvent{
+		&adapter.ErrorEvent{
 			Code: event.Code,
 			Msg:  event.Msg,
 		},
@@ -331,12 +381,24 @@ func (s SlackAdapter) SendErrorMessage(channelID string, title string, text stri
 }
 
 // wrapEvent creates a new ProviderEvent instance with metadata and the Event data attached.
-func (s *SlackAdapter) wrapEvent(eventType string, info *Info, data interface{}) *ProviderEvent {
-	return &ProviderEvent{
+func (s *SlackAdapter) wrapEvent(eventType string, info *adapter.Info, data interface{}) *adapter.ProviderEvent {
+	return &adapter.ProviderEvent{
 		EventType: eventType,
 		Data:      data,
 		Info:      info,
 		Adapter:   s,
+	}
+}
+
+// NewAdapter will construct a SlackAdapter instance for a given provider configuration.
+func NewAdapter(provider data.SlackProvider) SlackAdapter {
+	client := slack.New(provider.APIToken)
+	rtm := client.NewRTM()
+
+	return SlackAdapter{
+		client:   client,
+		provider: provider,
+		rtm:      rtm,
 	}
 }
 
