@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/clockworksoul/cog2/config"
-	"github.com/clockworksoul/cog2/dataaccess/postgres"
+	"github.com/clockworksoul/gort/config"
+	"github.com/clockworksoul/gort/dataaccess/postgres"
 
 	log "github.com/sirupsen/logrus"
 )

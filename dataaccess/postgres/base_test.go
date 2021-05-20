@@ -3,8 +3,8 @@ package postgres
 import (
 	"testing"
 
-	"github.com/clockworksoul/cog2/data"
-	cogerr "github.com/clockworksoul/cog2/errors"
+	"github.com/clockworksoul/gort/data"
+	gorterr "github.com/clockworksoul/gort/errors"
 )
 
 var (
@@ -14,7 +14,7 @@ var (
 func expectErr(t *testing.T, err error, expected error) {
 	if err == nil {
 		t.Fatalf("Expected error %q but didn't get one", expected)
-	} else if !cogerr.ErrEquals(err, expected) {
+	} else if !gorterr.ErrEquals(err, expected) {
 		t.Fatalf("Wrong error:\nExpected: %s\nGot: %s\n", expected, err)
 	}
 }
@@ -32,7 +32,7 @@ func TestDataAccessInit(t *testing.T) {
 		Password:   "password",
 		Port:       5432,
 		SSLEnabled: false,
-		User:       "cog",
+		User:       "gort",
 	}
 
 	da = NewPostgresDataAccess(configs)

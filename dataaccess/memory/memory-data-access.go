@@ -1,8 +1,8 @@
 package memory
 
 import (
-	"github.com/clockworksoul/cog2/data"
-	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/gort/data"
+	"github.com/clockworksoul/gort/data/rest"
 )
 
 // InMemoryDataAccess is an entirely in-memory representation of a data access layer.

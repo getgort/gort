@@ -1,7 +1,7 @@
 package adapter
 
 import (
-	"github.com/clockworksoul/cog2/data"
+	"github.com/clockworksoul/gort/data"
 	log "github.com/sirupsen/logrus"
 )
 

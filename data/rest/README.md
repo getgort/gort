@@ -1,1 +1,1 @@
-Structs (not objects!) shared by the REST API and cogctl.
+Structs (not objects!) shared by the REST API and gortctl.

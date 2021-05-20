@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 
-	cogerr "github.com/clockworksoul/cog2/errors"
+	gorterr "github.com/clockworksoul/gort/errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -32,7 +32,7 @@ func GenerateRandomToken(length int) (string, error) {
 
 	_, err := rand.Read(bytes)
 	if err != nil {
-		return "", cogerr.Wrap(ErrCryptoIO, err)
+		return "", gorterr.Wrap(ErrCryptoIO, err)
 	}
 
 	sEnc := base64.StdEncoding.EncodeToString(bytes)
@@ -44,7 +44,7 @@ func GenerateRandomToken(length int) (string, error) {
 func HashPassword(pwd string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.MinCost)
 	if err != nil {
-		return "", cogerr.Wrap(ErrCryptoHash, err)
+		return "", gorterr.Wrap(ErrCryptoHash, err)
 	}
 
 	return string(hash), nil

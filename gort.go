@@ -6,12 +6,12 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/clockworksoul/cog2/adapter"
-	"github.com/clockworksoul/cog2/adapter/slack"
-	"github.com/clockworksoul/cog2/config"
-	"github.com/clockworksoul/cog2/meta"
-	"github.com/clockworksoul/cog2/relay"
-	"github.com/clockworksoul/cog2/service"
+	"github.com/clockworksoul/gort/adapter"
+	"github.com/clockworksoul/gort/adapter/slack"
+	"github.com/clockworksoul/gort/config"
+	"github.com/clockworksoul/gort/meta"
+	"github.com/clockworksoul/gort/relay"
+	"github.com/clockworksoul/gort/service"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -21,17 +21,17 @@ var configfile string
 var verboseCount int
 
 var rootCmd = &cobra.Command{
-	Use:   "cog",
+	Use:   "gort",
 	Short: "Bringing the power of the command line to chat",
 	Long:  `Bringing the power of the command line to chat.`,
 }
 
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "Immediately start the Cog server",
-	Long:  `Immediately start the Cog server.`,
+	Short: "Immediately start the Gort server",
+	Long:  `Immediately start the Gort server.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := startCog()
+		err := startGort()
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -40,10 +40,10 @@ var startCmd = &cobra.Command{
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print Cog's version number",
-	Long:  `All software has versions. This is Cog's.`,
+	Short: "Print Gort's version number",
+	Long:  `All software has versions. This is Gort's.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Cog ChatOps Engine v%s\n", meta.CogVersion)
+		fmt.Printf("Gort ChatOps Engine v%s\n", meta.GortVersion)
 	},
 }
 
@@ -96,12 +96,12 @@ func installAdapters() error {
 	return nil
 }
 
-func startCog() error {
+func startGort() error {
 	initializeLogger(verboseCount)
 
-	log.Infof("[startCog] Starting Cog2 version %s", meta.CogVersion)
+	log.Infof("[startGort] Starting Gort version %s", meta.GortVersion)
 
-	// Load the Cog configuration.
+	// Load the Gort configuration.
 	err := initializeConfig(configfile)
 	if err != nil {
 		return err
@@ -112,8 +112,8 @@ func startCog() error {
 		return err
 	}
 
-	// Start the Cog REST web service
-	startServer(config.GetCogServerConfigs().APIAddress)
+	// Start the Gort REST web service
+	startServer(config.GetGortServerConfigs().APIAddress)
 
 	// Listen for signals for graceful shutdown
 	go catchSignals()
@@ -159,7 +159,7 @@ func catchSignals() {
 	// Optionally, you could run srv.Shutdown in a goroutine and block on
 	// <-ctx.Done() if your application should wait for other services
 	// to finalize based on meta cancellation.
-	log.Infof("[catchSignals] Shutting down Cog2")
+	log.Infof("[catchSignals] Shutting down Gort")
 
 	os.Exit(0)
 }

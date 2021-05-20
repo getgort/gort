@@ -3,13 +3,13 @@ global:
   # TODO Allow overriding at the command level
   command_timeout_seconds: 60
 
-cog:
-  # Cog will automatically create accounts for new users when set.
+gort:
+  # Gort will automatically create accounts for new users when set.
   # User accounts created this way will still need to be placed into groups
   # by an administrator in order to be granted any permissions.
   allow_self_registration: true
 
-  # The address to listen on for Cog’s REST API. Defaults to ":4000".
+  # The address to listen on for Gort’s REST API. Defaults to ":4000".
   api_address: ":4000"
 
   # Controls the prefix of URLs generated for the core API. URLs may contain a
@@ -18,27 +18,27 @@ cog:
   # Defaults to localhost
   api_url_base: localhost
 
-  # If true, allows Cog to respond to commands prefixed with ! instead of only
+  # If true, allows Gort to respond to commands prefixed with ! instead of only
   # via direct mentions. Defaults to true.
   enable_spoken_commands: true
 
 # Not yet supported
 database:
-  # The host where Cog's PostgreSQL database lives. Defaults to localhost.
+  # The host where Gort's PostgreSQL database lives. Defaults to localhost.
   host: localhost
 
-  # The port at which Cog may access its PostgreSQL database. Defaults to 5432.
+  # The port at which Gort may access its PostgreSQL database. Defaults to 5432.
   port: 5432
 
-  # The user to connect to Cog’s PostgreSQL database.
-  user: cog
+  # The user to connect to Gort’s PostgreSQL database.
+  user: gort
 
-  # The password for connecting to Cog’s PostgreSQL database.
+  # The password for connecting to Gort’s PostgreSQL database.
   # TODO Think of a better way to do this. Maybe allow {{ variables }} that
   # can be injected at startup and interpolated? Is that over-engineering?
   password: "veryKleverPassw0rd!"
 
-  # Set this to true to have Cog connect to its database using SSL.
+  # Set this to true to have Gort connect to its database using SSL.
   # Defaults to false.
   ssl_enabled: false
 
@@ -71,7 +71,7 @@ slack:
 
   # The name of the bot, as it appears in Slack. Defaults to the name used
   # when the bot was added to the account.
-  bot_name: Cog2
+  bot_name: Gort2
 
 bundles:
 - name: test

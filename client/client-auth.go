@@ -8,24 +8,24 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/clockworksoul/cog2/data/rest"
-	cogerr "github.com/clockworksoul/cog2/errors"
+	"github.com/clockworksoul/gort/data/rest"
+	gorterr "github.com/clockworksoul/gort/errors"
 )
 
-// Authenticate requests a new authentication token from the Cog service.
+// Authenticate requests a new authentication token from the Gort service.
 // If a valid token already exists it will be automatically invalidated if
 // this call is successful.
-func (c *CogClient) Authenticate() (rest.Token, error) {
+func (c *GortClient) Authenticate() (rest.Token, error) {
 	endpointURL := fmt.Sprintf("%s/v2/authenticate", c.profile.URL)
 
 	postBytes, err := json.Marshal(c.profile.User())
 	if err != nil {
-		return rest.Token{}, cogerr.Wrap(cogerr.ErrMarshal, err)
+		return rest.Token{}, gorterr.Wrap(gorterr.ErrMarshal, err)
 	}
 
 	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
 	if err != nil {
-		return rest.Token{}, cogerr.Wrap(ErrConnectionFailed, err)
+		return rest.Token{}, gorterr.Wrap(ErrConnectionFailed, err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -35,30 +35,30 @@ func (c *CogClient) Authenticate() (rest.Token, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return rest.Token{}, cogerr.Wrap(ErrResponseReadFailure, err)
+		return rest.Token{}, gorterr.Wrap(ErrResponseReadFailure, err)
 	}
 
 	token := rest.Token{}
 	err = json.Unmarshal(body, &token)
 	if err != nil {
-		return rest.Token{}, cogerr.Wrap(cogerr.ErrUnmarshal, err)
+		return rest.Token{}, gorterr.Wrap(gorterr.ErrUnmarshal, err)
 	}
 
 	// Save the token to disk
-	file, err := c.getCogTokenFilename()
+	file, err := c.getGortTokenFilename()
 	if err != nil {
-		return token, cogerr.Wrap(cogerr.ErrIO, err)
+		return token, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	f, err := os.Create(file)
 	defer f.Close()
 	if err != nil {
-		return token, cogerr.Wrap(cogerr.ErrIO, err)
+		return token, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	_, err = f.Write(body)
 	if err != nil {
-		return token, cogerr.Wrap(cogerr.ErrIO, err)
+		return token, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	return token, nil
@@ -66,7 +66,7 @@ func (c *CogClient) Authenticate() (rest.Token, error) {
 
 // Authenticated looks for any cached tokens associated with the current
 // server. Returns false if no tokens exist or tokens are expired.
-func (c *CogClient) Authenticated() (bool, error) {
+func (c *GortClient) Authenticated() (bool, error) {
 	if c.token != nil {
 		return !c.token.IsExpired(), nil
 	}
@@ -88,7 +88,7 @@ func (c *CogClient) Authenticated() (bool, error) {
 }
 
 // Bootstrap calls the POST /v2/bootstrap endpoint.
-func (c *CogClient) Bootstrap(user rest.User) (rest.User, error) {
+func (c *GortClient) Bootstrap(user rest.User) (rest.User, error) {
 	endpointURL := fmt.Sprintf("%s/v2/bootstrap", c.profile.URL)
 
 	// Get profile data so we can update it afterwards
@@ -99,12 +99,12 @@ func (c *CogClient) Bootstrap(user rest.User) (rest.User, error) {
 
 	postBytes, err := json.Marshal(user)
 	if err != nil {
-		return rest.User{}, cogerr.Wrap(cogerr.ErrMarshal, err)
+		return rest.User{}, gorterr.Wrap(gorterr.ErrMarshal, err)
 	}
 
 	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
 	if err != nil {
-		return rest.User{}, cogerr.Wrap(ErrConnectionFailed, err)
+		return rest.User{}, gorterr.Wrap(ErrConnectionFailed, err)
 	}
 	defer resp.Body.Close()
 
@@ -123,13 +123,13 @@ func (c *CogClient) Bootstrap(user rest.User) (rest.User, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return rest.User{}, cogerr.Wrap(cogerr.ErrIO, err)
+		return rest.User{}, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	// Re-using "user" instance. Sorry.
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		return rest.User{}, cogerr.Wrap(cogerr.ErrUnmarshal, err)
+		return rest.User{}, gorterr.Wrap(gorterr.ErrUnmarshal, err)
 	}
 
 	// Update the client profile file
@@ -152,7 +152,7 @@ func (c *CogClient) Bootstrap(user rest.User) (rest.User, error) {
 
 // Token is just a wrapper around a call to Authenticated() followed by a
 // call to Authenticate() if false.
-func (c *CogClient) Token() (rest.Token, error) {
+func (c *GortClient) Token() (rest.Token, error) {
 	authed, err := c.Authenticated()
 	if err != nil {
 		return rest.Token{}, err

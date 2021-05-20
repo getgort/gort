@@ -1,7 +1,7 @@
 package slack
 
 import (
-	"github.com/clockworksoul/cog2/adapter"
+	"github.com/clockworksoul/gort/adapter"
 	"github.com/slack-go/slack"
 )
 

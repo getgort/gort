@@ -1,6 +1,6 @@
 package meta
 
 const (
-	// CogVersion is the current version of Cog2
-	CogVersion = "0.4.3-dev.2"
+	// GortVersion is the current version of Gort
+	GortVersion = "0.4.4-dev.0"
 )

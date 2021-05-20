@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/gort/data/rest"
 	"github.com/gorilla/mux"
 )
 

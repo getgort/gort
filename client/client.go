@@ -12,8 +12,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/clockworksoul/cog2/data/rest"
-	cogerr "github.com/clockworksoul/cog2/errors"
+	"github.com/clockworksoul/gort/data/rest"
+	gorterr "github.com/clockworksoul/gort/errors"
 	homedir "github.com/mitchellh/go-homedir"
 )
 
@@ -24,8 +24,8 @@ var (
 	// ErrBadRequest indicates that a request could not be constructed.
 	ErrBadRequest = errors.New("request could not be constructed")
 
-	// ErrConnectionFailed is a failure for a client to connect to the Cog service.
-	ErrConnectionFailed = errors.New("failure to connect to the Cog service")
+	// ErrConnectionFailed is a failure for a client to connect to the Gort service.
+	ErrConnectionFailed = errors.New("failure to connect to the Gort service")
 
 	// ErrResourceExists is returned if a client tries to put a resource that
 	// already exists.
@@ -42,8 +42,8 @@ var (
 	ErrURLFormat = errors.New("invalid URL format")
 )
 
-// CogClient comments to be written...
-type CogClient struct {
+// GortClient comments to be written...
+type GortClient struct {
 	profile ProfileEntry
 	token   *rest.Token
 }
@@ -77,13 +77,13 @@ func (c Error) Status() uint {
 // Connect creates and returns a configured instance of the client for the
 // specified host. An empty string will use the default profile. If the
 // requested profile doesn't exist, an empty ProfileEntry is returned.
-func Connect(profileName string) (*CogClient, error) {
+func Connect(profileName string) (*GortClient, error) {
 	var entry ProfileEntry
 
 	// Load the profiles file
 	profile, err := loadClientProfile()
 	if err != nil {
-		return nil, cogerr.Wrap(ErrBadProfile, err)
+		return nil, gorterr.Wrap(ErrBadProfile, err)
 	}
 
 	// Find the desired profile entry
@@ -102,12 +102,12 @@ func Connect(profileName string) (*CogClient, error) {
 		return nil, ErrBadProfile
 	}
 
-	return &CogClient{profile: entry}, nil
+	return &GortClient{profile: entry}, nil
 }
 
 // ConnectWithNewProfile generates a connection using the supplied profile
 // entry data.
-func ConnectWithNewProfile(entry ProfileEntry) (*CogClient, error) {
+func ConnectWithNewProfile(entry ProfileEntry) (*GortClient, error) {
 	url, err := parseHostURL(entry.URLString)
 	if err != nil {
 		return nil, err
@@ -120,10 +120,10 @@ func ConnectWithNewProfile(entry ProfileEntry) (*CogClient, error) {
 		entry.Name = url.Hostname()
 	}
 
-	return &CogClient{profile: entry}, nil
+	return &GortClient{profile: entry}, nil
 }
 
-func (c *CogClient) doRequest(method string, url string, body []byte) (*http.Response, error) {
+func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Response, error) {
 	token, err := c.Token()
 	if err != nil {
 		return nil, err
@@ -131,29 +131,29 @@ func (c *CogClient) doRequest(method string, url string, body []byte) (*http.Res
 
 	req, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
-		return nil, cogerr.Wrap(ErrBadRequest, err)
+		return nil, gorterr.Wrap(ErrBadRequest, err)
 	}
 	req.Header.Add("X-Session-Token", token.Token)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, cogerr.Wrap(ErrConnectionFailed, err)
+		return nil, gorterr.Wrap(ErrConnectionFailed, err)
 	}
 
 	return resp, err
 }
 
-// getCogTokenFilename finds and returns the full-qualified filename for this
-// host's token file, stored in the $HOME/.cog/tokens directory.
-func (c *CogClient) getCogTokenFilename() (string, error) {
-	cogDir, err := getCogTokenDir()
+// getGortTokenFilename finds and returns the full-qualified filename for this
+// host's token file, stored in the $HOME/.gort/tokens directory.
+func (c *GortClient) getGortTokenFilename() (string, error) {
+	gortDir, err := getGortTokenDir()
 	if err != nil {
-		return "", cogerr.Wrap(cogerr.ErrIO, err)
+		return "", gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	url := c.profile.URL
-	tokenFileName := fmt.Sprintf("%s/%s_%s", cogDir, url.Hostname(), url.Port())
+	tokenFileName := fmt.Sprintf("%s/%s_%s", gortDir, url.Hostname(), url.Port())
 
 	return tokenFileName, nil
 }
@@ -161,10 +161,10 @@ func (c *CogClient) getCogTokenFilename() (string, error) {
 // loadHostToken attempts to load an existing token from a file. If the token
 // file exists, a filled Token{} is returned; an empty Token{} is it doesn't.
 // An error is only returned is there's an underlying error.
-func (c *CogClient) loadHostToken() (rest.Token, error) {
-	tokenFileName, err := c.getCogTokenFilename()
+func (c *GortClient) loadHostToken() (rest.Token, error) {
+	tokenFileName, err := c.getGortTokenFilename()
 	if err != nil {
-		return rest.Token{}, cogerr.Wrap(cogerr.ErrIO, err)
+		return rest.Token{}, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	// File doesn't exist. Not an error.
@@ -174,51 +174,51 @@ func (c *CogClient) loadHostToken() (rest.Token, error) {
 
 	bytes, err := ioutil.ReadFile(tokenFileName)
 	if err != nil {
-		return rest.Token{}, cogerr.Wrap(cogerr.ErrIO, err)
+		return rest.Token{}, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	token := rest.Token{}
 	err = json.Unmarshal(bytes, &token)
 	if err != nil {
-		return token, cogerr.Wrap(cogerr.ErrUnmarshal, err)
+		return token, gorterr.Wrap(gorterr.ErrUnmarshal, err)
 	}
 
 	return token, nil
 }
 
-// getCogConfigDir finds the users $HOME/.cog directory, creating it if it
+// getGortConfigDir finds the users $HOME/.gort directory, creating it if it
 // doesn't exist.
-func getCogConfigDir() (string, error) {
+func getGortConfigDir() (string, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return "", err
 	}
 
-	cogDir := homeDir + "/.cog"
+	gortDir := homeDir + "/.gort"
 
-	if cogDirInfo, err := os.Stat(cogDir); err == nil {
-		if !cogDirInfo.IsDir() {
-			return "", fmt.Errorf("%s exists but is not a directory", cogDir)
+	if gortDirInfo, err := os.Stat(gortDir); err == nil {
+		if !gortDirInfo.IsDir() {
+			return "", fmt.Errorf("%s exists but is not a directory", gortDir)
 		}
 	} else if os.IsNotExist(err) {
-		merr := os.Mkdir(cogDir, 0700)
+		merr := os.Mkdir(gortDir, 0700)
 		if merr != nil {
 			return "", merr
 		}
 	}
 
-	return cogDir, nil
+	return gortDir, nil
 }
 
-// getCogConfigDir finds the users $HOME/.cog/tokens directory, creating it if
+// getGortConfigDir finds the users $HOME/.gort/tokens directory, creating it if
 // it doesn't exist.
-func getCogTokenDir() (string, error) {
-	cogDir, err := getCogConfigDir()
+func getGortTokenDir() (string, error) {
+	gortDir, err := getGortConfigDir()
 	if err != nil {
 		return "", err
 	}
 
-	tokenDir := cogDir + "/tokens"
+	tokenDir := gortDir + "/tokens"
 
 	if tokenDirInfo, err := os.Stat(tokenDir); err == nil {
 		if !tokenDirInfo.IsDir() {
@@ -261,7 +261,7 @@ func parseHostURL(serverURLArg string) (*url.URL, error) {
 	// Does the URL have a prefix? If not, assume 'http://'
 	matches, err := regexp.MatchString("^[a-z0-9]+://.*", serverURLString)
 	if err != nil {
-		return nil, cogerr.Wrap(cogerr.ErrIO, err)
+		return nil, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 	if !matches {
 		serverURLString = "http://" + serverURLString
@@ -270,7 +270,7 @@ func parseHostURL(serverURLArg string) (*url.URL, error) {
 	// Parse the resulting URL
 	serverURL, err := url.Parse(serverURLString)
 	if err != nil {
-		return nil, cogerr.Wrap(ErrURLFormat, err)
+		return nil, gorterr.Wrap(ErrURLFormat, err)
 	}
 
 	return serverURL, nil

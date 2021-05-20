@@ -6,22 +6,22 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/clockworksoul/cog2/data"
+	"github.com/clockworksoul/gort/data"
 )
 
 // BundleDisable comments to be written...
-func (c *CogClient) BundleDisable(bundlename string, version string) error {
+func (c *GortClient) BundleDisable(bundlename string, version string) error {
 	return c.doBundleEnable(bundlename, version, false)
 }
 
 // BundleEnable comments to be written...
-func (c *CogClient) BundleEnable(bundlename string, version string) error {
+func (c *GortClient) BundleEnable(bundlename string, version string) error {
 	return c.doBundleEnable(bundlename, version, true)
 }
 
 // BundleExists simply returns true if a bundle exists with the specified
 // bundlename; false otherwise.
-func (c *CogClient) BundleExists(bundlename string, version string) (bool, error) {
+func (c *GortClient) BundleExists(bundlename string, version string) (bool, error) {
 	url := fmt.Sprintf("%s/v2/bundles/%s/version/%s",
 		c.profile.URL.String(), bundlename, version)
 
@@ -42,7 +42,7 @@ func (c *CogClient) BundleExists(bundlename string, version string) (bool, error
 }
 
 // BundleGet comments to be written...
-func (c *CogClient) BundleGet(bundlename string, version string) (data.Bundle, error) {
+func (c *GortClient) BundleGet(bundlename string, version string) (data.Bundle, error) {
 	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s",
 		c.profile.URL.String(), bundlename, version)
 
@@ -71,7 +71,7 @@ func (c *CogClient) BundleGet(bundlename string, version string) (data.Bundle, e
 }
 
 // BundleList comments to be written...
-func (c *CogClient) BundleList() ([]data.Bundle, error) {
+func (c *GortClient) BundleList() ([]data.Bundle, error) {
 	url := fmt.Sprintf("%s/v2/bundles", c.profile.URL.String())
 
 	resp, err := c.doRequest("GET", url, []byte{})
@@ -99,7 +99,7 @@ func (c *CogClient) BundleList() ([]data.Bundle, error) {
 }
 
 // BundleListVersions comments to be written...
-func (c *CogClient) BundleListVersions(bundlename string) ([]data.Bundle, error) {
+func (c *GortClient) BundleListVersions(bundlename string) ([]data.Bundle, error) {
 	url := fmt.Sprintf("%s/v2/bundles/%s/versions", c.profile.URL.String(), bundlename)
 
 	resp, err := c.doRequest("GET", url, []byte{})
@@ -127,7 +127,7 @@ func (c *CogClient) BundleListVersions(bundlename string) ([]data.Bundle, error)
 }
 
 // BundleInstall comments to be written...
-func (c *CogClient) BundleInstall(bundle data.Bundle) error {
+func (c *GortClient) BundleInstall(bundle data.Bundle) error {
 	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s",
 		c.profile.URL.String(), bundle.Name, bundle.Version)
 
@@ -150,7 +150,7 @@ func (c *CogClient) BundleInstall(bundle data.Bundle) error {
 }
 
 // BundleUninstall comments to be written...
-func (c *CogClient) BundleUninstall(bundlename string, version string) error {
+func (c *GortClient) BundleUninstall(bundlename string, version string) error {
 	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s",
 		c.profile.URL.String(), bundlename, version)
 
@@ -168,7 +168,7 @@ func (c *CogClient) BundleUninstall(bundlename string, version string) error {
 }
 
 // doBundleEnable comments to be written...
-func (c *CogClient) doBundleEnable(bundlename string, version string, enabled bool) error {
+func (c *GortClient) doBundleEnable(bundlename string, version string, enabled bool) error {
 	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s?enabled=%v",
 		c.profile.URL.String(), bundlename, version, enabled)
 

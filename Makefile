@@ -3,7 +3,7 @@
 ############################
 ## Project Info
 ############################
-PROJECT = cog2
+PROJECT = gort
 GIT_URL = github.com
 GIT_ORGANIZATION = clockworksoul
 GIT_REPOSITORY = $(GIT_URL)/$(GIT_ORGANIZATION)/$(PROJECT)
@@ -37,7 +37,7 @@ clean:
 test_begin:
 	@docker stop foo_postgres | true
 	@docker rm foo_postgres | true
-	@docker run -d -e POSTGRES_USER=cog -e POSTGRES_PASSWORD=password -p 5432:5432 --name foo_postgres postgres:11
+	@docker run -d -e POSTGRES_USER=gort -e POSTGRES_PASSWORD=password -p 5432:5432 --name foo_postgres postgres:11
 	
 test: test_begin
 	@docker build --target test -t foo_$(PROJECT)_foo --network host .

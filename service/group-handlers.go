@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/clockworksoul/cog2/data/rest"
-	cogerr "github.com/clockworksoul/cog2/errors"
+	"github.com/clockworksoul/gort/data/rest"
+	gorterr "github.com/clockworksoul/gort/errors"
 	"github.com/gorilla/mux"
 )
 
@@ -123,7 +123,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&group)
 	if err != nil {
-		respondAndLogError(w, cogerr.ErrUnmarshal)
+		respondAndLogError(w, gorterr.ErrUnmarshal)
 		return
 	}
 

@@ -1,3 +1,3 @@
-This package contains a web client for the Cog service.
+This package contains a web client for the Gort service.
 
-It's used here for testing, and by cogctl.
+It's used here for testing, and by gortctl.

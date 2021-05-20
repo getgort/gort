@@ -1,1 +1,1 @@
-This package includes data containers that are shared between the Cog server and the relay or API service.
+This package includes data containers that are shared between the Gort server and the relay or API service.

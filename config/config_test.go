@@ -25,12 +25,12 @@ func TestInputOutputHumanEyeball(t *testing.T) {
 // This is just used to make sure that the YAML will look the way we expect
 // based on the struct relationships.
 // func TestKindOf(t *testing.T) {
-// 	config := data.CogConfig{}
+// 	config := data.GortConfig{}
 
 // 	config.SlackProviders = make([]data.SlackProvider, 1)
 
 // 	config.SlackProviders[0] = data.SlackProvider{
-// 		BotName:       "Cog2",
+// 		BotName:       "Gort",
 // 		Name:          "ClockworkSoul",
 // 		IconURL:       "https://emoji.slack-edge.com/T025151EM/dragongopher/cdc9b1bd1a7752eb.png",
 // 		SlackAPIToken: "SlackAPIToken",

@@ -6,19 +6,19 @@
 #
 FROM golang:1.16 as test
 
-COPY . /cog2
-WORKDIR /cog2
+COPY . /gort
+WORKDIR /gort
 RUN go test -v ./...
 
 # Part 2: Compile the binary in a containerized Golang environment
 #
 FROM golang:1.16 as builder
 
-COPY . /cog2
-WORKDIR /cog2
-RUN GOOS=linux go build -a -installsuffix cgo -o cog2 .
+COPY . /gort
+WORKDIR /gort
+RUN GOOS=linux go build -a -installsuffix cgo -o gort .
 
-# Part 3: Build the Cog2 image proper
+# Part 3: Build the Gort image proper
 #
 FROM ubuntu:20.04 as image
 
@@ -35,8 +35,8 @@ RUN apt update                                              \
 
 RUN ssh-keygen -b 2048 -f /root/.ssh/id_rsa -P ''
 
-COPY --from=builder /cog2/cog2 .
+COPY --from=builder /gort/gort .
 
 EXPOSE 4000
 
-CMD [ "/cog2", "start", "-v" ]
+CMD [ "/gort", "start", "-v" ]

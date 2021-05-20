@@ -1,24 +1,24 @@
 version: '3'
 
 services:
-  cog:
-    image: clockworksoul/cog2:latest
-    command: "/cog2 start -v"
+  gort:
+    image: clockworksoul/gort:latest
+    command: "/gort start -v"
     ports:
       - "4000:4000"
     volumes:
       - ./test.yml:/config.yml
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - cog
+      - gort
 
   postgres:
     image: postgres:11
     environment:
-      - POSTGRES_USER=cog
+      - POSTGRES_USER=gort
       - POSTGRES_PASSWORD=veryKleverPassw0rd
     networks:
-      - cog
+      - gort
       
 networks:
-  cog:
+  gort:

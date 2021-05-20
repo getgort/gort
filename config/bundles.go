@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/clockworksoul/cog2/data"
+	"github.com/clockworksoul/gort/data"
 )
 
 var (

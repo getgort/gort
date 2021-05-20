@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/clockworksoul/cog2/dataaccess/errs"
+	"github.com/clockworksoul/gort/dataaccess/errs"
 
-	"github.com/clockworksoul/cog2/data"
-	cogerr "github.com/clockworksoul/cog2/errors"
+	"github.com/clockworksoul/gort/data"
+	gorterr "github.com/clockworksoul/gort/errors"
 	"github.com/gorilla/mux"
 )
 
@@ -92,7 +92,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 		err = json.NewDecoder(r.Body).Decode(&bundle)
 		if err != nil {
-			respondAndLogError(w, cogerr.ErrUnmarshal)
+			respondAndLogError(w, gorterr.ErrUnmarshal)
 			return
 		}
 
@@ -128,7 +128,7 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&bundle)
 	if err != nil {
-		respondAndLogError(w, cogerr.ErrUnmarshal)
+		respondAndLogError(w, gorterr.ErrUnmarshal)
 		return
 	}
 

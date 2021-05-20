@@ -1,8 +1,8 @@
 package relay
 
 import (
-	"github.com/clockworksoul/cog2/data"
-	"github.com/clockworksoul/cog2/worker"
+	"github.com/clockworksoul/gort/data"
+	"github.com/clockworksoul/gort/worker"
 )
 
 func handleRequest(commandRequest data.CommandRequest) data.CommandResponse {

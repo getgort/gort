@@ -3,8 +3,8 @@ package memory
 import (
 	"fmt"
 
-	"github.com/clockworksoul/cog2/data"
-	"github.com/clockworksoul/cog2/dataaccess/errs"
+	"github.com/clockworksoul/gort/data"
+	"github.com/clockworksoul/gort/dataaccess/errs"
 )
 
 // BundleCreate TBD
@@ -13,7 +13,7 @@ func (da *InMemoryDataAccess) BundleCreate(bundle data.Bundle) error {
 		return errs.ErrEmptyBundleName
 	}
 
-	if bundle.CogBundleVersion == 0 || bundle.Version == "" || bundle.Description == "" {
+	if bundle.GortBundleVersion == 0 || bundle.Version == "" || bundle.Description == "" {
 		return errs.ErrFieldRequired
 	}
 

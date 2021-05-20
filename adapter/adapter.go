@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/clockworksoul/cog2/config"
-	"github.com/clockworksoul/cog2/data"
-	"github.com/clockworksoul/cog2/data/rest"
-	"github.com/clockworksoul/cog2/dataaccess"
-	"github.com/clockworksoul/cog2/dataaccess/errs"
-	cogerr "github.com/clockworksoul/cog2/errors"
-	"github.com/clockworksoul/cog2/meta"
+	"github.com/clockworksoul/gort/config"
+	"github.com/clockworksoul/gort/data"
+	"github.com/clockworksoul/gort/data/rest"
+	"github.com/clockworksoul/gort/dataaccess"
+	"github.com/clockworksoul/gort/dataaccess/errs"
+	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/clockworksoul/gort/meta"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,11 +33,11 @@ var (
 	// information is the originating channel.
 	ErrChannelNotFound = errors.New("channel not found")
 
-	// ErrCogNotBootstrapped is returned by findOrMakeCogUser() if a user
-	// attempts to trigger a command but Cog hasn't yet been bopotstrapped.
-	ErrCogNotBootstrapped = errors.New("cog hasn't been bootstrapped yet")
+	// ErrGortNotBootstrapped is returned by findOrMakeGortUser() if a user
+	// attempts to trigger a command but Gort hasn't yet been bopotstrapped.
+	ErrGortNotBootstrapped = errors.New("gort hasn't been bootstrapped yet")
 
-	// ErrSelfRegistrationOff is returned by findOrMakeCogUser() if an unknown
+	// ErrSelfRegistrationOff is returned by findOrMakeGortUser() if an unknown
 	// user attempts to trigger a command but self-registration is configured
 	// to false.
 	ErrSelfRegistrationOff = errors.New("user doesn't exist and self-registration is off")
@@ -152,7 +152,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 	}
 
 	for _, c := range channels {
-		message := fmt.Sprintf("Cog2 version %s is online. Hello, %s!", meta.CogVersion, c.Name)
+		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", meta.GortVersion, c.Name)
 		event.Adapter.SendMessage(c.ID, message)
 	}
 }
@@ -164,12 +164,12 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
 	channelinfo, err := event.Adapter.GetChannelInfo(data.ChannelID)
 	if err != nil {
-		return nil, cogerr.Wrap(ErrChannelNotFound, err)
+		return nil, gorterr.Wrap(ErrChannelNotFound, err)
 	}
 
 	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
-		return nil, cogerr.Wrap(ErrUserNotFound, err)
+		return nil, gorterr.Wrap(ErrUserNotFound, err)
 	}
 
 	rawCommandText := data.Text
@@ -186,7 +186,7 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 	}
 
 	// If this starts with a trigger character but enable_spoken_commands is false, ignore.
-	if rawCommandText[0] == '!' && !config.GetCogServerConfigs().EnableSpokenCommands {
+	if rawCommandText[0] == '!' && !config.GetGortServerConfigs().EnableSpokenCommands {
 		return nil, nil
 	}
 
@@ -200,7 +200,7 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
 	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
-		return nil, cogerr.Wrap(ErrUserNotFound, err)
+		return nil, gorterr.Wrap(ErrUserNotFound, err)
 	}
 
 	rawCommandText := data.Text
@@ -249,9 +249,9 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	command, err := GetCommandEntry(params)
 	if err != nil {
 		switch {
-		case cogerr.ErrEquals(err, ErrNoSuchCommand):
+		case gorterr.ErrEquals(err, ErrNoSuchCommand):
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
-				"If this is not expected, you should contact a Cog administrator.",
+				"If this is not expected, you should contact a Gort administrator.",
 				params[0])
 			adapter.SendErrorMessage(channelID, "No Such Command", msg)
 		default:
@@ -265,20 +265,20 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	log.Debugf("[TriggerCommand] Found matching command: %s:%s",
 		command.Bundle.Name, command.Command.Name)
 
-	user, autocreated, err := findOrMakeCogUser(info)
+	user, autocreated, err := findOrMakeGortUser(info)
 	if err != nil {
 		switch {
-		case cogerr.ErrEquals(err, ErrSelfRegistrationOff):
+		case gorterr.ErrEquals(err, ErrSelfRegistrationOff):
 			msg := "I'm terribly sorry, but either I don't " +
-				"have a Cog account for you, or your Slack chat handle has " +
+				"have a Gort account for you, or your Slack chat handle has " +
 				"not been registered. Currently, only registered users can " +
-				"interact with me.\n\n\nYou'll need to ask a Cog " +
+				"interact with me.\n\n\nYou'll need to ask a Gort " +
 				"administrator to fix this situation and to register your " +
 				"Slack handle."
 			adapter.SendErrorMessage(channelID, "No Such Account", msg)
-		case cogerr.ErrEquals(err, ErrCogNotBootstrapped):
-			msg := "Cog doesn't appear to have been bootstrapped yet! Please " +
-				"use `cogctl` to properly bootstrap Cog environment before " +
+		case gorterr.ErrEquals(err, ErrGortNotBootstrapped):
+			msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
+				"use `gortctl` to properly bootstrap Gort environment before " +
 				"proceeding."
 			adapter.SendErrorMessage(channelID, "Not Bootstrapped?", msg)
 		default:
@@ -289,7 +289,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		return nil, err
 	} else if autocreated {
 		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
-			"owner of a shiny new Cog account named `%s`!",
+			"owner of a shiny new Gort account named `%s`!",
 			user.Username)
 		adapter.SendMessage(info.ID, message)
 	}
@@ -305,8 +305,8 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	return &request, nil
 }
 
-// findOrMakeCogUser ...
-func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
+// findOrMakeGortUser ...
+func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 	// Get the data access interface.
 	da, err := dataaccess.Get()
 	if err != nil {
@@ -329,7 +329,7 @@ func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
 
 	// Now we know it doesn't exist. If self-registration is off, exit with
 	// an error.
-	if !config.GetCogServerConfigs().AllowSelfRegistration {
+	if !config.GetGortServerConfigs().AllowSelfRegistration {
 		return user, false, ErrSelfRegistrationOff
 	}
 
@@ -339,7 +339,7 @@ func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
 		return rest.User{}, false, err
 	}
 	if !bootstrapped {
-		return rest.User{}, false, ErrCogNotBootstrapped
+		return rest.User{}, false, ErrGortNotBootstrapped
 	}
 
 	// Generate a random password for the auto-created user.
@@ -356,7 +356,7 @@ func findOrMakeCogUser(info *UserInfo) (rest.User, bool, error) {
 		Username: info.Name,
 	}
 
-	log.Infof("[findOrMakeCogUser] User auto-created: %s (%s)", user.Username, user.Email)
+	log.Infof("[findOrMakeGortUser] User auto-created: %s (%s)", user.Username, user.Email)
 
 	return user, true, da.UserCreate(user)
 }
@@ -409,7 +409,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			OnConnected(event, ev)
 
 		case *AuthenticationErrorEvent:
-			adapterErrors <- cogerr.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
+			adapterErrors <- gorterr.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
 
 		case *ChannelMessageEvent:
 			request, err := OnChannelMessage(event, ev)

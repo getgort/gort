@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/clockworksoul/cog2/adapter"
-	"github.com/clockworksoul/cog2/data"
+	"github.com/clockworksoul/gort/adapter"
+	"github.com/clockworksoul/gort/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 )
@@ -18,7 +18,7 @@ var (
 )
 
 // SlackAdapter is the Slack provider implementation of a relay, which knows how
-// to receive events from the Slack API, translate them into Cog2 events, and
+// to receive events from the Slack API, translate them into Gort events, and
 // forward them along.
 type SlackAdapter struct {
 	client   *slack.Client

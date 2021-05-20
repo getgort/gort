@@ -5,12 +5,12 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/clockworksoul/cog2/data/rest"
-	cogerr "github.com/clockworksoul/cog2/errors"
+	"github.com/clockworksoul/gort/data/rest"
+	gorterr "github.com/clockworksoul/gort/errors"
 	yaml "gopkg.in/yaml.v3"
 )
 
-// Profile represents a set of user profiles from a $HOME/.cog/profiles file
+// Profile represents a set of user profiles from a $HOME/.gort/profiles file
 type Profile struct {
 	Defaults ProfileDefaults
 	Profiles map[string]ProfileEntry `yaml:",inline"`
@@ -28,7 +28,7 @@ func (p Profile) Default() ProfileEntry {
 	return entry
 }
 
-// ProfileDefaults is used to store default values for a cog client profile.
+// ProfileDefaults is used to store default values for a gort client profile.
 type ProfileDefaults struct {
 	Profile string
 }
@@ -54,7 +54,7 @@ func (pe ProfileEntry) User() rest.User {
 func loadClientProfile() (Profile, error) {
 	profile := Profile{Profiles: make(map[string]ProfileEntry)}
 
-	configDir, err := getCogConfigDir()
+	configDir, err := getGortConfigDir()
 	if err != nil {
 		return Profile{}, err
 	}
@@ -70,18 +70,18 @@ func loadClientProfile() (Profile, error) {
 
 	// An actual error
 	if err != nil {
-		return profile, cogerr.Wrap(cogerr.ErrIO, err)
+		return profile, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	// The file exists!
 	bytes, err := ioutil.ReadFile(profileFile)
 	if err != nil {
-		return profile, cogerr.Wrap(cogerr.ErrIO, err)
+		return profile, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	err = yaml.Unmarshal(bytes, &profile)
 	if err != nil {
-		return profile, cogerr.Wrap(cogerr.ErrUnmarshal, err)
+		return profile, gorterr.Wrap(gorterr.ErrUnmarshal, err)
 	}
 
 	// Ensure that the URL field gets set.
@@ -100,7 +100,7 @@ func loadClientProfile() (Profile, error) {
 }
 
 func saveClientProfile(profile Profile) error {
-	configDir, err := getCogConfigDir()
+	configDir, err := getGortConfigDir()
 	if err != nil {
 		return err
 	}

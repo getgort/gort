@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/clockworksoul/cog2/data"
-	"github.com/clockworksoul/cog2/dataaccess/errs"
+	"github.com/clockworksoul/gort/data"
+	"github.com/clockworksoul/gort/dataaccess/errs"
 	yaml "gopkg.in/yaml.v3"
 
-	cogerr "github.com/clockworksoul/cog2/errors"
+	gorterr "github.com/clockworksoul/gort/errors"
 )
 
 func getTestBundle() (data.Bundle, error) {
@@ -18,12 +18,12 @@ func getTestBundle() (data.Bundle, error) {
 
 	dat, err := ioutil.ReadFile("../../testing/test-bundle.yml")
 	if err != nil {
-		return bundle, cogerr.Wrap(cogerr.ErrIO, err)
+		return bundle, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	err = yaml.Unmarshal(dat, &bundle)
 	if err != nil {
-		return bundle, cogerr.Wrap(cogerr.ErrUnmarshal, err)
+		return bundle, gorterr.Wrap(gorterr.ErrUnmarshal, err)
 	}
 
 	return bundle, nil
@@ -60,12 +60,12 @@ func TestBundleCreateMissingRequired(t *testing.T) {
 
 	defer da.BundleDelete(bundle.Name, bundle.Version)
 
-	// CogBundleVersion
-	originalCogBundleVersion := bundle.CogBundleVersion
-	bundle.CogBundleVersion = 0
+	// GortBundleVersion
+	originalGortBundleVersion := bundle.GortBundleVersion
+	bundle.GortBundleVersion = 0
 	err = da.BundleCreate(bundle)
 	expectErr(t, err, errs.ErrFieldRequired)
-	bundle.CogBundleVersion = originalCogBundleVersion
+	bundle.GortBundleVersion = originalGortBundleVersion
 
 	// Description
 	originalDescription := bundle.Description
@@ -167,7 +167,7 @@ func TestBundleGet(t *testing.T) {
 
 	matches, mismatch, expected, got, err := compareFields(
 		bundleCreate, bundleGet,
-		"CogBundleVersion", "Name", "Version", "Author", "Homepage",
+		"GortBundleVersion", "Name", "Version", "Author", "Homepage",
 		"Description", "LongDescription", "InstalledBy")
 	expectNoErr(t, err)
 	if err == nil && !matches {
@@ -208,13 +208,13 @@ func TestBundleGet(t *testing.T) {
 }
 
 func TestBundleList(t *testing.T) {
-	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
+	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete("test-list-0", "0.0")
-	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
+	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
 	defer da.BundleDelete("test-list-0", "0.1")
-	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
+	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete("test-list-1", "0.0")
-	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
+	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
 	defer da.BundleDelete("test-list-1", "0.1")
 
 	bundles, err := da.BundleList()
@@ -230,13 +230,13 @@ func TestBundleList(t *testing.T) {
 }
 
 func TestBundleListVersions(t *testing.T) {
-	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
+	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete("test-list-0", "0.0")
-	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
+	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
 	defer da.BundleDelete("test-list-0", "0.1")
-	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
+	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete("test-list-1", "0.0")
-	da.BundleCreate(data.Bundle{CogBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
+	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
 	defer da.BundleDelete("test-list-1", "0.1")
 
 	bundles, err := da.BundleListVersions("test-list-0")

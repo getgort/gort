@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/clockworksoul/cog2/data"
-	cogerr "github.com/clockworksoul/cog2/errors"
+	"github.com/clockworksoul/gort/data"
+	gorterr "github.com/clockworksoul/gort/errors"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -32,7 +32,7 @@ const (
 
 var (
 	badListenerEvents    = make(chan chan State) // Notified if there's an error emitting status
-	config               *data.CogConfig
+	config               *data.GortConfig
 	configFile           string
 	currentState         = StateConfigUninitialized
 	lastReloadWorked     = true // Used to keep prevent log spam
@@ -105,9 +105,9 @@ func GetDockerConfigs() data.DockerConfigs {
 	return config.DockerConfigs
 }
 
-// GetCogServerConfigs returns the data wrapper for the "cog" config section.
-func GetCogServerConfigs() data.CogServerConfigs {
-	return config.CogServerConfigs
+// GetGortServerConfigs returns the data wrapper for the "gort" config section.
+func GetGortServerConfigs() data.GortServerConfigs {
+	return config.GortServerConfigs
 }
 
 // GetGlobalConfigs returns the data wrapper for the "global" config section.
@@ -128,7 +128,7 @@ func Initialize(file string) error {
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		updateConfigState(StateConfigError)
-		return cogerr.Wrap(ErrConfigFileNotFound, err)
+		return gorterr.Wrap(ErrConfigFileNotFound, err)
 	}
 
 	return reloadConfiguration()
@@ -157,13 +157,13 @@ func Updates() <-chan State {
 func getMd5Sum(file string) ([]byte, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return []byte{}, cogerr.Wrap(cogerr.ErrIO, err)
+		return []byte{}, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 	defer f.Close()
 
 	hasher := md5.New()
 	if _, err := io.Copy(hasher, f); err != nil {
-		return []byte{}, cogerr.Wrap(cogerr.ErrIO, err)
+		return []byte{}, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
 	hashBytes := hasher.Sum(nil)
@@ -173,18 +173,18 @@ func getMd5Sum(file string) ([]byte, error) {
 
 // loadConfiguration is called by reloadConfiguration() to execute the actual
 // steps of loading the configuration.
-func loadConfiguration(file string) (*data.CogConfig, error) {
+func loadConfiguration(file string) (*data.GortConfig, error) {
 	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, cogerr.Wrap(cogerr.ErrIO, err)
+		return nil, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
-	var config data.CogConfig
+	var config data.GortConfig
 
 	err = yaml.Unmarshal(dat, &config)
 	if err != nil {
-		return nil, cogerr.Wrap(cogerr.ErrUnmarshal, err)
+		return nil, gorterr.Wrap(gorterr.ErrUnmarshal, err)
 	}
 
 	return &config, nil
@@ -196,7 +196,7 @@ func loadConfiguration(file string) (*data.CogConfig, error) {
 func reloadConfiguration() error {
 	sum, err := getMd5Sum(configFile)
 	if err != nil {
-		return cogerr.Wrap(ErrHashFailure, err)
+		return gorterr.Wrap(ErrHashFailure, err)
 	}
 
 	if !slicesAreEqual(sum, md5sum) {
@@ -208,7 +208,7 @@ func reloadConfiguration() error {
 				updateConfigState(StateConfigError)
 			}
 
-			return cogerr.Wrap(ErrConfigUnloadable, err)
+			return gorterr.Wrap(ErrConfigUnloadable, err)
 		}
 
 		md5sum = sum

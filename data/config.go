@@ -1,17 +1,17 @@
 package data
 
-// CogConfig is the top-level configuration object
-type CogConfig struct {
-	CogServerConfigs CogServerConfigs `yaml:"cog,omitempty"`
-	GlobalConfigs    GlobalConfigs    `yaml:"global,omitempty"`
-	DatabaseConfigs  DatabaseConfigs  `yaml:"database,omitempty"`
-	DockerConfigs    DockerConfigs    `yaml:"docker,omitempty"`
-	SlackProviders   []SlackProvider  `yaml:"slack,omitempty"`
-	BundleConfigs    []Bundle         `yaml:"bundles,omitempty"`
+// GortConfig is the top-level configuration object
+type GortConfig struct {
+	GortServerConfigs GortServerConfigs `yaml:"gort,omitempty"`
+	GlobalConfigs     GlobalConfigs     `yaml:"global,omitempty"`
+	DatabaseConfigs   DatabaseConfigs   `yaml:"database,omitempty"`
+	DockerConfigs     DockerConfigs     `yaml:"docker,omitempty"`
+	SlackProviders    []SlackProvider   `yaml:"slack,omitempty"`
+	BundleConfigs     []Bundle          `yaml:"bundles,omitempty"`
 }
 
-// CogServerConfigs is the data wrapper for the "cog" section.
-type CogServerConfigs struct {
+// GortServerConfigs is the data wrapper for the "gort" section.
+type GortServerConfigs struct {
 	AllowSelfRegistration bool   `yaml:"allow_self_registration,omitempty"`
 	APIAddress            string `yaml:"api_address,omitempty"`
 	APIURLBase            string `yaml:"api_url_base,omitempty"`

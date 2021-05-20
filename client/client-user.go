@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/clockworksoul/cog2/data/rest"
+	"github.com/clockworksoul/gort/data/rest"
 )
 
 // UserDelete comments to be written...
-func (c *CogClient) UserDelete(username string) error {
+func (c *GortClient) UserDelete(username string) error {
 	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), username)
 
 	resp, err := c.doRequest("DELETE", url, []byte{})
@@ -27,7 +27,7 @@ func (c *CogClient) UserDelete(username string) error {
 
 // UserExists simply returns true if a user exists with the specified
 // username; false otherwise.
-func (c *CogClient) UserExists(username string) (bool, error) {
+func (c *GortClient) UserExists(username string) (bool, error) {
 	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), username)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
@@ -46,7 +46,7 @@ func (c *CogClient) UserExists(username string) (bool, error) {
 }
 
 // UserGet comments to be written...
-func (c *CogClient) UserGet(username string) (rest.User, error) {
+func (c *GortClient) UserGet(username string) (rest.User, error) {
 	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), username)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
@@ -73,7 +73,7 @@ func (c *CogClient) UserGet(username string) (rest.User, error) {
 }
 
 // UserGroupList comments to be written...
-func (c *CogClient) UserGroupList(username string) ([]rest.Group, error) {
+func (c *GortClient) UserGroupList(username string) ([]rest.Group, error) {
 	url := fmt.Sprintf("%s/v2/users/%s/groups", c.profile.URL.String(), username)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
@@ -100,7 +100,7 @@ func (c *CogClient) UserGroupList(username string) ([]rest.Group, error) {
 }
 
 // UserList comments to be written...
-func (c *CogClient) UserList() ([]rest.User, error) {
+func (c *GortClient) UserList() ([]rest.User, error) {
 	url := fmt.Sprintf("%s/v2/users", c.profile.URL.String())
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
@@ -129,7 +129,7 @@ func (c *CogClient) UserList() ([]rest.User, error) {
 // UserSave will create or update a user. Note the the key is the username: if
 // this is called with a user whose username exists that user is updated
 // (empty fields will not be overwritten); otherwise a new user is created.
-func (c *CogClient) UserSave(user rest.User) error {
+func (c *GortClient) UserSave(user rest.User) error {
 	url := fmt.Sprintf("%s/v2/users/%s", c.profile.URL.String(), user.Username)
 
 	bytes, err := json.Marshal(user)

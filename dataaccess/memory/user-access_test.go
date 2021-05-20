@@ -3,8 +3,8 @@ package memory
 import (
 	"testing"
 
-	"github.com/clockworksoul/cog2/data/rest"
-	"github.com/clockworksoul/cog2/dataaccess/errs"
+	"github.com/clockworksoul/gort/data/rest"
+	"github.com/clockworksoul/gort/dataaccess/errs"
 )
 
 func TestUserNotExists(t *testing.T) {

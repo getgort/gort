@@ -1,8 +1,8 @@
 package memory
 
 import (
-	"github.com/clockworksoul/cog2/data/rest"
-	"github.com/clockworksoul/cog2/dataaccess/errs"
+	"github.com/clockworksoul/gort/data/rest"
+	"github.com/clockworksoul/gort/dataaccess/errs"
 )
 
 // UserAuthenticate authenticates a username/password combination.
@@ -23,7 +23,7 @@ func (da *InMemoryDataAccess) UserAuthenticate(username string, password string)
 	return password == user.Password, nil
 }
 
-// UserCreate is used to create a new Cog user in the data store. An error is
+// UserCreate is used to create a new Gort user in the data store. An error is
 // returned if the username is empty or if a user already exists.
 func (da *InMemoryDataAccess) UserCreate(user rest.User) error {
 	if user.Username == "" {
@@ -69,7 +69,7 @@ func (da *InMemoryDataAccess) UserDelete(username string) error {
 	return nil
 }
 
-// UserExists is used to determine whether a Cog user with the given username
+// UserExists is used to determine whether a Gort user with the given username
 // exists in the data store.
 func (da *InMemoryDataAccess) UserExists(username string) (bool, error) {
 	_, exists := da.users[username]

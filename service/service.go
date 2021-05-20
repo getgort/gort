@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clockworksoul/cog2/data"
-	"github.com/clockworksoul/cog2/data/rest"
-	"github.com/clockworksoul/cog2/dataaccess"
-	"github.com/clockworksoul/cog2/dataaccess/errs"
-	cogerr "github.com/clockworksoul/cog2/errors"
+	"github.com/clockworksoul/gort/data"
+	"github.com/clockworksoul/gort/data/rest"
+	"github.com/clockworksoul/gort/dataaccess"
+	"github.com/clockworksoul/gort/dataaccess/errs"
+	gorterr "github.com/clockworksoul/gort/errors"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -71,14 +71,14 @@ func (w StatusCaptureWriter) WriteHeader(statusCode int) {
 }
 
 func bootstrapUserWithDefaults(user rest.User) (rest.User, error) {
-	// If user doesn't have a defined email, we default to "cog@localhost".
+	// If user doesn't have a defined email, we default to "gort@localhost".
 	if user.Email == "" {
-		user.Email = "cog@localhost"
+		user.Email = "gort@localhost"
 	}
 
-	// If user doesn't have a defined name, we default to "Cog Administrator".
+	// If user doesn't have a defined name, we default to "Gort Administrator".
 	if user.FullName == "" {
-		user.FullName = "Cog Administrator"
+		user.FullName = "Gort Administrator"
 	}
 
 	// The bootstrap user is _always_ named "admin".
@@ -158,7 +158,7 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// RESTServer represents a Cog REST API service.
+// RESTServer represents a Gort REST API service.
 type RESTServer struct {
 	*http.Server
 
@@ -201,9 +201,9 @@ func (s *RESTServer) Requests() <-chan RequestEvent {
 	return s.requests
 }
 
-// ListenAndServe starts the Cog web service.
+// ListenAndServe starts the Gort web service.
 func (s *RESTServer) ListenAndServe() error {
-	log.Printf("[RESTServer.ListenAndServe] Cog service is starting on " + s.Addr)
+	log.Printf("[RESTServer.ListenAndServe] Gort service is starting on " + s.Addr)
 
 	return s.Server.ListenAndServe()
 }
@@ -215,7 +215,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	user := rest.User{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		respondAndLogError(w, cogerr.ErrUnmarshal)
+		respondAndLogError(w, gorterr.ErrUnmarshal)
 		return
 	}
 
@@ -260,56 +260,56 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 
 	switch {
 	// A required field is empty or missing
-	case cogerr.ErrEquals(err, errs.ErrEmptyBundleName):
+	case gorterr.ErrEquals(err, errs.ErrEmptyBundleName):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrEmptyBundleVersion):
+	case gorterr.ErrEquals(err, errs.ErrEmptyBundleVersion):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrEmptyGroupName):
+	case gorterr.ErrEquals(err, errs.ErrEmptyGroupName):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrEmptyUserName):
+	case gorterr.ErrEquals(err, errs.ErrEmptyUserName):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrFieldRequired):
+	case gorterr.ErrEquals(err, errs.ErrFieldRequired):
 		status = http.StatusExpectationFailed
 
 	// Requested resource doesn't exist
-	case cogerr.ErrEquals(err, errs.ErrNoSuchBundle):
+	case gorterr.ErrEquals(err, errs.ErrNoSuchBundle):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrNoSuchGroup):
+	case gorterr.ErrEquals(err, errs.ErrNoSuchGroup):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrNoSuchToken):
+	case gorterr.ErrEquals(err, errs.ErrNoSuchToken):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrNoSuchUser):
+	case gorterr.ErrEquals(err, errs.ErrNoSuchUser):
 		status = http.StatusNotFound
 
 	// Nope
-	case cogerr.ErrEquals(err, errs.ErrAdminUndeletable):
+	case gorterr.ErrEquals(err, errs.ErrAdminUndeletable):
 		status = http.StatusForbidden
 
 	// Can't insert over something that already exists
-	case cogerr.ErrEquals(err, errs.ErrBundleExists):
+	case gorterr.ErrEquals(err, errs.ErrBundleExists):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrGroupExists):
+	case gorterr.ErrEquals(err, errs.ErrGroupExists):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrUserExists):
+	case gorterr.ErrEquals(err, errs.ErrUserExists):
 		status = http.StatusConflict
 
 	// Not done yet
-	case cogerr.ErrEquals(err, errs.ErrNotImplemented):
+	case gorterr.ErrEquals(err, errs.ErrNotImplemented):
 		status = http.StatusNotImplemented
 
 	// Data access errors
-	case cogerr.ErrEquals(err, errs.ErrDataAccessNotInitialized):
+	case gorterr.ErrEquals(err, errs.ErrDataAccessNotInitialized):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrDataAccessCantInitialize):
+	case gorterr.ErrEquals(err, errs.ErrDataAccessCantInitialize):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrDataAccessCantConnect):
+	case gorterr.ErrEquals(err, errs.ErrDataAccessCantConnect):
 		fallthrough
-	case cogerr.ErrEquals(err, errs.ErrDataAccess):
+	case gorterr.ErrEquals(err, errs.ErrDataAccess):
 		status = http.StatusInternalServerError
 		log.Errorf("%d %s", status, msg)
 
 	// Bad context
-	case cogerr.ErrEquals(err, cogerr.ErrUnmarshal):
+	case gorterr.ErrEquals(err, gorterr.ErrUnmarshal):
 		msg = "Corrupt JSON payload"
 		status = http.StatusNotAcceptable
 
@@ -344,7 +344,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	user := rest.User{}
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		respondAndLogError(w, cogerr.ErrUnmarshal)
+		respondAndLogError(w, gorterr.ErrUnmarshal)
 		return
 	}
 
