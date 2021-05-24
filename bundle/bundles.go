@@ -16,12 +16,17 @@ func LoadBundle(file string) (data.Bundle, error) {
 		return data.Bundle{}, gorterr.Wrap(gorterr.ErrIO, err)
 	}
 
-	var bundle data.Bundle
+	var bun data.Bundle
 
-	err = yaml.Unmarshal(dat, &bundle)
+	err = yaml.Unmarshal(dat, &bun)
 	if err != nil {
 		return data.Bundle{}, gorterr.Wrap(gorterr.ErrUnmarshal, err)
 	}
 
-	return bundle, nil
+	// Ensure that the command name is propagated from the map key.
+	for n := range bun.Commands {
+		(bun.Commands[n]).Name = n
+	}
+
+	return bun, nil
 }

@@ -36,11 +36,11 @@ func TestErrorEquality(t *testing.T) {
 		t.Error("Didn't find wrappedErrMsg")
 	}
 
-	if !ErrEquals(newErr, nestedErr) {
-		t.Error("ErrEquals false when expected true")
+	if !Is(newErr, nestedErr) {
+		t.Error("Is false when expected true")
 	}
 
-	if ErrEquals(newErr, wrappedErr) {
-		t.Error("ErrEquals true when expected false")
+	if Is(newErr, wrappedErr) {
+		t.Error("Is true when expected false")
 	}
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/clockworksoul/gort/data"
 	"github.com/clockworksoul/gort/dataaccess/errs"
-	gorterr "github.com/clockworksoul/gort/errors"
+	gerr "github.com/clockworksoul/gort/errors"
 
 	_ "github.com/lib/pq" // Load the Postgres drivers
 )
@@ -33,10 +33,10 @@ func (da PostgresDataAccess) Initialize() error {
 
 	// Establish a connection to the "gort" database
 	db, err := da.connect("gort")
-	defer db.Close()
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	// Check whether the users table exists
 	exists, err := da.tableExists("users", db)
@@ -115,10 +115,10 @@ func (da PostgresDataAccess) gortDatabaseExists(db *sql.DB) (bool, error) {
 	rows, err := db.Query("SELECT datname " +
 		"FROM pg_database " +
 		"WHERE datistemplate = false AND datname = 'gort'")
-	defer rows.Close()
 	if err != nil {
-		return false, gorterr.Wrap(errs.ErrDataAccess, err)
+		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
+	defer rows.Close()
 
 	datname := ""
 
@@ -131,7 +131,7 @@ func (da PostgresDataAccess) gortDatabaseExists(db *sql.DB) (bool, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		return false, gorterr.Wrap(errs.ErrDataAccess, err)
+		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return false, nil
@@ -145,12 +145,12 @@ func (da PostgresDataAccess) connect(dbname string) (*sql.DB, error) {
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		return nil, gorterr.Wrap(errs.ErrDataAccess, err)
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		return nil, gorterr.Wrap(errs.ErrDataAccess, err)
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return db, nil
@@ -219,7 +219,7 @@ func (da PostgresDataAccess) createBundlesTables(db *sql.DB) error {
 
 	_, err = db.Exec(createBundlesQuery)
 	if err != nil {
-		return gorterr.Wrap(errs.ErrDataAccess, err)
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -234,7 +234,7 @@ func (da PostgresDataAccess) createGroupsTable(db *sql.DB) error {
 
 	_, err = db.Exec(createGroupQuery)
 	if err != nil {
-		return gorterr.Wrap(errs.ErrDataAccess, err)
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -251,7 +251,7 @@ func (da PostgresDataAccess) createGroupUsersTable(db *sql.DB) error {
 
 	_, err = db.Exec(createGroupUsersQuery)
 	if err != nil {
-		return gorterr.Wrap(errs.ErrDataAccess, err)
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -273,7 +273,7 @@ func (da PostgresDataAccess) createTokensTable(db *sql.DB) error {
 
 	_, err = db.Exec(createTokensQuery)
 	if err != nil {
-		return gorterr.Wrap(errs.ErrDataAccess, err)
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -291,7 +291,7 @@ func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
 
 	_, err = db.Exec(createUserQuery)
 	if err != nil {
-		return gorterr.Wrap(errs.ErrDataAccess, err)
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -314,7 +314,7 @@ func (da PostgresDataAccess) ensureGortDatabaseExists() error {
 	if !exists {
 		_, err := db.Exec("CREATE DATABASE Gort")
 		if err != nil {
-			return gorterr.Wrap(errs.ErrDataAccess, err)
+			return gerr.Wrap(errs.ErrDataAccess, err)
 		}
 	}
 
@@ -325,10 +325,10 @@ func (da PostgresDataAccess) tableExists(table string, db *sql.DB) (bool, error)
 	var result string
 
 	rows, err := db.Query(fmt.Sprintf("SELECT to_regclass('public.%s');", table))
-	defer rows.Close()
 	if err != nil {
-		return false, gorterr.Wrap(errs.ErrDataAccess, err)
+		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		rows.Scan(&result)
@@ -339,7 +339,7 @@ func (da PostgresDataAccess) tableExists(table string, db *sql.DB) (bool, error)
 	}
 
 	if err := rows.Err(); err != nil {
-		return false, gorterr.Wrap(errs.ErrDataAccess, err)
+		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return false, err

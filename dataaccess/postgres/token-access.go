@@ -6,7 +6,7 @@ import (
 	"github.com/clockworksoul/gort/data"
 	"github.com/clockworksoul/gort/data/rest"
 	"github.com/clockworksoul/gort/dataaccess/errs"
-	gorterr "github.com/clockworksoul/gort/errors"
+	gerr "github.com/clockworksoul/gort/errors"
 )
 
 // TokenEvaluate will test a token for validity. It returns true if the token
@@ -55,16 +55,16 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 	}
 
 	db, err := da.connect("gort")
-	defer db.Close()
 	if err != nil {
 		return rest.Token{}, err
 	}
+	defer db.Close()
 
 	query := `INSERT INTO tokens (token, username, valid_from, valid_until)
 	VALUES ($1, $2, $3, $4);`
 	_, err = db.Exec(query, token.Token, token.User, token.ValidFrom, token.ValidUntil)
 	if err != nil {
-		return rest.Token{}, gorterr.Wrap(errs.ErrDataAccess, err)
+		return rest.Token{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return token, nil
@@ -74,15 +74,15 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 // returned if the token doesn't exist.
 func (da PostgresDataAccess) TokenInvalidate(tokenString string) error {
 	db, err := da.connect("gort")
-	defer db.Close()
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	query := `DELETE FROM tokens WHERE token=$1;`
 	_, err = db.Exec(query, tokenString)
 	if err != nil {
-		return gorterr.Wrap(errs.ErrDataAccess, err)
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -92,10 +92,10 @@ func (da PostgresDataAccess) TokenInvalidate(tokenString string) error {
 // error is returned if no such token (or user) exists.
 func (da PostgresDataAccess) TokenRetrieveByUser(username string) (rest.Token, error) {
 	db, err := da.connect("gort")
-	defer db.Close()
 	if err != nil {
 		return rest.Token{}, err
 	}
+	defer db.Close()
 
 	// There will be more here eventually
 	query := `SELECT token, username, valid_from, valid_until
@@ -109,7 +109,7 @@ func (da PostgresDataAccess) TokenRetrieveByUser(username string) (rest.Token, e
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 
 	if err != nil {
-		err = gorterr.Wrap(errs.ErrNoSuchToken, err)
+		err = gerr.Wrap(errs.ErrNoSuchToken, err)
 	}
 
 	token.Duration = token.ValidUntil.Sub(token.ValidFrom)
@@ -121,10 +121,10 @@ func (da PostgresDataAccess) TokenRetrieveByUser(username string) (rest.Token, e
 // if no such token exists.
 func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (rest.Token, error) {
 	db, err := da.connect("gort")
-	defer db.Close()
 	if err != nil {
 		return rest.Token{}, err
 	}
+	defer db.Close()
 
 	// There will be more here eventually
 	query := `SELECT token, username, valid_from, valid_until
@@ -137,7 +137,7 @@ func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (rest.Toke
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 
 	if err != nil {
-		err = gorterr.Wrap(errs.ErrNoSuchToken, err)
+		err = gerr.Wrap(errs.ErrNoSuchToken, err)
 	}
 
 	token.Duration = token.ValidUntil.Sub(token.ValidFrom)

@@ -21,9 +21,9 @@ func Wrap(newErr error, nestedErr error) error {
 	return NestedError{Message: newErr.Error(), Err: nestedErr}
 }
 
-// ErrEquals compares two errors and returns true if they have the same message.
+// Is compares two errors and returns true if they have the same message.
 // If either is a NestedError, only the top-level message is checked.
-func ErrEquals(err1 error, err2 error) bool {
+func Is(err1 error, err2 error) bool {
 	errStr := func(err error) string {
 		switch v := err.(type) {
 		case NestedError:

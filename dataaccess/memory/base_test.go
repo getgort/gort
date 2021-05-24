@@ -13,7 +13,7 @@ var (
 func expectErr(t *testing.T, err error, expected error) {
 	if err == nil {
 		t.Error("Expected an error")
-	} else if !gorterr.ErrEquals(err, expected) {
+	} else if !gorterr.Is(err, expected) {
 		t.Errorf("Wrong error: Expected: %q Got: %q\n", expected.Error(), err.Error())
 	}
 }

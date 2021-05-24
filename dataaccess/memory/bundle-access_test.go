@@ -8,6 +8,7 @@ import (
 
 	"github.com/clockworksoul/gort/data"
 	"github.com/clockworksoul/gort/dataaccess/errs"
+	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v3"
 
 	gorterr "github.com/clockworksoul/gort/errors"
@@ -144,16 +145,16 @@ func TestBundleGet(t *testing.T) {
 
 	// Get the test bundle. Expect no error.
 	bundleCreate, err := getTestBundle()
-	expectNoErr(t, err)
-	bundleCreate.Name = "test-get"
+	assert.NoError(t, err)
 
 	// Set some values to non-defaults
-	bundleCreate.Enabled = true
+	bundleCreate.Name = "test-get"
+	// bundleCreate.Enabled = true
 
 	// Save the test bundle. Expect no error.
 	err = da.BundleCreate(bundleCreate)
 	defer da.BundleDelete(bundleCreate.Name, bundleCreate.Version)
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 
 	// Test bundle should now exist in the data store.
 	exists, _ := da.BundleExists(bundleCreate.Name, bundleCreate.Version)
@@ -163,48 +164,15 @@ func TestBundleGet(t *testing.T) {
 
 	// Load the bundle from the data store. Expect no error
 	bundleGet, err := da.BundleGet(bundleCreate.Name, bundleCreate.Version)
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 
-	matches, mismatch, expected, got, err := compareFields(
-		bundleCreate, bundleGet,
-		"GortBundleVersion", "Name", "Version", "Author", "Homepage",
-		"Description", "LongDescription", "InstalledBy")
-	expectNoErr(t, err)
-	if err == nil && !matches {
-		t.Errorf("Create/Got mismatch on field %q (expected=%s; got=%s)", mismatch, expected, got)
-	}
+	// This is set automatically on save, so we copy it here for the sake of the tests.
+	bundleCreate.InstalledOn = bundleGet.InstalledOn
 
-	matches, mismatch, expected, got, err = compareFields(
-		bundleCreate.Docker, bundleGet.Docker,
-		"Image", "Tag")
-	expectNoErr(t, err)
-	if err == nil && !matches {
-		t.Errorf("Create/Got mismatch on field %q (expected=%s; got=%s)", mismatch, expected, got)
-	}
-
-	err = compareStringSlices(bundleCreate.Permissions, bundleGet.Permissions)
-	if err != nil {
-		t.Errorf("Create/Got mismatch on permissions: %s", err)
-	}
-
-	if len(bundleCreate.Commands) != len(bundleGet.Commands) {
-		t.Errorf("Create/Got mismatch on commands")
-	}
-
-	for k := range bundleCreate.Commands {
-		matches, mismatch, expected, got, err = compareFields(
-			bundleCreate.Commands[k], bundleGet.Commands[k],
-			"Description", "Executable")
-		expectNoErr(t, err)
-		if err == nil && !matches {
-			t.Errorf("Create/Got mismatch on Command field %q (expected=%s; got=%s)", mismatch, expected, got)
-		}
-
-		err = compareStringSlices(bundleCreate.Commands[k].Rules, bundleGet.Commands[k].Rules)
-		if err != nil {
-			t.Errorf("Create/Got mismatch on command rules: %s", err)
-		}
-	}
+	assert.Equal(t, bundleCreate, bundleGet)
+	assert.Equal(t, bundleCreate.Docker, bundleGet.Docker)
+	assert.ElementsMatch(t, bundleCreate.Permissions, bundleGet.Permissions)
+	assert.Equal(t, bundleCreate.Commands, bundleGet.Commands)
 }
 
 func TestBundleList(t *testing.T) {

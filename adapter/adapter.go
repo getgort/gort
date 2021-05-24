@@ -249,7 +249,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	command, err := GetCommandEntry(params)
 	if err != nil {
 		switch {
-		case gorterr.ErrEquals(err, ErrNoSuchCommand):
+		case gorterr.Is(err, ErrNoSuchCommand):
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
 				"If this is not expected, you should contact a Gort administrator.",
 				params[0])
@@ -268,7 +268,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	user, autocreated, err := findOrMakeGortUser(info)
 	if err != nil {
 		switch {
-		case gorterr.ErrEquals(err, ErrSelfRegistrationOff):
+		case gorterr.Is(err, ErrSelfRegistrationOff):
 			msg := "I'm terribly sorry, but either I don't " +
 				"have a Gort account for you, or your Slack chat handle has " +
 				"not been registered. Currently, only registered users can " +
@@ -276,7 +276,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 				"administrator to fix this situation and to register your " +
 				"Slack handle."
 			adapter.SendErrorMessage(channelID, "No Such Account", msg)
-		case gorterr.ErrEquals(err, ErrGortNotBootstrapped):
+		case gorterr.Is(err, ErrGortNotBootstrapped):
 			msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
 				"use `gortctl` to properly bootstrap Gort environment before " +
 				"proceeding."

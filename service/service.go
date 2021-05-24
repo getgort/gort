@@ -260,56 +260,56 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 
 	switch {
 	// A required field is empty or missing
-	case gorterr.ErrEquals(err, errs.ErrEmptyBundleName):
+	case gorterr.Is(err, errs.ErrEmptyBundleName):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrEmptyBundleVersion):
+	case gorterr.Is(err, errs.ErrEmptyBundleVersion):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrEmptyGroupName):
+	case gorterr.Is(err, errs.ErrEmptyGroupName):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrEmptyUserName):
+	case gorterr.Is(err, errs.ErrEmptyUserName):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrFieldRequired):
+	case gorterr.Is(err, errs.ErrFieldRequired):
 		status = http.StatusExpectationFailed
 
 	// Requested resource doesn't exist
-	case gorterr.ErrEquals(err, errs.ErrNoSuchBundle):
+	case gorterr.Is(err, errs.ErrNoSuchBundle):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrNoSuchGroup):
+	case gorterr.Is(err, errs.ErrNoSuchGroup):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrNoSuchToken):
+	case gorterr.Is(err, errs.ErrNoSuchToken):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrNoSuchUser):
+	case gorterr.Is(err, errs.ErrNoSuchUser):
 		status = http.StatusNotFound
 
 	// Nope
-	case gorterr.ErrEquals(err, errs.ErrAdminUndeletable):
+	case gorterr.Is(err, errs.ErrAdminUndeletable):
 		status = http.StatusForbidden
 
 	// Can't insert over something that already exists
-	case gorterr.ErrEquals(err, errs.ErrBundleExists):
+	case gorterr.Is(err, errs.ErrBundleExists):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrGroupExists):
+	case gorterr.Is(err, errs.ErrGroupExists):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrUserExists):
+	case gorterr.Is(err, errs.ErrUserExists):
 		status = http.StatusConflict
 
 	// Not done yet
-	case gorterr.ErrEquals(err, errs.ErrNotImplemented):
+	case gorterr.Is(err, errs.ErrNotImplemented):
 		status = http.StatusNotImplemented
 
 	// Data access errors
-	case gorterr.ErrEquals(err, errs.ErrDataAccessNotInitialized):
+	case gorterr.Is(err, errs.ErrDataAccessNotInitialized):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrDataAccessCantInitialize):
+	case gorterr.Is(err, errs.ErrDataAccessCantInitialize):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrDataAccessCantConnect):
+	case gorterr.Is(err, errs.ErrDataAccessCantConnect):
 		fallthrough
-	case gorterr.ErrEquals(err, errs.ErrDataAccess):
+	case gorterr.Is(err, errs.ErrDataAccess):
 		status = http.StatusInternalServerError
 		log.Errorf("%d %s", status, msg)
 
 	// Bad context
-	case gorterr.ErrEquals(err, gorterr.ErrUnmarshal):
+	case gorterr.Is(err, gorterr.ErrUnmarshal):
 		msg = "Corrupt JSON payload"
 		status = http.StatusNotAcceptable
 

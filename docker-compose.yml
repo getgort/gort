@@ -13,7 +13,7 @@ services:
       - gort
 
   postgres:
-    image: postgres:11
+    image: postgres:13
     environment:
       - POSTGRES_USER=gort
       - POSTGRES_PASSWORD=veryKleverPassw0rd

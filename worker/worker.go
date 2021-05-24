@@ -2,6 +2,7 @@ package worker
 
 import (
 	"bufio"
+	"context"
 	"strings"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 // Worker represents a container executor. It has a lifetime of a single command execution.
