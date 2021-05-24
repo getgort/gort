@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -18,15 +19,18 @@ func expectErr(t *testing.T, err error, expected error) {
 	}
 }
 
-func expectNoErr(t *testing.T, err error) {
-	if err != nil {
-		t.Error("Expected no error. Got:", err.Error())
-	}
-}
-
-func TestDataAccessInit(t *testing.T) {
+func testInitialize(t *testing.T) {
 	da = NewInMemoryDataAccess()
 
 	err := da.Initialize()
-	expectNoErr(t, err)
+	assert.NoError(t, err)
+}
+
+func TestMain(t *testing.T) {
+	t.Run("testInitialize", testInitialize)
+
+	t.Run("testUserAccess", testUserAccess)
+	t.Run("testGroupAccess", testGroupAccess)
+	t.Run("testTokenAccess", testTokenAccess)
+	t.Run("testBundleAccess", testBundleAccess)
 }

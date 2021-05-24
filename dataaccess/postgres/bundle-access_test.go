@@ -1,8 +1,6 @@
 package postgres
 
 import (
-	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/clockworksoul/gort/bundle"
@@ -244,32 +242,6 @@ func testBundleListVersions(t *testing.T) {
 
 		t.Errorf("Expected len(bundles) = 2; got %d", len(bundles))
 	}
-}
-
-// Returns: matches?, mismatching field name, expected field value, got field value, error
-func compareFields(ob1 interface{}, ob2 interface{}, fields ...string) (bool, string, string, string, error) {
-	v1 := reflect.ValueOf(ob1)
-	v2 := reflect.ValueOf(ob2)
-
-	for _, fname := range fields {
-		f1 := v1.FieldByName(fname)
-		if !f1.IsValid() {
-			return false, fname, "", "", fmt.Errorf("Type %T has no field %q", ob1, fname)
-		}
-
-		f2 := v2.FieldByName(fname)
-		if !f2.IsValid() {
-			return false, fname, "", "", fmt.Errorf("Type %T has no field %q", ob1, fname)
-		}
-
-		if f1.Interface() != f2.Interface() {
-			s1 := fmt.Sprintf("%v", f1.Interface())
-			s2 := fmt.Sprintf("%v", f2.Interface())
-			return false, fname, s1, s2, nil
-		}
-	}
-
-	return true, "", "", "", nil
 }
 
 func getTestBundle() (data.Bundle, error) {

@@ -1,62 +1,54 @@
 package memory
 
 import (
-	"fmt"
-	"io/ioutil"
-	"reflect"
 	"testing"
 
+	"github.com/clockworksoul/gort/bundle"
 	"github.com/clockworksoul/gort/data"
 	"github.com/clockworksoul/gort/dataaccess/errs"
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v3"
-
-	gorterr "github.com/clockworksoul/gort/errors"
 )
 
-func getTestBundle() (data.Bundle, error) {
-	bundle := data.Bundle{}
-
-	dat, err := ioutil.ReadFile("../../testing/test-bundle.yml")
-	if err != nil {
-		return bundle, gorterr.Wrap(gorterr.ErrIO, err)
-	}
-
-	err = yaml.Unmarshal(dat, &bundle)
-	if err != nil {
-		return bundle, gorterr.Wrap(gorterr.ErrUnmarshal, err)
-	}
-
-	return bundle, nil
+func testBundleAccess(t *testing.T) {
+	t.Run("testLoadTestData", testLoadTestData)
+	t.Run("testBundleCreate", testBundleCreate)
+	t.Run("testBundleCreateMissingRequired", testBundleCreateMissingRequired)
+	t.Run("testBundleEnable", testBundleEnable)
+	t.Run("testBundleExists", testBundleExists)
+	t.Run("testBundleDelete", testBundleDelete)
+	t.Run("testBundleGet", testBundleGet)
+	t.Run("testBundleList", testBundleList)
+	t.Run("testBundleListVersions", testBundleListVersions)
 }
 
-func TestLoadTestData(t *testing.T) {
+// Fail-fast: can the test bundle be loaded?
+func testLoadTestData(t *testing.T) {
 	_, err := getTestBundle()
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 }
 
-func TestBundleCreate(t *testing.T) {
+func testBundleCreate(t *testing.T) {
 	// Expect an error
 	err := da.BundleCreate(data.Bundle{})
 	expectErr(t, err, errs.ErrEmptyBundleName)
 
 	bundle, err := getTestBundle()
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 	bundle.Name = "test-create"
 
 	// Expect no error
 	err = da.BundleCreate(bundle)
 	defer da.BundleDelete(bundle.Name, bundle.Version)
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 
 	// Expect an error
 	err = da.BundleCreate(bundle)
 	expectErr(t, err, errs.ErrBundleExists)
 }
 
-func TestBundleCreateMissingRequired(t *testing.T) {
+func testBundleCreateMissingRequired(t *testing.T) {
 	bundle, err := getTestBundle()
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 	bundle.Name = "test-missing-required"
 
 	defer da.BundleDelete(bundle.Name, bundle.Version)
@@ -76,11 +68,44 @@ func TestBundleCreateMissingRequired(t *testing.T) {
 	bundle.Description = originalDescription
 }
 
-func TestBundleExists(t *testing.T) {
+func testBundleEnable(t *testing.T) {
+	bundle, err := getTestBundle()
+	assert.NoError(t, err)
+	bundle.Name = "test-enable"
+
+	err = da.BundleCreate(bundle)
+	assert.NoError(t, err)
+	defer da.BundleDelete(bundle.Name, bundle.Version)
+
+	// No version should be enabled
+	enabled, err := da.BundleEnabledVersion(bundle.Name)
+	assert.NoError(t, err)
+	if enabled != "" {
+		t.Error("Expected no version to be enabled")
+	}
+
+	// Enable and verify
+	err = da.BundleEnable(bundle.Name, bundle.Version)
+	assert.NoError(t, err)
+
+	enabled, err = da.BundleEnabledVersion(bundle.Name)
+	assert.NoError(t, err)
+	if enabled != bundle.Version {
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
+			bundle.Version, enabled)
+		t.FailNow()
+	}
+
+	// Should now delete cleanly
+	err = da.BundleDelete(bundle.Name, bundle.Version)
+	assert.NoError(t, err)
+}
+
+func testBundleExists(t *testing.T) {
 	var exists bool
 
 	bundle, err := getTestBundle()
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 	bundle.Name = "test-exists"
 
 	exists, _ = da.BundleExists(bundle.Name, bundle.Version)
@@ -90,7 +115,7 @@ func TestBundleExists(t *testing.T) {
 
 	err = da.BundleCreate(bundle)
 	defer da.BundleDelete(bundle.Name, bundle.Version)
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 
 	exists, _ = da.BundleExists(bundle.Name, bundle.Version)
 	if !exists {
@@ -98,7 +123,7 @@ func TestBundleExists(t *testing.T) {
 	}
 }
 
-func TestBundleDelete(t *testing.T) {
+func testBundleDelete(t *testing.T) {
 	// Delete blank bundle
 	err := da.BundleDelete("", "0.0.1")
 	expectErr(t, err, errs.ErrEmptyBundleName)
@@ -112,15 +137,15 @@ func TestBundleDelete(t *testing.T) {
 	expectErr(t, err, errs.ErrNoSuchBundle)
 
 	bundle, err := getTestBundle()
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 	bundle.Name = "test-delete"
 
 	err = da.BundleCreate(bundle) // This has its own test
 	defer da.BundleDelete(bundle.Name, bundle.Version)
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 
 	err = da.BundleDelete(bundle.Name, bundle.Version)
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 
 	exists, _ := da.BundleExists(bundle.Name, bundle.Version)
 	if exists {
@@ -128,7 +153,7 @@ func TestBundleDelete(t *testing.T) {
 	}
 }
 
-func TestBundleGet(t *testing.T) {
+func testBundleGet(t *testing.T) {
 	var err error
 
 	// Empty bundle name. Expect a ErrEmptyBundleName.
@@ -175,7 +200,7 @@ func TestBundleGet(t *testing.T) {
 	assert.Equal(t, bundleCreate.Commands, bundleGet.Commands)
 }
 
-func TestBundleList(t *testing.T) {
+func testBundleList(t *testing.T) {
 	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete("test-list-0", "0.0")
 	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
@@ -186,7 +211,7 @@ func TestBundleList(t *testing.T) {
 	defer da.BundleDelete("test-list-1", "0.1")
 
 	bundles, err := da.BundleList()
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 
 	if len(bundles) != 4 {
 		for i, u := range bundles {
@@ -197,7 +222,7 @@ func TestBundleList(t *testing.T) {
 	}
 }
 
-func TestBundleListVersions(t *testing.T) {
+func testBundleListVersions(t *testing.T) {
 	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete("test-list-0", "0.0")
 	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
@@ -208,7 +233,7 @@ func TestBundleListVersions(t *testing.T) {
 	defer da.BundleDelete("test-list-1", "0.1")
 
 	bundles, err := da.BundleListVersions("test-list-0")
-	expectNoErr(t, err)
+	assert.NoError(t, err)
 
 	if len(bundles) != 2 {
 		for i, u := range bundles {
@@ -219,42 +244,6 @@ func TestBundleListVersions(t *testing.T) {
 	}
 }
 
-// Returns: matches?, mismatching field name, expected field value, got field value, error
-func compareFields(ob1 interface{}, ob2 interface{}, fields ...string) (bool, string, string, string, error) {
-	v1 := reflect.ValueOf(ob1)
-	v2 := reflect.ValueOf(ob2)
-
-	for _, fname := range fields {
-		f1 := v1.FieldByName(fname)
-		if !f1.IsValid() {
-			return false, fname, "", "", fmt.Errorf("Type %T has no field %q", ob1, fname)
-		}
-
-		f2 := v2.FieldByName(fname)
-		if !f2.IsValid() {
-			return false, fname, "", "", fmt.Errorf("Type %T has no field %q", ob1, fname)
-		}
-
-		if f1.Interface() != f2.Interface() {
-			s1 := fmt.Sprintf("%v", f1.Interface())
-			s2 := fmt.Sprintf("%v", f2.Interface())
-			return false, fname, s1, s2, nil
-		}
-	}
-
-	return true, "", "", "", nil
-}
-
-func compareStringSlices(s1, s2 []string) error {
-	if len(s1) != len(s2) {
-		return fmt.Errorf("different length slices: %d vs %d", len(s1), len(s2))
-	}
-
-	for i := 0; i < len(s1); i++ {
-		if s1[i] != s2[i] {
-			return fmt.Errorf("value mismatch: %q vs %q", s1[i], s2[i])
-		}
-	}
-
-	return nil
+func getTestBundle() (data.Bundle, error) {
+	return bundle.LoadBundle("../../testing/test-bundle.yml")
 }
