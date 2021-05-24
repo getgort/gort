@@ -14,7 +14,6 @@ import (
 // PostgresDataAccess is a data access implementation backed by a database.
 type PostgresDataAccess struct {
 	configs data.DatabaseConfigs
-	db      *sql.DB
 }
 
 // NewPostgresDataAccess returns a new PostgresDataAccess based on the
