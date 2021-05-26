@@ -113,8 +113,8 @@ func initializeDataAccess() {
 			err := dataAccessLayer.Initialize()
 
 			if err != nil {
-				log.Warn("[initializeDataAccess] Failed to connect to data source: ", err.Error())
-				log.Infof("[initializeDataAccess] Waiting %d seconds to try again", delay)
+				log.WithError(err).Warn("Failed to connect to data source")
+				log.WithField("delay", delay).Info("Waiting to try again")
 
 				updateDALState(StateError)
 
@@ -124,7 +124,7 @@ func initializeDataAccess() {
 					// if this happens, then initializeDataAccess() was just called again.
 					// Cancel this attempt.
 					if configStatus == config.StateConfigInitialized {
-						log.Debug("[initializeDataAccess] Starting over with new config")
+						log.Debug("Starting over with new config")
 						return
 					}
 				}
@@ -135,7 +135,8 @@ func initializeDataAccess() {
 					delay = 60
 				}
 			} else {
-				log.Info("[initializeDataAccess] Connection to data source established")
+				log.WithField("type", fmt.Sprintf("%T", dataAccessLayer)).
+					Info("Connection to data source established")
 				updateDALState(StateInitialized)
 			}
 		}
@@ -155,10 +156,10 @@ func monitorConfig() {
 		case config.StateConfigUninitialized:
 			fallthrough
 		case config.StateConfigError:
-			log.Infof("[monitorConfig] Waiting for config to report initialized")
+			log.Infof("Waiting for config to report initialized")
 		case config.StateConfigInitialized:
 			if lastConfigState != config.StateConfigUninitialized {
-				log.Info("[monitorConfig] Configuration change: updating data access interface")
+				log.Info("Configuration change: updating data access interface")
 			}
 
 			initializeDataAccess()
@@ -172,7 +173,7 @@ func monitorConfig() {
 func updateDALState(newState State) {
 	currentState = newState
 
-	log.Tracef("[updateDALState] Received status update: %s", newState)
+	log.WithField("status", newState).Trace("Received status update")
 
 	// Sadly, this needs to track and remove closed channels.
 	for _, ch := range stateChangeListeners {
@@ -204,7 +205,7 @@ func updateDALStateTryEmit(ch chan State, newState State) {
 func watchBadDALListenerEvents() {
 	badListenerEvents = make(chan chan State)
 
-	log.Tracef("[watchBadDALListenerEvents] Cleaning up closed channel")
+	log.Tracef("Cleaning up closed channel")
 
 	for chbad := range badListenerEvents {
 		newChs := make([]chan State, 0)

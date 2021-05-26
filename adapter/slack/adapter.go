@@ -15,7 +15,6 @@ import (
 var (
 	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*://[^:|]*)\>`)
 	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*://[^:|]*\|([^:|]*)\>`)
-	//regexp.MustCompile(`<([a-zA-Z0-9]*://[a-zA-Z0-9\.]*)\|([a-zA-Z0-9\.]*)>`)
 )
 
 // SlackAdapter is the Slack provider implementation of a relay, which knows how
@@ -135,9 +134,10 @@ func getFields(name string, i interface{}) map[string]interface{} {
 // Listen instructs the relay to begin listening to the provider that it's attached to.
 // It exits immediately, returning a channel that emits ProviderEvents.
 func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
+	le := log.WithField("adapter", s.GetName())
 	events := make(chan *adapter.ProviderEvent)
 
-	log.Infof("[SlackAdapter.Listen] Connecting to Slack provider %s...", s.provider.Name)
+	le.WithField("provider", s.provider.Name).Info("Connecting to Slack provider")
 
 	go s.rtm.ManageConnection()
 
@@ -149,7 +149,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 
 	eventLoop:
 		for msg := range s.rtm.IncomingEvents {
-			e := log.WithField("type", msg.Type)
+			e := le.WithField("message.type", msg.Type)
 
 			if log.IsLevelEnabled(log.TraceLevel) {
 				fields := getFields("", msg.Data)
@@ -159,15 +159,15 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				}
 			}
 
-			e.Tracef("[SlackAdapter.Listen] Incoming message")
+			e.Trace("Incoming message")
 
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
 				suser, err := s.rtm.GetUserInfo(ev.Info.User.ID)
 				if err != nil {
-					log.Errorf("[SlackAdapter.Listen] Error finding user %s on connect: %s",
-						ev.Info.User.ID,
-						err.Error())
+					e.WithError(err).
+						WithField("user.id", ev.Info.User.ID).
+						Error("Error finding user on connect")
 
 					continue eventLoop
 				}
@@ -199,20 +199,25 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				events <- s.OnRTMError(ev, info)
 
 			case *slack.AckErrorEvent:
-				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+				le.WithField("type", msg.Type).WithField("data", msg.Data).
+					Error("Unhandled error reported by Slack API")
 
 			case *slack.OutgoingErrorEvent:
-				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+				le.WithField("type", msg.Type).WithField("data", msg.Data).
+					Error("Unhandled error reported by Slack API")
 
 			case *slack.RateLimitedError:
-				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+				le.WithField("type", msg.Type).WithField("data", msg.Data).
+					Error("Unhandled error reported by Slack API")
 
 			case *slack.UnmarshallingErrorEvent:
-				log.Errorf("[SlackAdapter.Listen] Unhandled error type=%s %v", msg.Type, msg.Data)
+				le.WithField("type", msg.Type).WithField("data", msg.Data).
+					Error("Unhandled error reported by Slack API")
 
 			default:
 				// Ignore other events..
-				log.Debugf("[SlackAdapter.Listen] Received (and ignored) event type %T", ev)
+				le.WithField("type", fmt.Sprintf("%T", ev)).
+					Debugf("Received (and ignored) Slack event")
 			}
 		}
 
@@ -288,16 +293,16 @@ func (s *SlackAdapter) OnInvalidAuth(event *slack.InvalidAuthEvent, info *adapte
 
 // OnLatencyReport is called when the Slack API emits a LatencyReport.
 func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *adapter.Info) *adapter.ProviderEvent {
-	millis := event.Value.Nanoseconds() / 1000000
-	template := "[SlackAdapter.OnLatencyReport] High latency detected: %s"
+	le := log.WithField("latency", event.Value)
+	millis := event.Value.Milliseconds()
 
 	switch {
 	case millis >= 1000 && millis < 1500:
-		log.Debugf(template, event.Value.String())
+		le.Debug("High latency detected")
 	case millis >= 1500 && millis < 2000:
-		log.Infof(template, event.Value.String())
+		le.Info("High latency detected")
 	case millis >= 2000:
-		log.Warnf(template, event.Value.String())
+		le.Warn("High latency detected")
 	}
 
 	return nil

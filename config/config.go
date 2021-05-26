@@ -217,7 +217,7 @@ func reloadConfiguration() error {
 
 		updateConfigState(StateConfigInitialized)
 
-		log.Infof("[reloadConfiguration] Loaded configuration file %s", configFile)
+		log.WithField("file", configFile).Info("Loaded configuration file")
 	}
 
 	return nil

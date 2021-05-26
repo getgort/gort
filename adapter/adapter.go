@@ -97,7 +97,7 @@ func AddAdapter(a Adapter) {
 		name = fmt.Sprintf("%T", a)
 	}
 
-	log.Debugf("[adapter.AddAdapter] Adapter %s added", name)
+	log.WithField("adapter", name).Debug("Adapter added")
 	adapterLookup[name] = a
 }
 
@@ -138,8 +138,9 @@ func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
 
 // OnConnected handles ConnectedEvent events.
 func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
-	log.Infof(
-		"[OnConnected] Connection established to %s provider %s. I am @%s!",
+	le := adapterLogEvent(event, nil)
+	le.Infof(
+		"Connection established to %s provider %s. I am @%s!",
 		event.Info.Provider.Type,
 		event.Info.Provider.Name,
 		event.Info.User.Name,
@@ -147,13 +148,16 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 
 	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
 	if err != nil {
-		log.Errorf("[OnConnected] Failed to get channels list for %s: %s", event.Info.Provider.Name, err.Error())
+		le.WithError(err).Error("Failed to get channels list")
 		return
 	}
 
 	for _, c := range channels {
 		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", meta.GortVersion, c.Name)
-		event.Adapter.SendMessage(c.ID, message)
+		err := event.Adapter.SendMessage(c.ID, message)
+		if err != nil {
+			le.WithError(err).Error("Failed to send greeting")
+		}
 	}
 }
 
@@ -174,12 +178,6 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 
 	rawCommandText := data.Text
 
-	log.Debugf("[OnChannelMessage] Message from @%s in %s: %s",
-		userinfo.DisplayNameNormalized,
-		channelinfo.Name,
-		rawCommandText,
-	)
-
 	// If this isn't prepended by a trigger character, ignore.
 	if len(rawCommandText) <= 1 || rawCommandText[0] != '!' {
 		return nil, nil
@@ -193,6 +191,11 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 	// Remove the "trigger character" (!)
 	rawCommandText = rawCommandText[1:]
 
+	le := adapterLogEvent(event, userinfo)
+	le.WithField("command", rawCommandText)
+	le.WithField("channel", channelinfo.Name)
+	le.Debug("got message")
+
 	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
 
@@ -205,14 +208,14 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 
 	rawCommandText := data.Text
 
-	log.Debugf("[OnDirectMessage] Direct message from @%s: %s",
-		userinfo.DisplayNameNormalized,
-		data.Text,
-	)
-
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
 	}
+
+	le := adapterLogEvent(event, userinfo)
+	le.WithField("command", rawCommandText)
+	le.WithField("channel.id", data.ChannelID)
+	le.Debug("got direct message")
 
 	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
@@ -220,7 +223,7 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 // StartListening instructs all relays to establish connections, receives all
 // events from all relays, and forwards them to the various On* handler functions.
 func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, <-chan error) {
-	log.Debug("[adapter.StartListening] Instructing relays to establish connections")
+	log.Debug("Instructing relays to establish connections")
 
 	commandRequests := make(chan data.CommandRequest)
 	commandResponses := make(chan data.CommandResponse)
@@ -239,6 +242,11 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 // TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
 // valid command trigger is identified.
 func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
+	le := log.WithField("adapter", adapter.GetName()).
+		WithField("command", rawCommand).
+		WithField("channel", channelID).
+		WithField("user", userID)
+
 	params := TokenizeParameters(rawCommand)
 
 	info, err := adapter.GetUserInfo(userID)
@@ -259,11 +267,15 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
+		le.WithError(err)
+		le.Error()
+
 		return nil, err
 	}
 
-	log.Debugf("[TriggerCommand] Found matching command: %s:%s",
-		command.Bundle.Name, command.Command.Name)
+	le.WithField("bundle.name", command.Bundle.Name).
+		WithField("command.name", command.Command.Name).
+		Debug("Found matching command")
 
 	user, autocreated, err := findOrMakeGortUser(info)
 	if err != nil {
@@ -286,12 +298,17 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
+		le.WithError(err)
+		le.Error()
+
 		return nil, err
 	} else if autocreated {
 		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
 			"owner of a shiny new Gort account named `%s`!",
 			user.Username)
 		adapter.SendMessage(info.ID, message)
+
+		le.Info("autocreating user")
 	}
 
 	request := data.CommandRequest{
@@ -302,7 +319,29 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		UserID:       userID,
 	}
 
+	le = le.WithField("bundle.name", command.Bundle.Name).
+		WithField("bundle.version", command.Bundle.Version).
+		WithField("executable.executable", command.Command.Executable).
+		WithField("executable.name", command.Command.Name)
+	le.Info("Triggering command")
+
 	return &request, nil
+}
+
+// adapterLogEvent is a helper that pre-populates a log event
+func adapterLogEvent(event *ProviderEvent, ui *UserInfo) *log.Entry {
+	e := log.WithField("event", event.EventType).
+		WithField("adapter.name", event.Info.Provider.Name).
+		WithField("adapter.type", event.Info.Provider.Type)
+
+	if ui != nil {
+		e = e.WithField("user.email", ui.Email).
+			WithField("user.realname", ui.RealNameNormalized).
+			WithField("user.displayname", ui.DisplayNameNormalized).
+			WithField("user.id", ui.ID)
+	}
+
+	return e
 }
 
 // findOrMakeGortUser ...
@@ -388,7 +427,7 @@ func startAdapters() (<-chan *ProviderEvent, chan error) {
 	adapterErrors := make(chan error, len(config.GetSlackProviders()))
 
 	for k, a := range adapterLookup {
-		log.Debugf("[adapter.startAdapters] Starting adapter %s", k)
+		log.WithField("adapter", k).Debug("Starting adapter")
 
 		go func(adapter Adapter) {
 			for event := range adapter.Listen() {

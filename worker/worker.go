@@ -104,15 +104,6 @@ func (w *Worker) Start() (<-chan string, error) {
 		event.Trace("container stopped and removed")
 	}()
 
-	// // Begin the timeout counter for this container
-	// go func() {
-	// 	<-time.After(timeout)
-	// 	err := w.DockerClient.ContainerStop(ctx, resp.ID, nil)
-	// 	if err != nil {
-	// 		log.Warnf("[Worker.Start] Failed to stop container %s: %s", resp.ID, err.Error())
-	// 	}
-	// }()
-
 	// Watch for the container to enter "not running" state. This supports the Stopped() method.
 	go func() {
 		chwait, errs := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
@@ -120,13 +111,13 @@ func (w *Worker) Start() (<-chan string, error) {
 		select {
 		case ok := <-chwait:
 			event = event.WithField("duration", time.Since(startTime))
-			event.Debugf("[Worker.Start] worker completed")
+			event.Debugf("WOrker completed")
 			w.ExitStatus <- ok.StatusCode
 
 		case err := <-errs:
 			event = event.WithField("duration", time.Since(startTime))
 			event = event.WithError(err)
-			event.Errorf("[Worker.Start] error running container")
+			event.Errorf("Error running container")
 			w.ExitStatus <- 500
 		}
 	}()

@@ -15,7 +15,6 @@ func TestScrubMarkdown(t *testing.T) {
 	}
 
 	for test, expected := range tests {
-		actual := ScrubMarkdown(test)
-		assert.Equal(t, expected, actual)
+		assert.Equal(t, expected, ScrubMarkdown(test))
 	}
 }

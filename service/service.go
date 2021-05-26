@@ -203,7 +203,7 @@ func (s *RESTServer) Requests() <-chan RequestEvent {
 
 // ListenAndServe starts the Gort web service.
 func (s *RESTServer) ListenAndServe() error {
-	log.Printf("[RESTServer.ListenAndServe] Gort service is starting on " + s.Addr)
+	log.WithField("address", s.Addr).Info("Gort service is starting")
 
 	return s.Server.ListenAndServe()
 }

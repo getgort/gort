@@ -72,6 +72,13 @@ func initializeConfig(configfile string) error {
 }
 
 func initializeLogger(verbose int) {
+	log.SetFormatter(
+		&log.TextFormatter{
+			ForceColors:  true,
+			PadLevelText: true,
+		},
+	)
+
 	switch verbose {
 	case 0:
 		log.SetLevel(log.InfoLevel)
@@ -83,13 +90,16 @@ func initializeLogger(verbose int) {
 }
 
 func installAdapters() error {
-	log.Infof("[installAdapters] Installing %d adapter(s)", len(config.GetSlackProviders()))
+	// TODO Add support for (and implementations of) other chat types.
+	adapters := config.GetSlackProviders()
 
-	if len(config.GetSlackProviders()) == 0 {
+	if len(adapters) == 0 {
 		return fmt.Errorf("no adapters configured")
 	}
 
-	for _, sp := range config.GetSlackProviders() {
+	log.Info("Installing adapter(s)")
+
+	for _, sp := range adapters {
 		adapter.AddAdapter(slack.NewAdapter(sp))
 	}
 
@@ -99,7 +109,7 @@ func installAdapters() error {
 func startGort() error {
 	initializeLogger(verboseCount)
 
-	log.Infof("[startGort] Starting Gort version %s", meta.GortVersion)
+	log.WithField("version", meta.GortVersion).Infof("Starting Gort")
 
 	// Load the Gort configuration.
 	err := initializeConfig(configfile)
