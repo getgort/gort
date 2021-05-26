@@ -13,5 +13,5 @@ type Token struct {
 
 // IsExpired returns true if the token has expired.
 func (t Token) IsExpired() bool {
-	return !t.ValidUntil.After(time.Now())
+	return time.Now().After(t.ValidUntil)
 }

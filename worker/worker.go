@@ -59,10 +59,16 @@ func (w *Worker) Start() (<-chan string, error) {
 	startTime := time.Now()
 
 	cli := w.DockerClient
-	ctx := context.TODO()
 	imageName := w.ImageName
 	entryPoint := w.EntryPoint
-	timeout := w.ExecutionTimeout
+
+	event := log.
+		WithField("image", w.ImageName).
+		WithField("entry", entryPoint).
+		WithField("params", strings.Join(w.CommandParameters, " "))
+
+	ctx, cancel := context.WithTimeout(context.TODO(), w.ExecutionTimeout)
+	defer cancel()
 
 	// Start the image pull. This blocks until the pull is complete.
 	err := w.pullImage(false)
@@ -88,29 +94,41 @@ func (w *Worker) Start() (<-chan string, error) {
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return nil, err
 	}
+	defer func() {
+		c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
 
-	// Begin the timeout counter for this container
-	go func() {
-		<-time.After(timeout)
-		err := w.DockerClient.ContainerStop(ctx, resp.ID, nil)
-		if err != nil {
-			log.Warnf("[Worker.Start] Failed to stop container %s: %s", resp.ID, err.Error())
-		}
+		duration := 10 * time.Second
+		w.DockerClient.ContainerStop(c, resp.ID, &duration)
+		w.DockerClient.ContainerRemove(c, resp.ID, types.ContainerRemoveOptions{})
+		event.Trace("container stopped and removed")
 	}()
+
+	// // Begin the timeout counter for this container
+	// go func() {
+	// 	<-time.After(timeout)
+	// 	err := w.DockerClient.ContainerStop(ctx, resp.ID, nil)
+	// 	if err != nil {
+	// 		log.Warnf("[Worker.Start] Failed to stop container %s: %s", resp.ID, err.Error())
+	// 	}
+	// }()
 
 	// Watch for the container to enter "not running" state. This supports the Stopped() method.
 	go func() {
-		chwait, _ := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-		ok := <-chwait
+		chwait, errs := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 
-		log.Debugf("[Worker.Start] %s %s %s - Completed in %v",
-			w.ImageName,
-			entryPoint,
-			strings.Join(w.CommandParameters, " "),
-			time.Since(startTime),
-		)
+		select {
+		case ok := <-chwait:
+			event = event.WithField("duration", time.Since(startTime))
+			event.Debugf("[Worker.Start] worker completed")
+			w.ExitStatus <- ok.StatusCode
 
-		w.ExitStatus <- ok.StatusCode
+		case err := <-errs:
+			event = event.WithField("duration", time.Since(startTime))
+			event = event.WithError(err)
+			event.Errorf("[Worker.Start] error running container")
+			w.ExitStatus <- 500
+		}
 	}()
 
 	// Build the channel that will stream back the container logs

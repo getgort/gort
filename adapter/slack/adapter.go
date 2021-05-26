@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	linkMarkdownRegexShort = regexp.MustCompile(`<([a-zA-Z0-9]*://[a-zA-Z0-9\.]*)>`)
-	linkMarkdownRegexLong  = regexp.MustCompile(`<([a-zA-Z0-9]*://[a-zA-Z0-9\.]*)\|([a-zA-Z0-9\.]*)>`)
+	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*://[^:|]*)\>`)
+	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*://[^:|]*\|([^:|]*)\>`)
+	//regexp.MustCompile(`<([a-zA-Z0-9]*://[a-zA-Z0-9\.]*)\|([a-zA-Z0-9\.]*)>`)
 )
 
 // SlackAdapter is the Slack provider implementation of a relay, which knows how
@@ -405,43 +406,18 @@ func NewAdapter(provider data.SlackProvider) SlackAdapter {
 // ScrubMarkdown removes unnecessary/undesirable Slack markdown (of links, of
 // example) from text recieved from Slack.
 func ScrubMarkdown(text string) string {
-	var indices [][]int
-	var last int
-
 	// Remove links of the format "<https://google.com>"
 	//
-	indices = linkMarkdownRegexShort.FindAllSubmatchIndex([]byte(text), -1)
-	last = 0
-
-	if len(indices) > 0 {
-		newStr := ""
-
-		for _, z := range indices {
-			newStr += text[last:z[0]]
-			newStr += text[z[0]+1 : z[1]-1]
-			last = z[1]
-		}
-
-		newStr += text[indices[len(indices)-1][1]:]
-		text = newStr
+	if index := linkMarkdownRegexShort.FindStringIndex(text); index != nil {
+		submatch := linkMarkdownRegexShort.FindStringSubmatch(text)
+		text = text[:index[0]] + submatch[1] + text[index[1]:]
 	}
 
 	// Remove links of the format "<http://google.com|google.com>"
 	//
-	indices = linkMarkdownRegexLong.FindAllSubmatchIndex([]byte(text), -1)
-	last = 0
-
-	if len(indices) > 0 {
-		newStr := ""
-
-		for _, z := range indices {
-			newStr += text[last:z[0]]
-			newStr += text[z[4]:z[5]]
-			last = z[5] + 1
-		}
-
-		newStr += text[indices[len(indices)-1][5]+1:]
-		text = newStr
+	if index := linkMarkdownRegexLong.FindStringIndex(text); index != nil {
+		submatch := linkMarkdownRegexLong.FindStringSubmatch(text)
+		text = text[:index[0]] + submatch[1] + text[index[1]:]
 	}
 
 	return text
