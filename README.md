@@ -8,7 +8,7 @@ Gort brings the power of the command line to the place you collaborate with your
 
 ## Rationale
 
-Gort was initially conceived of as a Go re-implementation of Operable's [Cog Slack Bot](https://github.com/operable/cog). However, while it remains heavily inspired by Cog, is has gone its own way.
+Gort was initially conceived of as a Go re-implementation of Operable's [Cog Slack Bot](https://github.com/operable/cog). However, while it remains heavily inspired by Cog, it has largely gone its own way.
 
 Cog was originally designed as a distributed computation engine that was later rebranded as a chatops tool, and much of the original intent is reflected in its design, implementation, and featureset. As a result, many of Cog’s features, however innovative, go largely unused, and the codebase has become difficult to extend and maintain. These difficulties are compounded by its implementation language -- Elixir -- which has few proficient developers.
 
