@@ -9,9 +9,9 @@ import (
 	"github.com/clockworksoul/gort/adapter"
 	"github.com/clockworksoul/gort/adapter/slack"
 	"github.com/clockworksoul/gort/config"
-	"github.com/clockworksoul/gort/meta"
 	"github.com/clockworksoul/gort/relay"
 	"github.com/clockworksoul/gort/service"
+	"github.com/clockworksoul/gort/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -43,7 +43,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print Gort's version number",
 	Long:  `All software has versions. This is Gort's.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Gort ChatOps Engine v%s\n", meta.GortVersion)
+		fmt.Printf("Gort ChatOps Engine v%s\n", version.Version)
 	},
 }
 
@@ -108,7 +108,7 @@ func installAdapters() error {
 func startGort() error {
 	initializeLogger(verboseCount)
 
-	log.WithField("version", meta.GortVersion).Infof("Starting Gort")
+	log.WithField("version", version.Version).Infof("Starting Gort")
 
 	// Load the Gort configuration.
 	err := initializeConfig(configfile)

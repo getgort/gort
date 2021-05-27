@@ -16,7 +16,7 @@ permissions:
 
 docker:
   image: ubuntu
-  tag: 16.04
+  tag: 20.04
 
 commands:
   echo:

@@ -174,20 +174,49 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 
 				info.User = newUserInfoFromSlackUser(suser)
 
+				e.WithField("attempt", ev.ConnectionCount).
+					WithField("info.team", ev.Info.Team).
+					WithField("info.url", ev.Info.URL).
+					WithField("info.user.id", ev.Info.User.ID).
+					WithField("info.user.name", ev.Info.User.Name).
+					Info("Slack event: connected")
+
 				events <- s.OnConnected(ev, info)
 
 			case *slack.ConnectionErrorEvent:
+				e.WithError(ev.ErrorObj).
+					WithField("attempt", ev.Attempt).
+					WithField("backoff", ev.Backoff).
+					Error("Slack event: connection error -- backing off")
+
 				events <- s.OnConnectionError(ev, info)
 
 			case *slack.DisconnectedEvent:
+				e.WithError(ev.Cause).
+					WithField("intentional", ev.Intentional).
+					Error("Slack event: disconnected")
+
 				events <- s.OnDisconnected(ev, info)
 
 			case *slack.InvalidAuthEvent:
+				e.Fatal("Slack event: invalid auth")
+
 				events <- s.OnInvalidAuth(ev, info)
+
 				break eventLoop
 
 			case *slack.LatencyReport:
-				s.OnLatencyReport(ev, info)
+				le := e.WithField("latency", ev.Value)
+				millis := ev.Value.Milliseconds()
+
+				switch {
+				case millis >= 1000 && millis < 1500:
+					le.Debug("Slack event: high latency detected")
+				case millis >= 1500 && millis < 2000:
+					le.Info("Slack event: high latency detected")
+				case millis >= 2000:
+					le.Warn("Slack event: high latency detected")
+				}
 
 			case *slack.MessageEvent:
 				providerEvent := s.OnMessage(ev, info)
@@ -196,28 +225,49 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				}
 
 			case *slack.RTMError:
+				e.WithError(ev).
+					WithField("code", ev.Code).
+					WithField("msg", ev.Msg).
+					Error("Slack event: RTM error")
+
 				events <- s.OnRTMError(ev, info)
 
 			case *slack.AckErrorEvent:
-				le.WithField("type", msg.Type).WithField("data", msg.Data).
-					Error("Unhandled error reported by Slack API")
+				e.WithError(ev.ErrorObj).
+					WithField("replyto", ev.ReplyTo).
+					Error("Slack event: ACK event error")
+
+			case *slack.ConnectingEvent:
+				e.WithField("attempt", ev.Attempt).
+					WithField("connection.count", ev.ConnectionCount).
+					Info("Slack event: connecting")
+
+			case *slack.IncomingEventError:
+				e.WithError(ev).
+					Error("Slack event: error receiving incoming event")
 
 			case *slack.OutgoingErrorEvent:
-				le.WithField("type", msg.Type).WithField("data", msg.Data).
-					Error("Unhandled error reported by Slack API")
+				e.WithError(ev.ErrorObj).
+					WithField("message.channel", ev.Message.Channel).
+					WithField("message.id", ev.Message.ID).
+					WithField("message.text", ev.Message.Text).
+					WithField("message.type", ev.Message.Type).
+					Error("Slack event: outgoing message error")
 
 			case *slack.RateLimitedError:
-				le.WithField("type", msg.Type).WithField("data", msg.Data).
-					Error("Unhandled error reported by Slack API")
+				e.WithError(ev).
+					WithField("retryafter", ev.RetryAfter).
+					Error("Slack event: API rate limited error")
 
 			case *slack.UnmarshallingErrorEvent:
-				le.WithField("type", msg.Type).WithField("data", msg.Data).
-					Error("Unhandled error reported by Slack API")
+				e.WithError(ev.ErrorObj).
+					Error("Slack event: failed to deconstruct Slack response")
 
 			default:
-				// Ignore other events..
-				le.WithField("type", fmt.Sprintf("%T", ev)).
-					Debugf("Received (and ignored) Slack event")
+				// Report and ignore other events..
+				e.WithField("message.data", msg.Data).
+					WithField("type", fmt.Sprintf("%T", ev)).
+					Info("Slack event: unhandled error reported by Slack API")
 			}
 		}
 
@@ -289,23 +339,6 @@ func (s *SlackAdapter) OnInvalidAuth(event *slack.InvalidAuthEvent, info *adapte
 			Msg: fmt.Sprintf("Connection failed to %s: invalid credentials", s.provider.Name),
 		},
 	)
-}
-
-// OnLatencyReport is called when the Slack API emits a LatencyReport.
-func (s *SlackAdapter) OnLatencyReport(event *slack.LatencyReport, info *adapter.Info) *adapter.ProviderEvent {
-	le := log.WithField("latency", event.Value)
-	millis := event.Value.Milliseconds()
-
-	switch {
-	case millis >= 1000 && millis < 1500:
-		le.Debug("High latency detected")
-	case millis >= 1500 && millis < 2000:
-		le.Info("High latency detected")
-	case millis >= 2000:
-		le.Warn("High latency detected")
-	}
-
-	return nil
 }
 
 // OnMessage is called when the Slack API emits a MessageEvent.

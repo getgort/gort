@@ -11,7 +11,7 @@ import (
 	"github.com/clockworksoul/gort/dataaccess"
 	"github.com/clockworksoul/gort/dataaccess/errs"
 	gorterr "github.com/clockworksoul/gort/errors"
-	"github.com/clockworksoul/gort/meta"
+	"github.com/clockworksoul/gort/version"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -153,7 +153,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 	}
 
 	for _, c := range channels {
-		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", meta.GortVersion, c.Name)
+		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", version.Version, c.Name)
 		err := event.Adapter.SendMessage(c.ID, message)
 		if err != nil {
 			le.WithError(err).Error("Failed to send greeting")

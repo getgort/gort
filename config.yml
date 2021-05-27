@@ -71,7 +71,7 @@ slack:
 
   # The name of the bot, as it appears in Slack. Defaults to the name used
   # when the bot was added to the account.
-  bot_name: Gort2
+  bot_name: Gort
 
 bundles:
 - name: test
