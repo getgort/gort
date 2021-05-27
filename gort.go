@@ -33,7 +33,7 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := startGort()
 		if err != nil {
-			log.Fatal(err.Error())
+			log.WithError(err).Fatal("Fatal service error")
 		}
 	},
 }
@@ -158,17 +158,15 @@ func startGort() error {
 func catchSignals() {
 	c := make(chan os.Signal, 1)
 
-	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
+	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C).
 	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
 	signal.Notify(c, os.Interrupt)
 
 	// Block until we receive our signal.
 	sig := <-c
 
-	// Optionally, you could run srv.Shutdown in a goroutine and block on
-	// <-ctx.Done() if your application should wait for other services
-	// to finalize based on meta cancellation.
-	log.WithField("signal", sig.String()).Info("Gracefully shutting down Gort")
+	log.WithField("signal", sig.String()).
+		Info("Gracefully shutting down Gort")
 
 	os.Exit(0)
 }

@@ -242,10 +242,8 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 // TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
 // valid command trigger is identified.
 func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
-	le := log.WithField("adapter", adapter.GetName()).
-		WithField("command", rawCommand).
-		WithField("channel.id", channelID).
-		WithField("user.id", userID)
+	le := log.WithField("adapter.name", adapter.GetName()).
+		WithField("command", rawCommand)
 
 	params := TokenizeParameters(rawCommand)
 
@@ -253,11 +251,8 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	if err != nil {
 		return nil, err
 	}
-
 	if info != nil {
-		le = le.WithField("user.displayname", info.DisplayName).
-			WithField("user.email", info.Email).
-			WithField("user.realname", info.RealName)
+		le = le.WithField("user.email", info.Email)
 	}
 
 	command, err := GetCommandEntry(params)
@@ -280,10 +275,15 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	}
 
 	le.WithField("bundle.name", command.Bundle.Name).
+		WithField("bundle.version", command.Bundle.Version).
+		WithField("command.executable", command.Command.Executable).
 		WithField("command.name", command.Command.Name).
-		Debug("Found matching command")
+		Debug("Found matching command+bundle")
 
-	user, autocreated, err := findOrMakeGortUser(info)
+	le = le.WithField("channel.id", channelID).
+		WithField("user.id", userID)
+
+	gortUser, autocreated, err := findOrMakeGortUser(info)
 	if err != nil {
 		switch {
 		case gorterr.Is(err, ErrSelfRegistrationOff):
@@ -296,28 +296,28 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 			adapter.SendErrorMessage(channelID, "No Such Account", msg)
 		case gorterr.Is(err, ErrGortNotBootstrapped):
 			msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
-				"use `gortctl` to properly bootstrap Gort environment before " +
-				"proceeding."
+				"use `gortctl` to properly bootstrap the Gort environment " +
+				"before proceeding."
 			adapter.SendErrorMessage(channelID, "Not Bootstrapped?", msg)
 		default:
 			msg := formatCommandErrorMessage(command, params, err.Error())
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
-		le.WithError(err).Error()
+		le.WithError(err).Error("Can't find or create user")
 
 		return nil, err
 	}
 
-	le = le.WithField("user.gort", user.Username)
+	le = le.WithField("gort.user", gortUser.Username)
 
 	if autocreated {
 		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
 			"owner of a shiny new Gort account named `%s`!",
-			user.Username)
+			gortUser.Username)
 		adapter.SendMessage(info.ID, message)
 
-		le.Info("Autocreating user")
+		le.Info("Autocreating Gort user")
 	}
 
 	request := data.CommandRequest{
@@ -328,10 +328,8 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		UserID:       userID,
 	}
 
-	le = le.WithField("bundle.version", command.Bundle.Version).
-		WithField("executable.executable", command.Command.Executable).
-		WithField("executable.name", command.Command.Name)
-	le.Info("Triggering command")
+	le.WithField("executable", command.Command.Executable).
+		Info("Triggering command")
 
 	return &request, nil
 }
@@ -344,8 +342,6 @@ func adapterLogEvent(event *ProviderEvent, ui *UserInfo) *log.Entry {
 
 	if ui != nil {
 		e = e.WithField("user.email", ui.Email).
-			WithField("user.realname", ui.RealNameNormalized).
-			WithField("user.displayname", ui.DisplayNameNormalized).
 			WithField("user.id", ui.ID)
 	}
 
@@ -363,7 +359,7 @@ func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 	// Try to figure out what user we're working with here.
 	exists := true
 	user, err := da.UserGetByEmail(info.Email)
-	if err == errs.ErrNoSuchUser {
+	if gorterr.Is(err, errs.ErrNoSuchUser) {
 		exists = false
 	} else if err != nil {
 		return user, false, err
@@ -482,7 +478,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			adapterErrors <- ev
 
 		default:
-			log.WithField("type", fmt.Sprintf("%T", ev)).Fatal("Unknown event type")
+			log.WithField("type", fmt.Sprintf("%T", ev)).Warn("Unknown event type")
 		}
 	}
 }

@@ -175,8 +175,8 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				info.User = newUserInfoFromSlackUser(suser)
 
 				e.WithField("attempt", ev.ConnectionCount).
-					WithField("info.team", ev.Info.Team).
-					WithField("info.url", ev.Info.URL).
+					WithField("info.team.id", ev.Info.Team.ID).
+					WithField("info.team.domain", ev.Info.Team.Domain).
 					WithField("info.user.id", ev.Info.User.ID).
 					WithField("info.user.name", ev.Info.User.Name).
 					Info("Slack event: connected")
@@ -267,7 +267,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				// Report and ignore other events..
 				e.WithField("message.data", msg.Data).
 					WithField("type", fmt.Sprintf("%T", ev)).
-					Info("Slack event: unhandled error reported by Slack API")
+					Info("Slack event: unhandled event type")
 			}
 		}
 

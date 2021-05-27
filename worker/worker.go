@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -107,17 +108,22 @@ func (w *Worker) Start() (<-chan string, error) {
 	// Watch for the container to enter "not running" state. This supports the Stopped() method.
 	go func() {
 		chwait, errs := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+		event = event.WithField("duration", time.Since(startTime))
 
 		select {
 		case ok := <-chwait:
-			event = event.WithField("duration", time.Since(startTime))
-			event.Debug("Worker completed")
+			if ok.Error != nil && ok.Error.Message != "" {
+				event = event.WithError(fmt.Errorf(ok.Error.Message))
+			}
+
+			event.WithField("status", ok.StatusCode).
+				Info("Worker completed")
 			w.ExitStatus <- ok.StatusCode
 
 		case err := <-errs:
-			event = event.WithField("duration", time.Since(startTime))
-			event = event.WithError(err)
-			event.Error("Error running container")
+			event.WithField("duration", time.Since(startTime)).
+				WithError(err).
+				Error("Error running container")
 			w.ExitStatus <- 500
 		}
 	}()
