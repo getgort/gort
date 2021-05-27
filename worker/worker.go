@@ -111,13 +111,13 @@ func (w *Worker) Start() (<-chan string, error) {
 		select {
 		case ok := <-chwait:
 			event = event.WithField("duration", time.Since(startTime))
-			event.Debugf("WOrker completed")
+			event.Debug("Worker completed")
 			w.ExitStatus <- ok.StatusCode
 
 		case err := <-errs:
 			event = event.WithField("duration", time.Since(startTime))
 			event = event.WithError(err)
-			event.Errorf("Error running container")
+			event.Error("Error running container")
 			w.ExitStatus <- 500
 		}
 	}()
@@ -175,7 +175,7 @@ func (w *Worker) pullImage(force bool) error {
 	if force || !exists {
 		startTime := time.Now()
 
-		log.Debugf("[Worker.pullImage] Pulling image %s", imageName)
+		log.WithField("image", imageName).Trace("Pulling container image", imageName)
 
 		reader, err := cli.ImagePull(ctx, imageName, types.ImagePullOptions{})
 		if err != nil {
@@ -190,7 +190,9 @@ func (w *Worker) pullImage(force bool) error {
 			_, e = reader.Read(bytes)
 		}
 
-		log.Debugf("[Worker.pullImage] Image %s pulled in %v", imageName, time.Since(startTime))
+		log.WithField("image", imageName).
+			WithField("duration", time.Since(startTime)).
+			Debugf("Container image pulled", imageName, time.Since(startTime))
 	}
 
 	return nil

@@ -83,7 +83,7 @@ func BeginChangeCheck(frequency time.Duration) {
 			if err != nil {
 				if lastReloadWorked {
 					lastReloadWorked = false
-					log.Errorf("[BeginChangeCheck] %s", err.Error())
+					log.WithError(err).Error("Config reload failed")
 				}
 			}
 		}
@@ -243,7 +243,7 @@ func slicesAreEqual(a, b []byte) bool {
 func updateConfigState(newState State) {
 	currentState = newState
 
-	log.Tracef("[updateConfigState] Received status update")
+	log.WithField("state", newState).Trace("Config state update")
 
 	// Sadly, this needs to track and remove closed channels.
 	for _, ch := range stateChangeListeners {
@@ -274,7 +274,7 @@ func updateConfigStateTryEmit(ch chan State, newState State) {
 func watchBadConfigListenerEvents() {
 	badListenerEvents = make(chan chan State)
 
-	log.Tracef("[watchBadConfigListenerEvents] Cleaning up closed channel")
+	log.Trace("Cleaning up closed channel")
 
 	for chbad := range badListenerEvents {
 		newChs := make([]chan State, 0)

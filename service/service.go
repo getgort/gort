@@ -178,7 +178,7 @@ func BuildRESTServer(addr string) *RESTServer {
 	var err error
 	dataAccessLayer, err = dataaccess.Get()
 	if err != nil {
-		log.Fatal("Could not connect to data access layer:", err.Error())
+		log.WithError(err).Fatal("Could not connect to data access layer")
 	}
 
 	requests := make(chan RequestEvent)
@@ -222,15 +222,17 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	username := user.Username
 	password := user.Password
 
+	le := log.WithField("user", user)
+
 	exists, err := dataAccessLayer.UserExists(username)
 	if err != nil {
-		log.Errorf("[handleAuthenticate.2] %s", err.Error())
+		le.WithError(err).Error("Authentication: failed to find user")
 		return
 	}
 
 	if !exists {
 		http.Error(w, "No such user", http.StatusBadRequest)
-		log.Errorf("[handleAuthenticate.3] No such user %q", username)
+		le.Error("Authentication: No such user")
 		return
 	}
 
@@ -306,7 +308,7 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 		fallthrough
 	case gorterr.Is(err, errs.ErrDataAccess):
 		status = http.StatusInternalServerError
-		log.Errorf("%d %s", status, msg)
+		log.WithField("status", status).Error(msg)
 
 	// Bad context
 	case gorterr.Is(err, gorterr.ErrUnmarshal):
@@ -315,10 +317,9 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 
 	// Something else?
 	default:
-		log.Warnf("[%s] unhandled error found: %q",
-			"respondAndLogError", err.Error())
+		log.WithError(err).Warn("Unhandled server error")
 		status = http.StatusInternalServerError
-		log.Errorf("%d %s", status, msg)
+		log.WithError(err).WithField("status", status).Error(msg)
 	}
 
 	http.Error(w, msg, status)
@@ -335,7 +336,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	// If we already have users on this host, reject as "already bootstrapped".
 	if len(users) != 0 {
 		http.Error(w, "Service already bootstrapped", http.StatusConflict)
-		log.Warn("[handleBootstrap.2] Re-bootstrap attempted")
+		log.Warn("Re-bootstrap attempted")
 		return
 	}
 
@@ -389,12 +390,7 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func addHealthzMethodToRouter(router *mux.Router) {
-	router.HandleFunc("/v2/authenticate", handleAuthenticate).
-		Methods("POST")
-
-	router.HandleFunc("/v2/bootstrap", handleBootstrap).
-		Methods("POST")
-
-	router.HandleFunc("/v2/healthz", handleHealthz).
-		Methods("GET")
+	router.HandleFunc("/v2/authenticate", handleAuthenticate).Methods("POST")
+	router.HandleFunc("/v2/bootstrap", handleBootstrap).Methods("POST")
+	router.HandleFunc("/v2/healthz", handleHealthz).Methods("GET")
 }

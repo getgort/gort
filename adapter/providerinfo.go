@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"fmt"
+
 	"github.com/clockworksoul/gort/data"
 	log "github.com/sirupsen/logrus"
 )
@@ -20,7 +22,8 @@ func NewProviderInfoFromConfig(provider data.Provider) *ProviderInfo {
 		p.Type = "slack"
 		p.Name = ap.Name
 	default:
-		log.Errorf("[ProviderInfo.NewProviderInfoFromConfig] Unsupported provider type: %T", ap)
+		log.WithField("type", fmt.Sprintf("%T", ap)).
+			Errorf("Unsupported provider type")
 	}
 
 	return p

@@ -156,7 +156,7 @@ func monitorConfig() {
 		case config.StateConfigUninitialized:
 			fallthrough
 		case config.StateConfigError:
-			log.Infof("Waiting for config to report initialized")
+			log.Info("Waiting for config to report initialized")
 		case config.StateConfigInitialized:
 			if lastConfigState != config.StateConfigUninitialized {
 				log.Info("Configuration change: updating data access interface")
@@ -205,7 +205,7 @@ func updateDALStateTryEmit(ch chan State, newState State) {
 func watchBadDALListenerEvents() {
 	badListenerEvents = make(chan chan State)
 
-	log.Tracef("Cleaning up closed channel")
+	log.Trace("Cleaning up closed channel")
 
 	for chbad := range badListenerEvents {
 		newChs := make([]chan State, 0)

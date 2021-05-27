@@ -97,9 +97,8 @@ func installAdapters() error {
 		return fmt.Errorf("no adapters configured")
 	}
 
-	log.Info("Installing adapter(s)")
-
 	for _, sp := range adapters {
+		log.WithField("adapter.name", sp.Name).Info("Installing adapter")
 		adapter.AddAdapter(slack.NewAdapter(sp))
 	}
 
@@ -151,7 +150,7 @@ func startGort() error {
 
 		// An adapter is reporting an error.
 		case aerr := <-adapterErrorsFrom:
-			log.Errorf("[start] %s", aerr.Error())
+			log.WithError(aerr).Error("Error reported by adapter")
 		}
 	}
 }
@@ -164,12 +163,12 @@ func catchSignals() {
 	signal.Notify(c, os.Interrupt)
 
 	// Block until we receive our signal.
-	<-c
+	sig := <-c
 
 	// Optionally, you could run srv.Shutdown in a goroutine and block on
 	// <-ctx.Done() if your application should wait for other services
 	// to finalize based on meta cancellation.
-	log.Infof("[catchSignals] Shutting down Gort")
+	log.WithField("signal", sig.String()).Info("Gracefully shutting down Gort")
 
 	os.Exit(0)
 }
@@ -181,8 +180,14 @@ func startServer(addr string) {
 	// Start watching the
 	go func() {
 		logs := server.Requests()
-		for logevent := range logs {
-			log.Info(logevent)
+		for event := range logs {
+			log.WithTime(event.Timestamp).
+				WithField("addr", event.Addr).
+				WithField("request", event.Request).
+				WithField("size", event.Size).
+				WithField("status", event.Status).
+				WithField("user", event.UserID).
+				Info("REST service event")
 		}
 	}()
 
@@ -190,7 +195,7 @@ func startServer(addr string) {
 	go func() {
 		err := server.ListenAndServe()
 		if err != nil {
-			log.Errorf("[main] %s", err.Error())
+			log.WithError(err).Fatal("Fatal service error")
 		}
 	}()
 }

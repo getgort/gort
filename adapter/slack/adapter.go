@@ -327,7 +327,8 @@ func (s *SlackAdapter) OnMessage(event *slack.MessageEvent, info *adapter.Info) 
 		// Note here for later; ignore for now.
 		return nil
 	default:
-		log.Warnf("[SlackAdapter.OnMessage] Received unknown submessage type (%s)", event.Msg.SubType)
+		log.WithField("subtype", event.Msg.SubType).
+			Warn("Received message subtype")
 		return nil
 	}
 }

@@ -125,10 +125,13 @@ func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
 	}
 
 	if len(entries) > 1 {
-		log.Warnf("Multiple commands found: %s:%s vs %s:%s",
-			entries[0].Bundle.Name, entries[0].Command.Name,
-			entries[1].Bundle.Name, entries[1].Command.Name,
-		)
+		log.
+			WithField("requested", tokens[0]).
+			WithField("bundle0", entries[0].Bundle.Name).
+			WithField("command0", entries[0].Command.Name).
+			WithField("bundle1", entries[1].Bundle.Name).
+			WithField("command1", entries[1].Command.Name).
+			Warn("Multiple commands found")
 
 		return data.CommandEntry{}, ErrMultipleCommands
 	}
@@ -139,12 +142,9 @@ func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
 // OnConnected handles ConnectedEvent events.
 func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 	le := adapterLogEvent(event, nil)
-	le.Infof(
-		"Connection established to %s provider %s. I am @%s!",
-		event.Info.Provider.Type,
-		event.Info.Provider.Name,
-		event.Info.User.Name,
-	)
+
+	le.WithField("app.name", event.Info.User.Name).
+		Info("Connection established to provider")
 
 	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
 	if err != nil {
@@ -191,10 +191,10 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 	// Remove the "trigger character" (!)
 	rawCommandText = rawCommandText[1:]
 
-	le := adapterLogEvent(event, userinfo)
-	le.WithField("command", rawCommandText)
-	le.WithField("channel", channelinfo.Name)
-	le.Debug("got message")
+	adapterLogEvent(event, userinfo).
+		WithField("command", rawCommandText).
+		WithField("channel.name", channelinfo.Name).
+		Debug("Got message")
 
 	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
@@ -212,10 +212,10 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 		rawCommandText = rawCommandText[1:]
 	}
 
-	le := adapterLogEvent(event, userinfo)
-	le.WithField("command", rawCommandText)
-	le.WithField("channel.id", data.ChannelID)
-	le.Debug("got direct message")
+	adapterLogEvent(event, userinfo).
+		WithField("command", rawCommandText).
+		WithField("channel.id", data.ChannelID).
+		Debug("Got direct message")
 
 	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
@@ -244,14 +244,20 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
 	le := log.WithField("adapter", adapter.GetName()).
 		WithField("command", rawCommand).
-		WithField("channel", channelID).
-		WithField("user", userID)
+		WithField("channel.id", channelID).
+		WithField("user.id", userID)
 
 	params := TokenizeParameters(rawCommand)
 
 	info, err := adapter.GetUserInfo(userID)
 	if err != nil {
 		return nil, err
+	}
+
+	if info != nil {
+		le = le.WithField("user.displayname", info.DisplayName).
+			WithField("user.email", info.Email).
+			WithField("user.realname", info.RealName)
 	}
 
 	command, err := GetCommandEntry(params)
@@ -298,17 +304,20 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
-		le.WithError(err)
-		le.Error()
+		le.WithError(err).Error()
 
 		return nil, err
-	} else if autocreated {
+	}
+
+	le = le.WithField("user.gort", user.Username)
+
+	if autocreated {
 		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
 			"owner of a shiny new Gort account named `%s`!",
 			user.Username)
 		adapter.SendMessage(info.ID, message)
 
-		le.Info("autocreating user")
+		le.Info("Autocreating user")
 	}
 
 	request := data.CommandRequest{
@@ -319,8 +328,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		UserID:       userID,
 	}
 
-	le = le.WithField("bundle.name", command.Bundle.Name).
-		WithField("bundle.version", command.Bundle.Version).
+	le = le.WithField("bundle.version", command.Bundle.Version).
 		WithField("executable.executable", command.Command.Executable).
 		WithField("executable.name", command.Command.Name)
 	le.Info("Triggering command")
@@ -395,7 +403,9 @@ func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 		Username: info.Name,
 	}
 
-	log.Infof("[findOrMakeGortUser] User auto-created: %s (%s)", user.Username, user.Email)
+	log.WithField("user.username", user.Username).
+		WithField("user.email", user.Email).
+		Info("User auto-created")
 
 	return user, true, da.UserCreate(user)
 }
@@ -472,7 +482,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			adapterErrors <- ev
 
 		default:
-			log.Fatalf("[startProviderEventListening] Unknown data type: %T", ev)
+			log.WithField("type", fmt.Sprintf("%T", ev)).Fatal("Unknown event type")
 		}
 	}
 }
