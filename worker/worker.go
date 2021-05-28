@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/clockworksoul/gort/config"
-	gcontainer "github.com/clockworksoul/gort/container"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
@@ -129,7 +128,7 @@ func (w *Worker) Start() (<-chan string, error) {
 	}()
 
 	// Build the channel that will stream back the container logs
-	logs, err := gcontainer.BuildContainerLogChannel(ctx, cli, resp.ID)
+	logs, err := BuildContainerLogChannel(ctx, cli, resp.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +197,7 @@ func (w *Worker) pullImage(force bool) error {
 
 		log.WithField("image", imageName).
 			WithField("duration", time.Since(startTime)).
-			Debugf("Container image pulled", imageName, time.Since(startTime))
+			Debugf("Container image pulled")
 	}
 
 	return nil
