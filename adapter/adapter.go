@@ -370,12 +370,6 @@ func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 		return user, false, nil
 	}
 
-	// Now we know it doesn't exist. If self-registration is off, exit with
-	// an error.
-	if !config.GetGortServerConfigs().AllowSelfRegistration {
-		return user, false, ErrSelfRegistrationOff
-	}
-
 	// We can create the user... unless the instance hasn't been bootstrapped.
 	bootstrapped, err := da.UserExists("admin")
 	if err != nil {
@@ -383,6 +377,12 @@ func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 	}
 	if !bootstrapped {
 		return rest.User{}, false, ErrGortNotBootstrapped
+	}
+
+	// Now we know it doesn't exist. If self-registration is off, exit with
+	// an error.
+	if !config.GetGortServerConfigs().AllowSelfRegistration {
+		return user, false, ErrSelfRegistrationOff
 	}
 
 	// Generate a random password for the auto-created user.

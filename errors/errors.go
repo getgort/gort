@@ -25,6 +25,10 @@ func Wrap(newErr error, nestedErr error) error {
 // If either is a NestedError, only the top-level message is checked.
 func Is(err1 error, err2 error) bool {
 	errStr := func(err error) string {
+		if err == nil {
+			return "nil"
+		}
+
 		switch v := err.(type) {
 		case NestedError:
 			return v.Message

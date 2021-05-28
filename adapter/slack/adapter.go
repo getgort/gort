@@ -179,7 +179,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 					WithField("info.team.domain", ev.Info.Team.Domain).
 					WithField("info.user.id", ev.Info.User.ID).
 					WithField("info.user.name", ev.Info.User.Name).
-					Info("Slack event: connected")
+					Trace("Slack event: connected")
 
 				events <- s.OnConnected(ev, info)
 
@@ -194,12 +194,12 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 			case *slack.DisconnectedEvent:
 				e.WithError(ev.Cause).
 					WithField("intentional", ev.Intentional).
-					Error("Slack event: disconnected")
+					Debug("Slack event: disconnected")
 
 				events <- s.OnDisconnected(ev, info)
 
 			case *slack.InvalidAuthEvent:
-				e.Fatal("Slack event: invalid auth")
+				e.Debug("Slack event: invalid auth")
 
 				events <- s.OnInvalidAuth(ev, info)
 
@@ -228,7 +228,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				e.WithError(ev).
 					WithField("code", ev.Code).
 					WithField("msg", ev.Msg).
-					Error("Slack event: RTM error")
+					Debug("Slack event: RTM error")
 
 				events <- s.OnRTMError(ev, info)
 
@@ -240,11 +240,11 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 			case *slack.ConnectingEvent:
 				e.WithField("attempt", ev.Attempt).
 					WithField("connection.count", ev.ConnectionCount).
-					Info("Slack event: connecting")
+					Debug("Slack event: connecting")
 
 			case *slack.IncomingEventError:
 				e.WithError(ev).
-					Error("Slack event: error receiving incoming event")
+					Debug("Slack event: error receiving incoming event")
 
 			case *slack.OutgoingErrorEvent:
 				e.WithError(ev.ErrorObj).
@@ -267,7 +267,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				// Report and ignore other events..
 				e.WithField("message.data", msg.Data).
 					WithField("type", fmt.Sprintf("%T", ev)).
-					Info("Slack event: unhandled event type")
+					Debug("Slack event: unhandled event type")
 			}
 		}
 
