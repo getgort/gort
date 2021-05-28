@@ -29,6 +29,7 @@ func TestScrubMarkdown(t *testing.T) {
 		"<mailto:matthew.titmus@gmail.com|matthew.titmus@gmail.com>": "matthew.titmus@gmail.com",
 		"curl -I <http://very-serio.us>":                             "curl -I http://very-serio.us",
 		"curl -I <http://very-serio.us|very-serio.us>":               "curl -I very-serio.us",
+		"curl -I <https://very-serio.us|https://very-serio.us>":      "curl -I https://very-serio.us",
 	}
 
 	for test, expected := range tests {

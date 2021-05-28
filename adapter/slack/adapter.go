@@ -29,8 +29,8 @@ import (
 )
 
 var (
-	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*:[^:|]*)\>`)
-	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*:[^:|]*\|([^:|]*)\>`)
+	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*:[^|]*)\>`)
+	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*:[^|]*\|([^|]*)\>`)
 )
 
 // SlackAdapter is the Slack provider implementation of a relay, which knows how
