@@ -1,6 +1,6 @@
 # Gort
 
-**This project is a work in progress under active heavy development. Follow for updates!**
+**This project is a work in progress under active heavy development. It is not production (or even alpha) ready! Follow for updates!**
 
 Gort is a chatbot framework designed from the ground up for chatops.
 
