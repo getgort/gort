@@ -38,7 +38,7 @@ test_begin:
 	@docker stop foo_postgres | true
 	@docker rm foo_postgres | true
 	@docker run -d -e POSTGRES_USER=gort -e POSTGRES_PASSWORD=password -p 5432:5432 --name foo_postgres postgres:13
-	
+
 test: test_begin
 	@docker build --target test -t foo_$(PROJECT)_foo --network host .
 	@docker rmi foo_$(PROJECT)_foo

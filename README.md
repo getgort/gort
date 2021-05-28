@@ -29,7 +29,7 @@ The primary goal of this project is to reimplement the core features of Cog that
 
 This includes all of the [high-level features listed in the Cog documentation](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/introducing_cog.html#current-featuress).
 
-<!-- ## Non-Goals  
+<!-- ## Non-Goals
 
 While some effort will be made to support existing functionality (such as Cog bundles), perfect compatibility is explicitly not guaranteed (however, a migration guide should be written eventually). -->
 
@@ -55,6 +55,6 @@ Active heavy development. The date that various [milestones](https://docs.google
 
 ## How to run
 
-With Go installed, you can run (for testing) with: `go run . start`. 
+With Go installed, you can run (for testing) with: `go run . start`.
 
 Note that you'll need a proper API key in the config first!

@@ -19,6 +19,6 @@ services:
       - POSTGRES_PASSWORD=veryKleverPassw0rd
     networks:
       - gort
-      
+
 networks:
   gort:

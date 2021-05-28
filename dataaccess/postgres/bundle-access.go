@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 The Gort Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package postgres
 
 import (
@@ -469,9 +485,9 @@ func (da PostgresDataAccess) doBundleEnable(tx *sql.Tx, name string, version str
 
 // BundleExists TBD
 func (da PostgresDataAccess) doBundleEnabledVersion(tx *sql.Tx, name string) (string, error) {
-	query := `SELECT 
+	query := `SELECT
 		COALESCE(
-		(SELECT bundle_version FROM bundle_enabled WHERE bundle_name=$1), 
+		(SELECT bundle_version FROM bundle_enabled WHERE bundle_name=$1),
 		''
 		) AS bundle_version;`
 
@@ -500,7 +516,7 @@ func (da PostgresDataAccess) doBundleExists(tx *sql.Tx, name string, version str
 
 func (da PostgresDataAccess) doBundleGet(tx *sql.Tx, name string, version string) (data.Bundle, error) {
 	query := `SELECT gort_bundle_version, name, version, author, homepage,
-			description, long_description, docker_image, docker_tag, 
+			description, long_description, docker_image, docker_tag,
 			install_timestamp, install_user
 		FROM bundles
 		WHERE name=$1 AND version=$2`
@@ -601,7 +617,7 @@ func (da PostgresDataAccess) doBundleGet(tx *sql.Tx, name string, version string
 }
 
 func (da PostgresDataAccess) doBundleInsert(tx *sql.Tx, bundle data.Bundle) error {
-	query := `INSERT INTO bundles (gort_bundle_version, name, version, author, 
+	query := `INSERT INTO bundles (gort_bundle_version, name, version, author,
 		homepage, description, long_description, docker_image,
 		docker_tag, install_user)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`
