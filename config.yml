@@ -18,6 +18,10 @@ gort:
   # Defaults to localhost
   api_url_base: localhost
 
+  # Enables development mode. Currently this only affects log output format.
+  # Defaults to false
+  development_mode: false
+
   # If true, allows Gort to respond to commands prefixed with ! instead of only
   # via direct mentions. Defaults to true.
   enable_spoken_commands: true

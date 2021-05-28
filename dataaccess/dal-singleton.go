@@ -175,7 +175,7 @@ func monitorConfig() {
 			log.Info("Waiting for config to report initialized")
 		case config.StateConfigInitialized:
 			if lastConfigState != config.StateConfigUninitialized {
-				log.Info("Configuration change: updating data access interface")
+				log.Info("Configuration change detected: updating data access interface")
 			}
 
 			initializeDataAccess()

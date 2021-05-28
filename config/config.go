@@ -231,12 +231,31 @@ func reloadConfiguration() error {
 		config = cp
 		lastReloadWorked = true
 
+		setLogFormatter()
+
 		updateConfigState(StateConfigInitialized)
 
 		log.WithField("file", configFile).Info("Loaded configuration file")
 	}
 
 	return nil
+}
+
+func setLogFormatter() {
+	dev := GetGortServerConfigs().DevelopmentMode
+
+	if dev {
+		log.SetFormatter(
+			&log.TextFormatter{
+				ForceColors:  true,
+				PadLevelText: true,
+			},
+		)
+	} else {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	log.WithField("development", dev).Debug("Log formatter defined")
 }
 
 // slicesAreEqual compares two hashcode []bytes and returns true if they're

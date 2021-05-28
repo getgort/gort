@@ -87,14 +87,7 @@ func initializeConfig(configfile string) error {
 	return nil
 }
 
-func initializeLogger(verbose int) {
-	log.SetFormatter(
-		&log.TextFormatter{
-			ForceColors:  true,
-			PadLevelText: true,
-		},
-	)
-
+func setLoggerVerbosity(verbose int) {
 	switch verbose {
 	case 0:
 		log.SetLevel(log.InfoLevel)
@@ -122,15 +115,15 @@ func installAdapters() error {
 }
 
 func startGort() error {
-	initializeLogger(verboseCount)
-
-	log.WithField("version", version.Version).Infof("Starting Gort")
+	setLoggerVerbosity(verboseCount)
 
 	// Load the Gort configuration.
 	err := initializeConfig(configfile)
 	if err != nil {
 		return err
 	}
+
+	log.WithField("version", version.Version).Infof("Starting Gort")
 
 	err = installAdapters()
 	if err != nil {

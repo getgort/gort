@@ -31,6 +31,7 @@ type GortServerConfigs struct {
 	AllowSelfRegistration bool   `yaml:"allow_self_registration,omitempty"`
 	APIAddress            string `yaml:"api_address,omitempty"`
 	APIURLBase            string `yaml:"api_url_base,omitempty"`
+	DevelopmentMode       bool   `yaml:"development_mode,omitempty"`
 	EnableSpokenCommands  bool   `yaml:"enable_spoken_commands,omitempty"`
 }
 
