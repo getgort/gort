@@ -6,7 +6,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 ## Milestone 4 (Command Bundles)
 
-- The **Gort Guide** initial draft (started: https://docs.google.com/document/d/1GetZrlyBLpzYKpPvI7ffZlBgwt_bBuqodQhToaYnY_4/edit?usp=sharing)
+- The **Gort Guide** : initial draft [started here](https://docs.google.com/document/d/1GetZrlyBLpzYKpPvI7ffZlBgwt_bBuqodQhToaYnY_4/edit?usp=sharing)
 - Document how command bundles are _supposed_ to work.
 - Ensure command bundle behavior is consistent with documentation.
 
@@ -34,9 +34,9 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 ## Milestone 7 (API-level authorization)
 
 - Document permissions model and how auth is expected to work.
-- Command invocations can be associated with a user.
 - User and group permission assignment
 - Bundle/command permission assignment
+- Command invocations can be associated with a user; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html).
 - Audit log for all API actions (user, timestamp, action taken, method (Slack, API, etc.))
 
 ***(Publically release v0.7.0-alpha.0 at this point)***
