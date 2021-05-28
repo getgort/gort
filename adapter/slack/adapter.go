@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*://[^:|]*)\>`)
-	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*://[^:|]*\|([^:|]*)\>`)
+	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*:[^:|]*)\>`)
+	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*:[^:|]*\|([^:|]*)\>`)
 )
 
 // SlackAdapter is the Slack provider implementation of a relay, which knows how
@@ -262,6 +262,11 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 			case *slack.UnmarshallingErrorEvent:
 				e.WithError(ev.ErrorObj).
 					Error("Slack event: failed to deconstruct Slack response")
+
+			case *slack.UserTypingEvent:
+				e.WithField("user", ev.User).
+					WithField("channel", ev.Channel).
+					Trace("Slack event: user is typing")
 
 			default:
 				// Report and ignore other events..
