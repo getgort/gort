@@ -21,10 +21,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/clockworksoul/gort/dataaccess/errs"
+	"github.com/getgort/gort/dataaccess/errs"
 
-	"github.com/clockworksoul/gort/data"
-	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data"
+	gorterr "github.com/getgort/gort/errors"
 	"github.com/gorilla/mux"
 )
 

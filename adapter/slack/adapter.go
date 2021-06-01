@@ -22,8 +22,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/clockworksoul/gort/adapter"
-	"github.com/clockworksoul/gort/data"
+	"github.com/getgort/gort/adapter"
+	"github.com/getgort/gort/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 )

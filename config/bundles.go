@@ -20,7 +20,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/clockworksoul/gort/data"
+	"github.com/getgort/gort/data"
 )
 
 var (

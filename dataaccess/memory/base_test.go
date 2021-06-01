@@ -19,7 +19,7 @@ package memory
 import (
 	"testing"
 
-	gorterr "github.com/clockworksoul/gort/errors"
+	gorterr "github.com/getgort/gort/errors"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -17,7 +17,7 @@
 package slack
 
 import (
-	"github.com/clockworksoul/gort/adapter"
+	"github.com/getgort/gort/adapter"
 	"github.com/slack-go/slack"
 )
 

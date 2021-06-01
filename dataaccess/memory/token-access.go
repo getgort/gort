@@ -19,9 +19,9 @@ package memory
 import (
 	"time"
 
-	"github.com/clockworksoul/gort/data"
-	"github.com/clockworksoul/gort/data/rest"
-	"github.com/clockworksoul/gort/dataaccess/errs"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess/errs"
 )
 
 var (

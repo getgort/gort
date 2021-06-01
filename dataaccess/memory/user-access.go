@@ -17,8 +17,8 @@
 package memory
 
 import (
-	"github.com/clockworksoul/gort/data/rest"
-	"github.com/clockworksoul/gort/dataaccess/errs"
+	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess/errs"
 )
 
 // UserAuthenticate authenticates a username/password combination.

@@ -17,9 +17,9 @@
 package postgres
 
 import (
-	"github.com/clockworksoul/gort/data/rest"
-	"github.com/clockworksoul/gort/dataaccess/errs"
-	gerr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess/errs"
+	gerr "github.com/getgort/gort/errors"
 )
 
 // GroupAddUser adds a user to a group

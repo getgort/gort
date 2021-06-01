@@ -24,8 +24,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/clockworksoul/gort/data"
-	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data"
+	gorterr "github.com/getgort/gort/errors"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
 )

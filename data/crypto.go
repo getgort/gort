@@ -21,7 +21,7 @@ import (
 	"encoding/base64"
 	"errors"
 
-	gorterr "github.com/clockworksoul/gort/errors"
+	gorterr "github.com/getgort/gort/errors"
 	"golang.org/x/crypto/bcrypt"
 )
 

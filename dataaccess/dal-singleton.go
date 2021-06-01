@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/clockworksoul/gort/config"
-	"github.com/clockworksoul/gort/dataaccess/postgres"
+	"github.com/getgort/gort/config"
+	"github.com/getgort/gort/dataaccess/postgres"
 
 	log "github.com/sirupsen/logrus"
 )

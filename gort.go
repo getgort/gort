@@ -22,12 +22,12 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/clockworksoul/gort/adapter"
-	"github.com/clockworksoul/gort/adapter/slack"
-	"github.com/clockworksoul/gort/config"
-	"github.com/clockworksoul/gort/relay"
-	"github.com/clockworksoul/gort/service"
-	"github.com/clockworksoul/gort/version"
+	"github.com/getgort/gort/adapter"
+	"github.com/getgort/gort/adapter/slack"
+	"github.com/getgort/gort/config"
+	"github.com/getgort/gort/relay"
+	"github.com/getgort/gort/service"
+	"github.com/getgort/gort/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

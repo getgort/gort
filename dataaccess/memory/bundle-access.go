@@ -19,8 +19,8 @@ package memory
 import (
 	"fmt"
 
-	"github.com/clockworksoul/gort/data"
-	"github.com/clockworksoul/gort/dataaccess/errs"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess/errs"
 )
 
 // BundleCreate TBD

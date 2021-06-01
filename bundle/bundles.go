@@ -19,8 +19,8 @@ package bundle
 import (
 	"io/ioutil"
 
-	"github.com/clockworksoul/gort/data"
-	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data"
+	gorterr "github.com/getgort/gort/errors"
 	yaml "gopkg.in/yaml.v3"
 )
 

@@ -17,8 +17,8 @@
 package memory
 
 import (
-	"github.com/clockworksoul/gort/data"
-	"github.com/clockworksoul/gort/data/rest"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
 )
 
 // InMemoryDataAccess is an entirely in-memory representation of a data access layer.

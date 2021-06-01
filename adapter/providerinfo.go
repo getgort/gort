@@ -19,7 +19,7 @@ package adapter
 import (
 	"fmt"
 
-	"github.com/clockworksoul/gort/data"
+	"github.com/getgort/gort/data"
 	log "github.com/sirupsen/logrus"
 )
 

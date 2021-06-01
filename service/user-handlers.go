@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/clockworksoul/gort/data/rest"
+	"github.com/getgort/gort/data/rest"
 	"github.com/gorilla/mux"
 )
 

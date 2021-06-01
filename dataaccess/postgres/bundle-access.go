@@ -20,9 +20,9 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/clockworksoul/gort/data"
-	"github.com/clockworksoul/gort/dataaccess/errs"
-	gerr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess/errs"
+	gerr "github.com/getgort/gort/errors"
 )
 
 // BundleCreate TBD

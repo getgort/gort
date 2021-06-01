@@ -21,13 +21,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/clockworksoul/gort/config"
-	"github.com/clockworksoul/gort/data"
-	"github.com/clockworksoul/gort/data/rest"
-	"github.com/clockworksoul/gort/dataaccess"
-	"github.com/clockworksoul/gort/dataaccess/errs"
-	gorterr "github.com/clockworksoul/gort/errors"
-	"github.com/clockworksoul/gort/version"
+	"github.com/getgort/gort/config"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/dataaccess/errs"
+	gorterr "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/version"
 	log "github.com/sirupsen/logrus"
 )
 

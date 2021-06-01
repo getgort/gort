@@ -28,8 +28,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/clockworksoul/gort/data/rest"
-	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data/rest"
+	gorterr "github.com/getgort/gort/errors"
 	homedir "github.com/mitchellh/go-homedir"
 )
 

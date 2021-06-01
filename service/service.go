@@ -23,11 +23,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clockworksoul/gort/data"
-	"github.com/clockworksoul/gort/data/rest"
-	"github.com/clockworksoul/gort/dataaccess"
-	"github.com/clockworksoul/gort/dataaccess/errs"
-	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/dataaccess/errs"
+	gorterr "github.com/getgort/gort/errors"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )

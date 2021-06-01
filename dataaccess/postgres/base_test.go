@@ -23,12 +23,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clockworksoul/gort/data"
-	gerr "github.com/clockworksoul/gort/errors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/getgort/gort/data"
+	gerr "github.com/getgort/gort/errors"
 	"github.com/stretchr/testify/assert"
 )
 

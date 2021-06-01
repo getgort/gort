@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/clockworksoul/gort/data/rest"
+	"github.com/getgort/gort/data/rest"
 )
 
 // UserDelete comments to be written...

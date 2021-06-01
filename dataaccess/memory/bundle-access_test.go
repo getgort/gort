@@ -19,9 +19,9 @@ package memory
 import (
 	"testing"
 
-	"github.com/clockworksoul/gort/bundle"
-	"github.com/clockworksoul/gort/data"
-	"github.com/clockworksoul/gort/dataaccess/errs"
+	"github.com/getgort/gort/bundle"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/stretchr/testify/assert"
 )
 

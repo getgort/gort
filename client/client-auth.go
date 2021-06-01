@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/clockworksoul/gort/data/rest"
-	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data/rest"
+	gorterr "github.com/getgort/gort/errors"
 )
 
 // Authenticate requests a new authentication token from the Gort service.

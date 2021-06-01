@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/clockworksoul/gort/data/rest"
-	gorterr "github.com/clockworksoul/gort/errors"
+	"github.com/getgort/gort/data/rest"
+	gorterr "github.com/getgort/gort/errors"
 	"github.com/gorilla/mux"
 )
 

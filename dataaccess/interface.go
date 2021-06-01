@@ -19,8 +19,8 @@ package dataaccess
 import (
 	"time"
 
-	"github.com/clockworksoul/gort/data"
-	"github.com/clockworksoul/gort/data/rest"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
 )
 
 // DataAccess represents a common DataAccessObject, backed either by a

@@ -19,8 +19,8 @@ package memory
 import (
 	"testing"
 
-	"github.com/clockworksoul/gort/data/rest"
-	"github.com/clockworksoul/gort/dataaccess/errs"
+	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/stretchr/testify/assert"
 )
 

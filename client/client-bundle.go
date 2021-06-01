@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/clockworksoul/gort/data"
+	"github.com/getgort/gort/data"
 )
 
 // BundleDisable comments to be written...
