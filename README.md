@@ -10,15 +10,15 @@ Gort brings the power of the command line to the place you collaborate with your
 
 Gort was initially conceived of as a Go re-implementation of Operable's [Cog Slack Bot](https://github.com/operable/cog), and while it remains heavily inspired by Cog, Gort has largely gone its own way.
 
-Cog was originally designed as a distributed computation engine that was later rebranded as a chatops tool, and much of this original intent was reflected in its design, implementation, and featureset. As a result, many of Cog’s features, however innovative, went largely unused, and the codebase had become difficult to extend and maintain. These difficulties were compounded by its implementation language -- Elixir -- which has relatively few proficient developers.
+Cog was originally designed as a distributed computation engine that was later re-branded as a chatops tool, and much of this original intent was reflected in its design, implementation, and feature set. As a result, many of Cog’s features, however innovative, went largely unused, and the codebase had become difficult to extend and maintain. These difficulties were compounded by its implementation language -- Elixir -- which has relatively few proficient developers.
 
 The solution, which was discussed for many months on the [Cog Slack workspace](https://cogbot.slack.com), was to rewrite Cog from scratch in a more accessible language, such as [Go](http://golang.org), removing some of less-used functionality and reducing complexity in the process.
 
-This gives us the opportunity to consider and possibly redefine what Cog was meant to be. To choose the features that make sense, and to discard those that don't. In this way, Gort can be described more as a “spiritual successor” to Cog than a faithful reimplementation: many things will change, others will cease to exist entirely.
+This gives us the opportunity to consider and possibly redefine what Cog was meant to be. To choose the features that make sense, and to discard those that don't. In this way, Gort can be described more as a “spiritual successor” to Cog than a faithful re-implementation: many things will change, others will cease to exist entirely.
 
 ## Features
 
-The primary goal of this project is to reimplement the core features of Cog that made it stand out among other chatops tools. Specifically, to:
+The primary goal of this project is to re-implement the core features of Cog that made it stand out among other chatops tools. Specifically, to:
 
 * define arbitrary command functionality in any programming language,
 * package those commands into bundles that can be installed in Gort,

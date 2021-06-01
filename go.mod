@@ -1,4 +1,4 @@
-module github.com/clockworksoul/gort
+module github.com/getgort/gort
 
 go 1.16
 

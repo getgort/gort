@@ -71,7 +71,7 @@ slack:
   api_token: xoxb-210987654321-123456789012-nyWJ3U4JoWuUtaUkRPKn0dJR
 
   # The chat icon for the bot. If not defined defaults to the configured bot default.
-  icon_url: https://emoji.slack-edge.com/T025151EM/dragongopher/cdc9b1bd1a7752eb.png
+  icon_url: https://emoji.slack-edge.com/T023V8ZFQEQ/gort/78a0c1607eeb1f29.png
 
   # The name of the bot, as it appears in Slack. Defaults to the name used
   # when the bot was added to the account.
