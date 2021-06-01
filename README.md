@@ -58,3 +58,7 @@ Active heavy development. The date that various [milestones](https://docs.google
 With Go installed, you can run (for testing) with: `go run . start`.
 
 Note that you'll need a proper API key in the config first!
+
+## Gortctl
+
+The `gortctl` administration CLI can be found [in its own repository](https://github.com/clockworksoul/gortctl).
