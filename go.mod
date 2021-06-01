@@ -3,7 +3,8 @@ module github.com/getgort/gort
 go 1.16
 
 require (
-	github.com/containerd/containerd v1.5.1 // indirect
+	github.com/Microsoft/go-winio v0.5.0 // indirect
+	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/docker/docker v20.10.6+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gorilla/mux v1.8.0
@@ -14,8 +15,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/slack-go/slack v0.9.1
 	github.com/spf13/cobra v1.1.3
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
