@@ -6,7 +6,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 ## Milestone 4 (Command Bundles)
 
-- The **Gort Guide** : initial draft [started here](https://docs.google.com/document/d/1GetZrlyBLpzYKpPvI7ffZlBgwt_bBuqodQhToaYnY_4/edit?usp=sharing)
+- The **Gort Guide** : initial draft [started here](https://github.com/clockworksoul/gort-guide)
 - Document how command bundles are _supposed_ to work.
 - Ensure command bundle behavior is consistent with documentation.
 
