@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
@@ -131,7 +132,12 @@ func GetAdapter(name string) (Adapter, error) {
 // associated data.CommandEntry instances. If the number of matching
 // commands is > 1, an error is returned.
 func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
-	entries, err := config.FindCommandEntry(tokens[0])
+	bundle, command, err := bundles.SplitCommand(tokens[0])
+	if err != nil {
+		return data.CommandEntry{}, err
+	}
+
+	entries, err := config.CommandEntryFinder().FindCommandEntry(bundle, command)
 	if err != nil {
 		return data.CommandEntry{}, err
 	}

@@ -17,39 +17,20 @@
 package config
 
 import (
-	"errors"
-	"strings"
-
+	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/data"
 )
 
-var (
-	// ErrInvalidBundleCommandPair is returned by FindCommandEntry when the
-	// command entry string doesn't look like  "command" or "bundle:command".
-	ErrInvalidBundleCommandPair = errors.New("invalid bundle:comand pair")
-)
+// ConfigCommandEntryFinder just has a FindCommandEntry() function so that
+// config can provide functionality that's compliant with the
+// bundles.CommandEntryFinder interface.
+type ConfigCommandEntryFinder struct{}
 
 // FindCommandEntry looks for a command in the configuration. It assumes that
 // command character(s) have already been removed, and expects a string in the
 // format "bundle:command" or "command"; the latter can return multiple values
-// if a similarly-named command is found in multiple bundles
-func FindCommandEntry(name string) ([]data.CommandEntry, error) {
-	var bundleName string
-	var commandName string
-
-	split := strings.Split(name, ":")
-
-	switch len(split) {
-	case 1:
-		bundleName = "*"
-		commandName = split[0]
-	case 2:
-		bundleName = split[0]
-		commandName = split[1]
-	default:
-		return nil, ErrInvalidBundleCommandPair
-	}
-
+// if a similarly-named command is found in multiple bundles.
+func (c ConfigCommandEntryFinder) FindCommandEntry(bundleName, commandName string) ([]data.CommandEntry, error) {
 	entries := make([]data.CommandEntry, 0)
 
 	for _, bundle := range GetBundleConfigs() {
@@ -70,4 +51,11 @@ func FindCommandEntry(name string) ([]data.CommandEntry, error) {
 	}
 
 	return entries, nil
+}
+
+// CommandEntryFinder returns a bundles.CommandEntryFinder implementation that
+// allows interrogation of the bundles described in the config in a way that's
+// compliant with the bundles.CommandEntryFinder interface.
+func CommandEntryFinder() bundles.CommandEntryFinder {
+	return ConfigCommandEntryFinder{}
 }

@@ -14,14 +14,22 @@
  * limitations under the License.
  */
 
-package bundle
+package bundles
 
 import (
+	"errors"
 	"io/ioutil"
+	"strings"
 
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
 	yaml "gopkg.in/yaml.v3"
+)
+
+var (
+	// ErrInvalidBundleCommandPair is returned by FindCommandEntry when the
+	// command entry string doesn't look like  "command" or "bundle:command".
+	ErrInvalidBundleCommandPair = errors.New("invalid bundle:comand pair")
 )
 
 // LoadBundle is called by ...
@@ -45,4 +53,24 @@ func LoadBundle(file string) (data.Bundle, error) {
 	}
 
 	return bun, nil
+}
+
+// SplitCommand accepts a string in the style of "bundle:command" or "command"
+// and returns the bundle and command as a pair of strings. If there's no
+// indicated bundle, the bundle string (the first string) will be empty. If
+// there's more than one colon, an error will be returned.
+func SplitCommand(name string) (bundle, command string, err error) {
+	split := strings.Split(name, ":")
+
+	switch len(split) {
+	case 1:
+		command = split[0]
+	case 2:
+		bundle = split[0]
+		command = split[1]
+	default:
+		err = ErrInvalidBundleCommandPair
+	}
+
+	return
 }

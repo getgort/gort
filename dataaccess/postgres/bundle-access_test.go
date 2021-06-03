@@ -19,7 +19,7 @@ package postgres
 import (
 	"testing"
 
-	"github.com/getgort/gort/bundle"
+	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/stretchr/testify/assert"
@@ -261,5 +261,5 @@ func testBundleListVersions(t *testing.T) {
 }
 
 func getTestBundle() (data.Bundle, error) {
-	return bundle.LoadBundle("../../testing/test-bundle.yml")
+	return bundles.LoadBundle("../../testing/test-bundle.yml")
 }

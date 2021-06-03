@@ -18,6 +18,7 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/getgort/gort/data"
@@ -414,6 +415,10 @@ func (da PostgresDataAccess) BundleUpdate(bundle data.Bundle) error {
 	}
 
 	return nil
+}
+
+func (da PostgresDataAccess) FindCommandEntry(bundle, command string) ([]data.CommandEntry, error) {
+	return nil, errors.New("not implemented")
 }
 
 func (da PostgresDataAccess) doBundleDelete(tx *sql.Tx, name string, version string) error {

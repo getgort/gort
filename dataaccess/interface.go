@@ -19,6 +19,7 @@ package dataaccess
 import (
 	"time"
 
+	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 )
@@ -26,6 +27,8 @@ import (
 // DataAccess represents a common DataAccessObject, backed either by a
 // database or an in-memory datastore.
 type DataAccess interface {
+	bundles.CommandEntryFinder
+
 	Initialize() error
 
 	BundleCreate(bundle data.Bundle) error

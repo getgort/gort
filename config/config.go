@@ -32,7 +32,7 @@ import (
 
 const (
 	// StateConfigUninitialized is the default state of the config,
-	// before initializtion begins.
+	// before initialization begins.
 	StateConfigUninitialized State = iota
 
 	// StateConfigInitialized indicates the config is fully initialized.
@@ -138,7 +138,7 @@ func GetSlackProviders() []data.SlackProvider {
 
 // Initialize is called by main() to trigger creation of the config singleton.
 // It can be called multiple times, if you're into that kind of thing. If
-// succesful, this will emit a StateConfigInitialized to any update listeners.
+// successful, this will emit a StateConfigInitialized to any update listeners.
 func Initialize(file string) error {
 	configFile = file
 

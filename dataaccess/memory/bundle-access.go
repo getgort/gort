@@ -17,6 +17,7 @@
 package memory
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/getgort/gort/data"
@@ -219,6 +220,10 @@ func (da *InMemoryDataAccess) BundleUpdate(bundle data.Bundle) error {
 	da.bundles[bundleKey(bundle.Name, bundle.Version)] = &bundle
 
 	return nil
+}
+
+func (da *InMemoryDataAccess) FindCommandEntry(bundle, command string) ([]data.CommandEntry, error) {
+	return nil, errors.New("not implemented")
 }
 
 func bundleKey(name, version string) string {

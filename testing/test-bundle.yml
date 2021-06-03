@@ -1,18 +1,18 @@
 ---
 gort_bundle_version: 5
 
-name: testx
+name: test
 version: 0.0.1
 author: Matt Titmus <matthew.titmus@gmail.com>
-homepage: https://github.com/clockworksoul/gort
+homepage: https://getgort.github.io/gort-guide/
 description: A test bundle.
-long_description: >
+long_description: |-
   This is test bundle.
   There are many like it, but this one is mine.
 
 permissions:
-  - testx:echox
-  - testx:test
+  - test:echo
+  - test:test
 
 docker:
   image: ubuntu
@@ -23,4 +23,4 @@ commands:
     description: "Echos back anything sent to it, all at once."
     executable: "/bin/echo"
     rules:
-      - must have testx:echox
+      - must have test:echox
