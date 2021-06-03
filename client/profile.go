@@ -22,7 +22,7 @@ import (
 	"os"
 
 	"github.com/getgort/gort/data/rest"
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -86,18 +86,18 @@ func loadClientProfile() (Profile, error) {
 
 	// An actual error
 	if err != nil {
-		return profile, gorterr.Wrap(gorterr.ErrIO, err)
+		return profile, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	// The file exists!
 	bytes, err := ioutil.ReadFile(profileFile)
 	if err != nil {
-		return profile, gorterr.Wrap(gorterr.ErrIO, err)
+		return profile, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	err = yaml.Unmarshal(bytes, &profile)
 	if err != nil {
-		return profile, gorterr.Wrap(gorterr.ErrUnmarshal, err)
+		return profile, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
 	// Ensure that the URL field gets set.

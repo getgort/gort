@@ -26,7 +26,7 @@ import (
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/version"
 	log "github.com/sirupsen/logrus"
 )
@@ -50,7 +50,7 @@ var (
 	ErrChannelNotFound = errors.New("channel not found")
 
 	// ErrGortNotBootstrapped is returned by findOrMakeGortUser() if a user
-	// attempts to trigger a command but Gort hasn't yet been bopotstrapped.
+	// attempts to trigger a command but Gort hasn't yet been bootstrapped.
 	ErrGortNotBootstrapped = errors.New("gort hasn't been bootstrapped yet")
 
 	// ErrSelfRegistrationOff is returned by findOrMakeGortUser() if an unknown
@@ -184,12 +184,12 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
 	channelinfo, err := event.Adapter.GetChannelInfo(data.ChannelID)
 	if err != nil {
-		return nil, gorterr.Wrap(ErrChannelNotFound, err)
+		return nil, gerrs.Wrap(ErrChannelNotFound, err)
 	}
 
 	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
-		return nil, gorterr.Wrap(ErrUserNotFound, err)
+		return nil, gerrs.Wrap(ErrUserNotFound, err)
 	}
 
 	rawCommandText := data.Text
@@ -219,7 +219,7 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
 	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
-		return nil, gorterr.Wrap(ErrUserNotFound, err)
+		return nil, gerrs.Wrap(ErrUserNotFound, err)
 	}
 
 	rawCommandText := data.Text
@@ -274,7 +274,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	command, err := GetCommandEntry(params)
 	if err != nil {
 		switch {
-		case gorterr.Is(err, ErrNoSuchCommand):
+		case gerrs.Is(err, ErrNoSuchCommand):
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
 				"If this is not expected, you should contact a Gort administrator.",
 				params[0])
@@ -302,7 +302,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 	gortUser, autocreated, err := findOrMakeGortUser(info)
 	if err != nil {
 		switch {
-		case gorterr.Is(err, ErrSelfRegistrationOff):
+		case gerrs.Is(err, ErrSelfRegistrationOff):
 			msg := "I'm terribly sorry, but either I don't " +
 				"have a Gort account for you, or your Slack chat handle has " +
 				"not been registered. Currently, only registered users can " +
@@ -310,7 +310,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 				"administrator to fix this situation and to register your " +
 				"Slack handle."
 			adapter.SendErrorMessage(channelID, "No Such Account", msg)
-		case gorterr.Is(err, ErrGortNotBootstrapped):
+		case gerrs.Is(err, ErrGortNotBootstrapped):
 			msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
 				"use `gortctl` to properly bootstrap the Gort environment " +
 				"before proceeding."
@@ -375,7 +375,7 @@ func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 	// Try to figure out what user we're working with here.
 	exists := true
 	user, err := da.UserGetByEmail(info.Email)
-	if gorterr.Is(err, errs.ErrNoSuchUser) {
+	if gerrs.Is(err, errs.ErrNoSuchUser) {
 		exists = false
 	} else if err != nil {
 		return user, false, err
@@ -470,7 +470,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			OnConnected(event, ev)
 
 		case *AuthenticationErrorEvent:
-			adapterErrors <- gorterr.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
+			adapterErrors <- gerrs.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
 
 		case *ChannelMessageEvent:
 			request, err := OnChannelMessage(event, ev)

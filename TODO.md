@@ -12,10 +12,10 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 ## Milestone 5 (Focus on Security)
 
-- Encrypt Gort REST service communications
-  - Allow a TLS certificate to be installed by Gort service
-    - MUST loudly warn on startup if one is not being used
-  - Gortctl SHOULD warn when not using an encrypted connection
+- Encrypt Gort REST service communications.
+  - Allow a TLS certificate to be installed by Gort controller.
+    - MUST loudly warn on startup if one is not being used.
+  - Gortctl SHOULD warn when not using an encrypted connection.
 - Inject database password so we don't have to add it as plain text in the config.
   - Figure how we want to do it.
   - Actually DO it.

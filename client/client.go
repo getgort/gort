@@ -29,7 +29,7 @@ import (
 	"strings"
 
 	"github.com/getgort/gort/data/rest"
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 	homedir "github.com/mitchellh/go-homedir"
 )
 
@@ -40,8 +40,8 @@ var (
 	// ErrBadRequest indicates that a request could not be constructed.
 	ErrBadRequest = errors.New("request could not be constructed")
 
-	// ErrConnectionFailed is a failure for a client to connect to the Gort service.
-	ErrConnectionFailed = errors.New("failure to connect to the Gort service")
+	// ErrConnectionFailed is a failure for a client to connect to the Gort controller.
+	ErrConnectionFailed = errors.New("failure to connect to the Gort controller")
 
 	// ErrResourceExists is returned if a client tries to put a resource that
 	// already exists.
@@ -99,7 +99,7 @@ func Connect(profileName string) (*GortClient, error) {
 	// Load the profiles file
 	profile, err := loadClientProfile()
 	if err != nil {
-		return nil, gorterr.Wrap(ErrBadProfile, err)
+		return nil, gerrs.Wrap(ErrBadProfile, err)
 	}
 
 	// Find the desired profile entry
@@ -147,14 +147,14 @@ func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Re
 
 	req, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
-		return nil, gorterr.Wrap(ErrBadRequest, err)
+		return nil, gerrs.Wrap(ErrBadRequest, err)
 	}
 	req.Header.Add("X-Session-Token", token.Token)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, gorterr.Wrap(ErrConnectionFailed, err)
+		return nil, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 
 	return resp, err
@@ -165,7 +165,7 @@ func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Re
 func (c *GortClient) getGortTokenFilename() (string, error) {
 	gortDir, err := getGortTokenDir()
 	if err != nil {
-		return "", gorterr.Wrap(gorterr.ErrIO, err)
+		return "", gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	url := c.profile.URL
@@ -180,7 +180,7 @@ func (c *GortClient) getGortTokenFilename() (string, error) {
 func (c *GortClient) loadHostToken() (rest.Token, error) {
 	tokenFileName, err := c.getGortTokenFilename()
 	if err != nil {
-		return rest.Token{}, gorterr.Wrap(gorterr.ErrIO, err)
+		return rest.Token{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	// File doesn't exist. Not an error.
@@ -190,13 +190,13 @@ func (c *GortClient) loadHostToken() (rest.Token, error) {
 
 	bytes, err := ioutil.ReadFile(tokenFileName)
 	if err != nil {
-		return rest.Token{}, gorterr.Wrap(gorterr.ErrIO, err)
+		return rest.Token{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	token := rest.Token{}
 	err = json.Unmarshal(bytes, &token)
 	if err != nil {
-		return token, gorterr.Wrap(gorterr.ErrUnmarshal, err)
+		return token, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
 	return token, nil
@@ -277,7 +277,7 @@ func parseHostURL(serverURLArg string) (*url.URL, error) {
 	// Does the URL have a prefix? If not, assume 'http://'
 	matches, err := regexp.MatchString("^[a-z0-9]+://.*", serverURLString)
 	if err != nil {
-		return nil, gorterr.Wrap(gorterr.ErrIO, err)
+		return nil, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 	if !matches {
 		serverURLString = "http://" + serverURLString
@@ -286,7 +286,7 @@ func parseHostURL(serverURLArg string) (*url.URL, error) {
 	// Parse the resulting URL
 	serverURL, err := url.Parse(serverURLString)
 	if err != nil {
-		return nil, gorterr.Wrap(ErrURLFormat, err)
+		return nil, gerrs.Wrap(ErrURLFormat, err)
 	}
 
 	return serverURL, nil

@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 
 	"github.com/getgort/gort/data"
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -29,14 +29,14 @@ func LoadBundle(file string) (data.Bundle, error) {
 	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
-		return data.Bundle{}, gorterr.Wrap(gorterr.ErrIO, err)
+		return data.Bundle{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	var bun data.Bundle
 
 	err = yaml.Unmarshal(dat, &bun)
 	if err != nil {
-		return data.Bundle{}, gorterr.Wrap(gorterr.ErrUnmarshal, err)
+		return data.Bundle{}, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
 	// Ensure that the command name is propagated from the map key.

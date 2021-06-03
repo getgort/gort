@@ -28,7 +28,7 @@ import (
 
 const (
 	// StateUninitialized is the default state of the data access
-	// layer, before initializtion begins.
+	// layer, before initialization begins.
 	StateUninitialized State = iota
 
 	// StateInitializing indicates that the data access layer is

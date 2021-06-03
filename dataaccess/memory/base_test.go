@@ -19,7 +19,7 @@ package memory
 import (
 	"testing"
 
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +30,7 @@ var (
 func expectErr(t *testing.T, err error, expected error) {
 	if err == nil {
 		t.Error("Expected an error")
-	} else if !gorterr.Is(err, expected) {
+	} else if !gerrs.Is(err, expected) {
 		t.Errorf("Wrong error: Expected: %q Got: %q\n", expected.Error(), err.Error())
 	}
 }

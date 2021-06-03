@@ -25,10 +25,10 @@ import (
 	"os"
 
 	"github.com/getgort/gort/data/rest"
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 )
 
-// Authenticate requests a new authentication token from the Gort service.
+// Authenticate requests a new authentication token from the Gort controller.
 // If a valid token already exists it will be automatically invalidated if
 // this call is successful.
 func (c *GortClient) Authenticate() (rest.Token, error) {
@@ -36,12 +36,12 @@ func (c *GortClient) Authenticate() (rest.Token, error) {
 
 	postBytes, err := json.Marshal(c.profile.User())
 	if err != nil {
-		return rest.Token{}, gorterr.Wrap(gorterr.ErrMarshal, err)
+		return rest.Token{}, gerrs.Wrap(gerrs.ErrMarshal, err)
 	}
 
 	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
 	if err != nil {
-		return rest.Token{}, gorterr.Wrap(ErrConnectionFailed, err)
+		return rest.Token{}, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -51,30 +51,30 @@ func (c *GortClient) Authenticate() (rest.Token, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return rest.Token{}, gorterr.Wrap(ErrResponseReadFailure, err)
+		return rest.Token{}, gerrs.Wrap(ErrResponseReadFailure, err)
 	}
 
 	token := rest.Token{}
 	err = json.Unmarshal(body, &token)
 	if err != nil {
-		return rest.Token{}, gorterr.Wrap(gorterr.ErrUnmarshal, err)
+		return rest.Token{}, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
 	// Save the token to disk
 	file, err := c.getGortTokenFilename()
 	if err != nil {
-		return token, gorterr.Wrap(gorterr.ErrIO, err)
+		return token, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	f, err := os.Create(file)
 	defer f.Close()
 	if err != nil {
-		return token, gorterr.Wrap(gorterr.ErrIO, err)
+		return token, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	_, err = f.Write(body)
 	if err != nil {
-		return token, gorterr.Wrap(gorterr.ErrIO, err)
+		return token, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	return token, nil
@@ -115,12 +115,12 @@ func (c *GortClient) Bootstrap(user rest.User) (rest.User, error) {
 
 	postBytes, err := json.Marshal(user)
 	if err != nil {
-		return rest.User{}, gorterr.Wrap(gorterr.ErrMarshal, err)
+		return rest.User{}, gerrs.Wrap(gerrs.ErrMarshal, err)
 	}
 
 	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
 	if err != nil {
-		return rest.User{}, gorterr.Wrap(ErrConnectionFailed, err)
+		return rest.User{}, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 	defer resp.Body.Close()
 
@@ -139,13 +139,13 @@ func (c *GortClient) Bootstrap(user rest.User) (rest.User, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return rest.User{}, gorterr.Wrap(gorterr.ErrIO, err)
+		return rest.User{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	// Re-using "user" instance. Sorry.
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		return rest.User{}, gorterr.Wrap(gorterr.ErrUnmarshal, err)
+		return rest.User{}, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
 	// Update the client profile file

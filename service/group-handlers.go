@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/getgort/gort/data/rest"
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 	"github.com/gorilla/mux"
 )
 
@@ -139,7 +139,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&group)
 	if err != nil {
-		respondAndLogError(w, gorterr.ErrUnmarshal)
+		respondAndLogError(w, gerrs.ErrUnmarshal)
 		return
 	}
 

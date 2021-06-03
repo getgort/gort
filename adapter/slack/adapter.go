@@ -464,7 +464,7 @@ func NewAdapter(provider data.SlackProvider) SlackAdapter {
 }
 
 // ScrubMarkdown removes unnecessary/undesirable Slack markdown (of links, of
-// example) from text recieved from Slack.
+// example) from text received from Slack.
 func ScrubMarkdown(text string) string {
 	// Remove links of the format "<https://google.com>"
 	//

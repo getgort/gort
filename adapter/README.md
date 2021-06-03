@@ -4,7 +4,7 @@ Contains:
 * events: descriptions of the various Gort events, provided by an Adapter implementation
 * tokenize: splits a command string into parameter tokens.
 
-Also contains some data wrapper stucts:
+Also contains some data wrapper structs:
 
 * ProviderInfo - info about a generic provider
 * ChannelInfo - info about a generic provider "channel" (which can contain provider-specific values, like ID)

@@ -1,7 +1,7 @@
 ---
 gort_bundle_version: 5
 
-name: test
+name: testx
 version: 0.0.1
 author: Matt Titmus <matthew.titmus@gmail.com>
 homepage: https://github.com/clockworksoul/gort
@@ -11,16 +11,16 @@ long_description: >
   There are many like it, but this one is mine.
 
 permissions:
-  - test:echo
-  - test:test
+  - testx:echox
+  - testx:test
 
 docker:
   image: ubuntu
   tag: 20.04
 
 commands:
-  echo:
+  echox:
     description: "Echos back anything sent to it, all at once."
     executable: "/bin/echo"
     rules:
-      - must have test:echo
+      - must have testx:echox

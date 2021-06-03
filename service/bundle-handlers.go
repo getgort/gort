@@ -21,10 +21,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/getgort/gort/dataaccess/errs"
-
 	"github.com/getgort/gort/data"
-	gorterr "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/dataaccess/errs"
+	gerrs "github.com/getgort/gort/errors"
 	"github.com/gorilla/mux"
 )
 
@@ -108,7 +107,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 		err = json.NewDecoder(r.Body).Decode(&bundle)
 		if err != nil {
-			respondAndLogError(w, gorterr.ErrUnmarshal)
+			respondAndLogError(w, gerrs.ErrUnmarshal)
 			return
 		}
 
@@ -144,7 +143,7 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&bundle)
 	if err != nil {
-		respondAndLogError(w, gorterr.ErrUnmarshal)
+		respondAndLogError(w, gerrs.ErrUnmarshal)
 		return
 	}
 

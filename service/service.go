@@ -27,7 +27,7 @@ import (
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -219,7 +219,7 @@ func (s *RESTServer) Requests() <-chan RequestEvent {
 
 // ListenAndServe starts the Gort web service.
 func (s *RESTServer) ListenAndServe() error {
-	log.WithField("address", s.Addr).Info("Gort service is starting")
+	log.WithField("address", s.Addr).Info("Gort controller is starting")
 
 	return s.Server.ListenAndServe()
 }
@@ -231,7 +231,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	user := rest.User{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		respondAndLogError(w, gorterr.ErrUnmarshal)
+		respondAndLogError(w, gerrs.ErrUnmarshal)
 		return
 	}
 
@@ -278,56 +278,56 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 
 	switch {
 	// A required field is empty or missing
-	case gorterr.Is(err, errs.ErrEmptyBundleName):
+	case gerrs.Is(err, errs.ErrEmptyBundleName):
 		fallthrough
-	case gorterr.Is(err, errs.ErrEmptyBundleVersion):
+	case gerrs.Is(err, errs.ErrEmptyBundleVersion):
 		fallthrough
-	case gorterr.Is(err, errs.ErrEmptyGroupName):
+	case gerrs.Is(err, errs.ErrEmptyGroupName):
 		fallthrough
-	case gorterr.Is(err, errs.ErrEmptyUserName):
+	case gerrs.Is(err, errs.ErrEmptyUserName):
 		fallthrough
-	case gorterr.Is(err, errs.ErrFieldRequired):
+	case gerrs.Is(err, errs.ErrFieldRequired):
 		status = http.StatusExpectationFailed
 
 	// Requested resource doesn't exist
-	case gorterr.Is(err, errs.ErrNoSuchBundle):
+	case gerrs.Is(err, errs.ErrNoSuchBundle):
 		fallthrough
-	case gorterr.Is(err, errs.ErrNoSuchGroup):
+	case gerrs.Is(err, errs.ErrNoSuchGroup):
 		fallthrough
-	case gorterr.Is(err, errs.ErrNoSuchToken):
+	case gerrs.Is(err, errs.ErrNoSuchToken):
 		fallthrough
-	case gorterr.Is(err, errs.ErrNoSuchUser):
+	case gerrs.Is(err, errs.ErrNoSuchUser):
 		status = http.StatusNotFound
 
 	// Nope
-	case gorterr.Is(err, errs.ErrAdminUndeletable):
+	case gerrs.Is(err, errs.ErrAdminUndeletable):
 		status = http.StatusForbidden
 
 	// Can't insert over something that already exists
-	case gorterr.Is(err, errs.ErrBundleExists):
+	case gerrs.Is(err, errs.ErrBundleExists):
 		fallthrough
-	case gorterr.Is(err, errs.ErrGroupExists):
+	case gerrs.Is(err, errs.ErrGroupExists):
 		fallthrough
-	case gorterr.Is(err, errs.ErrUserExists):
+	case gerrs.Is(err, errs.ErrUserExists):
 		status = http.StatusConflict
 
 	// Not done yet
-	case gorterr.Is(err, errs.ErrNotImplemented):
+	case gerrs.Is(err, errs.ErrNotImplemented):
 		status = http.StatusNotImplemented
 
 	// Data access errors
-	case gorterr.Is(err, errs.ErrDataAccessNotInitialized):
+	case gerrs.Is(err, errs.ErrDataAccessNotInitialized):
 		fallthrough
-	case gorterr.Is(err, errs.ErrDataAccessCantInitialize):
+	case gerrs.Is(err, errs.ErrDataAccessCantInitialize):
 		fallthrough
-	case gorterr.Is(err, errs.ErrDataAccessCantConnect):
+	case gerrs.Is(err, errs.ErrDataAccessCantConnect):
 		fallthrough
-	case gorterr.Is(err, errs.ErrDataAccess):
+	case gerrs.Is(err, errs.ErrDataAccess):
 		status = http.StatusInternalServerError
 		log.WithField("status", status).Error(msg)
 
 	// Bad context
-	case gorterr.Is(err, gorterr.ErrUnmarshal):
+	case gerrs.Is(err, gerrs.ErrUnmarshal):
 		msg = "Corrupt JSON payload"
 		status = http.StatusNotAcceptable
 
@@ -361,7 +361,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	user := rest.User{}
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		respondAndLogError(w, gorterr.ErrUnmarshal)
+		respondAndLogError(w, gerrs.ErrUnmarshal)
 		return
 	}
 

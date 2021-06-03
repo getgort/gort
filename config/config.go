@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/getgort/gort/data"
-	gorterr "github.com/getgort/gort/errors"
+	gerrs "github.com/getgort/gort/errors"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -144,7 +144,7 @@ func Initialize(file string) error {
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		updateConfigState(StateConfigError)
-		return gorterr.Wrap(ErrConfigFileNotFound, err)
+		return gerrs.Wrap(ErrConfigFileNotFound, err)
 	}
 
 	return reloadConfiguration()
@@ -173,13 +173,13 @@ func Updates() <-chan State {
 func getMd5Sum(file string) ([]byte, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return []byte{}, gorterr.Wrap(gorterr.ErrIO, err)
+		return []byte{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 	defer f.Close()
 
 	hasher := md5.New()
 	if _, err := io.Copy(hasher, f); err != nil {
-		return []byte{}, gorterr.Wrap(gorterr.ErrIO, err)
+		return []byte{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	hashBytes := hasher.Sum(nil)
@@ -193,14 +193,14 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, gorterr.Wrap(gorterr.ErrIO, err)
+		return nil, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
 	var config data.GortConfig
 
 	err = yaml.Unmarshal(dat, &config)
 	if err != nil {
-		return nil, gorterr.Wrap(gorterr.ErrUnmarshal, err)
+		return nil, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
 	return &config, nil
@@ -212,7 +212,7 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 func reloadConfiguration() error {
 	sum, err := getMd5Sum(configFile)
 	if err != nil {
-		return gorterr.Wrap(ErrHashFailure, err)
+		return gerrs.Wrap(ErrHashFailure, err)
 	}
 
 	if !slicesAreEqual(sum, md5sum) {
@@ -224,7 +224,7 @@ func reloadConfiguration() error {
 				updateConfigState(StateConfigError)
 			}
 
-			return gorterr.Wrap(ErrConfigUnloadable, err)
+			return gerrs.Wrap(ErrConfigUnloadable, err)
 		}
 
 		md5sum = sum
