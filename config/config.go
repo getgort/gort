@@ -214,6 +214,7 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 }
 
 func standardizeBundleConfig(b data.Bundle) data.Bundle {
+	b.Default = true
 	b.Enabled = true
 
 	if b.Commands == nil {

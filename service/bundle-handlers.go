@@ -19,8 +19,10 @@ package service
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strings"
 
+	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
@@ -29,7 +31,7 @@ import (
 
 // handleGetBundles handles "GET /v2/bundles"
 func handleGetBundles(w http.ResponseWriter, r *http.Request) {
-	bundles, err := dataAccessLayer.BundleList()
+	bundles, err := getAllBundles()
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -156,6 +158,23 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 		respondAndLogError(w, err)
 		return
 	}
+}
+
+func getAllBundles() ([]data.Bundle, error) {
+	// Default bundles from config
+	bundles := config.GetBundleConfigs()
+
+	// Explicit bundles from the data layer
+	dataLayerBundles, err := dataAccessLayer.BundleList()
+	if err != nil {
+		return nil, err
+	}
+
+	bundles = append(bundles, dataLayerBundles...)
+
+	sort.Slice(bundles, func(i, j int) bool { return bundles[i].Name < bundles[j].Name })
+
+	return bundles, nil
 }
 
 func addBundleMethodsToRouter(router *mux.Router) {

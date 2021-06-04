@@ -46,6 +46,7 @@ type Bundle struct {
 	Docker            BundleDocker              `yaml:",omitempty" json:"docker,omitempty"`
 	Permissions       []string                  `yaml:",omitempty" json:"permissions,omitempty"`
 	Commands          map[string]*BundleCommand `yaml:",omitempty" json:"commands,omitempty"`
+	Default           bool                      `yaml:"-" json:"default,omitempty"`
 }
 
 // BundleDocker represents the "bundles/docker" subsection of the config doc

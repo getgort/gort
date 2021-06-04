@@ -4,11 +4,11 @@ An incomplete list of tasks for Gort by milestone. Tasks listed within a milesto
 
 This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If what you want to add doesn't have an open issue, please [create one of these as well](https://github.com/clockworksoul/Gort/issues).
 
-## Milestone 4 (Command Bundles)
+## Milestone 4 (Command Bundles) -- *COMPLETE!* ✅
 
-- The **Gort Guide** : initial draft [started here](https://github.com/clockworksoul/gort-guide)
-- Document how command bundles are _supposed_ to work.
-- Ensure command bundle behavior is consistent with documentation.
+- The **Gort Guide** : [started here](https://getgort.github.io/gort-guide/bundles.html) ✅
+- Document how command bundles are _supposed_ to work. ✅
+- Ensure command bundle behavior is consistent with documentation. ✅
 
 ## Milestone 5 (Focus on Security)
 
@@ -39,7 +39,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 - Command invocations can be associated with a user; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html).
 - Audit log for all API actions (user, timestamp, action taken, method (Slack, API, etc.))
 
-***(Publically release v0.7.0-alpha.0 at this point)***
+***(Publicly release v0.7.0-alpha.0 at this point)***
 
 ## Milestone 8 (Remote relays)
 

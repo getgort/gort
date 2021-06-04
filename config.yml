@@ -80,6 +80,10 @@ slack:
 bundles:
 - name: echo
   description: A default bundle with echo commands.
+
+  permissions:
+    - echo
+    
   docker:
     image: clockworksoul/relaytest
     tag: latest
@@ -94,6 +98,10 @@ bundles:
 
 - name: curl
   description: A default bundle that provides curl.
+
+  permissions:
+    - echo
+
   docker:
     image: clockworksoul/relaytest
     tag: latest

@@ -1,5 +1,5 @@
 ---
-gort_bundle_version: 5
+gort_bundle_version: 1
 
 name: test
 version: 0.0.1
@@ -11,8 +11,7 @@ long_description: |-
   There are many like it, but this one is mine.
 
 permissions:
-  - test:echo
-  - test:test
+  - echox
 
 docker:
   image: ubuntu
