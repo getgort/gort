@@ -34,7 +34,7 @@ func TestLoadBundle(t *testing.T) {
 	assert.Equal(t, "https://getgort.github.io/gort-guide/", b.Homepage)
 	assert.Equal(t, "A test bundle.", b.Description)
 	assert.Equal(t, "This is test bundle.\nThere are many like it, but this one is mine.", b.LongDescription)
-	assert.Len(t, b.Permissions, 2)
+	assert.Len(t, b.Permissions, 1)
 	assert.Equal(t, "ubuntu", b.Docker.Image)
 	assert.Equal(t, "20.04", b.Docker.Tag)
 	assert.Len(t, b.Commands, 1)

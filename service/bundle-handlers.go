@@ -18,6 +18,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"sort"
 	"strings"
@@ -27,6 +28,12 @@ import (
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/gorilla/mux"
+)
+
+var (
+	// ErrMissingValue is returned by a method when an expected form field
+	// is missing.
+	ErrMissingValue = errors.New("a form value is missing")
 )
 
 // handleGetBundles handles "GET /v2/bundles"
@@ -91,15 +98,29 @@ func handleGetBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 // handlePatchBundleVersion handles "PATCH /v2/bundles/{name}/versions/{version}"
 func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
+	var err error
+
 	params := mux.Vars(r)
 	name := params["name"]
 	version := params["version"]
+
+	enabledValue := strings.ToUpper(r.FormValue("enabled"))
+	if enabledValue == "" {
+		enabledValue = "-"
+	}
+
+	// If enabled=false we ignore the value of version and replace it with the
+	// current enabled version.
+	if enabledValue[0] == 'F' {
+		version, err = dataAccessLayer.BundleEnabledVersion(name)
+	}
 
 	exists, err := dataAccessLayer.BundleExists(name, version)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
-	} else if !exists {
+	}
+	if !exists {
 		respondAndLogError(w, errs.ErrNoSuchBundle)
 		return
 	}
@@ -123,18 +144,14 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	enabled := r.FormValue("enabled")
-	if enabled != "" {
-		enabled = strings.ToUpper(enabled)
-		if enabled[0] == 'T' {
-			err = dataAccessLayer.BundleEnable(name, version)
-		} else {
-			err = dataAccessLayer.BundleDisable(name, version)
-		}
-		if err != nil {
-			respondAndLogError(w, err)
-			return
-		}
+	if enabledValue[0] == 'T' {
+		err = dataAccessLayer.BundleEnable(name, version)
+	} else if enabledValue[0] == 'F' {
+		err = dataAccessLayer.BundleDisable(name)
+	}
+	if err != nil {
+		respondAndLogError(w, err)
+		return
 	}
 }
 

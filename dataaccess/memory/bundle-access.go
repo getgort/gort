@@ -70,25 +70,25 @@ func (da *InMemoryDataAccess) BundleDelete(name, version string) error {
 }
 
 // BundleDisable TBD
-func (da *InMemoryDataAccess) BundleDisable(name, version string) error {
+func (da *InMemoryDataAccess) BundleDisable(name string) error {
 	if name == "" {
 		return errs.ErrEmptyBundleName
 	}
 
-	if version == "" {
-		return errs.ErrEmptyBundleVersion
+	foundMatch := false
+
+	for n, b := range da.bundles {
+		if n != name {
+			continue
+		}
+
+		foundMatch = true
+		b.Enabled = false
 	}
 
-	exists, err := da.BundleExists(name, version)
-	if err != nil {
-		return err
-	}
-	if !exists {
+	if !foundMatch {
 		return errs.ErrNoSuchBundle
 	}
-
-	bundle := da.bundles[bundleKey(name, version)]
-	bundle.Enabled = false
 
 	return nil
 }

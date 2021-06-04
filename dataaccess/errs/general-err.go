@@ -44,7 +44,7 @@ var (
 	// initialized.
 	ErrDataAccessNotInitialized = errors.New("data access layer not initialized")
 
-	// ErrFieldRequired is returned by an insert or update when one of the
+	// ErrFieldRequired is returned by an insert or update when one of a
 	// struct's required field values is empty.
 	ErrFieldRequired = errors.New("a required field is missing")
 )

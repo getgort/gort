@@ -286,6 +286,8 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 		fallthrough
 	case gerrs.Is(err, errs.ErrEmptyUserName):
 		fallthrough
+	case gerrs.Is(err, ErrMissingValue):
+		fallthrough
 	case gerrs.Is(err, errs.ErrFieldRequired):
 		status = http.StatusExpectationFailed
 

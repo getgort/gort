@@ -33,7 +33,7 @@ type DataAccess interface {
 
 	BundleCreate(bundle data.Bundle) error
 	BundleDelete(name string, version string) error
-	BundleDisable(name string, version string) error
+	BundleDisable(name string) error
 	BundleEnable(name string, version string) error
 	BundleEnabledVersion(name string) (string, error)
 	BundleExists(name string, version string) (bool, error)

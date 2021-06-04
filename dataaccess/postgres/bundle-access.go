@@ -122,7 +122,7 @@ func (da PostgresDataAccess) BundleDelete(name, version string) error {
 		return errs.ErrNoSuchBundle
 	}
 
-	err = da.doBundleDisable(tx, name, version)
+	err = da.doBundleDisable(tx, name)
 	if err != nil {
 		tx.Rollback()
 		return gerr.Wrap(errs.ErrDataAccess, err)
@@ -144,7 +144,7 @@ func (da PostgresDataAccess) BundleDelete(name, version string) error {
 }
 
 // BundleDisable TBD
-func (da PostgresDataAccess) BundleDisable(name, version string) error {
+func (da PostgresDataAccess) BundleDisable(name string) error {
 	db, err := da.connect("gort")
 	if err != nil {
 		return err
@@ -156,7 +156,7 @@ func (da PostgresDataAccess) BundleDisable(name, version string) error {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	err = da.doBundleDisable(tx, name, version)
+	err = da.doBundleDisable(tx, name)
 	if err != nil {
 		tx.Rollback()
 		return gerr.Wrap(errs.ErrDataAccess, err)
@@ -469,11 +469,10 @@ func (da PostgresDataAccess) doBundleDelete(tx *sql.Tx, name string, version str
 }
 
 // doBundleDisable TBD
-func (da PostgresDataAccess) doBundleDisable(tx *sql.Tx, name string, version string) error {
-	query := `DELETE FROM bundle_enabled
-	WHERE bundle_name=$1 AND bundle_version=$2;`
+func (da PostgresDataAccess) doBundleDisable(tx *sql.Tx, name string) error {
+	query := `DELETE FROM bundle_enabled WHERE bundle_name=$1`
 
-	_, err := tx.Exec(query, name, version)
+	_, err := tx.Exec(query, name)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}

@@ -26,8 +26,8 @@ import (
 )
 
 // BundleDisable comments to be written...
-func (c *GortClient) BundleDisable(bundlename string, version string) error {
-	return c.doBundleEnable(bundlename, version, false)
+func (c *GortClient) BundleDisable(bundlename string) error {
+	return c.doBundleEnable(bundlename, "-", false)
 }
 
 // BundleEnable comments to be written...
@@ -183,7 +183,8 @@ func (c *GortClient) BundleUninstall(bundlename string, version string) error {
 	return nil
 }
 
-// doBundleEnable comments to be written...
+// doBundleEnable allows a bundle to be enabled or disabled. The value of
+// version is ignored when disabling a bundle.
 func (c *GortClient) doBundleEnable(bundlename string, version string, enabled bool) error {
 	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s?enabled=%v",
 		c.profile.URL.String(), bundlename, version, enabled)
