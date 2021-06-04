@@ -512,6 +512,9 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 		case *ConnectedEvent:
 			OnConnected(event, ev)
 
+		case *DisconnectedEvent:
+			// Do nothing.
+
 		case *AuthenticationErrorEvent:
 			adapterErrors <- gerrs.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
 

@@ -140,7 +140,7 @@ func startGort() error {
 	// Returns channels to get user command requests and adapter errors out.
 	requestsFrom, responsesTo, adapterErrorsFrom := adapter.StartListening()
 
-	// Starts the relay (currently just a local gofunc).
+	// Starts the relay (currently just a local goroutine).
 	// Returns channels to send user command request in and get command
 	// responses out.
 	requestsTo, responsesFrom := relay.StartListening()

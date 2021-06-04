@@ -282,6 +282,9 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 					WithField("channel", ev.Channel).
 					Trace("Slack event: user is typing")
 
+			case *slack.HelloEvent:
+				// Do nothing (for now).
+
 			default:
 				// Report and ignore other events..
 				e.WithField("message.data", msg.Data).
