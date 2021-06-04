@@ -127,8 +127,6 @@ func getFields(name string, i interface{}) map[string]interface{} {
 		m := map[string]interface{}{}
 		t := value.Type()
 
-		fmt.Println("GOT TYPE:", t.Name())
-
 		for i := 0; i < t.NumField(); i++ {
 			fv := value.Field(i)
 			fn := t.Field(i).Name

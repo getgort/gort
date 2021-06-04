@@ -17,7 +17,6 @@
 package memory
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/getgort/gort/data"
@@ -112,8 +111,13 @@ func (da *InMemoryDataAccess) BundleEnable(name, version string) error {
 		return errs.ErrNoSuchBundle
 	}
 
-	bundle := da.bundles[bundleKey(name, version)]
-	bundle.Enabled = true
+	for _, v := range da.bundles {
+		if v.Name != name {
+			continue
+		}
+
+		v.Enabled = (version == v.Version)
+	}
 
 	return nil
 }
@@ -222,8 +226,30 @@ func (da *InMemoryDataAccess) BundleUpdate(bundle data.Bundle) error {
 	return nil
 }
 
-func (da *InMemoryDataAccess) FindCommandEntry(bundle, command string) ([]data.CommandEntry, error) {
-	return nil, errors.New("not implemented")
+// FindCommandEntry is used to find the enabled commands with the provided
+// bundle and command names. If either is empty, it is treated as a wildcard.
+// Importantly, this must only return ENABLED commands!
+func (da *InMemoryDataAccess) FindCommandEntry(bundleName, commandName string) ([]data.CommandEntry, error) {
+	entries := make([]data.CommandEntry, 0)
+
+	for _, bundle := range da.bundles {
+		if bundleName != "" && bundleName != bundle.Name {
+			continue
+		}
+
+		if !bundle.Enabled {
+			continue
+		}
+
+		for _, cmd := range bundle.Commands {
+			if cmd.Name == commandName {
+				e := data.CommandEntry{Bundle: *bundle, Command: *cmd}
+				entries = append(entries, e)
+			}
+		}
+	}
+
+	return entries, nil
 }
 
 func bundleKey(name, version string) string {

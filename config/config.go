@@ -205,18 +205,26 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 
 	// Make sure that the command names get set correctly.
 	if config.BundleConfigs != nil {
-		for _, bc := range config.BundleConfigs {
-			if bc.Commands == nil {
-				continue
-			}
-
-			for name, command := range bc.Commands {
-				command.Name = name
-			}
+		for i, b := range config.BundleConfigs {
+			config.BundleConfigs[i] = standardizeBundleConfig(b)
 		}
 	}
 
 	return &config, nil
+}
+
+func standardizeBundleConfig(b data.Bundle) data.Bundle {
+	b.Enabled = true
+
+	if b.Commands == nil {
+		return b
+	}
+
+	for name, command := range b.Commands {
+		command.Name = name
+	}
+
+	return b
 }
 
 //  reloadConfiguration is called by both BeginChangeCheck() and Initialize()

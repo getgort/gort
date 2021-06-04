@@ -42,7 +42,7 @@ func testInitialize(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestMain(t *testing.T) {
+func TestMemoryDataAccessMain(t *testing.T) {
 	t.Run("testInitialize", testInitialize)
 
 	t.Run("testUserAccess", testUserAccess)

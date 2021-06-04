@@ -34,13 +34,12 @@ func (c ConfigCommandEntryFinder) FindCommandEntry(bundleName, commandName strin
 	entries := make([]data.CommandEntry, 0)
 
 	for _, bundle := range GetBundleConfigs() {
-		if bundleName != bundle.Name && bundleName != "*" {
+		if bundleName != bundle.Name && bundleName != "" {
 			continue
 		}
 
 		for name, command := range bundle.Commands {
 			if name == commandName {
-
 				command.Name = name
 				entries = append(entries, data.CommandEntry{
 					Bundle:  bundle,

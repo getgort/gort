@@ -30,11 +30,13 @@ func testBundleAccess(t *testing.T) {
 	t.Run("testBundleCreate", testBundleCreate)
 	t.Run("testBundleCreateMissingRequired", testBundleCreateMissingRequired)
 	t.Run("testBundleEnable", testBundleEnable)
+	t.Run("testBundleEnableTwo", testBundleEnableTwo)
 	t.Run("testBundleExists", testBundleExists)
 	t.Run("testBundleDelete", testBundleDelete)
 	t.Run("testBundleGet", testBundleGet)
 	t.Run("testBundleList", testBundleList)
 	t.Run("testBundleListVersions", testBundleListVersions)
+	t.Run("testFindCommandEntry", testFindCommandEntry)
 }
 
 // Fail-fast: can the test bundle be loaded?
@@ -115,6 +117,74 @@ func testBundleEnable(t *testing.T) {
 	// Should now delete cleanly
 	err = da.BundleDelete(bundle.Name, bundle.Version)
 	assert.NoError(t, err)
+}
+
+func testBundleEnableTwo(t *testing.T) {
+	bundleA, err := getTestBundle()
+	assert.NoError(t, err)
+	bundleA.Name = "test-enable-2"
+	bundleA.Version = "0.0.1"
+
+	err = da.BundleCreate(bundleA)
+	assert.NoError(t, err)
+	defer da.BundleDelete(bundleA.Name, bundleA.Version)
+
+	// Enable and verify
+	err = da.BundleEnable(bundleA.Name, bundleA.Version)
+	assert.NoError(t, err)
+
+	enabled, err := da.BundleEnabledVersion(bundleA.Name)
+	assert.NoError(t, err)
+
+	if enabled != bundleA.Version {
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
+			bundleA.Version, enabled)
+		t.FailNow()
+	}
+
+	// Create a new version of the same bundle
+
+	bundleB, err := getTestBundle()
+	assert.NoError(t, err)
+	bundleB.Name = bundleA.Name
+	bundleB.Version = "0.0.2"
+
+	err = da.BundleCreate(bundleB)
+	assert.NoError(t, err)
+	defer da.BundleDelete(bundleB.Name, bundleB.Version)
+
+	// BundleA should still be enabled
+
+	enabled, err = da.BundleEnabledVersion(bundleA.Name)
+	assert.NoError(t, err)
+
+	if enabled != bundleA.Version {
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
+			bundleA.Version, enabled)
+		t.FailNow()
+	}
+
+	enabled, err = da.BundleEnabledVersion(bundleA.Name)
+	assert.NoError(t, err)
+
+	if enabled != bundleA.Version {
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
+			bundleA.Version, enabled)
+		t.FailNow()
+	}
+
+	// Enable and verify
+	err = da.BundleEnable(bundleB.Name, bundleB.Version)
+	assert.NoError(t, err)
+
+	enabled, err = da.BundleEnabledVersion(bundleB.Name)
+	assert.NoError(t, err)
+
+	if enabled != bundleB.Version {
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
+			bundleB.Version, enabled)
+		t.FailNow()
+	}
 }
 
 func testBundleExists(t *testing.T) {
@@ -258,6 +328,55 @@ func testBundleListVersions(t *testing.T) {
 
 		t.Errorf("Expected len(bundles) = 2; got %d", len(bundles))
 	}
+}
+
+func testFindCommandEntry(t *testing.T) {
+	const BundleName = "test"
+	const BundleVersion = "0.0.1"
+	const CommandName = "echox"
+
+	tb, err := getTestBundle()
+	assert.NoError(t, err)
+
+	// Save to data store
+	err = da.BundleCreate(tb)
+	assert.NoError(t, err)
+
+	// Load back from the data store
+	tb, err = da.BundleGet(tb.Name, tb.Version)
+	assert.NoError(t, err)
+
+	// Sanity testing. Has the test case changed?
+	assert.Equal(t, BundleName, tb.Name)
+	assert.Equal(t, BundleVersion, tb.Version)
+	assert.NotNil(t, tb.Commands[CommandName])
+
+	// Not yet enabled. Should find nothing.
+	ce, err := da.FindCommandEntry(BundleName, CommandName)
+	assert.NoError(t, err)
+	assert.Len(t, ce, 0)
+
+	err = da.BundleEnable(BundleName, BundleVersion)
+	assert.NoError(t, err)
+
+	// Reload to capture enabled status
+	tb, err = da.BundleGet(tb.Name, tb.Version)
+	assert.NoError(t, err)
+
+	// Enabled. Should find commands.
+	ce, err = da.FindCommandEntry(BundleName, CommandName)
+	assert.NoError(t, err)
+	assert.Len(t, ce, 1)
+
+	// Is the loaded bundle correct?
+	assert.Equal(t, tb, ce[0].Bundle)
+
+	tc := tb.Commands[CommandName]
+	cmd := ce[0].Command
+	assert.Equal(t, tc.Description, cmd.Description)
+	assert.Equal(t, tc.Executable, cmd.Executable)
+	assert.Equal(t, tc.Name, cmd.Name)
+	assert.Equal(t, tc.Rules, cmd.Rules)
 }
 
 func getTestBundle() (data.Bundle, error) {

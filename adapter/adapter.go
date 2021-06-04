@@ -132,12 +132,17 @@ func GetAdapter(name string) (Adapter, error) {
 // associated data.CommandEntry instances. If the number of matching
 // commands is > 1, an error is returned.
 func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
-	bundle, command, err := bundles.SplitCommand(tokens[0])
+	bundleName, commandName, err := bundles.SplitCommand(tokens[0])
 	if err != nil {
 		return data.CommandEntry{}, err
 	}
 
-	entries, err := config.CommandEntryFinder().FindCommandEntry(bundle, command)
+	finders, err := allCommandEntryFinders()
+	if err != nil {
+		return data.CommandEntry{}, err
+	}
+
+	entries, err := findAllEntries(bundleName, commandName, finders...)
 	if err != nil {
 		return data.CommandEntry{}, err
 	}
@@ -159,6 +164,38 @@ func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
 	}
 
 	return entries[0], nil
+}
+
+func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
+	finders := make([]bundles.CommandEntryFinder, 0)
+
+	// Get the configuration CommandEntryFinder
+	finders = append(finders, config.CommandEntryFinder())
+
+	// Get the DAL CommandEntryFinder
+	dal, err := dataaccess.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	finders = append(finders, dal)
+
+	return finders, nil
+}
+
+func findAllEntries(bundleName, commandName string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {
+	entries := make([]data.CommandEntry, 0)
+
+	for _, f := range finder {
+		e, err := f.FindCommandEntry(bundleName, commandName)
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, e...)
+	}
+
+	return entries, nil
 }
 
 // OnConnected handles ConnectedEvent events.

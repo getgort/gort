@@ -44,7 +44,7 @@ var (
 	da PostgresDataAccess
 )
 
-func TestMain(t *testing.T) {
+func TestPostgresDataAccessMain(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute/2)
 	defer cancel()
 
@@ -124,11 +124,17 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 }
 
 func testInitialize(t *testing.T) {
+	const timeout = 10 * time.Second
+	timeoutAt := time.Now().Add(timeout)
 	da = NewPostgresDataAccess(configs)
 
 	t.Log("Waiting for database to be ready")
 
 	for {
+		if time.Now().After(timeoutAt) {
+			t.Error("timeout waiting for database:", timeout)
+			t.FailNow()
+		}
 		db, err := da.connect("postgres")
 
 		if db != nil && err == nil {
