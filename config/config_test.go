@@ -17,75 +17,66 @@
 package config
 
 import (
-	"fmt"
 	"testing"
 
-	yaml "gopkg.in/yaml.v3"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestInputOutputHumanEyeball(t *testing.T) {
+func TestLoadConfiguration(t *testing.T) {
 	config, err := loadConfiguration("../config.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}
 
-	y, err := yaml.Marshal(config)
-	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return
-	}
+	cglobal := config.GlobalConfigs
+	assert.NotNil(t, cglobal)
+	assert.Equal(t, 60, cglobal.CommandTimeoutSeconds)
 
-	fmt.Println(string(y))
+	cgort := config.GortServerConfigs
+	assert.NotNil(t, cgort)
+	assert.Equal(t, true, cgort.AllowSelfRegistration)
+	assert.Equal(t, ":4000", cgort.APIAddress)
+	assert.Equal(t, "localhost", cgort.APIURLBase)
+	assert.Equal(t, true, cgort.DevelopmentMode)
+	assert.Equal(t, true, cgort.EnableSpokenCommands)
+
+	cdb := config.DatabaseConfigs
+	assert.NotNil(t, cdb)
+	assert.Equal(t, "localhost", cdb.Host)
+	assert.Equal(t, 5432, cdb.Port)
+	assert.Equal(t, "gort", cdb.User)
+	assert.Equal(t, "veryKleverPassw0rd!", cdb.Password)
+	assert.Equal(t, true, cdb.SSLEnabled)
+	assert.Equal(t, 10, cdb.PoolSize)
+	assert.Equal(t, 15000, cdb.PoolTimeout)
+	assert.Equal(t, 15000, cdb.QueryTimeout)
+
+	cd := config.DockerConfigs
+	assert.NotNil(t, cd)
+	assert.Equal(t, "unix:///var/run/docker.sock", cd.DockerHost)
+
+	cs := config.SlackProviders
+	assert.NotNil(t, cs)
+	assert.NotEmpty(t, cs)
+	assert.Equal(t, "MyWorkspace", cs[0].Name)
+	assert.Equal(t, "xoxb-210987654321-123456789012-nyWJ3U4JoWuUtaUkRPKn0dJR", cs[0].APIToken)
+	assert.Equal(t, "https://emoji.slack-edge.com/T023V8ZFQEQ/gort/78a0c1607eeb1f29.png", cs[0].IconURL)
+	assert.Equal(t, "Gort", cs[0].BotName)
+
+	cb := config.BundleConfigs
+	assert.NotNil(t, cb)
+	assert.Len(t, cb, 2)
+	assert.Equal(t, "echo", cb[0].Name)
+	assert.Equal(t, "A default bundle with echo commands.", cb[0].Description)
+	assert.Equal(t, "clockworksoul/relaytest", cb[0].Docker.Image)
+	assert.Equal(t, "latest", cb[0].Docker.Tag)
+
+	assert.Len(t, cb[0].Commands, 2)
+	assert.Equal(t, "echo", cb[0].Commands["echo"].Name)
+	assert.Equal(t, "Echos back anything sent to it, all at once.", cb[0].Commands["echo"].Description)
+	assert.Equal(t, "/bin/echo", cb[0].Commands["echo"].Executable)
+
+	assert.Equal(t, "splitecho", cb[0].Commands["splitecho"].Name)
+	assert.Equal(t, "Echos back anything sent to it, one parameter at a time.", cb[0].Commands["splitecho"].Description)
+	assert.Equal(t, "/opt/app/splitecho.sh", cb[0].Commands["splitecho"].Executable)
 }
-
-// This is just used to make sure that the YAML will look the way we expect
-// based on the struct relationships.
-// func TestKindOf(t *testing.T) {
-// 	config := data.GortConfig{}
-
-// 	config.SlackProviders = make([]data.SlackProvider, 1)
-
-// 	config.SlackProviders[0] = data.SlackProvider{
-// 		BotName:       "Gort",
-// 		Name:          "ClockworkSoul",
-// 		IconURL:       "https://emoji.slack-edge.com/T025151EM/dragongopher/cdc9b1bd1a7752eb.png",
-// 		SlackAPIToken: "SlackAPIToken",
-// 	}
-
-// 	config.BundleConfigs = make([]data.Bundle, 1)
-
-// 	config.BundleConfigs[0] = data.Bundle{
-// 		Name:        "test",
-// 		Description: "A description",
-// 	}
-
-// 	config.BundleConfigs[0].Docker = data.BundleDocker{
-// 		Image: "clockworksoul/foo",
-// 		Tag:   "latest",
-// 	}
-
-// 	config.BundleConfigs[0].Commands = make(map[string]data.BundleCommand)
-
-// 	config.BundleConfigs[0].Commands["splitecho"] = data.BundleCommand{
-// 		Description: "Echos back anything sent to it, one parameter at a time.",
-// 		Executable:  []string{"/opt/app/splitecho.sh"},
-// 	}
-
-// 	config.BundleConfigs[0].Commands["curl"] = data.BundleCommand{
-// 		Description: "The official curl command",
-// 		Executable:  []string{"/usr/bin/curl"},
-// 	}
-
-// 	config.BundleConfigs[0].Commands["echo"] = data.BundleCommand{
-// 		Description: "Echos back anything sent to it, all at once.",
-// 		Executable:  []string{"/bin/echo"},
-// 	}
-
-// 	y, err := yaml.Marshal(config)
-// 	if err != nil {
-// 		fmt.Printf("err: %v\n", err)
-// 		return
-// 	}
-
-// 	fmt.Println(string(y))
-// }

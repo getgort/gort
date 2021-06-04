@@ -203,6 +203,19 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 		return nil, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
+	// Make sure that the command names get set correctly.
+	if config.BundleConfigs != nil {
+		for _, bc := range config.BundleConfigs {
+			if bc.Commands == nil {
+				continue
+			}
+
+			for name, command := range bc.Commands {
+				command.Name = name
+			}
+		}
+	}
+
 	return &config, nil
 }
 
