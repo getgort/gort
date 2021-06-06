@@ -33,6 +33,8 @@ type GortServerConfigs struct {
 	APIURLBase            string `yaml:"api_url_base,omitempty"`
 	DevelopmentMode       bool   `yaml:"development_mode,omitempty"`
 	EnableSpokenCommands  bool   `yaml:"enable_spoken_commands,omitempty"`
+	TLSCertFile           string `yaml:"tls_cert_file,omitempty"`
+	TLSKeyFile            string `yaml:"tls_key_file,omitempty"`
 }
 
 // GlobalConfigs is the data wrapper for the "global" section

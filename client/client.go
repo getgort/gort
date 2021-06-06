@@ -28,9 +28,10 @@ import (
 	"regexp"
 	"strings"
 
+	homedir "github.com/mitchellh/go-homedir"
+
 	"github.com/getgort/gort/data/rest"
 	gerrs "github.com/getgort/gort/errors"
-	homedir "github.com/mitchellh/go-homedir"
 )
 
 var (
@@ -56,6 +57,8 @@ var (
 
 	// ErrURLFormat indicates badly formatted URL.
 	ErrURLFormat = errors.New("invalid URL format")
+
+	ErrInsecureURL = errors.New("insecure URL provided, please use https or set allowInsecure")
 )
 
 // GortClient comments to be written...
@@ -118,7 +121,7 @@ func Connect(profileName string) (*GortClient, error) {
 		return nil, ErrBadProfile
 	}
 
-	return &GortClient{profile: entry}, nil
+	return NewClient(entry)
 }
 
 // ConnectWithNewProfile generates a connection using the supplied profile
@@ -136,7 +139,19 @@ func ConnectWithNewProfile(entry ProfileEntry) (*GortClient, error) {
 		entry.Name = url.Hostname()
 	}
 
-	return &GortClient{profile: entry}, nil
+	return NewClient(entry)
+}
+
+// NewClient creates a GortClient for the provided ProfileEntry.
+// An error is returned if the profile is invalid.
+func NewClient(entry ProfileEntry) (*GortClient, error) {
+	if !entry.AllowInsecure && entry.URL.Scheme != "https" {
+		return nil, ErrInsecureURL
+	}
+
+	return &GortClient{
+		profile: entry,
+	}, nil
 }
 
 func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Response, error) {

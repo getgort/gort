@@ -22,14 +22,16 @@ import (
 	"os/signal"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/adapter/slack"
 	"github.com/getgort/gort/config"
+	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/relay"
 	"github.com/getgort/gort/service"
 	"github.com/getgort/gort/version"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 var configfile string
@@ -131,7 +133,7 @@ func startGort() error {
 	}
 
 	// Start the Gort REST web service
-	startServer(config.GetGortServerConfigs().APIAddress)
+	startServer(config.GetGortServerConfigs())
 
 	// Listen for signals for graceful shutdown
 	go catchSignals()
@@ -180,9 +182,9 @@ func catchSignals() {
 	os.Exit(0)
 }
 
-func startServer(addr string) {
+func startServer(config data.GortServerConfigs) {
 	// Build the service representation
-	server := service.BuildRESTServer(addr)
+	server := service.BuildRESTServer(config.APIAddress)
 
 	// Start watching the
 	go func() {
@@ -200,7 +202,13 @@ func startServer(addr string) {
 
 	// Make the service listen.
 	go func() {
-		err := server.ListenAndServe()
+		var err error
+		if config.TLSCertFile != "" && config.TLSKeyFile != "" {
+			err = server.ListenAndServeTLS(config.TLSCertFile, config.TLSKeyFile)
+		} else {
+			log.Warn("Using http for API connections, please consider using https")
+			err = server.ListenAndServe()
+		}
 		if err != nil {
 			log.WithError(err).Fatal("Fatal service error")
 		}

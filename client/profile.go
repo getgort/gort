@@ -21,9 +21,10 @@ import (
 	"net/url"
 	"os"
 
+	yaml "gopkg.in/yaml.v3"
+
 	"github.com/getgort/gort/data/rest"
 	gerrs "github.com/getgort/gort/errors"
-	yaml "gopkg.in/yaml.v3"
 )
 
 // Profile represents a set of user profiles from a $HOME/.gort/profiles file
@@ -51,11 +52,13 @@ type ProfileDefaults struct {
 
 // ProfileEntry represents a single profile entry.
 type ProfileEntry struct {
-	Name      string   `yaml:"-"`
-	URLString string   `yaml:"url"`
-	Password  string   `yaml:"password"`
-	URL       *url.URL `yaml:"-"`
-	Username  string   `yaml:"user"`
+	Name          string   `yaml:"-"`
+	URLString     string   `yaml:"url"`
+	Password      string   `yaml:"password"`
+	URL           *url.URL `yaml:"-"`
+	Username      string   `yaml:"user"`
+	AllowInsecure bool     `yaml:"allow_insecure"`
+	TLSCertFile   string   `yaml:"tls_cert_file"`
 }
 
 // User is a convenience method that returns a rest.User pre-set with the

@@ -4,7 +4,7 @@ An incomplete list of tasks for Gort by milestone. Tasks listed within a milesto
 
 This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If what you want to add doesn't have an open issue, please [create one of these as well](https://github.com/clockworksoul/Gort/issues).
 
-## Milestone 4 (Command Bundles) -- *COMPLETE!* ✅
+## Milestone 4 (Command Bundles) -- _COMPLETE!_ ✅
 
 - The **Gort Guide** : [started here](https://getgort.github.io/gort-guide/bundles.html) ✅
 - Document how command bundles are _supposed_ to work. ✅
@@ -12,7 +12,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 ## Milestone 5 (Focus on Security)
 
-- Encrypt Gort REST service communications.
+- Encrypt Gort REST service communications. ✅
   - Allow a TLS certificate to be installed by Gort controller.
     - MUST loudly warn on startup if one is not being used.
   - Gortctl SHOULD warn when not using an encrypted connection.
@@ -39,7 +39,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 - Command invocations can be associated with a user; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html).
 - Audit log for all API actions (user, timestamp, action taken, method (Slack, API, etc.))
 
-***(Publicly release v0.7.0-alpha.0 at this point)***
+**_(Publicly release v0.7.0-alpha.0 at this point)_**
 
 ## Milestone 8 (Remote relays)
 

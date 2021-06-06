@@ -26,6 +26,15 @@ gort:
   # via direct mentions. Defaults to true.
   enable_spoken_commands: true
 
+  # If set along with tls_key_file, TLS will be used for API connections.
+  # This parameter specifies the path to a certificate file.
+  # tls_cert_file: host.crt
+
+  # If set alsong with tls_cert_file, TLS will be used for API connections.
+  # This parameter specifies the path to a key file.
+  # The key must not be encrypted with a password.
+  # tls_key_file: host.key
+
 # Not yet supported
 database:
   # The host where Gort's PostgreSQL database lives. Defaults to localhost.
