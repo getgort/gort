@@ -343,14 +343,14 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 
 	err := dataAccessLayer.UserCreate(testUser)
 	if err != nil {
-		log.WithError(err).Error("health check failure")
-		telemetry.Errors().WithError(err).Commit(context.TODO())
-	} else {
-		log.Trace("health check pass")
+		log.WithError(err).Warning("health check failure")
+		http.Error(w, `{"healthy":false}`, http.StatusServiceUnavailable)
+		return
 	}
 	defer dataAccessLayer.UserDelete(testUser.Username)
 
-	m := map[string]bool{"healthy": err == nil}
+	log.Trace("health check pass")
+	m := map[string]bool{"healthy": true}
 	json.NewEncoder(w).Encode(m)
 }
 
