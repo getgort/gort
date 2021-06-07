@@ -302,9 +302,13 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 // valid command trigger is identified.
 func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
 	le := log.WithField("adapter.name", adapter.GetName()).
-		WithField("command", rawCommand)
+		WithField("command.raw", rawCommand).
+		WithField("channel.id", channelID).
+		WithField("user.id", userID)
 
 	params := TokenizeParameters(rawCommand)
+	le = le.WithField("command.name", params[0]).
+		WithField("command.params", strings.Join(params[1:], " "))
 
 	info, err := adapter.GetUserInfo(userID)
 	if err != nil {
@@ -327,20 +331,17 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
-		le.WithError(err)
-		le.Error()
+		le.WithError(err).Error("Command lookup failure")
 
 		return nil, err
 	}
 
 	le.WithField("bundle.name", command.Bundle.Name).
 		WithField("bundle.version", command.Bundle.Version).
+		WithField("bundle.default", command.Bundle.Default).
 		WithField("command.executable", command.Command.Executable).
 		WithField("command.name", command.Command.Name).
 		Debug("Found matching command+bundle")
-
-	le = le.WithField("channel.id", channelID).
-		WithField("user.id", userID)
 
 	gortUser, autocreated, err := findOrMakeGortUser(info)
 	if err != nil {
