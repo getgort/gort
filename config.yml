@@ -9,7 +9,7 @@ gort:
   # by an administrator in order to be granted any permissions.
   allow_self_registration: true
 
-  # The address to listen on for Gort’s REST API. Defaults to ":4000".
+  # The address to listen on for Gort's REST API. Defaults to ":4000".
   api_address: ":4000"
 
   # Controls the prefix of URLs generated for the core API. URLs may contain a
@@ -30,7 +30,7 @@ gort:
   # This parameter specifies the path to a certificate file.
   # tls_cert_file: host.crt
 
-  # If set alsong with tls_cert_file, TLS will be used for API connections.
+  # If set along with tls_cert_file, TLS will be used for API connections.
   # This parameter specifies the path to a key file.
   # The key must not be encrypted with a password.
   # tls_key_file: host.key
@@ -43,10 +43,10 @@ database:
   # The port at which Gort may access its PostgreSQL database. Defaults to 5432.
   port: 5432
 
-  # The user to connect to Gort’s PostgreSQL database.
+  # The user to connect to Gort's PostgreSQL database.
   user: gort
 
-  # The password for connecting to Gort’s PostgreSQL database.
+  # The password for connecting to Gort's PostgreSQL database.
   # TODO Think of a better way to do this. Maybe allow {{ variables }} that
   # can be injected at startup and interpolated? Is that over-engineering?
   password: "veryKleverPassw0rd!"
@@ -72,7 +72,6 @@ docker:
 
 slack:
 - # An arbitrary name for human labelling purposes.
-  # TODO Do we need this? Is it confusing? Should we use the API-provided workspace name?
   name: MyWorkspace
 
   # Bot User OAuth Access Token (https://api.slack.com/docs/token-types#bot)
