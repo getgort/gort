@@ -17,6 +17,8 @@
 package postgres
 
 import (
+	"context"
+
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
@@ -24,8 +26,8 @@ import (
 )
 
 // UserAuthenticate authenticates a username/password combination.
-func (da PostgresDataAccess) UserAuthenticate(username string, password string) (bool, error) {
-	exists, err := da.UserExists(username)
+func (da PostgresDataAccess) UserAuthenticate(ctx context.Context, username string, password string) (bool, error) {
+	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return false, err
 	}
@@ -54,12 +56,12 @@ func (da PostgresDataAccess) UserAuthenticate(username string, password string) 
 
 // UserCreate is used to create a new Gort user in the data store. An error is
 // returned if the username is empty or if a user already exists.
-func (da PostgresDataAccess) UserCreate(user rest.User) error {
+func (da PostgresDataAccess) UserCreate(ctx context.Context, user rest.User) error {
 	if user.Username == "" {
 		return errs.ErrEmptyUserName
 	}
 
-	exists, err := da.UserExists(user.Username)
+	exists, err := da.UserExists(ctx, user.Username)
 	if err != nil {
 		return err
 	}
@@ -94,7 +96,7 @@ func (da PostgresDataAccess) UserCreate(user rest.User) error {
 // UserDelete deletes an existing user from the data store. An error is
 // returned if the username parameter is empty or if the user doesn't
 // exist.
-func (da PostgresDataAccess) UserDelete(username string) error {
+func (da PostgresDataAccess) UserDelete(ctx context.Context, username string) error {
 	if username == "" {
 		return errs.ErrEmptyUserName
 	}
@@ -104,7 +106,7 @@ func (da PostgresDataAccess) UserDelete(username string) error {
 		return errs.ErrAdminUndeletable
 	}
 
-	exists, err := da.UserExists(username)
+	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -141,7 +143,7 @@ func (da PostgresDataAccess) UserDelete(username string) error {
 
 // UserExists is used to determine whether a Gort user with the given username
 // exists in the data store.
-func (da PostgresDataAccess) UserExists(username string) (bool, error) {
+func (da PostgresDataAccess) UserExists(ctx context.Context, username string) (bool, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return false, err
@@ -161,7 +163,7 @@ func (da PostgresDataAccess) UserExists(username string) (bool, error) {
 
 // UserGet returns a user from the data store. An error is returned if the
 // username parameter is empty or if the user doesn't exist.
-func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
+func (da PostgresDataAccess) UserGet(ctx context.Context, username string) (rest.User, error) {
 	if username == "" {
 		return rest.User{}, errs.ErrEmptyUserName
 	}
@@ -189,7 +191,7 @@ func (da PostgresDataAccess) UserGet(username string) (rest.User, error) {
 
 // UserGetByEmail returns a user from the data store. An error is returned if
 // the email parameter is empty or if the user doesn't exist.
-func (da PostgresDataAccess) UserGetByEmail(email string) (rest.User, error) {
+func (da PostgresDataAccess) UserGetByEmail(ctx context.Context, email string) (rest.User, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return rest.User{}, err
@@ -213,7 +215,7 @@ func (da PostgresDataAccess) UserGetByEmail(email string) (rest.User, error) {
 
 // UserList returns a list of all known users in the datastore.
 // Passwords are not included. Nice try.
-func (da PostgresDataAccess) UserList() ([]rest.User, error) {
+func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return nil, err
@@ -242,12 +244,12 @@ func (da PostgresDataAccess) UserList() ([]rest.User, error) {
 
 // UserUpdate is used to update an existing user. An error is returned if the
 // username is empty or if the user doesn't exist.
-func (da PostgresDataAccess) UserUpdate(user rest.User) error {
+func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) error {
 	if user.Username == "" {
 		return errs.ErrEmptyUserName
 	}
 
-	exists, err := da.UserExists(user.Username)
+	exists, err := da.UserExists(ctx, user.Username)
 	if err != nil {
 		return err
 	}
@@ -303,7 +305,7 @@ func (da PostgresDataAccess) UserUpdate(user rest.User) error {
 }
 
 // UserGroupList comments TBD
-func (da PostgresDataAccess) UserGroupList(username string) ([]rest.Group, error) {
+func (da PostgresDataAccess) UserGroupList(ctx context.Context, username string) ([]rest.Group, error) {
 	groups := make([]rest.Group, 0)
 
 	db, err := da.connect("gort")
@@ -333,7 +335,7 @@ func (da PostgresDataAccess) UserGroupList(username string) ([]rest.Group, error
 }
 
 // UserGroupAdd comments TBD
-func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) error {
+func (da PostgresDataAccess) UserGroupAdd(ctx context.Context, username string, groupname string) error {
 	if username == "" {
 		return errs.ErrEmptyUserName
 	}
@@ -342,7 +344,7 @@ func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) err
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.UserExists(username)
+	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -350,7 +352,7 @@ func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) err
 		return errs.ErrNoSuchUser
 	}
 
-	exists, err = da.GroupExists(username)
+	exists, err = da.GroupExists(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -377,7 +379,7 @@ func (da PostgresDataAccess) UserGroupAdd(username string, groupname string) err
 }
 
 // UserGroupDelete comments TBD
-func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) error {
+func (da PostgresDataAccess) UserGroupDelete(ctx context.Context, username string, groupname string) error {
 	if username == "" {
 		return errs.ErrEmptyUserName
 	}
@@ -386,7 +388,7 @@ func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) 
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.UserExists(username)
+	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -394,7 +396,7 @@ func (da PostgresDataAccess) UserGroupDelete(username string, groupname string) 
 		return errs.ErrNoSuchUser
 	}
 
-	exists, err = da.GroupExists(username)
+	exists, err = da.GroupExists(ctx, username)
 	if err != nil {
 		return err
 	}

@@ -37,16 +37,16 @@ func testGroupAccess(t *testing.T) {
 func testGroupExists(t *testing.T) {
 	var exists bool
 
-	exists, _ = da.GroupExists("test-exists")
+	exists, _ = da.GroupExists(ctx, "test-exists")
 	if exists {
 		t.Error("Group should not exist now")
 	}
 
 	// Now we add a group to find.
-	da.GroupCreate(rest.Group{Name: "test-exists"})
-	defer da.GroupDelete("test-exists")
+	da.GroupCreate(ctx, rest.Group{Name: "test-exists"})
+	defer da.GroupDelete(ctx, "test-exists")
 
-	exists, _ = da.GroupExists("test-exists")
+	exists, _ = da.GroupExists(ctx, "test-exists")
 	if !exists {
 		t.Error("Group should exist now")
 	}
@@ -57,35 +57,35 @@ func testGroupCreate(t *testing.T) {
 	var group rest.Group
 
 	// Expect an error
-	err = da.GroupCreate(group)
+	err = da.GroupCreate(ctx, group)
 	expectErr(t, err, errs.ErrEmptyGroupName)
 
 	// Expect no error
-	err = da.GroupCreate(rest.Group{Name: "test-create"})
-	defer da.GroupDelete("test-create")
+	err = da.GroupCreate(ctx, rest.Group{Name: "test-create"})
+	defer da.GroupDelete(ctx, "test-create")
 	assert.NoError(t, err)
 
 	// Expect an error
-	err = da.GroupCreate(rest.Group{Name: "test-create"})
+	err = da.GroupCreate(ctx, rest.Group{Name: "test-create"})
 	expectErr(t, err, errs.ErrGroupExists)
 }
 
 func testGroupDelete(t *testing.T) {
 	// Delete blank group
-	err := da.GroupDelete("")
+	err := da.GroupDelete(ctx, "")
 	expectErr(t, err, errs.ErrEmptyGroupName)
 
 	// Delete group that doesn't exist
-	err = da.GroupDelete("no-such-group")
+	err = da.GroupDelete(ctx, "no-such-group")
 	expectErr(t, err, errs.ErrNoSuchGroup)
 
-	da.GroupCreate(rest.Group{Name: "test-delete"}) // This has its own test
-	defer da.GroupDelete("test-delete")
+	da.GroupCreate(ctx, rest.Group{Name: "test-delete"}) // This has its own test
+	defer da.GroupDelete(ctx, "test-delete")
 
-	err = da.GroupDelete("test-delete")
+	err = da.GroupDelete(ctx, "test-delete")
 	assert.NoError(t, err)
 
-	exists, _ := da.GroupExists("test-delete")
+	exists, _ := da.GroupExists(ctx, "test-delete")
 	if exists {
 		t.Error("Shouldn't exist anymore!")
 	}
@@ -96,24 +96,24 @@ func testGroupGet(t *testing.T) {
 	var group rest.Group
 
 	// Expect an error
-	_, err = da.GroupGet("")
+	_, err = da.GroupGet(ctx, "")
 	expectErr(t, err, errs.ErrEmptyGroupName)
 
 	// Expect an error
-	_, err = da.GroupGet("test-get")
+	_, err = da.GroupGet(ctx, "test-get")
 	expectErr(t, err, errs.ErrNoSuchGroup)
 
-	da.GroupCreate(rest.Group{Name: "test-get"})
-	defer da.GroupDelete("test-get")
+	da.GroupCreate(ctx, rest.Group{Name: "test-get"})
+	defer da.GroupDelete(ctx, "test-get")
 
-	// da.Group should exist now
-	exists, _ := da.GroupExists("test-get")
+	// da.Group should ctx, exist now
+	exists, _ := da.GroupExists(ctx, "test-get")
 	if !exists {
 		t.Error("Group should exist now")
 	}
 
 	// Expect no error
-	group, err = da.GroupGet("test-get")
+	group, err = da.GroupGet(ctx, "test-get")
 	assert.NoError(t, err)
 	if group.Name != "test-get" {
 		t.Errorf("Group name mismatch: %q is not \"test-get\"", group.Name)
@@ -121,16 +121,16 @@ func testGroupGet(t *testing.T) {
 }
 
 func testGroupList(t *testing.T) {
-	da.GroupCreate(rest.Group{Name: "test-list-0"})
-	defer da.GroupDelete("test-list-0")
-	da.GroupCreate(rest.Group{Name: "test-list-1"})
-	defer da.GroupDelete("test-list-1")
-	da.GroupCreate(rest.Group{Name: "test-list-2"})
-	defer da.GroupDelete("test-list-2")
-	da.GroupCreate(rest.Group{Name: "test-list-3"})
-	defer da.GroupDelete("test-list-3")
+	da.GroupCreate(ctx, rest.Group{Name: "test-list-0"})
+	defer da.GroupDelete(ctx, "test-list-0")
+	da.GroupCreate(ctx, rest.Group{Name: "test-list-1"})
+	defer da.GroupDelete(ctx, "test-list-1")
+	da.GroupCreate(ctx, rest.Group{Name: "test-list-2"})
+	defer da.GroupDelete(ctx, "test-list-2")
+	da.GroupCreate(ctx, rest.Group{Name: "test-list-3"})
+	defer da.GroupDelete(ctx, "test-list-3")
 
-	groups, err := da.GroupList()
+	groups, err := da.GroupList(ctx)
 	assert.NoError(t, err)
 
 	if len(groups) != 4 {
@@ -145,22 +145,22 @@ func testGroupList(t *testing.T) {
 }
 
 func testGroupAddUser(t *testing.T) {
-	err := da.GroupAddUser("foo", "bar")
+	err := da.GroupAddUser(ctx, "foo", "bar")
 	expectErr(t, err, errs.ErrNoSuchGroup)
 
-	da.GroupCreate(rest.Group{Name: "foo"})
-	defer da.GroupDelete("foo")
+	da.GroupCreate(ctx, rest.Group{Name: "foo"})
+	defer da.GroupDelete(ctx, "foo")
 
-	err = da.GroupAddUser("foo", "bar")
+	err = da.GroupAddUser(ctx, "foo", "bar")
 	expectErr(t, err, errs.ErrNoSuchUser)
 
-	da.UserCreate(rest.User{Username: "bar", Email: "bar"})
-	defer da.UserDelete("bar")
+	da.UserCreate(ctx, rest.User{Username: "bar", Email: "bar"})
+	defer da.UserDelete(ctx, "bar")
 
-	err = da.GroupAddUser("foo", "bar")
+	err = da.GroupAddUser(ctx, "foo", "bar")
 	assert.NoError(t, err)
 
-	group, _ := da.GroupGet("foo")
+	group, _ := da.GroupGet(ctx, "foo")
 
 	if len(group.Users) != 1 {
 		t.Error("Users list empty")
@@ -172,16 +172,16 @@ func testGroupAddUser(t *testing.T) {
 }
 
 func testGroupRemoveUser(t *testing.T) {
-	da.GroupCreate(rest.Group{Name: "foo"})
-	defer da.GroupDelete("foo")
+	da.GroupCreate(ctx, rest.Group{Name: "foo"})
+	defer da.GroupDelete(ctx, "foo")
 
-	da.UserCreate(rest.User{Username: "bat"})
-	defer da.UserDelete("bat")
+	da.UserCreate(ctx, rest.User{Username: "bat"})
+	defer da.UserDelete(ctx, "bat")
 
-	err := da.GroupAddUser("foo", "bat")
+	err := da.GroupAddUser(ctx, "foo", "bat")
 	assert.NoError(t, err)
 
-	group, err := da.GroupGet("foo")
+	group, err := da.GroupGet(ctx, "foo")
 	assert.NoError(t, err)
 
 	if len(group.Users) != 1 {
@@ -192,10 +192,10 @@ func testGroupRemoveUser(t *testing.T) {
 		t.Error("Wrong user!")
 	}
 
-	err = da.GroupRemoveUser("foo", "bat")
+	err = da.GroupRemoveUser(ctx, "foo", "bat")
 	assert.NoError(t, err)
 
-	group, err = da.GroupGet("foo")
+	group, err = da.GroupGet(ctx, "foo")
 	assert.NoError(t, err)
 
 	if len(group.Users) != 0 {

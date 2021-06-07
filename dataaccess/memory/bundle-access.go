@@ -17,6 +17,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/getgort/gort/data"
@@ -24,7 +25,7 @@ import (
 )
 
 // BundleCreate TBD
-func (da *InMemoryDataAccess) BundleCreate(bundle data.Bundle) error {
+func (da *InMemoryDataAccess) BundleCreate(ctx context.Context, bundle data.Bundle) error {
 	if bundle.Name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -33,7 +34,7 @@ func (da *InMemoryDataAccess) BundleCreate(bundle data.Bundle) error {
 		return errs.ErrFieldRequired
 	}
 
-	exists, err := da.BundleExists(bundle.Name, bundle.Version)
+	exists, err := da.BundleExists(ctx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	}
@@ -47,7 +48,7 @@ func (da *InMemoryDataAccess) BundleCreate(bundle data.Bundle) error {
 }
 
 // BundleDelete TBD
-func (da *InMemoryDataAccess) BundleDelete(name, version string) error {
+func (da *InMemoryDataAccess) BundleDelete(ctx context.Context, name, version string) error {
 	if name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -56,7 +57,7 @@ func (da *InMemoryDataAccess) BundleDelete(name, version string) error {
 		return errs.ErrEmptyBundleVersion
 	}
 
-	exists, err := da.BundleExists(name, version)
+	exists, err := da.BundleExists(ctx, name, version)
 	if err != nil {
 		return err
 	}
@@ -70,7 +71,7 @@ func (da *InMemoryDataAccess) BundleDelete(name, version string) error {
 }
 
 // BundleDisable TBD
-func (da *InMemoryDataAccess) BundleDisable(name string) error {
+func (da *InMemoryDataAccess) BundleDisable(ctx context.Context, name string) error {
 	if name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -94,7 +95,7 @@ func (da *InMemoryDataAccess) BundleDisable(name string) error {
 }
 
 // BundleEnable TBD
-func (da *InMemoryDataAccess) BundleEnable(name, version string) error {
+func (da *InMemoryDataAccess) BundleEnable(ctx context.Context, name, version string) error {
 	if name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -103,7 +104,7 @@ func (da *InMemoryDataAccess) BundleEnable(name, version string) error {
 		return errs.ErrEmptyBundleVersion
 	}
 
-	exists, err := da.BundleExists(name, version)
+	exists, err := da.BundleExists(ctx, name, version)
 	if err != nil {
 		return err
 	}
@@ -123,7 +124,7 @@ func (da *InMemoryDataAccess) BundleEnable(name, version string) error {
 }
 
 // BundleEnabledVersion TBD
-func (da *InMemoryDataAccess) BundleEnabledVersion(name string) (string, error) {
+func (da *InMemoryDataAccess) BundleEnabledVersion(ctx context.Context, name string) (string, error) {
 	if name == "" {
 		return "", errs.ErrEmptyBundleName
 	}
@@ -150,14 +151,14 @@ func (da *InMemoryDataAccess) BundleEnabledVersion(name string) (string, error) 
 }
 
 // BundleExists TBD
-func (da *InMemoryDataAccess) BundleExists(name, version string) (bool, error) {
+func (da *InMemoryDataAccess) BundleExists(ctx context.Context, name, version string) (bool, error) {
 	_, exists := da.bundles[bundleKey(name, version)]
 
 	return exists, nil
 }
 
 // BundleGet TBD
-func (da *InMemoryDataAccess) BundleGet(name, version string) (data.Bundle, error) {
+func (da *InMemoryDataAccess) BundleGet(ctx context.Context, name, version string) (data.Bundle, error) {
 	if name == "" {
 		return data.Bundle{}, errs.ErrEmptyBundleName
 	}
@@ -166,7 +167,7 @@ func (da *InMemoryDataAccess) BundleGet(name, version string) (data.Bundle, erro
 		return data.Bundle{}, errs.ErrEmptyBundleVersion
 	}
 
-	exists, err := da.BundleExists(name, version)
+	exists, err := da.BundleExists(ctx, name, version)
 	if err != nil {
 		return data.Bundle{}, err
 	}
@@ -180,7 +181,7 @@ func (da *InMemoryDataAccess) BundleGet(name, version string) (data.Bundle, erro
 }
 
 // BundleList TBD
-func (da *InMemoryDataAccess) BundleList() ([]data.Bundle, error) {
+func (da *InMemoryDataAccess) BundleList(ctx context.Context) ([]data.Bundle, error) {
 	list := make([]data.Bundle, 0)
 
 	for _, g := range da.bundles {
@@ -191,7 +192,7 @@ func (da *InMemoryDataAccess) BundleList() ([]data.Bundle, error) {
 }
 
 // BundleListVersions TBD
-func (da *InMemoryDataAccess) BundleListVersions(name string) ([]data.Bundle, error) {
+func (da *InMemoryDataAccess) BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error) {
 	list := make([]data.Bundle, 0)
 
 	for _, g := range da.bundles {
@@ -204,7 +205,7 @@ func (da *InMemoryDataAccess) BundleListVersions(name string) ([]data.Bundle, er
 }
 
 // BundleUpdate TBD
-func (da *InMemoryDataAccess) BundleUpdate(bundle data.Bundle) error {
+func (da *InMemoryDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundle) error {
 	if bundle.Name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -213,7 +214,7 @@ func (da *InMemoryDataAccess) BundleUpdate(bundle data.Bundle) error {
 		return errs.ErrEmptyBundleVersion
 	}
 
-	exists, err := da.BundleExists(bundle.Name, bundle.Version)
+	exists, err := da.BundleExists(ctx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	}
@@ -229,7 +230,7 @@ func (da *InMemoryDataAccess) BundleUpdate(bundle data.Bundle) error {
 // FindCommandEntry is used to find the enabled commands with the provided
 // bundle and command names. If either is empty, it is treated as a wildcard.
 // Importantly, this must only return ENABLED commands!
-func (da *InMemoryDataAccess) FindCommandEntry(bundleName, commandName string) ([]data.CommandEntry, error) {
+func (da *InMemoryDataAccess) FindCommandEntry(ctx context.Context, bundleName, commandName string) ([]data.CommandEntry, error) {
 	entries := make([]data.CommandEntry, 0)
 
 	for _, bundle := range da.bundles {

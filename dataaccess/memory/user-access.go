@@ -17,13 +17,15 @@
 package memory
 
 import (
+	"context"
+
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 )
 
 // UserAuthenticate authenticates a username/password combination.
-func (da *InMemoryDataAccess) UserAuthenticate(username string, password string) (bool, error) {
-	exists, err := da.UserExists(username)
+func (da *InMemoryDataAccess) UserAuthenticate(ctx context.Context, username string, password string) (bool, error) {
+	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return false, err
 	}
@@ -31,7 +33,7 @@ func (da *InMemoryDataAccess) UserAuthenticate(username string, password string)
 		return false, errs.ErrNoSuchUser
 	}
 
-	user, err := da.UserGet(username)
+	user, err := da.UserGet(ctx, username)
 	if err != nil {
 		return false, err
 	}
@@ -41,12 +43,12 @@ func (da *InMemoryDataAccess) UserAuthenticate(username string, password string)
 
 // UserCreate is used to create a new Gort user in the data store. An error is
 // returned if the username is empty or if a user already exists.
-func (da *InMemoryDataAccess) UserCreate(user rest.User) error {
+func (da *InMemoryDataAccess) UserCreate(ctx context.Context, user rest.User) error {
 	if user.Username == "" {
 		return errs.ErrEmptyUserName
 	}
 
-	exists, err := da.UserExists(user.Username)
+	exists, err := da.UserExists(ctx, user.Username)
 	if err != nil {
 		return err
 	}
@@ -62,7 +64,7 @@ func (da *InMemoryDataAccess) UserCreate(user rest.User) error {
 // UserDelete deletes an existing user from the data store. An error is
 // returned if the username parameter is empty of if the user doesn't
 // exist.
-func (da *InMemoryDataAccess) UserDelete(username string) error {
+func (da *InMemoryDataAccess) UserDelete(ctx context.Context, username string) error {
 	if username == "" {
 		return errs.ErrEmptyUserName
 	}
@@ -72,7 +74,7 @@ func (da *InMemoryDataAccess) UserDelete(username string) error {
 		return errs.ErrAdminUndeletable
 	}
 
-	exists, err := da.UserExists(username)
+	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -87,7 +89,7 @@ func (da *InMemoryDataAccess) UserDelete(username string) error {
 
 // UserExists is used to determine whether a Gort user with the given username
 // exists in the data store.
-func (da *InMemoryDataAccess) UserExists(username string) (bool, error) {
+func (da *InMemoryDataAccess) UserExists(ctx context.Context, username string) (bool, error) {
 	_, exists := da.users[username]
 
 	return exists, nil
@@ -95,12 +97,12 @@ func (da *InMemoryDataAccess) UserExists(username string) (bool, error) {
 
 // UserGet returns a user from the data store. An error is returned if the
 // username parameter is empty or if the user doesn't exist.
-func (da *InMemoryDataAccess) UserGet(username string) (rest.User, error) {
+func (da *InMemoryDataAccess) UserGet(ctx context.Context, username string) (rest.User, error) {
 	if username == "" {
 		return rest.User{}, errs.ErrEmptyUserName
 	}
 
-	exists, err := da.UserExists(username)
+	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return rest.User{}, err
 	}
@@ -115,7 +117,7 @@ func (da *InMemoryDataAccess) UserGet(username string) (rest.User, error) {
 
 // UserGetByEmail returns a user from the data store. An error is returned if
 // the email parameter is empty or if the user doesn't exist.
-func (da *InMemoryDataAccess) UserGetByEmail(email string) (rest.User, error) {
+func (da *InMemoryDataAccess) UserGetByEmail(ctx context.Context, email string) (rest.User, error) {
 	for _, v := range da.users {
 		if v.Email == email {
 			return *v, nil
@@ -127,7 +129,7 @@ func (da *InMemoryDataAccess) UserGetByEmail(email string) (rest.User, error) {
 
 // UserList returns a list of all known users in the datastore.
 // Passwords are not included. Nice try.
-func (da *InMemoryDataAccess) UserList() ([]rest.User, error) {
+func (da *InMemoryDataAccess) UserList(ctx context.Context) ([]rest.User, error) {
 	list := make([]rest.User, 0)
 
 	for _, u := range da.users {
@@ -141,12 +143,12 @@ func (da *InMemoryDataAccess) UserList() ([]rest.User, error) {
 // UserUpdate is used to update an existing user. An error is returned if the
 // username is empty or if the user doesn't exist.
 // TODO Should we let this create users that don't exist?
-func (da *InMemoryDataAccess) UserUpdate(user rest.User) error {
+func (da *InMemoryDataAccess) UserUpdate(ctx context.Context, user rest.User) error {
 	if user.Username == "" {
 		return errs.ErrEmptyUserName
 	}
 
-	exists, err := da.UserExists(user.Username)
+	exists, err := da.UserExists(ctx, user.Username)
 	if err != nil {
 		return err
 	}
@@ -160,16 +162,16 @@ func (da *InMemoryDataAccess) UserUpdate(user rest.User) error {
 }
 
 // UserGroupList comments TBD
-func (da *InMemoryDataAccess) UserGroupList(user string) ([]rest.Group, error) {
+func (da *InMemoryDataAccess) UserGroupList(ctx context.Context, user string) ([]rest.Group, error) {
 	return []rest.Group{}, errs.ErrNotImplemented
 }
 
 // UserGroupAdd comments TBD
-func (da *InMemoryDataAccess) UserGroupAdd(user string, group string) error {
+func (da *InMemoryDataAccess) UserGroupAdd(ctx context.Context, user string, group string) error {
 	return errs.ErrNotImplemented
 }
 
 // UserGroupDelete comments TBD
-func (da *InMemoryDataAccess) UserGroupDelete(user string, group string) error {
+func (da *InMemoryDataAccess) UserGroupDelete(ctx context.Context, user string, group string) error {
 	return errs.ErrNotImplemented
 }

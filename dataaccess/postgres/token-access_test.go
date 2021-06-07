@@ -34,12 +34,12 @@ func testTokenAccess(t *testing.T) {
 }
 
 func testTokenGenerate(t *testing.T) {
-	err := da.UserCreate(rest.User{Username: "test_generate"})
-	defer da.UserDelete("test_generate")
+	err := da.UserCreate(ctx, rest.User{Username: "test_generate"})
+	defer da.UserDelete(ctx, "test_generate")
 	assert.NoError(t, err)
 
-	token, err := da.TokenGenerate("test_generate", 10*time.Minute)
-	defer da.TokenInvalidate(token.Token)
+	token, err := da.TokenGenerate(ctx, "test_generate", 10*time.Minute)
+	defer da.TokenInvalidate(ctx, token.Token)
 	assert.NoError(t, err)
 
 	if token.Duration != 10*time.Minute {
@@ -56,18 +56,18 @@ func testTokenGenerate(t *testing.T) {
 }
 
 func testTokenRetrieveByUser(t *testing.T) {
-	_, err := da.TokenRetrieveByUser("no-such-user")
+	_, err := da.TokenRetrieveByUser(ctx, "no-such-user")
 	expectErr(t, err, errs.ErrNoSuchToken)
 
-	err = da.UserCreate(rest.User{Username: "test_uretrieve", Email: "test_uretrieve"})
-	defer da.UserDelete("test_uretrieve")
+	err = da.UserCreate(ctx, rest.User{Username: "test_uretrieve", Email: "test_uretrieve"})
+	defer da.UserDelete(ctx, "test_uretrieve")
 	assert.NoError(t, err)
 
-	token, err := da.TokenGenerate("test_uretrieve", 10*time.Minute)
-	defer da.TokenInvalidate(token.Token)
+	token, err := da.TokenGenerate(ctx, "test_uretrieve", 10*time.Minute)
+	defer da.TokenInvalidate(ctx, token.Token)
 	assert.NoError(t, err)
 
-	rtoken, err := da.TokenRetrieveByUser("test_uretrieve")
+	rtoken, err := da.TokenRetrieveByUser(ctx, "test_uretrieve")
 	assert.NoError(t, err)
 
 	if token.Token != rtoken.Token {
@@ -76,18 +76,18 @@ func testTokenRetrieveByUser(t *testing.T) {
 }
 
 func testTokenRetrieveByToken(t *testing.T) {
-	_, err := da.TokenRetrieveByToken("no-such-token")
+	_, err := da.TokenRetrieveByToken(ctx, "no-such-token")
 	expectErr(t, err, errs.ErrNoSuchToken)
 
-	err = da.UserCreate(rest.User{Username: "test_tretrieve", Email: "test_tretrieve"})
-	defer da.UserDelete("test_tretrieve")
+	err = da.UserCreate(ctx, rest.User{Username: "test_tretrieve", Email: "test_tretrieve"})
+	defer da.UserDelete(ctx, "test_tretrieve")
 	assert.NoError(t, err)
 
-	token, err := da.TokenGenerate("test_tretrieve", 10*time.Minute)
-	defer da.TokenInvalidate(token.Token)
+	token, err := da.TokenGenerate(ctx, "test_tretrieve", 10*time.Minute)
+	defer da.TokenInvalidate(ctx, token.Token)
 	assert.NoError(t, err)
 
-	rtoken, err := da.TokenRetrieveByToken(token.Token)
+	rtoken, err := da.TokenRetrieveByToken(ctx, token.Token)
 	assert.NoError(t, err)
 
 	if token.Token != rtoken.Token {
@@ -96,12 +96,12 @@ func testTokenRetrieveByToken(t *testing.T) {
 }
 
 func testTokenExpiry(t *testing.T) {
-	err := da.UserCreate(rest.User{Username: "test_expires", Email: "test_expires"})
-	defer da.UserDelete("test_expires")
+	err := da.UserCreate(ctx, rest.User{Username: "test_expires", Email: "test_expires"})
+	defer da.UserDelete(ctx, "test_expires")
 	assert.NoError(t, err)
 
-	token, err := da.TokenGenerate("test_expires", 1*time.Second)
-	defer da.TokenInvalidate(token.Token)
+	token, err := da.TokenGenerate(ctx, "test_expires", 1*time.Second)
+	defer da.TokenInvalidate(ctx, token.Token)
 	assert.NoError(t, err)
 
 	if token.IsExpired() {
@@ -116,22 +116,22 @@ func testTokenExpiry(t *testing.T) {
 }
 
 func testTokenInvalidate(t *testing.T) {
-	err := da.UserCreate(rest.User{Username: "test_invalidate", Email: "test_invalidate"})
-	defer da.UserDelete("test_invalidate")
+	err := da.UserCreate(ctx, rest.User{Username: "test_invalidate", Email: "test_invalidate"})
+	defer da.UserDelete(ctx, "test_invalidate")
 	assert.NoError(t, err)
 
-	token, err := da.TokenGenerate("test_invalidate", 10*time.Minute)
-	defer da.TokenInvalidate(token.Token)
+	token, err := da.TokenGenerate(ctx, "test_invalidate", 10*time.Minute)
+	defer da.TokenInvalidate(ctx, token.Token)
 	assert.NoError(t, err)
 
-	if !da.TokenEvaluate(token.Token) {
+	if !da.TokenEvaluate(ctx, token.Token) {
 		t.Error("Expected token to be valid")
 	}
 
-	err = da.TokenInvalidate(token.Token)
+	err = da.TokenInvalidate(ctx, token.Token)
 	assert.NoError(t, err)
 
-	if da.TokenEvaluate(token.Token) {
+	if da.TokenEvaluate(ctx, token.Token) {
 		t.Error("Expected token to be invalid")
 	}
 }

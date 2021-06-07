@@ -133,7 +133,7 @@ func GetAdapter(name string) (Adapter, error) {
 // GetCommandEntry accepts a tokenized parameter slice and returns any
 // associated data.CommandEntry instances. If the number of matching
 // commands is > 1, an error is returned.
-func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
+func GetCommandEntry(ctx context.Context, tokens []string) (data.CommandEntry, error) {
 	bundleName, commandName, err := bundles.SplitCommand(tokens[0])
 	if err != nil {
 		return data.CommandEntry{}, err
@@ -144,7 +144,7 @@ func GetCommandEntry(tokens []string) (data.CommandEntry, error) {
 		return data.CommandEntry{}, err
 	}
 
-	entries, err := findAllEntries(bundleName, commandName, finders...)
+	entries, err := findAllEntries(ctx, bundleName, commandName, finders...)
 	if err != nil {
 		return data.CommandEntry{}, err
 	}
@@ -185,11 +185,11 @@ func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
 	return finders, nil
 }
 
-func findAllEntries(bundleName, commandName string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {
+func findAllEntries(ctx context.Context, bundleName, commandName string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {
 	entries := make([]data.CommandEntry, 0)
 
 	for _, f := range finder {
-		e, err := f.FindCommandEntry(bundleName, commandName)
+		e, err := f.FindCommandEntry(ctx, bundleName, commandName)
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +201,7 @@ func findAllEntries(bundleName, commandName string, finder ...bundles.CommandEnt
 }
 
 // OnConnected handles ConnectedEvent events.
-func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
+func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent) {
 	le := adapterLogEvent(event, nil)
 
 	le.WithField("app.name", event.Info.User.Name).
@@ -228,7 +228,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 // If a command is found in the text, it will emit a data.CommandRequest
 // instance to the commands channel.
 // TODO Support direct in-channel mentions.
-func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
+func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
 	channelinfo, err := event.Adapter.GetChannelInfo(data.ChannelID)
 	if err != nil {
 		return nil, gerrs.Wrap(ErrChannelNotFound, err)
@@ -259,11 +259,11 @@ func OnChannelMessage(event *ProviderEvent, data *ChannelMessageEvent) (*data.Co
 		WithField("channel.name", channelinfo.Name).
 		Debug("Got message")
 
-	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
+	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
 
 // OnDirectMessage handles DirectMessageEvent events.
-func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
+func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
 	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
 	if err != nil {
 		return nil, gerrs.Wrap(ErrUserNotFound, err)
@@ -280,7 +280,7 @@ func OnDirectMessage(event *ProviderEvent, data *DirectMessageEvent) (*data.Comm
 		WithField("channel.id", data.ChannelID).
 		Debug("Got direct message")
 
-	return TriggerCommand(rawCommandText, event.Adapter, data.ChannelID, data.UserID)
+	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
 
 // StartListening instructs all relays to establish connections, receives all
@@ -304,7 +304,7 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 
 // TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
 // valid command trigger is identified.
-func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
+func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
 	le := log.WithField("adapter.name", adapter.GetName()).
 		WithField("command.raw", rawCommand).
 		WithField("channel.id", channelID).
@@ -322,7 +322,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		le = le.WithField("user.email", info.Email)
 	}
 
-	command, err := GetCommandEntry(params)
+	command, err := GetCommandEntry(ctx, params)
 	if err != nil {
 		switch {
 		case gerrs.Is(err, ErrNoSuchCommand):
@@ -348,7 +348,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 		WithField("command.name", command.Command.Name).
 		Debug("Found matching command+bundle")
 
-	gortUser, autocreated, err := findOrMakeGortUser(info)
+	gortUser, autocreated, err := findOrMakeGortUser(ctx, info)
 	if err != nil {
 		switch {
 		case gerrs.Is(err, ErrSelfRegistrationOff):
@@ -415,7 +415,7 @@ func adapterLogEvent(event *ProviderEvent, ui *UserInfo) *log.Entry {
 }
 
 // findOrMakeGortUser ...
-func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
+func findOrMakeGortUser(ctx context.Context, info *UserInfo) (rest.User, bool, error) {
 	// Get the data access interface.
 	da, err := dataaccess.Get()
 	if err != nil {
@@ -424,7 +424,7 @@ func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 
 	// Try to figure out what user we're working with here.
 	exists := true
-	user, err := da.UserGetByEmail(info.Email)
+	user, err := da.UserGetByEmail(ctx, info.Email)
 	if gerrs.Is(err, errs.ErrNoSuchUser) {
 		exists = false
 	} else if err != nil {
@@ -437,7 +437,7 @@ func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 	}
 
 	// We can create the user... unless the instance hasn't been bootstrapped.
-	bootstrapped, err := da.UserExists("admin")
+	bootstrapped, err := da.UserExists(ctx, "admin")
 	if err != nil {
 		return rest.User{}, false, err
 	}
@@ -469,7 +469,7 @@ func findOrMakeGortUser(info *UserInfo) (rest.User, bool, error) {
 		WithField("user.email", user.Email).
 		Info("User auto-created")
 
-	return user, true, da.UserCreate(user)
+	return user, true, da.UserCreate(ctx, user)
 }
 
 // TODO Replace this with something resembling a template. Eventually.
@@ -517,7 +517,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 	for event := range allEvents {
 		switch ev := event.Data.(type) {
 		case *ConnectedEvent:
-			OnConnected(event, ev)
+			OnConnected(event.Context, event, ev)
 
 		case *DisconnectedEvent:
 			// Do nothing.
@@ -526,7 +526,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			adapterErrors <- gerrs.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
 
 		case *ChannelMessageEvent:
-			request, err := OnChannelMessage(event, ev)
+			request, err := OnChannelMessage(event.Context, event, ev)
 			if request != nil {
 				commandRequests <- *request
 			}
@@ -535,7 +535,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			}
 
 		case *DirectMessageEvent:
-			request, err := OnDirectMessage(event, ev)
+			request, err := OnDirectMessage(event.Context, event, ev)
 			if request != nil {
 				commandRequests <- *request
 			}

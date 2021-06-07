@@ -17,6 +17,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -39,7 +40,7 @@ func NewPostgresDataAccess(configs data.DatabaseConfigs) PostgresDataAccess {
 }
 
 // Initialize sets up the database.
-func (da PostgresDataAccess) Initialize() error {
+func (da PostgresDataAccess) Initialize(ctx context.Context) error {
 	// Does the database exist? If not, create it.
 	err := da.ensureGortDatabaseExists()
 	if err != nil {

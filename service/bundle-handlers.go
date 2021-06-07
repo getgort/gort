@@ -17,6 +17,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -39,7 +40,7 @@ var (
 
 // handleGetBundles handles "GET /v2/bundles"
 func handleGetBundles(w http.ResponseWriter, r *http.Request) {
-	bundles, err := getAllBundles()
+	bundles, err := getAllBundles(r.Context())
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -57,7 +58,7 @@ func handleGetBundleVersions(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	name := params["name"]
 
-	bundles, err := dataAccessLayer.BundleListVersions(name)
+	bundles, err := dataAccessLayer.BundleListVersions(r.Context(), name)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -75,7 +76,7 @@ func handleDeleteBundleVersion(w http.ResponseWriter, r *http.Request) {
 	name := params["name"]
 	version := params["version"]
 
-	err := dataAccessLayer.BundleDelete(name, version)
+	err := dataAccessLayer.BundleDelete(r.Context(), name, version)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -88,7 +89,7 @@ func handleGetBundleVersion(w http.ResponseWriter, r *http.Request) {
 	name := params["name"]
 	version := params["version"]
 
-	bundle, err := dataAccessLayer.BundleGet(name, version)
+	bundle, err := dataAccessLayer.BundleGet(r.Context(), name, version)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -113,14 +114,14 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 	// If enabled=false we ignore the value of version and replace it with the
 	// current enabled version.
 	if enabledValue[0] == 'F' {
-		version, err = dataAccessLayer.BundleEnabledVersion(name)
+		version, err = dataAccessLayer.BundleEnabledVersion(r.Context(), name)
 		if err != nil {
 			respondAndLogError(w, err)
 			return
 		}
 	}
 
-	exists, err := dataAccessLayer.BundleExists(name, version)
+	exists, err := dataAccessLayer.BundleExists(r.Context(), name, version)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -142,7 +143,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 		bundle.Name = name
 		bundle.Version = version
 
-		err = dataAccessLayer.BundleUpdate(bundle)
+		err = dataAccessLayer.BundleUpdate(r.Context(), bundle)
 		if err != nil {
 			respondAndLogError(w, err)
 			return
@@ -150,9 +151,9 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if enabledValue[0] == 'T' {
-		err = dataAccessLayer.BundleEnable(name, version)
+		err = dataAccessLayer.BundleEnable(r.Context(), name, version)
 	} else if enabledValue[0] == 'F' {
-		err = dataAccessLayer.BundleDisable(name)
+		err = dataAccessLayer.BundleDisable(r.Context(), name)
 	}
 	if err != nil {
 		respondAndLogError(w, err)
@@ -175,19 +176,19 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 	bundle.Name = params["name"]
 	bundle.Version = params["version"]
 
-	err = dataAccessLayer.BundleCreate(bundle)
+	err = dataAccessLayer.BundleCreate(r.Context(), bundle)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
 	}
 }
 
-func getAllBundles() ([]data.Bundle, error) {
+func getAllBundles(ctx context.Context) ([]data.Bundle, error) {
 	// Default bundles from config
 	bundles := config.GetBundleConfigs()
 
 	// Explicit bundles from the data layer
-	dataLayerBundles, err := dataAccessLayer.BundleList()
+	dataLayerBundles, err := dataAccessLayer.BundleList(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -201,7 +201,7 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 			userID := "-"
 			tokenString := r.Header.Get("X-Session-Token")
 			if tokenString != "" {
-				token, _ := dataAccessLayer.TokenRetrieveByToken(tokenString)
+				token, _ := dataAccessLayer.TokenRetrieveByToken(r.Context(), tokenString)
 				userID = token.User
 			}
 
@@ -240,7 +240,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 	le := log.WithField("user", user)
 
-	exists, err := dataAccessLayer.UserExists(username)
+	exists, err := dataAccessLayer.UserExists(r.Context(), username)
 	if err != nil {
 		le.WithError(err).Error("Authentication: failed to find user")
 		telemetry.Errors().WithError(err).Commit(context.TODO())
@@ -254,7 +254,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authenticated, err := dataAccessLayer.UserAuthenticate(username, password)
+	authenticated, err := dataAccessLayer.UserAuthenticate(r.Context(), username, password)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -265,7 +265,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := dataAccessLayer.TokenGenerate(username, 10*time.Minute)
+	token, err := dataAccessLayer.TokenGenerate(r.Context(), username, 10*time.Minute)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -276,7 +276,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 // handleBootstrap handles "POST /bootstrap"
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
-	users, err := dataAccessLayer.UserList()
+	users, err := dataAccessLayer.UserList(r.Context())
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -306,7 +306,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Persist our shiny new user to the database.
-	err = dataAccessLayer.UserCreate(user)
+	err = dataAccessLayer.UserCreate(r.Context(), user)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -314,14 +314,14 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 
 	// Create admin group.
 	group := rest.Group{Name: "admin"}
-	err = dataAccessLayer.GroupCreate(group)
+	err = dataAccessLayer.GroupCreate(r.Context(), group)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
 	}
 
 	// Add the admin user to the admin group.
-	err = dataAccessLayer.GroupAddUser(group.Name, user.Username)
+	err = dataAccessLayer.GroupAddUser(r.Context(), group.Name, user.Username)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -341,13 +341,13 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 		Password: testPassword,
 	}
 
-	err := dataAccessLayer.UserCreate(testUser)
+	err := dataAccessLayer.UserCreate(r.Context(), testUser)
 	if err != nil {
 		log.WithError(err).Warning("health check failure")
 		http.Error(w, `{"healthy":false}`, http.StatusServiceUnavailable)
 		return
 	}
-	defer dataAccessLayer.UserDelete(testUser.Username)
+	defer dataAccessLayer.UserDelete(r.Context(), testUser.Username)
 
 	log.Trace("health check pass")
 	m := map[string]bool{"healthy": true}
@@ -448,7 +448,7 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 			Commit(r.Context())
 
 		token := r.Header.Get("X-Session-Token")
-		if token == "" || !dataAccessLayer.TokenEvaluate(token) {
+		if token == "" || !dataAccessLayer.TokenEvaluate(r.Context(), token) {
 			telemetry.UnauthorizedRequests().
 				WithAttribute("request.uri", r.RequestURI).
 				WithAttribute("request.remote-addr", strings.Split(r.RemoteAddr, ":")[0]).

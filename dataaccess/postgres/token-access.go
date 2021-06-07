@@ -17,6 +17,7 @@
 package postgres
 
 import (
+	"context"
 	"time"
 
 	"github.com/getgort/gort/data"
@@ -27,8 +28,8 @@ import (
 
 // TokenEvaluate will test a token for validity. It returns true if the token
 // exists and is still within its valid period; false otherwise.
-func (da PostgresDataAccess) TokenEvaluate(tokenString string) bool {
-	token, err := da.TokenRetrieveByToken(tokenString)
+func (da PostgresDataAccess) TokenEvaluate(ctx context.Context, tokenString string) bool {
+	token, err := da.TokenRetrieveByToken(ctx, tokenString)
 	if err != nil {
 		return false
 	}
@@ -39,8 +40,8 @@ func (da PostgresDataAccess) TokenEvaluate(tokenString string) bool {
 // TokenGenerate generates a new token for the given user with a specified
 // expiration duration. Any existing token for this user will be automatically
 // invalidated. If the user doesn't exist an error is returned.
-func (da PostgresDataAccess) TokenGenerate(username string, duration time.Duration) (rest.Token, error) {
-	exists, err := da.UserExists(username)
+func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string, duration time.Duration) (rest.Token, error) {
+	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return rest.Token{}, err
 	}
@@ -49,9 +50,9 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 	}
 
 	// If a token already exists for this user, automatically invalidate it.
-	token, err := da.TokenRetrieveByUser(username)
+	token, err := da.TokenRetrieveByUser(ctx, username)
 	if err == nil {
-		da.TokenInvalidate(token.Token)
+		da.TokenInvalidate(ctx, token.Token)
 	}
 
 	tokenString, err := data.GenerateRandomToken(64)
@@ -88,7 +89,7 @@ func (da PostgresDataAccess) TokenGenerate(username string, duration time.Durati
 
 // TokenInvalidate immediately invalidates the specified token. An error is
 // returned if the token doesn't exist.
-func (da PostgresDataAccess) TokenInvalidate(tokenString string) error {
+func (da PostgresDataAccess) TokenInvalidate(ctx context.Context, tokenString string) error {
 	db, err := da.connect("gort")
 	if err != nil {
 		return err
@@ -106,7 +107,7 @@ func (da PostgresDataAccess) TokenInvalidate(tokenString string) error {
 
 // TokenRetrieveByUser retrieves the token associated with a username. An
 // error is returned if no such token (or user) exists.
-func (da PostgresDataAccess) TokenRetrieveByUser(username string) (rest.Token, error) {
+func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username string) (rest.Token, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return rest.Token{}, err
@@ -135,7 +136,7 @@ func (da PostgresDataAccess) TokenRetrieveByUser(username string) (rest.Token, e
 
 // TokenRetrieveByToken retrieves the token by its value. An error is returned
 // if no such token exists.
-func (da PostgresDataAccess) TokenRetrieveByToken(tokenString string) (rest.Token, error) {
+func (da PostgresDataAccess) TokenRetrieveByToken(ctx context.Context, tokenString string) (rest.Token, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return rest.Token{}, err

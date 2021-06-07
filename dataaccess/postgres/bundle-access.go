@@ -17,6 +17,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -37,7 +38,7 @@ type bundleCommandData struct {
 }
 
 // BundleCreate TBD
-func (da PostgresDataAccess) BundleCreate(bundle data.Bundle) error {
+func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundle) error {
 	if bundle.Name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -95,7 +96,7 @@ func (da PostgresDataAccess) BundleCreate(bundle data.Bundle) error {
 }
 
 // BundleDelete TBD
-func (da PostgresDataAccess) BundleDelete(name, version string) error {
+func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version string) error {
 	if name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -144,7 +145,7 @@ func (da PostgresDataAccess) BundleDelete(name, version string) error {
 }
 
 // BundleDisable TBD
-func (da PostgresDataAccess) BundleDisable(name string) error {
+func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) error {
 	db, err := da.connect("gort")
 	if err != nil {
 		return err
@@ -172,7 +173,7 @@ func (da PostgresDataAccess) BundleDisable(name string) error {
 }
 
 // BundleEnable TBD
-func (da PostgresDataAccess) BundleEnable(name, version string) error {
+func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version string) error {
 	db, err := da.connect("gort")
 	if err != nil {
 		return err
@@ -200,7 +201,7 @@ func (da PostgresDataAccess) BundleEnable(name, version string) error {
 }
 
 // BundleEnabledVersion TBD
-func (da PostgresDataAccess) BundleEnabledVersion(name string) (string, error) {
+func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name string) (string, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return "", err
@@ -228,7 +229,7 @@ func (da PostgresDataAccess) BundleEnabledVersion(name string) (string, error) {
 }
 
 // BundleExists TBD
-func (da PostgresDataAccess) BundleExists(name, version string) (bool, error) {
+func (da PostgresDataAccess) BundleExists(ctx context.Context, name, version string) (bool, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return false, err
@@ -244,7 +245,7 @@ func (da PostgresDataAccess) BundleExists(name, version string) (bool, error) {
 }
 
 // BundleGet TBD
-func (da PostgresDataAccess) BundleGet(name, version string) (data.Bundle, error) {
+func (da PostgresDataAccess) BundleGet(ctx context.Context, name, version string) (data.Bundle, error) {
 	if name == "" {
 		return data.Bundle{}, errs.ErrEmptyBundleName
 	}
@@ -273,7 +274,7 @@ func (da PostgresDataAccess) BundleGet(name, version string) (data.Bundle, error
 }
 
 // BundleList TBD
-func (da PostgresDataAccess) BundleList() ([]data.Bundle, error) {
+func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, error) {
 	// This is hacky as fuck. I know.
 	// I'll optimize later.
 
@@ -327,7 +328,7 @@ func (da PostgresDataAccess) BundleList() ([]data.Bundle, error) {
 }
 
 // BundleListVersions TBD
-func (da PostgresDataAccess) BundleListVersions(name string) ([]data.Bundle, error) {
+func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error) {
 	// This is hacky as fuck. I know.
 	// I'll optimize later.
 
@@ -380,7 +381,7 @@ func (da PostgresDataAccess) BundleListVersions(name string) ([]data.Bundle, err
 }
 
 // BundleUpdate TBD
-func (da PostgresDataAccess) BundleUpdate(bundle data.Bundle) error {
+func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundle) error {
 	if bundle.Name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -425,7 +426,7 @@ func (da PostgresDataAccess) BundleUpdate(bundle data.Bundle) error {
 // FindCommandEntry is used to find the enabled commands with the provided
 // bundle and command names. If either is empty, it is treated as a wildcard.
 // Importantly, this must only return ENABLED commands!
-func (da PostgresDataAccess) FindCommandEntry(bundleName, commandName string) ([]data.CommandEntry, error) {
+func (da PostgresDataAccess) FindCommandEntry(ctx context.Context, bundleName, commandName string) ([]data.CommandEntry, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return nil, err

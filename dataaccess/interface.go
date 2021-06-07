@@ -17,6 +17,7 @@
 package dataaccess
 
 import (
+	"context"
 	"time"
 
 	"github.com/getgort/gort/bundles"
@@ -29,48 +30,48 @@ import (
 type DataAccess interface {
 	bundles.CommandEntryFinder
 
-	Initialize() error
+	Initialize(context.Context) error
 
-	BundleCreate(bundle data.Bundle) error
-	BundleDelete(name string, version string) error
-	BundleDisable(name string) error
-	BundleEnable(name string, version string) error
-	BundleEnabledVersion(name string) (string, error)
-	BundleExists(name string, version string) (bool, error)
-	BundleGet(name string, version string) (data.Bundle, error)
-	BundleList() ([]data.Bundle, error)
-	BundleListVersions(name string) ([]data.Bundle, error)
-	BundleUpdate(bundle data.Bundle) error
+	BundleCreate(ctx context.Context, bundle data.Bundle) error
+	BundleDelete(ctx context.Context, name string, version string) error
+	BundleDisable(ctx context.Context, name string) error
+	BundleEnable(ctx context.Context, name string, version string) error
+	BundleEnabledVersion(ctx context.Context, name string) (string, error)
+	BundleExists(ctx context.Context, name string, version string) (bool, error)
+	BundleGet(ctx context.Context, name string, version string) (data.Bundle, error)
+	BundleList(ctx context.Context) ([]data.Bundle, error)
+	BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error)
+	BundleUpdate(ctx context.Context, bundle data.Bundle) error
 
-	GroupAddUser(groupname string, username string) error
-	GroupCreate(group rest.Group) error
-	GroupDelete(groupname string) error
-	GroupExists(groupname string) (bool, error)
-	GroupGet(groupname string) (rest.Group, error)
-	GroupGrantRole() error
-	GroupList() ([]rest.Group, error)
-	GroupRemoveUser(groupname string, username string) error
-	GroupRevokeRole() error
-	GroupUpdate(rest.Group) error
-	GroupUserList(groupname string) ([]rest.User, error)
-	GroupUserAdd(groupname string, user string) error
-	GroupUserDelete(groupname string, username string) error
+	GroupAddUser(ctx context.Context, groupname string, username string) error
+	GroupCreate(ctx context.Context, group rest.Group) error
+	GroupDelete(ctx context.Context, groupname string) error
+	GroupExists(ctx context.Context, groupname string) (bool, error)
+	GroupGet(ctx context.Context, groupname string) (rest.Group, error)
+	GroupGrantRole(ctx context.Context) error
+	GroupList(ctx context.Context) ([]rest.Group, error)
+	GroupRemoveUser(ctx context.Context, groupname string, username string) error
+	GroupRevokeRole(ctx context.Context) error
+	GroupUpdate(ctx context.Context, group rest.Group) error
+	GroupUserList(ctx context.Context, groupname string) ([]rest.User, error)
+	GroupUserAdd(ctx context.Context, groupname string, username string) error
+	GroupUserDelete(ctx context.Context, groupname string, username string) error
 
-	TokenEvaluate(token string) bool
-	TokenGenerate(username string, duration time.Duration) (rest.Token, error)
-	TokenInvalidate(token string) error
-	TokenRetrieveByUser(username string) (rest.Token, error)
-	TokenRetrieveByToken(token string) (rest.Token, error)
+	TokenEvaluate(ctx context.Context, token string) bool
+	TokenGenerate(ctx context.Context, username string, duration time.Duration) (rest.Token, error)
+	TokenInvalidate(ctx context.Context, token string) error
+	TokenRetrieveByUser(ctx context.Context, username string) (rest.Token, error)
+	TokenRetrieveByToken(ctx context.Context, token string) (rest.Token, error)
 
-	UserAuthenticate(username string, password string) (bool, error)
-	UserCreate(user rest.User) error
-	UserDelete(username string) error
-	UserExists(username string) (bool, error)
-	UserGet(username string) (rest.User, error)
-	UserGetByEmail(email string) (rest.User, error)
-	UserGroupList(username string) ([]rest.Group, error)
-	UserGroupAdd(username string, groupname string) error
-	UserGroupDelete(username string, groupname string) error
-	UserList() ([]rest.User, error)
-	UserUpdate(user rest.User) error
+	UserAuthenticate(ctx context.Context, username string, password string) (bool, error)
+	UserCreate(ctx context.Context, user rest.User) error
+	UserDelete(ctx context.Context, username string) error
+	UserExists(ctx context.Context, username string) (bool, error)
+	UserGet(ctx context.Context, username string) (rest.User, error)
+	UserGetByEmail(ctx context.Context, email string) (rest.User, error)
+	UserGroupList(ctx context.Context, username string) ([]rest.Group, error)
+	UserGroupAdd(ctx context.Context, username string, groupname string) error
+	UserGroupDelete(ctx context.Context, username string, groupname string) error
+	UserList(ctx context.Context) ([]rest.User, error)
+	UserUpdate(ctx context.Context, user rest.User) error
 }

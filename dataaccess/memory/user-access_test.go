@@ -41,7 +41,7 @@ func testUserNotExists(t *testing.T) {
 	err := da.Initialize()
 	assert.NoError(t, err)
 
-	exists, _ = da.UserExists("test-not-exists")
+	exists, _ = da.UserExists(ctx, "test-not-exists")
 	if exists {
 		t.Error("User should not exist now")
 	}
@@ -52,44 +52,44 @@ func testUserCreate(t *testing.T) {
 	var user rest.User
 
 	// Expect an error
-	err = da.UserCreate(user)
+	err = da.UserCreate(ctx, user)
 	expectErr(t, err, errs.ErrEmptyUserName)
 
 	// Expect no error
-	err = da.UserCreate(rest.User{Username: "test-create", Email: "test-create@bar.com"})
-	defer da.UserDelete("test-create")
+	err = da.UserCreate(ctx, rest.User{Username: "test-create", Email: "test-create@bar.com"})
+	defer da.UserDelete(ctx, "test-create")
 	assert.NoError(t, err)
 
 	// Expect an error
-	err = da.UserCreate(rest.User{Username: "test-create", Email: "test-create@bar.com"})
+	err = da.UserCreate(ctx, rest.User{Username: "test-create", Email: "test-create@bar.com"})
 	expectErr(t, err, errs.ErrUserExists)
 }
 
 func testUserAuthenticate(t *testing.T) {
 	var err error
 
-	authenticated, err := da.UserAuthenticate("test-auth", "no-match")
+	authenticated, err := da.UserAuthenticate(ctx, "test-auth", "no-match")
 	expectErr(t, err, errs.ErrNoSuchUser)
 	if authenticated {
 		t.Error("Expected false")
 	}
 
 	// Expect no error
-	err = da.UserCreate(rest.User{
+	err = da.UserCreate(ctx, rest.User{
 		Username: "test-auth",
 		Email:    "test-auth@bar.com",
 		Password: "password",
 	})
-	defer da.UserDelete("test-auth")
+	defer da.UserDelete(ctx, "test-auth")
 	assert.NoError(t, err)
 
-	authenticated, err = da.UserAuthenticate("test-auth", "no-match")
+	authenticated, err = da.UserAuthenticate(ctx, "test-auth", "no-match")
 	assert.NoError(t, err)
 	if authenticated {
 		t.Error("Expected false")
 	}
 
-	authenticated, err = da.UserAuthenticate("test-auth", "password")
+	authenticated, err = da.UserAuthenticate(ctx, "test-auth", "password")
 	assert.NoError(t, err)
 	if !authenticated {
 		t.Error("Expected true")
@@ -98,17 +98,17 @@ func testUserAuthenticate(t *testing.T) {
 func testUserExists(t *testing.T) {
 	var exists bool
 
-	exists, _ = da.UserExists("test-exists")
+	exists, _ = da.UserExists(ctx, "test-exists")
 	if exists {
 		t.Error("User should not exist now")
 	}
 
 	// Now we add a user to find.
-	err := da.UserCreate(rest.User{Username: "test-exists", Email: "test-exists@bar.com"})
-	defer da.UserDelete("test-exists")
+	err := da.UserCreate(ctx, rest.User{Username: "test-exists", Email: "test-exists@bar.com"})
+	defer da.UserDelete(ctx, "test-exists")
 	assert.NoError(t, err)
 
-	exists, _ = da.UserExists("test-exists")
+	exists, _ = da.UserExists(ctx, "test-exists")
 	if !exists {
 		t.Error("User should exist now")
 	}
@@ -116,25 +116,25 @@ func testUserExists(t *testing.T) {
 
 func testUserDelete(t *testing.T) {
 	// Delete blank user
-	err := da.UserDelete("")
+	err := da.UserDelete(ctx, "")
 	expectErr(t, err, errs.ErrEmptyUserName)
 
 	// Delete admin user
-	err = da.UserDelete("admin")
+	err = da.UserDelete(ctx, "admin")
 	expectErr(t, err, errs.ErrAdminUndeletable)
 
 	// Delete user that doesn't exist
-	err = da.UserDelete("no-such-user")
+	err = da.UserDelete(ctx, "no-such-user")
 	expectErr(t, err, errs.ErrNoSuchUser)
 
 	user := rest.User{Username: "test-delete", Email: "foo1.example.com"}
-	da.UserCreate(user) // This has its own test
-	defer da.UserDelete("test-delete")
+	da.UserCreate(ctx, user) // This has its own test
+	defer da.UserDelete(ctx, "test-delete")
 
-	err = da.UserDelete("test-delete")
+	err = da.UserDelete(ctx, "test-delete")
 	assert.NoError(t, err)
 
-	exists, _ := da.UserExists("test-delete")
+	exists, _ := da.UserExists(ctx, "test-delete")
 	if exists {
 		t.Error("Shouldn't exist anymore!")
 	}
@@ -145,25 +145,25 @@ func testUserGet(t *testing.T) {
 	var user rest.User
 
 	// Expect an error
-	_, err = da.UserGet("")
+	_, err = da.UserGet(ctx, "")
 	expectErr(t, err, errs.ErrEmptyUserName)
 
 	// Expect an error
-	_, err = da.UserGet("test-get")
+	_, err = da.UserGet(ctx, "test-get")
 	expectErr(t, err, errs.ErrNoSuchUser)
 
-	err = da.UserCreate(rest.User{Username: "test-get", Email: "test-get@foo.com"})
-	defer da.UserDelete("test-get")
+	err = da.UserCreate(ctx, rest.User{Username: "test-get", Email: "test-get@foo.com"})
+	defer da.UserDelete(ctx, "test-get")
 	assert.NoError(t, err)
 
-	// da.User should exist now
-	exists, _ := da.UserExists("test-get")
+	// da.User should ctx, exist now
+	exists, _ := da.UserExists(ctx, "test-get")
 	if !exists {
 		t.Error("User should exist now")
 	}
 
 	// Expect no error
-	user, err = da.UserGet("test-get")
+	user, err = da.UserGet(ctx, "test-get")
 	assert.NoError(t, err)
 	if user.Username != "test-get" {
 		t.Errorf("User name mismatch: %q is not \"test-get\"", user.Username)
@@ -171,16 +171,16 @@ func testUserGet(t *testing.T) {
 }
 
 func testUserList(t *testing.T) {
-	da.UserCreate(rest.User{Username: "test-list-0", Password: "password0!", Email: "test-list-0"})
-	defer da.UserDelete("test-list-0")
-	da.UserCreate(rest.User{Username: "test-list-1", Password: "password1!", Email: "test-list-1"})
-	defer da.UserDelete("test-list-1")
-	da.UserCreate(rest.User{Username: "test-list-2", Password: "password2!", Email: "test-list-2"})
-	defer da.UserDelete("test-list-2")
-	da.UserCreate(rest.User{Username: "test-list-3", Password: "password3!", Email: "test-list-3"})
-	defer da.UserDelete("test-list-3")
+	da.UserCreate(ctx, rest.User{Username: "test-list-0", Password: "password0!", Email: "test-list-0"})
+	defer da.UserDelete(ctx, "test-list-0")
+	da.UserCreate(ctx, rest.User{Username: "test-list-1", Password: "password1!", Email: "test-list-1"})
+	defer da.UserDelete(ctx, "test-list-1")
+	da.UserCreate(ctx, rest.User{Username: "test-list-2", Password: "password2!", Email: "test-list-2"})
+	defer da.UserDelete(ctx, "test-list-2")
+	da.UserCreate(ctx, rest.User{Username: "test-list-3", Password: "password3!", Email: "test-list-3"})
+	defer da.UserDelete(ctx, "test-list-3")
 
-	users, err := da.UserList()
+	users, err := da.UserList(ctx)
 	assert.NoError(t, err)
 
 	if len(users) != 4 {
@@ -204,30 +204,30 @@ func testUserList(t *testing.T) {
 
 func testUserUpdate(t *testing.T) {
 	// Update blank user
-	err := da.UserUpdate(rest.User{})
+	err := da.UserUpdate(ctx, rest.User{})
 	expectErr(t, err, errs.ErrEmptyUserName)
 
 	// Update user that doesn't exist
-	err = da.UserUpdate(rest.User{Username: "no-such-user"})
+	err = da.UserUpdate(ctx, rest.User{Username: "no-such-user"})
 	expectErr(t, err, errs.ErrNoSuchUser)
 
 	userA := rest.User{Username: "test-update", Email: "foo1.example.com"}
-	da.UserCreate(userA)
-	defer da.UserDelete("test-update")
+	da.UserCreate(ctx, userA)
+	defer da.UserDelete(ctx, "test-update")
 
 	// Get the user we just added. Emails should match.
-	user1, _ := da.UserGet("test-update")
+	user1, _ := da.UserGet(ctx, "test-update")
 	if userA.Email != user1.Email {
 		t.Errorf("Email mistatch: %q vs %q", userA.Email, user1.Email)
 	}
 
 	// Do the update
 	userB := rest.User{Username: "test-update", Email: "foo2.example.com"}
-	err = da.UserUpdate(userB)
+	err = da.UserUpdate(ctx, userB)
 	assert.NoError(t, err)
 
 	// Get the user we just updated. Emails should match.
-	user2, _ := da.UserGet("test-update")
+	user2, _ := da.UserGet(ctx, "test-update")
 	if userB.Email != user2.Email {
 		t.Errorf("Email mistatch: %q vs %q", userB.Email, user2.Email)
 	}

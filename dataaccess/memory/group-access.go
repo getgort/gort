@@ -17,17 +17,19 @@
 package memory
 
 import (
+	"context"
+
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 )
 
 // GroupAddUser adds a user to a group
-func (da *InMemoryDataAccess) GroupAddUser(groupname string, username string) error {
+func (da *InMemoryDataAccess) GroupAddUser(ctx context.Context, groupname string, username string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.GroupExists(groupname)
+	exists, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return err
 	}
@@ -39,7 +41,7 @@ func (da *InMemoryDataAccess) GroupAddUser(groupname string, username string) er
 		return errs.ErrEmptyUserName
 	}
 
-	exists, err = da.UserExists(username)
+	exists, err = da.UserExists(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -55,12 +57,12 @@ func (da *InMemoryDataAccess) GroupAddUser(groupname string, username string) er
 }
 
 // GroupCreate creates a new user group.
-func (da *InMemoryDataAccess) GroupCreate(group rest.Group) error {
+func (da *InMemoryDataAccess) GroupCreate(ctx context.Context, group rest.Group) error {
 	if group.Name == "" {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.GroupExists(group.Name)
+	exists, err := da.GroupExists(ctx, group.Name)
 	if err != nil {
 		return err
 	}
@@ -74,7 +76,7 @@ func (da *InMemoryDataAccess) GroupCreate(group rest.Group) error {
 }
 
 // GroupDelete delete a group.
-func (da *InMemoryDataAccess) GroupDelete(groupname string) error {
+func (da *InMemoryDataAccess) GroupDelete(ctx context.Context, groupname string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -84,7 +86,7 @@ func (da *InMemoryDataAccess) GroupDelete(groupname string) error {
 		return errs.ErrAdminUndeletable
 	}
 
-	exists, err := da.GroupExists(groupname)
+	exists, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return err
 	}
@@ -98,19 +100,19 @@ func (da *InMemoryDataAccess) GroupDelete(groupname string) error {
 }
 
 // GroupExists is used to determine whether a group exists in the data store.
-func (da *InMemoryDataAccess) GroupExists(groupname string) (bool, error) {
+func (da *InMemoryDataAccess) GroupExists(ctx context.Context, groupname string) (bool, error) {
 	_, exists := da.groups[groupname]
 
 	return exists, nil
 }
 
 // GroupGet gets a specific group.
-func (da *InMemoryDataAccess) GroupGet(groupname string) (rest.Group, error) {
+func (da *InMemoryDataAccess) GroupGet(ctx context.Context, groupname string) (rest.Group, error) {
 	if groupname == "" {
 		return rest.Group{}, errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.GroupExists(groupname)
+	exists, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return rest.Group{}, err
 	}
@@ -124,13 +126,13 @@ func (da *InMemoryDataAccess) GroupGet(groupname string) (rest.Group, error) {
 }
 
 // GroupGrantRole grants one or more roles to a group.
-func (da *InMemoryDataAccess) GroupGrantRole() error {
+func (da *InMemoryDataAccess) GroupGrantRole(ctx context.Context) error {
 	return errs.ErrNotImplemented
 }
 
 // GroupList returns a list of all known groups in the datastore.
 // Passwords are not included. Nice try.
-func (da *InMemoryDataAccess) GroupList() ([]rest.Group, error) {
+func (da *InMemoryDataAccess) GroupList(ctx context.Context) ([]rest.Group, error) {
 	list := make([]rest.Group, 0)
 
 	for _, g := range da.groups {
@@ -141,12 +143,12 @@ func (da *InMemoryDataAccess) GroupList() ([]rest.Group, error) {
 }
 
 // GroupRemoveUser removes one or more users from a group.
-func (da *InMemoryDataAccess) GroupRemoveUser(groupname string, username string) error {
+func (da *InMemoryDataAccess) GroupRemoveUser(ctx context.Context, groupname string, username string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.GroupExists(groupname)
+	exists, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return err
 	}
@@ -167,19 +169,19 @@ func (da *InMemoryDataAccess) GroupRemoveUser(groupname string, username string)
 }
 
 // GroupRevokeRole revokes one or more roles from a group.
-func (da *InMemoryDataAccess) GroupRevokeRole() error {
+func (da *InMemoryDataAccess) GroupRevokeRole(ctx context.Context) error {
 	return errs.ErrNotImplemented
 }
 
 // GroupUpdate is used to update an existing group. An error is returned if the
 // groupname is empty or if the group doesn't exist.
 // TODO Should we let this create groups that don't exist?
-func (da *InMemoryDataAccess) GroupUpdate(group rest.Group) error {
+func (da *InMemoryDataAccess) GroupUpdate(ctx context.Context, group rest.Group) error {
 	if group.Name == "" {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.GroupExists(group.Name)
+	exists, err := da.GroupExists(ctx, group.Name)
 	if err != nil {
 		return err
 	}
@@ -193,16 +195,16 @@ func (da *InMemoryDataAccess) GroupUpdate(group rest.Group) error {
 }
 
 // GroupUserList comments TBD
-func (da *InMemoryDataAccess) GroupUserList(group string) ([]rest.User, error) {
+func (da *InMemoryDataAccess) GroupUserList(ctx context.Context, group string) ([]rest.User, error) {
 	return []rest.User{}, errs.ErrNotImplemented
 }
 
 // GroupUserAdd comments TBD
-func (da *InMemoryDataAccess) GroupUserAdd(group string, user string) error {
+func (da *InMemoryDataAccess) GroupUserAdd(ctx context.Context, group string, user string) error {
 	return errs.ErrNotImplemented
 }
 
 // GroupUserDelete comments TBD
-func (da *InMemoryDataAccess) GroupUserDelete(group string, user string) error {
+func (da *InMemoryDataAccess) GroupUserDelete(ctx context.Context, group string, user string) error {
 	return errs.ErrNotImplemented
 }

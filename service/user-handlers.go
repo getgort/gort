@@ -28,7 +28,7 @@ import (
 // handleDeleteUser handles "DELETE /v2/users/{username}"
 func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	err := dataAccessLayer.UserDelete(params["username"])
+	err := dataAccessLayer.UserDelete(r.Context(), params["username"])
 
 	if err != nil {
 		respondAndLogError(w, err)
@@ -45,7 +45,7 @@ func handleDeleteUserGroup(w http.ResponseWriter, r *http.Request) {
 func handleGetUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	exists, err := dataAccessLayer.UserExists(params["username"])
+	exists, err := dataAccessLayer.UserExists(r.Context(), params["username"])
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -55,7 +55,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := dataAccessLayer.UserGet(params["username"])
+	user, err := dataAccessLayer.UserGet(r.Context(), params["username"])
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -68,7 +68,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	exists, err := dataAccessLayer.UserExists(params["username"])
+	exists, err := dataAccessLayer.UserExists(r.Context(), params["username"])
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -78,7 +78,7 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups, err := dataAccessLayer.UserGroupList(params["username"])
+	groups, err := dataAccessLayer.UserGroupList(r.Context(), params["username"])
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -89,7 +89,7 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 
 // handleGetUsers handles "GET /v2/users"
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := dataAccessLayer.UserList()
+	users, err := dataAccessLayer.UserList(r.Context())
 
 	if err != nil {
 		respondAndLogError(w, err)
@@ -114,16 +114,16 @@ func handlePutUser(w http.ResponseWriter, r *http.Request) {
 
 	user.Username = params["username"]
 
-	exists, err := dataAccessLayer.UserExists(user.Username)
+	exists, err := dataAccessLayer.UserExists(r.Context(), user.Username)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
 	}
 
 	if exists {
-		err = dataAccessLayer.UserUpdate(user)
+		err = dataAccessLayer.UserUpdate(r.Context(), user)
 	} else {
-		err = dataAccessLayer.UserCreate(user)
+		err = dataAccessLayer.UserCreate(r.Context(), user)
 	}
 
 	if err != nil {

@@ -17,6 +17,8 @@
 package config
 
 import (
+	"context"
+
 	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/data"
 )
@@ -30,7 +32,7 @@ type ConfigCommandEntryFinder struct{}
 // command character(s) have already been removed, and expects a string in the
 // format "bundle:command" or "command"; the latter can return multiple values
 // if a similarly-named command is found in multiple bundles.
-func (c ConfigCommandEntryFinder) FindCommandEntry(bundleName, commandName string) ([]data.CommandEntry, error) {
+func (c ConfigCommandEntryFinder) FindCommandEntry(ctx context.Context, bundleName, commandName string) ([]data.CommandEntry, error) {
 	entries := make([]data.CommandEntry, 0)
 
 	for _, bundle := range GetBundleConfigs() {

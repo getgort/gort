@@ -112,7 +112,7 @@ func Updates() <-chan State {
 
 // initializeDataAccess is called by monitorConfig to initialize the data
 // access layer whenever the configuration is updated.
-func initializeDataAccess() {
+func initializeDataAccess(ctx context.Context) {
 	configUpdates := config.Updates()
 
 	// Ignore current status
@@ -128,7 +128,7 @@ func initializeDataAccess() {
 			dataAccessLayer = postgres.NewPostgresDataAccess(dbConfigs) // hard-coded for now
 			// dataAccessLayer = memory.NewInMemoryDataAccess()
 
-			err := dataAccessLayer.Initialize()
+			err := dataAccessLayer.Initialize(ctx)
 
 			if err != nil {
 				log.WithError(err).Warn("Failed to connect to data source")
@@ -181,7 +181,7 @@ func monitorConfig() {
 				log.Info("Configuration change detected: updating data access interface")
 			}
 
-			initializeDataAccess()
+			initializeDataAccess(context.Background())
 		}
 
 		lastConfigState = cs

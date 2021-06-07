@@ -16,7 +16,10 @@
 
 package adapter
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // Info is used by events to wrap user and provider info.
 type Info struct {
@@ -38,6 +41,9 @@ type ProviderEvent struct {
 
 	// The adapter that generated the event
 	Adapter Adapter
+
+	// The event's context
+	Context context.Context
 }
 
 // AuthenticationErrorEvent indicates failure to authenticate

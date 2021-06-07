@@ -44,6 +44,8 @@ var (
 	da PostgresDataAccess
 )
 
+var ctx = context.Background()
+
 func TestPostgresDataAccessMain(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute/2)
 	defer cancel()
@@ -146,7 +148,7 @@ func testInitialize(t *testing.T) {
 		time.Sleep(time.Second)
 	}
 
-	err := da.Initialize()
+	err := da.Initialize(ctx)
 	assert.NoError(t, err)
 
 	t.Run("testDatabaseExists", testDatabaseExists)
@@ -156,7 +158,7 @@ func testInitialize(t *testing.T) {
 func testDatabaseExists(t *testing.T) {
 	da = NewPostgresDataAccess(configs)
 
-	err := da.Initialize()
+	err := da.Initialize(ctx)
 	assert.NoError(t, err)
 
 	// Test database "gort" exists

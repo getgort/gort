@@ -47,7 +47,7 @@ func testLoadTestData(t *testing.T) {
 
 func testBundleCreate(t *testing.T) {
 	// Expect an error
-	err := da.BundleCreate(data.Bundle{})
+	err := da.BundleCreate(ctx, data.Bundle{})
 	expectErr(t, err, errs.ErrEmptyBundleName)
 
 	bundle, err := getTestBundle()
@@ -55,12 +55,12 @@ func testBundleCreate(t *testing.T) {
 	bundle.Name = "test-create"
 
 	// Expect no error
-	err = da.BundleCreate(bundle)
-	defer da.BundleDelete(bundle.Name, bundle.Version)
+	err = da.BundleCreate(ctx, bundle)
+	defer da.BundleDelete(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 
 	// Expect an error
-	err = da.BundleCreate(bundle)
+	err = da.BundleCreate(ctx, bundle)
 	expectErr(t, err, errs.ErrBundleExists)
 }
 
@@ -69,19 +69,19 @@ func testBundleCreateMissingRequired(t *testing.T) {
 	assert.NoError(t, err)
 	bundle.Name = "test-missing-required"
 
-	defer da.BundleDelete(bundle.Name, bundle.Version)
+	defer da.BundleDelete(ctx, bundle.Name, bundle.Version)
 
 	// GortBundleVersion
 	originalGortBundleVersion := bundle.GortBundleVersion
 	bundle.GortBundleVersion = 0
-	err = da.BundleCreate(bundle)
+	err = da.BundleCreate(ctx, bundle)
 	expectErr(t, err, errs.ErrFieldRequired)
 	bundle.GortBundleVersion = originalGortBundleVersion
 
 	// Description
 	originalDescription := bundle.Description
 	bundle.Description = ""
-	err = da.BundleCreate(bundle)
+	err = da.BundleCreate(ctx, bundle)
 	expectErr(t, err, errs.ErrFieldRequired)
 	bundle.Description = originalDescription
 }
@@ -91,27 +91,27 @@ func testBundleEnable(t *testing.T) {
 	assert.NoError(t, err)
 	bundle.Name = "test-enable"
 
-	err = da.BundleCreate(bundle)
+	err = da.BundleCreate(ctx, bundle)
 	assert.NoError(t, err)
-	defer da.BundleDelete(bundle.Name, bundle.Version)
+	defer da.BundleDelete(ctx, bundle.Name, bundle.Version)
 
 	// No version should be enabled
-	enabled, err := da.BundleEnabledVersion(bundle.Name)
+	enabled, err := da.BundleEnabledVersion(ctx, bundle.Name)
 	assert.NoError(t, err)
 	if enabled != "" {
 		t.Error("Expected no version to be enabled")
 	}
 
 	// Reload and verify enabled value is false
-	bundle, err = da.BundleGet(bundle.Name, bundle.Version)
+	bundle, err = da.BundleGet(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 	assert.False(t, bundle.Enabled)
 
 	// Enable and verify
-	err = da.BundleEnable(bundle.Name, bundle.Version)
+	err = da.BundleEnable(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 
-	enabled, err = da.BundleEnabledVersion(bundle.Name)
+	enabled, err = da.BundleEnabledVersion(ctx, bundle.Name)
 	assert.NoError(t, err)
 	if enabled != bundle.Version {
 		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
@@ -119,12 +119,12 @@ func testBundleEnable(t *testing.T) {
 		t.FailNow()
 	}
 
-	bundle, err = da.BundleGet(bundle.Name, bundle.Version)
+	bundle, err = da.BundleGet(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 	assert.True(t, bundle.Enabled)
 
 	// Should now delete cleanly
-	err = da.BundleDelete(bundle.Name, bundle.Version)
+	err = da.BundleDelete(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 }
 
@@ -134,15 +134,15 @@ func testBundleEnableTwo(t *testing.T) {
 	bundleA.Name = "test-enable-2"
 	bundleA.Version = "0.0.1"
 
-	err = da.BundleCreate(bundleA)
+	err = da.BundleCreate(ctx, bundleA)
 	assert.NoError(t, err)
-	defer da.BundleDelete(bundleA.Name, bundleA.Version)
+	defer da.BundleDelete(ctx, bundleA.Name, bundleA.Version)
 
 	// Enable and verify
-	err = da.BundleEnable(bundleA.Name, bundleA.Version)
+	err = da.BundleEnable(ctx, bundleA.Name, bundleA.Version)
 	assert.NoError(t, err)
 
-	enabled, err := da.BundleEnabledVersion(bundleA.Name)
+	enabled, err := da.BundleEnabledVersion(ctx, bundleA.Name)
 	assert.NoError(t, err)
 
 	if enabled != bundleA.Version {
@@ -158,13 +158,13 @@ func testBundleEnableTwo(t *testing.T) {
 	bundleB.Name = bundleA.Name
 	bundleB.Version = "0.0.2"
 
-	err = da.BundleCreate(bundleB)
+	err = da.BundleCreate(ctx, bundleB)
 	assert.NoError(t, err)
-	defer da.BundleDelete(bundleB.Name, bundleB.Version)
+	defer da.BundleDelete(ctx, bundleB.Name, bundleB.Version)
 
 	// BundleA should still be enabled
 
-	enabled, err = da.BundleEnabledVersion(bundleA.Name)
+	enabled, err = da.BundleEnabledVersion(ctx, bundleA.Name)
 	assert.NoError(t, err)
 
 	if enabled != bundleA.Version {
@@ -173,7 +173,7 @@ func testBundleEnableTwo(t *testing.T) {
 		t.FailNow()
 	}
 
-	enabled, err = da.BundleEnabledVersion(bundleA.Name)
+	enabled, err = da.BundleEnabledVersion(ctx, bundleA.Name)
 	assert.NoError(t, err)
 
 	if enabled != bundleA.Version {
@@ -183,10 +183,10 @@ func testBundleEnableTwo(t *testing.T) {
 	}
 
 	// Enable and verify
-	err = da.BundleEnable(bundleB.Name, bundleB.Version)
+	err = da.BundleEnable(ctx, bundleB.Name, bundleB.Version)
 	assert.NoError(t, err)
 
-	enabled, err = da.BundleEnabledVersion(bundleB.Name)
+	enabled, err = da.BundleEnabledVersion(ctx, bundleB.Name)
 	assert.NoError(t, err)
 
 	if enabled != bundleB.Version {
@@ -203,16 +203,16 @@ func testBundleExists(t *testing.T) {
 	assert.NoError(t, err)
 	bundle.Name = "test-exists"
 
-	exists, _ = da.BundleExists(bundle.Name, bundle.Version)
+	exists, _ = da.BundleExists(ctx, bundle.Name, bundle.Version)
 	if exists {
 		t.Error("Bundle should not exist now")
 	}
 
-	err = da.BundleCreate(bundle)
-	defer da.BundleDelete(bundle.Name, bundle.Version)
+	err = da.BundleCreate(ctx, bundle)
+	defer da.BundleDelete(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 
-	exists, _ = da.BundleExists(bundle.Name, bundle.Version)
+	exists, _ = da.BundleExists(ctx, bundle.Name, bundle.Version)
 	if !exists {
 		t.Error("Bundle should exist now")
 	}
@@ -220,29 +220,29 @@ func testBundleExists(t *testing.T) {
 
 func testBundleDelete(t *testing.T) {
 	// Delete blank bundle
-	err := da.BundleDelete("", "0.0.1")
+	err := da.BundleDelete(ctx, "", "0.0.1")
 	expectErr(t, err, errs.ErrEmptyBundleName)
 
 	// Delete blank bundle
-	err = da.BundleDelete("foo", "")
+	err = da.BundleDelete(ctx, "foo", "")
 	expectErr(t, err, errs.ErrEmptyBundleVersion)
 
 	// Delete bundle that doesn't exist
-	err = da.BundleDelete("no-such-bundle", "0.0.1")
+	err = da.BundleDelete(ctx, "no-such-bundle", "0.0.1")
 	expectErr(t, err, errs.ErrNoSuchBundle)
 
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 	bundle.Name = "test-delete"
 
-	err = da.BundleCreate(bundle) // This has its own test
-	defer da.BundleDelete(bundle.Name, bundle.Version)
+	err = da.BundleCreate(ctx, bundle) // This has its own test
+	defer da.BundleDelete(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 
-	err = da.BundleDelete(bundle.Name, bundle.Version)
+	err = da.BundleDelete(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 
-	exists, _ := da.BundleExists(bundle.Name, bundle.Version)
+	exists, _ := da.BundleExists(ctx, bundle.Name, bundle.Version)
 	if exists {
 		t.Error("Shouldn't exist anymore!")
 	}
@@ -252,15 +252,15 @@ func testBundleGet(t *testing.T) {
 	var err error
 
 	// Empty bundle name. Expect a ErrEmptyBundleName.
-	_, err = da.BundleGet("", "0.0.1")
+	_, err = da.BundleGet(ctx, "", "0.0.1")
 	expectErr(t, err, errs.ErrEmptyBundleName)
 
 	// Empty bundle name. Expect a ErrEmptyBundleVersion.
-	_, err = da.BundleGet("test-get", "")
+	_, err = da.BundleGet(ctx, "test-get", "")
 	expectErr(t, err, errs.ErrEmptyBundleVersion)
 
 	// Bundle that doesn't exist. Expect a ErrNoSuchBundle.
-	_, err = da.BundleGet("test-get", "0.0.1")
+	_, err = da.BundleGet(ctx, "test-get", "0.0.1")
 	expectErr(t, err, errs.ErrNoSuchBundle)
 
 	// Get the test bundle. Expect no error.
@@ -272,18 +272,18 @@ func testBundleGet(t *testing.T) {
 	// bundleCreate.Enabled = true
 
 	// Save the test bundle. Expect no error.
-	err = da.BundleCreate(bundleCreate)
-	defer da.BundleDelete(bundleCreate.Name, bundleCreate.Version)
+	err = da.BundleCreate(ctx, bundleCreate)
+	defer da.BundleDelete(ctx, bundleCreate.Name, bundleCreate.Version)
 	assert.NoError(t, err)
 
 	// Test bundle should now exist in the data store.
-	exists, _ := da.BundleExists(bundleCreate.Name, bundleCreate.Version)
+	exists, _ := da.BundleExists(ctx, bundleCreate.Name, bundleCreate.Version)
 	if !exists {
 		t.Error("Bundle should exist now, but it doesn't")
 	}
 
 	// Load the bundle from the data store. Expect no error
-	bundleGet, err := da.BundleGet(bundleCreate.Name, bundleCreate.Version)
+	bundleGet, err := da.BundleGet(ctx, bundleCreate.Name, bundleCreate.Version)
 	assert.NoError(t, err)
 
 	// This is set automatically on save, so we copy it here for the sake of the tests.
@@ -298,16 +298,16 @@ func testBundleGet(t *testing.T) {
 }
 
 func testBundleList(t *testing.T) {
-	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
-	defer da.BundleDelete("test-list-0", "0.0")
-	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
-	defer da.BundleDelete("test-list-0", "0.1")
-	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
-	defer da.BundleDelete("test-list-1", "0.0")
-	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
-	defer da.BundleDelete("test-list-1", "0.1")
+	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete(ctx, "test-list-0", "0.0")
+	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete(ctx, "test-list-0", "0.1")
+	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete(ctx, "test-list-1", "0.0")
+	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete(ctx, "test-list-1", "0.1")
 
-	bundles, err := da.BundleList()
+	bundles, err := da.BundleList(ctx)
 	assert.NoError(t, err)
 
 	if len(bundles) != 4 {
@@ -320,16 +320,16 @@ func testBundleList(t *testing.T) {
 }
 
 func testBundleListVersions(t *testing.T) {
-	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
-	defer da.BundleDelete("test-list-0", "0.0")
-	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
-	defer da.BundleDelete("test-list-0", "0.1")
-	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
-	defer da.BundleDelete("test-list-1", "0.0")
-	da.BundleCreate(data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
-	defer da.BundleDelete("test-list-1", "0.1")
+	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete(ctx, "test-list-0", "0.0")
+	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete(ctx, "test-list-0", "0.1")
+	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.0", Description: "foo"})
+	defer da.BundleDelete(ctx, "test-list-1", "0.0")
+	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
+	defer da.BundleDelete(ctx, "test-list-1", "0.1")
 
-	bundles, err := da.BundleListVersions("test-list-0")
+	bundles, err := da.BundleListVersions(ctx, "test-list-0")
 	assert.NoError(t, err)
 
 	if len(bundles) != 2 {
@@ -350,11 +350,11 @@ func testFindCommandEntry(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Save to data store
-	err = da.BundleCreate(tb)
+	err = da.BundleCreate(ctx, tb)
 	assert.NoError(t, err)
 
 	// Load back from the data store
-	tb, err = da.BundleGet(tb.Name, tb.Version)
+	tb, err = da.BundleGet(ctx, tb.Name, tb.Version)
 	assert.NoError(t, err)
 
 	// Sanity testing. Has the test case changed?
@@ -363,19 +363,19 @@ func testFindCommandEntry(t *testing.T) {
 	assert.NotNil(t, tb.Commands[CommandName])
 
 	// Not yet enabled. Should find nothing.
-	ce, err := da.FindCommandEntry(BundleName, CommandName)
+	ce, err := da.FindCommandEntry(ctx, BundleName, CommandName)
 	assert.NoError(t, err)
 	assert.Len(t, ce, 0)
 
-	err = da.BundleEnable(BundleName, BundleVersion)
+	err = da.BundleEnable(ctx, BundleName, BundleVersion)
 	assert.NoError(t, err)
 
 	// Reload to capture enabled status
-	tb, err = da.BundleGet(tb.Name, tb.Version)
+	tb, err = da.BundleGet(ctx, tb.Name, tb.Version)
 	assert.NoError(t, err)
 
 	// Enabled. Should find commands.
-	ce, err = da.FindCommandEntry(BundleName, CommandName)
+	ce, err = da.FindCommandEntry(ctx, BundleName, CommandName)
 	assert.NoError(t, err)
 	assert.Len(t, ce, 1)
 

@@ -30,7 +30,7 @@ import (
 func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	err := dataAccessLayer.GroupDelete(params["groupname"])
+	err := dataAccessLayer.GroupDelete(r.Context(), params["groupname"])
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -46,7 +46,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 	groupname := params["groupname"]
 	username := params["username"]
 
-	exists, err = dataAccessLayer.GroupExists(groupname)
+	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -56,7 +56,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err = dataAccessLayer.UserExists(username)
+	exists, err = dataAccessLayer.UserExists(r.Context(), username)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -66,7 +66,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.GroupRemoveUser(groupname, username)
+	err = dataAccessLayer.GroupRemoveUser(r.Context(), groupname, username)
 	if err != nil {
 		respondAndLogError(w, err)
 	}
@@ -76,7 +76,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	exists, err := dataAccessLayer.GroupExists(params["groupname"])
+	exists, err := dataAccessLayer.GroupExists(r.Context(), params["groupname"])
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -86,7 +86,7 @@ func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := dataAccessLayer.GroupGet(params["groupname"])
+	group, err := dataAccessLayer.GroupGet(r.Context(), params["groupname"])
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -97,7 +97,7 @@ func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 
 // handleGetGroups handles "GET /v2/groups"
 func handleGetGroups(w http.ResponseWriter, r *http.Request) {
-	groups, err := dataAccessLayer.GroupList()
+	groups, err := dataAccessLayer.GroupList(r.Context())
 
 	if err != nil {
 		respondAndLogError(w, err)
@@ -112,7 +112,7 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	groupname := params["groupname"]
 
-	exists, err := dataAccessLayer.GroupExists(groupname)
+	exists, err := dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -122,7 +122,7 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := dataAccessLayer.GroupGet(groupname)
+	group, err := dataAccessLayer.GroupGet(r.Context(), groupname)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -146,7 +146,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 
 	group.Name = params["groupname"]
 
-	exists, err := dataAccessLayer.GroupExists(group.Name)
+	exists, err := dataAccessLayer.GroupExists(r.Context(), group.Name)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -154,9 +154,9 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 
 	// NOTE: Should we just make "update" create groups that don't exist?
 	if exists {
-		err = dataAccessLayer.GroupUpdate(group)
+		err = dataAccessLayer.GroupUpdate(r.Context(), group)
 	} else {
-		err = dataAccessLayer.GroupCreate(group)
+		err = dataAccessLayer.GroupCreate(r.Context(), group)
 	}
 
 	if err != nil {
@@ -173,7 +173,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 	groupname := params["groupname"]
 	username := params["username"]
 
-	exists, err = dataAccessLayer.GroupExists(groupname)
+	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -183,7 +183,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err = dataAccessLayer.UserExists(username)
+	exists, err = dataAccessLayer.UserExists(r.Context(), username)
 	if err != nil {
 		respondAndLogError(w, err)
 		return
@@ -193,7 +193,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.GroupAddUser(groupname, username)
+	err = dataAccessLayer.GroupAddUser(r.Context(), groupname, username)
 	if err != nil {
 		respondAndLogError(w, err)
 	}

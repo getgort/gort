@@ -17,6 +17,7 @@
 package memory
 
 import (
+	"context"
 	"testing"
 
 	gerrs "github.com/getgort/gort/errors"
@@ -26,6 +27,8 @@ import (
 var (
 	da *InMemoryDataAccess
 )
+
+var ctx = context.Background()
 
 func expectErr(t *testing.T, err error, expected error) {
 	if err == nil {

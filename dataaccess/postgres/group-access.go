@@ -17,18 +17,20 @@
 package postgres
 
 import (
+	"context"
+
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerr "github.com/getgort/gort/errors"
 )
 
 // GroupAddUser adds a user to a group
-func (da PostgresDataAccess) GroupAddUser(groupname string, username string) error {
+func (da PostgresDataAccess) GroupAddUser(ctx context.Context, groupname string, username string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.GroupExists(groupname)
+	exists, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return err
 	}
@@ -40,7 +42,7 @@ func (da PostgresDataAccess) GroupAddUser(groupname string, username string) err
 		return errs.ErrEmptyUserName
 	}
 
-	exists, err = da.UserExists(username)
+	exists, err = da.UserExists(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -64,12 +66,12 @@ func (da PostgresDataAccess) GroupAddUser(groupname string, username string) err
 }
 
 // GroupCreate creates a new user group.
-func (da PostgresDataAccess) GroupCreate(group rest.Group) error {
+func (da PostgresDataAccess) GroupCreate(ctx context.Context, group rest.Group) error {
 	if group.Name == "" {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.GroupExists(group.Name)
+	exists, err := da.GroupExists(ctx, group.Name)
 	if err != nil {
 		return err
 	}
@@ -93,7 +95,7 @@ func (da PostgresDataAccess) GroupCreate(group rest.Group) error {
 }
 
 // GroupDelete deletes a group.
-func (da PostgresDataAccess) GroupDelete(groupname string) error {
+func (da PostgresDataAccess) GroupDelete(ctx context.Context, groupname string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -103,7 +105,7 @@ func (da PostgresDataAccess) GroupDelete(groupname string) error {
 		return errs.ErrAdminUndeletable
 	}
 
-	exists, err := da.GroupExists(groupname)
+	exists, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return err
 	}
@@ -133,7 +135,7 @@ func (da PostgresDataAccess) GroupDelete(groupname string) error {
 }
 
 // GroupExists is used to determine whether a group exists in the data store.
-func (da PostgresDataAccess) GroupExists(groupname string) (bool, error) {
+func (da PostgresDataAccess) GroupExists(ctx context.Context, groupname string) (bool, error) {
 	db, err := da.connect("gort")
 	if err != nil {
 		return false, err
@@ -152,7 +154,7 @@ func (da PostgresDataAccess) GroupExists(groupname string) (bool, error) {
 }
 
 // GroupGet gets a specific group.
-func (da PostgresDataAccess) GroupGet(groupname string) (rest.Group, error) {
+func (da PostgresDataAccess) GroupGet(ctx context.Context, groupname string) (rest.Group, error) {
 	if groupname == "" {
 		return rest.Group{}, errs.ErrEmptyGroupName
 	}
@@ -174,7 +176,7 @@ func (da PostgresDataAccess) GroupGet(groupname string) (rest.Group, error) {
 		return group, gerr.Wrap(errs.ErrNoSuchGroup, err)
 	}
 
-	users, err := da.GroupListUsers(groupname)
+	users, err := da.GroupListUsers(ctx, groupname)
 	if err != nil {
 		return group, err
 	}
@@ -185,13 +187,13 @@ func (da PostgresDataAccess) GroupGet(groupname string) (rest.Group, error) {
 }
 
 // GroupGrantRole grants one or more roles to a group.
-func (da PostgresDataAccess) GroupGrantRole() error {
+func (da PostgresDataAccess) GroupGrantRole(ctx context.Context) error {
 	return errs.ErrNotImplemented
 }
 
 // GroupList returns a list of all known groups in the datastore.
 // Passwords are not included. Nice try.
-func (da PostgresDataAccess) GroupList() ([]rest.Group, error) {
+func (da PostgresDataAccess) GroupList(ctx context.Context) ([]rest.Group, error) {
 	groups := make([]rest.Group, 0)
 
 	db, err := da.connect("gort")
@@ -221,7 +223,7 @@ func (da PostgresDataAccess) GroupList() ([]rest.Group, error) {
 }
 
 // GroupListUsers returns a list of all known users in a group.
-func (da PostgresDataAccess) GroupListUsers(groupname string) ([]rest.User, error) {
+func (da PostgresDataAccess) GroupListUsers(ctx context.Context, groupname string) ([]rest.User, error) {
 	users := make([]rest.User, 0)
 
 	db, err := da.connect("gort")
@@ -258,12 +260,12 @@ func (da PostgresDataAccess) GroupListUsers(groupname string) ([]rest.User, erro
 }
 
 // GroupRemoveUser removes a user from a group.
-func (da PostgresDataAccess) GroupRemoveUser(groupname string, username string) error {
+func (da PostgresDataAccess) GroupRemoveUser(ctx context.Context, groupname string, username string) error {
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.GroupExists(groupname)
+	exists, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return err
 	}
@@ -287,19 +289,19 @@ func (da PostgresDataAccess) GroupRemoveUser(groupname string, username string) 
 }
 
 // GroupRevokeRole revokes a role from a group.
-func (da PostgresDataAccess) GroupRevokeRole() error {
+func (da PostgresDataAccess) GroupRevokeRole(ctx context.Context) error {
 	return errs.ErrNotImplemented
 }
 
 // GroupUpdate is used to update an existing group. An error is returned if the
 // groupname is empty or if the group doesn't exist.
 // TODO Should we let this create groups that don't exist?
-func (da PostgresDataAccess) GroupUpdate(group rest.Group) error {
+func (da PostgresDataAccess) GroupUpdate(ctx context.Context, group rest.Group) error {
 	if group.Name == "" {
 		return errs.ErrEmptyGroupName
 	}
 
-	exists, err := da.UserExists(group.Name)
+	exists, err := da.UserExists(ctx, group.Name)
 	if err != nil {
 		return err
 	}
@@ -327,16 +329,16 @@ func (da PostgresDataAccess) GroupUpdate(group rest.Group) error {
 }
 
 // GroupUserList comments TBD
-func (da PostgresDataAccess) GroupUserList(group string) ([]rest.User, error) {
+func (da PostgresDataAccess) GroupUserList(ctx context.Context, group string) ([]rest.User, error) {
 	return []rest.User{}, errs.ErrNotImplemented
 }
 
 // GroupUserAdd comments TBD
-func (da PostgresDataAccess) GroupUserAdd(group string, user string) error {
+func (da PostgresDataAccess) GroupUserAdd(ctx context.Context, group string, user string) error {
 	return errs.ErrNotImplemented
 }
 
 // GroupUserDelete comments TBD
-func (da PostgresDataAccess) GroupUserDelete(group string, user string) error {
+func (da PostgresDataAccess) GroupUserDelete(ctx context.Context, group string, user string) error {
 	return errs.ErrNotImplemented
 }
