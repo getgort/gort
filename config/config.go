@@ -17,6 +17,7 @@
 package config
 
 import (
+	"context"
 	"crypto/md5"
 	"errors"
 	"io"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/telemetry"
 )
 
 const (
@@ -105,6 +107,7 @@ func BeginChangeCheck(frequency time.Duration) {
 				if lastReloadWorked {
 					lastReloadWorked = false
 					log.WithError(err).Error("Config reload failed")
+					telemetry.Errors().WithError(err).Commit(context.TODO())
 				}
 			}
 		}

@@ -17,6 +17,7 @@
 package adapter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/version"
 	log "github.com/sirupsen/logrus"
 )
@@ -207,6 +209,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 
 	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
 	if err != nil {
+		telemetry.Errors().WithError(err).Commit(context.TODO())
 		le.WithError(err).Error("Failed to get channels list")
 		return
 	}
@@ -215,6 +218,7 @@ func OnConnected(event *ProviderEvent, data *ConnectedEvent) {
 		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", version.Version, c.Name)
 		err := event.Adapter.SendMessage(c.ID, message)
 		if err != nil {
+			telemetry.Errors().WithError(err).Commit(context.TODO())
 			le.WithError(err).Error("Failed to send greeting")
 		}
 	}
@@ -331,6 +335,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
+		telemetry.Errors().WithError(err).Commit(context.TODO())
 		le.WithError(err).Error("Command lookup failure")
 
 		return nil, err
@@ -364,6 +369,7 @@ func TriggerCommand(rawCommand string, adapter Adapter, channelID string, userID
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
+		telemetry.Errors().WithError(err).Commit(context.TODO())
 		le.WithError(err).Error("Can't find or create user")
 
 		return nil, err

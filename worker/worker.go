@@ -26,6 +26,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/getgort/gort/config"
+	"github.com/getgort/gort/telemetry"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -129,6 +130,7 @@ func (w *Worker) Start() (<-chan string, error) {
 		case ok := <-chwait:
 			if ok.Error != nil && ok.Error.Message != "" {
 				event = event.WithError(fmt.Errorf(ok.Error.Message))
+				telemetry.Errors().WithError(fmt.Errorf(ok.Error.Message)).Commit(context.TODO())
 			}
 
 			event.WithField("status", ok.StatusCode).

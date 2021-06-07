@@ -23,11 +23,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gorilla/mux"
+
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
-	"github.com/gorilla/mux"
 )
 
 var (

@@ -20,9 +20,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"github.com/getgort/gort/data/rest"
 	gerrs "github.com/getgort/gort/errors"
-	"github.com/gorilla/mux"
 )
 
 // handleDeleteGroup handles "DELETE /v2/groups/{groupname}"

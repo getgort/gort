@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -31,6 +32,7 @@ import (
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/relay"
 	"github.com/getgort/gort/service"
+	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/version"
 )
 
@@ -51,6 +53,7 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := startGort()
 		if err != nil {
+			telemetry.Errors().WithError(err).Commit(context.TODO())
 			log.WithError(err).Fatal("Fatal service error")
 		}
 	},
@@ -161,6 +164,7 @@ func startGort() error {
 
 		// An adapter is reporting an error.
 		case aerr := <-adapterErrorsFrom:
+			telemetry.Errors().WithError(aerr).Commit(context.TODO())
 			log.WithError(aerr).Error("Error reported by adapter")
 		}
 	}
@@ -210,6 +214,7 @@ func startServer(config data.GortServerConfigs) {
 			err = server.ListenAndServe()
 		}
 		if err != nil {
+			telemetry.Errors().WithError(err).Commit(context.TODO())
 			log.WithError(err).Fatal("Fatal service error")
 		}
 	}()

@@ -22,8 +22,9 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 ## Milestone 6 (Focus on Observability)
 
+- Functional health check endpoint. ✅
 - Observability
-  - Metrics endpoint
+  - Metrics endpoint ✅
   - Distributed tracing
 - Command audit log
   - All commands MUST be written to the database

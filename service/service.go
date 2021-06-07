@@ -17,19 +17,22 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
+	"github.com/getgort/gort/telemetry"
 )
 
 var (
@@ -84,6 +87,79 @@ func (w StatusCaptureWriter) Write(bytes []byte) (int, error) {
 func (w StatusCaptureWriter) WriteHeader(statusCode int) {
 	*w.status = statusCode
 	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+// RESTServer represents a Gort REST API service.
+type RESTServer struct {
+	*http.Server
+
+	requests chan RequestEvent
+}
+
+// BuildRESTServer builds a RESTServer.
+func BuildRESTServer(addr string) *RESTServer {
+	dalUpdate := dataaccess.Updates()
+
+	for dalState := range dalUpdate {
+		if dalState == dataaccess.StateInitialized {
+			break
+		}
+	}
+
+	var err error
+	dataAccessLayer, err = dataaccess.Get()
+	if err != nil {
+		log.WithError(err).Fatal("Could not connect to data access layer")
+		telemetry.Errors().WithError(err).Commit(context.TODO())
+	}
+
+	requests := make(chan RequestEvent)
+
+	router := mux.NewRouter()
+	router.Use(buildLoggingMiddleware(requests), tokenObservingMiddleware)
+
+	err = addMetricsToRouter(router)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to add metrics endpoint to controller router")
+		telemetry.Errors().WithError(err).Commit(context.TODO())
+	}
+
+	addHealthzMethodToRouter(router)
+	addBundleMethodsToRouter(router)
+	addGroupMethodsToRouter(router)
+	addUserMethodsToRouter(router)
+
+	server := &http.Server{Addr: addr, Handler: router}
+
+	return &RESTServer{server, requests}
+}
+
+// Requests retrieves the channel to which user request events are sent.
+func (s *RESTServer) Requests() <-chan RequestEvent {
+	return s.requests
+}
+
+// ListenAndServe starts the Gort web service.
+func (s *RESTServer) ListenAndServe() error {
+	log.WithField("address", s.Addr).Info("Gort controller is starting")
+
+	return s.Server.ListenAndServe()
+}
+
+func addHealthzMethodToRouter(router *mux.Router) {
+	router.HandleFunc("/v2/authenticate", handleAuthenticate).Methods("POST")
+	router.HandleFunc("/v2/bootstrap", handleBootstrap).Methods("POST")
+	router.HandleFunc("/v2/healthz", handleHealthz).Methods("GET")
+}
+
+func addMetricsToRouter(router *mux.Router) error {
+	exporter, err := telemetry.BuildPromExporter()
+	if err != nil {
+		return err
+	}
+
+	router.Handle("/v2/metrics", exporter)
+	return nil
 }
 
 func bootstrapUserWithDefaults(user rest.User) (rest.User, error) {
@@ -148,82 +224,6 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 	}
 }
 
-func tokenObservingMiddleware(next http.Handler) http.Handler {
-	exemptEndpoints := map[string]bool{
-		"/v2/authenticate": true,
-		"/v2/bootstrap":    true,
-		"/v2/healthz":      true,
-		"/v2/metrics":      true,
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestURI := strings.Split(r.RequestURI, "?")[0]
-
-		if exemptEndpoints[requestURI] {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		token := r.Header.Get("X-Session-Token")
-		if token == "" || !dataAccessLayer.TokenEvaluate(token) {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-// RESTServer represents a Gort REST API service.
-type RESTServer struct {
-	*http.Server
-
-	requests chan RequestEvent
-}
-
-// BuildRESTServer builds a RESTServer.
-func BuildRESTServer(addr string) *RESTServer {
-	dalUpdate := dataaccess.Updates()
-
-	for dalState := range dalUpdate {
-		if dalState == dataaccess.StateInitialized {
-			break
-		}
-	}
-
-	var err error
-	dataAccessLayer, err = dataaccess.Get()
-	if err != nil {
-		log.WithError(err).Fatal("Could not connect to data access layer")
-	}
-
-	requests := make(chan RequestEvent)
-
-	router := mux.NewRouter()
-	router.Use(buildLoggingMiddleware(requests), tokenObservingMiddleware)
-
-	addHealthzMethodToRouter(router)
-	addBundleMethodsToRouter(router)
-	addGroupMethodsToRouter(router)
-	addUserMethodsToRouter(router)
-
-	server := &http.Server{Addr: addr, Handler: router}
-
-	return &RESTServer{server, requests}
-}
-
-// Requests retrieves the channel to which user request events are sent.
-func (s *RESTServer) Requests() <-chan RequestEvent {
-	return s.requests
-}
-
-// ListenAndServe starts the Gort web service.
-func (s *RESTServer) ListenAndServe() error {
-	log.WithField("address", s.Addr).Info("Gort controller is starting")
-
-	return s.Server.ListenAndServe()
-}
-
 // handleAuthenticate handles "GET /authenticate"
 func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	// Grab the user struct from the request. If it doesn't exist, respond with
@@ -243,12 +243,14 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	exists, err := dataAccessLayer.UserExists(username)
 	if err != nil {
 		le.WithError(err).Error("Authentication: failed to find user")
+		telemetry.Errors().WithError(err).Commit(context.TODO())
 		return
 	}
 
 	if !exists {
 		http.Error(w, "No such user", http.StatusBadRequest)
 		le.Error("Authentication: No such user")
+		telemetry.Errors().WithError(fmt.Errorf("no such user")).Commit(context.TODO())
 		return
 	}
 
@@ -270,6 +272,86 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(token)
+}
+
+// handleBootstrap handles "POST /bootstrap"
+func handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	users, err := dataAccessLayer.UserList()
+	if err != nil {
+		respondAndLogError(w, err)
+		return
+	}
+
+	// If we already have users on this host, reject as "already bootstrapped".
+	if len(users) != 0 {
+		http.Error(w, "Service already bootstrapped", http.StatusConflict)
+		log.Warn("Re-bootstrap attempted")
+		return
+	}
+
+	// Grab the user struct from the request. If it doesn't exist, respond with
+	// a client error.
+	user := rest.User{}
+	err = json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		respondAndLogError(w, gerrs.ErrUnmarshal)
+		return
+	}
+
+	// Set user defaults where necessary.
+	user, err = bootstrapUserWithDefaults(user)
+	if err != nil {
+		respondAndLogError(w, err)
+		return
+	}
+
+	// Persist our shiny new user to the database.
+	err = dataAccessLayer.UserCreate(user)
+	if err != nil {
+		respondAndLogError(w, err)
+		return
+	}
+
+	// Create admin group.
+	group := rest.Group{Name: "admin"}
+	err = dataAccessLayer.GroupCreate(group)
+	if err != nil {
+		respondAndLogError(w, err)
+		return
+	}
+
+	// Add the admin user to the admin group.
+	err = dataAccessLayer.GroupAddUser(group.Name, user.Username)
+	if err != nil {
+		respondAndLogError(w, err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
+}
+
+// handleHealthz handles "GET /v2/healthz"
+func handleHealthz(w http.ResponseWriter, r *http.Request) {
+	testUsername, _ := data.HashPassword(time.Now().Local().String())
+	testPassword, _ := data.HashPassword(testUsername)
+	testUser := rest.User{
+		Email:    "healthz@test.user",
+		FullName: "Health Check User",
+		Username: "healthz" + testUsername[:8],
+		Password: testPassword,
+	}
+
+	err := dataAccessLayer.UserCreate(testUser)
+	if err != nil {
+		log.WithError(err).Error("health check failure")
+		telemetry.Errors().WithError(err).Commit(context.TODO())
+	} else {
+		log.Trace("health check pass")
+	}
+	defer dataAccessLayer.UserDelete(testUser.Username)
+
+	m := map[string]bool{"healthy": err == nil}
+	json.NewEncoder(w).Encode(m)
 }
 
 func respondAndLogError(w http.ResponseWriter, err error) {
@@ -336,6 +418,7 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 	// Something else?
 	default:
 		log.WithError(err).Warn("Unhandled server error")
+		telemetry.Errors().WithError(err).Commit(context.TODO())
 		status = http.StatusInternalServerError
 		log.WithError(err).WithField("status", status).Error(msg)
 	}
@@ -343,72 +426,37 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 	http.Error(w, msg, status)
 }
 
-// handleBootstrap handles "POST /bootstrap"
-func handleBootstrap(w http.ResponseWriter, r *http.Request) {
-	users, err := dataAccessLayer.UserList()
-	if err != nil {
-		respondAndLogError(w, err)
-		return
+func tokenObservingMiddleware(next http.Handler) http.Handler {
+	exemptEndpoints := map[string]bool{
+		"/v2/authenticate": true,
+		"/v2/bootstrap":    true,
+		"/v2/healthz":      true,
+		"/v2/metrics":      true,
 	}
 
-	// If we already have users on this host, reject as "already bootstrapped".
-	if len(users) != 0 {
-		http.Error(w, "Service already bootstrapped", http.StatusConflict)
-		log.Warn("Re-bootstrap attempted")
-		return
-	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestURI := strings.Split(r.RequestURI, "?")[0]
 
-	// Grab the user struct from the request. If it doesn't exist, respond with
-	// a client error.
-	user := rest.User{}
-	err = json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		respondAndLogError(w, gerrs.ErrUnmarshal)
-		return
-	}
+		if exemptEndpoints[requestURI] {
+			next.ServeHTTP(w, r)
+			return
+		}
 
-	// Set user defaults where necessary.
-	user, err = bootstrapUserWithDefaults(user)
-	if err != nil {
-		respondAndLogError(w, err)
-		return
-	}
+		telemetry.TotalRequests().
+			WithAttribute("request.uri", r.RequestURI).
+			WithAttribute("request.remote-addr", strings.Split(r.RemoteAddr, ":")[0]).
+			Commit(r.Context())
 
-	// Persist our shiny new user to the database.
-	err = dataAccessLayer.UserCreate(user)
-	if err != nil {
-		respondAndLogError(w, err)
-		return
-	}
+		token := r.Header.Get("X-Session-Token")
+		if token == "" || !dataAccessLayer.TokenEvaluate(token) {
+			telemetry.UnauthorizedRequests().
+				WithAttribute("request.uri", r.RequestURI).
+				WithAttribute("request.remote-addr", strings.Split(r.RemoteAddr, ":")[0]).
+				Commit(r.Context())
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 
-	// Create admin group.
-	group := rest.Group{Name: "admin"}
-	err = dataAccessLayer.GroupCreate(group)
-	if err != nil {
-		respondAndLogError(w, err)
-		return
-	}
-
-	// Add the admin user to the admin group.
-	err = dataAccessLayer.GroupAddUser(group.Name, user.Username)
-	if err != nil {
-		respondAndLogError(w, err)
-		return
-	}
-
-	json.NewEncoder(w).Encode(user)
-}
-
-// handleHealthz handles "GET /healthz"
-// TODO Can we make this more meaningful?
-func handleHealthz(w http.ResponseWriter, r *http.Request) {
-	m := map[string]bool{"healthy": true}
-
-	json.NewEncoder(w).Encode(m)
-}
-
-func addHealthzMethodToRouter(router *mux.Router) {
-	router.HandleFunc("/v2/authenticate", handleAuthenticate).Methods("POST")
-	router.HandleFunc("/v2/bootstrap", handleBootstrap).Methods("POST")
-	router.HandleFunc("/v2/healthz", handleHealthz).Methods("GET")
+		next.ServeHTTP(w, r)
+	})
 }

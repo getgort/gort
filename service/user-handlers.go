@@ -20,8 +20,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/getgort/gort/data/rest"
 	"github.com/gorilla/mux"
+
+	"github.com/getgort/gort/data/rest"
 )
 
 // handleDeleteUser handles "DELETE /v2/users/{username}"

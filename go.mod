@@ -16,6 +16,9 @@ require (
 	github.com/slack-go/slack v0.9.1
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.7.0
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/exporters/metric/prometheus v0.20.0
+	go.opentelemetry.io/otel/metric v0.20.0
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )

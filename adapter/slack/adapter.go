@@ -17,6 +17,7 @@
 package slack
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/telemetry"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 )
@@ -182,6 +184,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 					e.WithError(err).
 						WithField("user.id", ev.Info.User.ID).
 						Error("Error finding user on connect")
+					telemetry.Errors().WithError(err).Commit(context.TODO())
 
 					continue eventLoop
 				}
@@ -202,6 +205,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 					WithField("attempt", ev.Attempt).
 					WithField("backoff", ev.Backoff).
 					Error("Slack event: connection error -- backing off")
+				telemetry.Errors().WithError(ev.ErrorObj).Commit(context.TODO())
 
 				events <- s.OnConnectionError(ev, info)
 
@@ -209,6 +213,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				e.WithError(ev.Cause).
 					WithField("intentional", ev.Intentional).
 					Debug("Slack event: disconnected")
+				telemetry.Errors().WithError(ev.Cause).Commit(context.TODO())
 
 				events <- s.OnDisconnected(ev, info)
 
@@ -243,6 +248,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 					WithField("code", ev.Code).
 					WithField("msg", ev.Msg).
 					Debug("Slack event: RTM error")
+				telemetry.Errors().WithError(ev).Commit(context.TODO())
 
 				events <- s.OnRTMError(ev, info)
 
@@ -250,6 +256,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 				e.WithError(ev.ErrorObj).
 					WithField("replyto", ev.ReplyTo).
 					Error("Slack event: ACK event error")
+				telemetry.Errors().WithError(ev.ErrorObj).Commit(context.TODO())
 
 			case *slack.ConnectingEvent:
 				e.WithField("attempt", ev.Attempt).
@@ -259,6 +266,7 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 			case *slack.IncomingEventError:
 				e.WithError(ev).
 					Debug("Slack event: error receiving incoming event")
+				telemetry.Errors().WithError(ev).Commit(context.TODO())
 
 			case *slack.OutgoingErrorEvent:
 				e.WithError(ev.ErrorObj).
@@ -267,15 +275,18 @@ func (s SlackAdapter) Listen() <-chan *adapter.ProviderEvent {
 					WithField("message.text", ev.Message.Text).
 					WithField("message.type", ev.Message.Type).
 					Error("Slack event: outgoing message error")
+				telemetry.Errors().WithError(ev.ErrorObj).Commit(context.TODO())
 
 			case *slack.RateLimitedError:
 				e.WithError(ev).
 					WithField("retryafter", ev.RetryAfter).
 					Error("Slack event: API rate limited error")
+				telemetry.Errors().WithError(ev).Commit(context.TODO())
 
 			case *slack.UnmarshallingErrorEvent:
 				e.WithError(ev.ErrorObj).
 					Error("Slack event: failed to deconstruct Slack response")
+				telemetry.Errors().WithError(ev.ErrorObj).Commit(context.TODO())
 
 			case *slack.UserTypingEvent:
 				e.WithField("user", ev.User).

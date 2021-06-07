@@ -17,11 +17,13 @@
 package dataaccess
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/dataaccess/postgres"
+	"github.com/getgort/gort/telemetry"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -130,6 +132,7 @@ func initializeDataAccess() {
 
 			if err != nil {
 				log.WithError(err).Warn("Failed to connect to data source")
+				telemetry.Errors().WithError(err).Commit(context.TODO())
 				log.WithField("delay", delay).Info("Waiting to try again")
 
 				updateDALState(StateError)
