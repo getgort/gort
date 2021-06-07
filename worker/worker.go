@@ -215,7 +215,7 @@ func (w *Worker) pullImage(force bool) error {
 
 		log.WithField("image", imageName).
 			WithField("duration", time.Since(startTime)).
-			Debugf("Container image pulled")
+			Debug("Container image pulled")
 	}
 
 	return nil

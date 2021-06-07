@@ -114,6 +114,10 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 	// current enabled version.
 	if enabledValue[0] == 'F' {
 		version, err = dataAccessLayer.BundleEnabledVersion(name)
+		if err != nil {
+			respondAndLogError(w, err)
+			return
+		}
 	}
 
 	exists, err := dataAccessLayer.BundleExists(name, version)

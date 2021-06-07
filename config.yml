@@ -46,8 +46,8 @@ database:
   user: gort
 
   # The password for connecting to Gort's PostgreSQL database. Alternatively,
-  # this value can (and should) be specified via the GORT_DB_PASSWORD env var.
-  # password: "veryKleverPassw0rd!"
+  # this value can (and should) be specified via the GORT_DB_PASSWORD envvar.
+  password: "veryKleverPassw0rd!"
 
   # Set this to true to have Gort connect to its database using SSL.
   # Defaults to false.
@@ -89,7 +89,7 @@ bundles:
 
   permissions:
     - echo
-    
+
   docker:
     image: clockworksoul/relaytest
     tag: latest

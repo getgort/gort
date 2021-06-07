@@ -39,7 +39,6 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 // handleDeleteUserGroup handles "DELETE /v2/users/{username}/groups/{username}"
 func handleDeleteUserGroup(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Not Implemented", http.StatusNotImplemented)
-	return
 }
 
 // handleGetUser handles "GET /v2/users/{username}"
@@ -136,7 +135,6 @@ func handlePutUser(w http.ResponseWriter, r *http.Request) {
 // handlePutUserGroup handles "PUT /v2/users/{username}/groups/{username}"
 func handlePutUserGroup(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Not Implemented", http.StatusNotImplemented)
-	return
 }
 
 func addUserMethodsToRouter(router *mux.Router) {
