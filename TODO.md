@@ -10,12 +10,12 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 - Document how command bundles are _supposed_ to work. ✅
 - Ensure command bundle behavior is consistent with documentation. ✅
 
-## Milestone 5 (Focus on Security)
+## Milestone 5 (Focus on Security) -- _COMPLETE!_ ✅
 
 - Encrypt Gort REST service communications. ✅
-  - Allow a TLS certificate to be installed by Gort controller.
-    - MUST loudly warn on startup if one is not being used.ß
-  - Gortctl SHOULD warn when not using an encrypted connection.
+  - Allow a TLS certificate to be installed by Gort controller. ✅
+    - MUST loudly warn on startup if one is not being used. ✅
+  - Gortctl SHOULD warn when not using an encrypted connection. ✅
 - Inject database password via an envvar so we don't have to add it as plain text in the config. ✅
   - Figure how we want to do it. ✅
   - Actually DO it. ✅
