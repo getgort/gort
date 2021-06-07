@@ -9,11 +9,14 @@ services:
     volumes:
       - ./test.yml:/config.yml
       - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GORT_DB_PASSWORD=veryKleverPassw0rd
     networks:
       - gort
 
   postgres:
     image: postgres:13
+    # Uncommenting ports lets the database to be inspected with pgAdmin or similar
     # ports:
     #   - "5432:5432"
     environment:

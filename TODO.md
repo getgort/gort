@@ -14,11 +14,11 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 - Encrypt Gort REST service communications. ✅
   - Allow a TLS certificate to be installed by Gort controller.
-    - MUST loudly warn on startup if one is not being used.
+    - MUST loudly warn on startup if one is not being used.ß
   - Gortctl SHOULD warn when not using an encrypted connection.
-- Inject database password so we don't have to add it as plain text in the config.
-  - Figure how we want to do it.
-  - Actually DO it.
+- Inject database password via an envvar so we don't have to add it as plain text in the config. ✅
+  - Figure how we want to do it. ✅
+  - Actually DO it. ✅
 
 ## Milestone 6 (Focus on Observability)
 

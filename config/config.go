@@ -24,10 +24,15 @@ import (
 	"os"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
-	log "github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v3"
+)
+
+const (
+	EnvDatabasePassword = "GORT_DB_PASSWORD"
 )
 
 const (
@@ -203,6 +208,9 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 		return nil, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
+	// Properly load the database configs.
+	standardizeDatabaseConfig(&config.DatabaseConfigs)
+
 	// Make sure that the command names get set correctly.
 	if config.BundleConfigs != nil {
 		for i, b := range config.BundleConfigs {
@@ -226,6 +234,16 @@ func standardizeBundleConfig(b data.Bundle) data.Bundle {
 	}
 
 	return b
+}
+
+func standardizeDatabaseConfig(dbc *data.DatabaseConfigs) {
+	if dbc.Password == "" {
+		log.Debug("Config database password empty; using envvar", EnvDatabasePassword)
+
+		if dbc.Password = os.Getenv(EnvDatabasePassword); dbc.Password == "" {
+			log.Debug("Config database password cannot be found")
+		}
+	}
 }
 
 //  reloadConfiguration is called by both BeginChangeCheck() and Initialize()

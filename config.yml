@@ -35,7 +35,6 @@ gort:
   # The key must not be encrypted with a password.
   # tls_key_file: host.key
 
-# Not yet supported
 database:
   # The host where Gort's PostgreSQL database lives. Defaults to localhost.
   host: localhost
@@ -46,10 +45,9 @@ database:
   # The user to connect to Gort's PostgreSQL database.
   user: gort
 
-  # The password for connecting to Gort's PostgreSQL database.
-  # TODO Think of a better way to do this. Maybe allow {{ variables }} that
-  # can be injected at startup and interpolated? Is that over-engineering?
-  password: "veryKleverPassw0rd!"
+  # The password for connecting to Gort's PostgreSQL database. Alternatively,
+  # this value can (and should) be specified via the GORT_DB_PASSWORD env var.
+  # password: "veryKleverPassw0rd!"
 
   # Set this to true to have Gort connect to its database using SSL.
   # Defaults to false.
