@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/data/rest"
 	gerrs "github.com/getgort/gort/errors"
@@ -201,13 +202,13 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 
 func addGroupMethodsToRouter(router *mux.Router) {
 	// Basic group methods
-	router.HandleFunc("/v2/groups", handleGetGroups).Methods("GET")
-	router.HandleFunc("/v2/groups/{groupname}", handleGetGroup).Methods("GET")
-	router.HandleFunc("/v2/groups/{groupname}", handlePutGroup).Methods("PUT")
-	router.HandleFunc("/v2/groups/{groupname}", handleDeleteGroup).Methods("DELETE")
+	router.Handle("/v2/groups", otelhttp.NewHandler(http.HandlerFunc(handleGetGroups), "handleGetGroups")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(http.HandlerFunc(handleGetGroup), "handleGetGroup")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(http.HandlerFunc(handlePutGroup), "handlePutGroup")).Methods("PUT")
+	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteGroup), "handleDeleteGroup")).Methods("DELETE")
 
 	// Group user membership
-	router.HandleFunc("/v2/groups/{groupname}/members", handleGetGroupMembers).Methods("GET")
-	router.HandleFunc("/v2/groups/{groupname}/members/{username}", handleDeleteGroupMember).Methods("DELETE")
-	router.HandleFunc("/v2/groups/{groupname}/members/{username}", handlePutGroupMember).Methods("PUT")
+	router.Handle("/v2/groups/{groupname}/members", otelhttp.NewHandler(http.HandlerFunc(handleGetGroupMembers), "handleGetGroupMembers")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteGroupMember), "handleDeleteGroupMember")).Methods("DELETE")
+	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(http.HandlerFunc(handlePutGroupMember), "handlePutGroupMember")).Methods("PUT")
 }

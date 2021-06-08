@@ -241,7 +241,7 @@ func standardizeBundleConfig(b data.Bundle) data.Bundle {
 
 func standardizeDatabaseConfig(dbc *data.DatabaseConfigs) {
 	if dbc.Password == "" {
-		log.Debug("Config database password empty; using envvar", EnvDatabasePassword)
+		log.Debug("Config database password empty; using envvar ", EnvDatabasePassword)
 
 		if dbc.Password = os.Getenv(EnvDatabasePassword); dbc.Password == "" {
 			log.Debug("Config database password cannot be found")

@@ -26,6 +26,7 @@ import (
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
@@ -147,9 +148,9 @@ func (s *RESTServer) ListenAndServe() error {
 }
 
 func addHealthzMethodToRouter(router *mux.Router) {
-	router.HandleFunc("/v2/authenticate", handleAuthenticate).Methods("POST")
-	router.HandleFunc("/v2/bootstrap", handleBootstrap).Methods("POST")
-	router.HandleFunc("/v2/healthz", handleHealthz).Methods("GET")
+	router.Handle("/v2/authenticate", otelhttp.NewHandler(http.HandlerFunc(handleAuthenticate), "authenticate")).Methods("POST")
+	router.Handle("/v2/bootstrap", otelhttp.NewHandler(http.HandlerFunc(handleBootstrap), "bootstrap")).Methods("POST")
+	router.Handle("/v2/healthz", otelhttp.NewHandler(http.HandlerFunc(handleHealthz), "healthz")).Methods("GET")
 }
 
 func addMetricsToRouter(router *mux.Router) error {

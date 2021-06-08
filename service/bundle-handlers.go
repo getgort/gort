@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
@@ -201,16 +202,15 @@ func getAllBundles(ctx context.Context) ([]data.Bundle, error) {
 }
 
 func addBundleMethodsToRouter(router *mux.Router) {
-	router.HandleFunc("/v2/bundles", handleGetBundles).Methods("GET")
+	router.Handle("/v2/bundles", otelhttp.NewHandler(http.HandlerFunc(handleGetBundles), "handleGetBundles")).Methods("GET")
 
-	router.HandleFunc("/v2/bundles/{name}", handleGetBundleVersions).Methods("GET")
-	router.HandleFunc("/v2/bundles/{name}/versions", handleGetBundleVersions).Methods("GET")
+	router.Handle("/v2/bundles/{name}", otelhttp.NewHandler(http.HandlerFunc(handleGetBundleVersions), "handleGetBundleVersions")).Methods("GET")
+	router.Handle("/v2/bundles/{name}/versions", otelhttp.NewHandler(http.HandlerFunc(handleGetBundleVersions), "handleGetBundleVersions")).Methods("GET")
 
-	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handleGetBundleVersion).Methods("GET")
-	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handlePutBundleVersion).Methods("PUT")
-	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handleDeleteBundleVersion).Methods("DELETE")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handleGetBundleVersion), "handleGetBundleVersion")).Methods("GET")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handlePutBundleVersion), "handlePutBundleVersion")).Methods("PUT")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteBundleVersion), "handleDeleteBundleVersion")).Methods("DELETE")
 
-	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handlePatchBundleVersion).Methods("PATCH")
-	router.HandleFunc("/v2/bundles/{name}/versions/{version}", handlePatchBundleVersion).Methods("PATCH").
-		Queries("enabled", "")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handlePatchBundleVersion), "handlePatchBundleVersion")).Methods("PATCH")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handlePatchBundleVersion), "handlePatchBundleVersion")).Methods("PATCH").Queries("enabled", "")
 }

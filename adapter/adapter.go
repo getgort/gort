@@ -22,6 +22,11 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
@@ -31,7 +36,6 @@ import (
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/version"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -78,6 +82,8 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
+const ServiceName = "gort-controller"
+
 // Adapter represents a connection to a chat provider.
 type Adapter interface {
 	// GetChannelInfo provides info on a specific provider channel accessible
@@ -90,7 +96,7 @@ type Adapter interface {
 	// GetPresentChannels returns a slice of channels that a user is present in.
 	GetPresentChannels(userID string) ([]*ChannelInfo, error)
 
-	// GetUserInfo provides info on a specific provider channel accessible
+	// GetUserInfo provides info on a specific provider user accessible
 	// to the adapter.
 	GetUserInfo(userID string) (*UserInfo, error)
 
@@ -168,6 +174,289 @@ func GetCommandEntry(ctx context.Context, tokens []string) (data.CommandEntry, e
 	return entries[0], nil
 }
 
+// OnConnected handles ConnectedEvent events.
+func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent) {
+	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	ctx, sp := tr.Start(ctx, "OnConnected")
+	defer sp.End()
+
+	ctx, err := setContextIdentityData(ctx, event.Adapter, "", event.Info.User.ID)
+	if err != nil {
+		log.WithError(err).Error("failed to set context identity data")
+		return
+	}
+
+	le := adapterLogEntry(ctx, nil, event, sp)
+
+	le.Info("Connection established to provider")
+
+	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
+	if err != nil {
+		telemetry.Errors().WithError(err).Commit(ctx)
+		le.WithError(err).Error("Failed to get channels list")
+		return
+	}
+
+	for _, c := range channels {
+		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", version.Version, c.Name)
+		err := event.Adapter.SendMessage(c.ID, message)
+		if err != nil {
+			telemetry.Errors().WithError(err).Commit(ctx)
+			le.WithError(err).Error("Failed to send greeting")
+		}
+	}
+}
+
+// OnChannelMessage handles ChannelMessageEvent events.
+// If a command is found in the text, it will emit a data.CommandRequest
+// instance to the commands channel.
+// TODO Support direct in-channel mentions.
+func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
+	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	ctx, sp := tr.Start(ctx, "OnChannelMessage")
+	defer sp.End()
+
+	ctx, err := setContextIdentityData(ctx, event.Adapter, data.ChannelID, data.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	rawCommandText := data.Text
+
+	// If this isn't prepended by a trigger character, ignore.
+	if len(rawCommandText) <= 1 || rawCommandText[0] != '!' {
+		return nil, nil
+	}
+
+	// If this starts with a trigger character but enable_spoken_commands is false, ignore.
+	if rawCommandText[0] == '!' && !config.GetGortServerConfigs().EnableSpokenCommands {
+		return nil, nil
+	}
+
+	// Remove the "trigger character" (!)
+	rawCommandText = rawCommandText[1:]
+
+	adapterLogEntry(ctx, nil, event, sp).
+		WithField("event", event.EventType).
+		WithField("command", rawCommandText).
+		Debug("Got message")
+
+	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
+}
+
+// OnDirectMessage handles DirectMessageEvent events.
+func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
+	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	ctx, sp := tr.Start(ctx, "OnDirectMessage")
+	defer sp.End()
+
+	ctx, err := setContextIdentityData(ctx, event.Adapter, data.ChannelID, data.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	rawCommandText := data.Text
+
+	if rawCommandText[0] == '!' {
+		rawCommandText = rawCommandText[1:]
+	}
+
+	adapterLogEntry(ctx, nil, event, sp).
+		WithField("event", event.EventType).
+		WithField("command.raw", rawCommandText).
+		Debug("Got direct message")
+
+	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
+}
+
+// StartListening instructs all relays to establish connections, receives all
+// events from all relays, and forwards them to the various On* handler functions.
+func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, <-chan error) {
+	log.Debug("Instructing relays to establish connections")
+
+	commandRequests := make(chan data.CommandRequest)
+	commandResponses := make(chan data.CommandResponse)
+
+	allEvents, adapterErrors := startAdapters()
+
+	// Start listening for events coming from the chat provider
+	go startProviderEventListening(commandRequests, allEvents, adapterErrors)
+
+	// Start listening for responses coming back from the relay
+	go startRelayResponseListening(commandResponses, allEvents, adapterErrors)
+
+	return commandRequests, commandResponses, adapterErrors
+}
+
+// TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
+// valid command trigger is identified.
+func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
+	// Start trace span
+	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	ctx, sp := tr.Start(ctx, "TriggerCommand")
+	defer sp.End()
+
+	// If identity data isn't set, ensure that it's set
+	ctx, err := setContextIdentityData(ctx, adapter, channelID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Define parent log entry
+	le := adapterLogEntry(ctx, nil, adapter, sp)
+
+	// Tokenize the raw command and look up the command entry
+	params := TokenizeParameters(rawCommand)
+	le = le.WithField("command.name", params[0]).
+		WithField("command.params", strings.Join(params[1:], " "))
+
+	command, err := GetCommandEntry(ctx, params)
+	if err != nil {
+		switch {
+		case gerrs.Is(err, ErrNoSuchCommand):
+			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
+				"If this is not expected, you should contact a Gort administrator.",
+				params[0])
+			adapter.SendErrorMessage(channelID, "No Such Command", msg)
+		default:
+			msg := formatCommandErrorMessage(command, params, err.Error())
+			adapter.SendErrorMessage(channelID, "Error", msg)
+		}
+
+		telemetry.Errors().WithError(err).Commit(context.TODO())
+		le.WithError(err).Error("Command lookup failure")
+
+		return nil, err
+	}
+
+	// Update log entry with command info
+	le = adapterLogEntry(ctx, le, command)
+	le.Debug("Found matching command+bundle")
+
+	info, ok := GetChatUser(ctx)
+	if !ok {
+		info, err = adapter.GetUserInfo(userID)
+		if err != nil {
+			return nil, err
+		}
+		ctx = WithChatUser(ctx, info)
+	}
+
+	gortUser, autocreated, err := findOrMakeGortUser(ctx, info)
+	if err != nil {
+		switch {
+		case gerrs.Is(err, ErrSelfRegistrationOff):
+			msg := "I'm terribly sorry, but either I don't " +
+				"have a Gort account for you, or your Slack chat handle has " +
+				"not been registered. Currently, only registered users can " +
+				"interact with me.\n\n\nYou'll need to ask a Gort " +
+				"administrator to fix this situation and to register your " +
+				"Slack handle."
+			adapter.SendErrorMessage(channelID, "No Such Account", msg)
+		case gerrs.Is(err, ErrGortNotBootstrapped):
+			msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
+				"use `gortctl` to properly bootstrap the Gort environment " +
+				"before proceeding."
+			adapter.SendErrorMessage(channelID, "Not Bootstrapped?", msg)
+		default:
+			msg := formatCommandErrorMessage(command, params, err.Error())
+			adapter.SendErrorMessage(channelID, "Error", msg)
+		}
+
+		telemetry.Errors().WithError(err).Commit(context.TODO())
+		le.WithError(err).Error("Can't find or create user")
+
+		return nil, err
+	}
+
+	ctx = WithGortUser(ctx, gortUser)
+
+	// Update log entry with Gort user info
+	le = adapterLogEntry(ctx, le)
+
+	if autocreated {
+		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
+			"owner of a shiny new Gort account named `%s`!",
+			gortUser.Username)
+		adapter.SendMessage(info.ID, message)
+
+		le.Info("Autocreating Gort user")
+	}
+
+	request := data.CommandRequest{
+		CommandEntry: command,
+		ChannelID:    channelID,
+		Adapter:      adapter.GetName(),
+		Parameters:   params[1:],
+		UserID:       userID,
+	}
+
+	// Update log entry with command info
+	le = adapterLogEntry(ctx, le, command)
+
+	le.Info("Triggering command")
+
+	return &request, nil
+}
+
+// adapterLogEntry is a helper that pre-populates a log event
+func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log.Entry {
+	if e == nil {
+		e = log.WithContext(ctx)
+	}
+
+	if ui, ok := GetChatUser(ctx); ok {
+		e = e.WithField("provider.user.email", ui.Email).
+			WithField("provider.user.id", ui.ID)
+	}
+
+	if ci, ok := GetChatChannel(ctx); ok {
+		e = e.WithField("provider.channel.name", ci.Name).
+			WithField("provider.channel.id", ci.ID)
+	}
+
+	if user, ok := GetGortUser(ctx); ok {
+		e = e.WithField("gort.user.name", user.Username)
+	}
+
+	for _, i := range obs {
+		switch o := i.(type) {
+		case Adapter:
+			e = e.WithField("adapter.name", o.GetName())
+
+		case *ProviderEvent:
+			e = e.WithField("event", o.EventType).
+				WithField("adapter.name", o.Info.Provider.Name).
+				WithField("adapter.type", o.Info.Provider.Type)
+
+		case data.Bundle:
+			e = e.WithField("bundle.name", o.Name).
+				WithField("bundle.version", o.Version).
+				WithField("bundle.default", o.Default)
+
+		case data.BundleCommand:
+			e = e.WithField("command.executable", o.Executable).
+				WithField("command.name", o.Name)
+
+		case data.CommandEntry:
+			e = adapterLogEntry(ctx, e, o.Bundle, o.Command)
+
+		case trace.Span:
+			if o.SpanContext().HasTraceID() {
+				e = log.WithField("id", o.SpanContext().TraceID())
+			}
+
+		case error:
+			e = e.WithError(o)
+
+		default:
+			panic(fmt.Sprintf("I don't know how to log a %T", i))
+		}
+	}
+
+	return e
+}
+
 func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
 	finders := make([]bundles.CommandEntryFinder, 0)
 
@@ -198,220 +487,6 @@ func findAllEntries(ctx context.Context, bundleName, commandName string, finder 
 	}
 
 	return entries, nil
-}
-
-// OnConnected handles ConnectedEvent events.
-func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent) {
-	le := adapterLogEvent(event, nil)
-
-	le.WithField("app.name", event.Info.User.Name).
-		Info("Connection established to provider")
-
-	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
-	if err != nil {
-		telemetry.Errors().WithError(err).Commit(context.TODO())
-		le.WithError(err).Error("Failed to get channels list")
-		return
-	}
-
-	for _, c := range channels {
-		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", version.Version, c.Name)
-		err := event.Adapter.SendMessage(c.ID, message)
-		if err != nil {
-			telemetry.Errors().WithError(err).Commit(context.TODO())
-			le.WithError(err).Error("Failed to send greeting")
-		}
-	}
-}
-
-// OnChannelMessage handles ChannelMessageEvent events.
-// If a command is found in the text, it will emit a data.CommandRequest
-// instance to the commands channel.
-// TODO Support direct in-channel mentions.
-func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
-	channelinfo, err := event.Adapter.GetChannelInfo(data.ChannelID)
-	if err != nil {
-		return nil, gerrs.Wrap(ErrChannelNotFound, err)
-	}
-
-	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
-	if err != nil {
-		return nil, gerrs.Wrap(ErrUserNotFound, err)
-	}
-
-	rawCommandText := data.Text
-
-	// If this isn't prepended by a trigger character, ignore.
-	if len(rawCommandText) <= 1 || rawCommandText[0] != '!' {
-		return nil, nil
-	}
-
-	// If this starts with a trigger character but enable_spoken_commands is false, ignore.
-	if rawCommandText[0] == '!' && !config.GetGortServerConfigs().EnableSpokenCommands {
-		return nil, nil
-	}
-
-	// Remove the "trigger character" (!)
-	rawCommandText = rawCommandText[1:]
-
-	adapterLogEvent(event, userinfo).
-		WithField("command", rawCommandText).
-		WithField("channel.name", channelinfo.Name).
-		Debug("Got message")
-
-	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
-}
-
-// OnDirectMessage handles DirectMessageEvent events.
-func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
-	userinfo, err := event.Adapter.GetUserInfo(data.UserID)
-	if err != nil {
-		return nil, gerrs.Wrap(ErrUserNotFound, err)
-	}
-
-	rawCommandText := data.Text
-
-	if rawCommandText[0] == '!' {
-		rawCommandText = rawCommandText[1:]
-	}
-
-	adapterLogEvent(event, userinfo).
-		WithField("command", rawCommandText).
-		WithField("channel.id", data.ChannelID).
-		Debug("Got direct message")
-
-	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
-}
-
-// StartListening instructs all relays to establish connections, receives all
-// events from all relays, and forwards them to the various On* handler functions.
-func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, <-chan error) {
-	log.Debug("Instructing relays to establish connections")
-
-	commandRequests := make(chan data.CommandRequest)
-	commandResponses := make(chan data.CommandResponse)
-
-	allEvents, adapterErrors := startAdapters()
-
-	// Start listening for events coming from the chat provider
-	go startProviderEventListening(commandRequests, allEvents, adapterErrors)
-
-	// Start listening for responses coming back from the relay
-	go startRelayResponseListening(commandResponses, allEvents, adapterErrors)
-
-	return commandRequests, commandResponses, adapterErrors
-}
-
-// TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
-// valid command trigger is identified.
-func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
-	le := log.WithField("adapter.name", adapter.GetName()).
-		WithField("command.raw", rawCommand).
-		WithField("channel.id", channelID).
-		WithField("user.id", userID)
-
-	params := TokenizeParameters(rawCommand)
-	le = le.WithField("command.name", params[0]).
-		WithField("command.params", strings.Join(params[1:], " "))
-
-	info, err := adapter.GetUserInfo(userID)
-	if err != nil {
-		return nil, err
-	}
-	if info != nil {
-		le = le.WithField("user.email", info.Email)
-	}
-
-	command, err := GetCommandEntry(ctx, params)
-	if err != nil {
-		switch {
-		case gerrs.Is(err, ErrNoSuchCommand):
-			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
-				"If this is not expected, you should contact a Gort administrator.",
-				params[0])
-			adapter.SendErrorMessage(channelID, "No Such Command", msg)
-		default:
-			msg := formatCommandErrorMessage(command, params, err.Error())
-			adapter.SendErrorMessage(channelID, "Error", msg)
-		}
-
-		telemetry.Errors().WithError(err).Commit(context.TODO())
-		le.WithError(err).Error("Command lookup failure")
-
-		return nil, err
-	}
-
-	le.WithField("bundle.name", command.Bundle.Name).
-		WithField("bundle.version", command.Bundle.Version).
-		WithField("bundle.default", command.Bundle.Default).
-		WithField("command.executable", command.Command.Executable).
-		WithField("command.name", command.Command.Name).
-		Debug("Found matching command+bundle")
-
-	gortUser, autocreated, err := findOrMakeGortUser(ctx, info)
-	if err != nil {
-		switch {
-		case gerrs.Is(err, ErrSelfRegistrationOff):
-			msg := "I'm terribly sorry, but either I don't " +
-				"have a Gort account for you, or your Slack chat handle has " +
-				"not been registered. Currently, only registered users can " +
-				"interact with me.\n\n\nYou'll need to ask a Gort " +
-				"administrator to fix this situation and to register your " +
-				"Slack handle."
-			adapter.SendErrorMessage(channelID, "No Such Account", msg)
-		case gerrs.Is(err, ErrGortNotBootstrapped):
-			msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
-				"use `gortctl` to properly bootstrap the Gort environment " +
-				"before proceeding."
-			adapter.SendErrorMessage(channelID, "Not Bootstrapped?", msg)
-		default:
-			msg := formatCommandErrorMessage(command, params, err.Error())
-			adapter.SendErrorMessage(channelID, "Error", msg)
-		}
-
-		telemetry.Errors().WithError(err).Commit(context.TODO())
-		le.WithError(err).Error("Can't find or create user")
-
-		return nil, err
-	}
-
-	le = le.WithField("gort.user", gortUser.Username)
-
-	if autocreated {
-		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
-			"owner of a shiny new Gort account named `%s`!",
-			gortUser.Username)
-		adapter.SendMessage(info.ID, message)
-
-		le.Info("Autocreating Gort user")
-	}
-
-	request := data.CommandRequest{
-		CommandEntry: command,
-		ChannelID:    channelID,
-		Adapter:      adapter.GetName(),
-		Parameters:   params[1:],
-		UserID:       userID,
-	}
-
-	le.WithField("executable", command.Command.Executable).
-		Info("Triggering command")
-
-	return &request, nil
-}
-
-// adapterLogEvent is a helper that pre-populates a log event
-func adapterLogEvent(event *ProviderEvent, ui *UserInfo) *log.Entry {
-	e := log.WithField("event", event.EventType).
-		WithField("adapter.name", event.Info.Provider.Name).
-		WithField("adapter.type", event.Info.Provider.Type)
-
-	if ui != nil {
-		e = e.WithField("user.email", ui.Email).
-			WithField("user.id", ui.ID)
-	}
-
-	return e
 }
 
 // findOrMakeGortUser ...
@@ -492,6 +567,46 @@ func formatCommandErrorMessage(command data.CommandEntry, params []string, outpu
 	)
 }
 
+func setContextIdentityData(ctx context.Context, adapter Adapter, channelId, userId string) (context.Context, error) {
+	var err error
+	var ok bool
+
+	if _, ok = GetChatChannel(ctx); !ok {
+		if channelId != "" {
+			channelinfo, err := adapter.GetChannelInfo(channelId)
+			if err != nil {
+				return nil, gerrs.Wrap(ErrChannelNotFound, err)
+			}
+			ctx = WithChatChannel(ctx, channelinfo)
+		}
+	}
+
+	var userinfo *UserInfo
+	if userinfo, ok = GetChatUser(ctx); !ok {
+		if userId != "" {
+			userinfo, err = adapter.GetUserInfo(userId)
+			if err != nil {
+				return nil, gerrs.Wrap(ErrUserNotFound, err)
+			}
+			ctx = WithChatUser(ctx, userinfo)
+		}
+	}
+
+	if guser, ok := GetGortUser(ctx); !ok {
+		dal, err := dataaccess.Get()
+		if err != nil {
+			return ctx, err
+		}
+
+		guser, err = dal.UserGetByEmail(ctx, userinfo.Email)
+		if err == nil {
+			ctx = WithGortUser(ctx, guser)
+		}
+	}
+
+	return ctx, nil
+}
+
 func startAdapters() (<-chan *ProviderEvent, chan error) {
 	allEvents := make(chan *ProviderEvent)
 
@@ -499,7 +614,7 @@ func startAdapters() (<-chan *ProviderEvent, chan error) {
 	adapterErrors := make(chan error, len(config.GetSlackProviders()))
 
 	for k, a := range adapterLookup {
-		log.WithField("adapter", k).Debug("Starting adapter")
+		log.WithField("adapter.name", k).Debug("Starting adapter")
 
 		go func(adapter Adapter) {
 			for event := range adapter.Listen() {
@@ -514,10 +629,14 @@ func startAdapters() (<-chan *ProviderEvent, chan error) {
 func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 	allEvents <-chan *ProviderEvent, adapterErrors chan<- error) {
 
+	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	ctx, sp := tr.Start(context.Background(), "Incoming Adapter Event")
+	defer sp.End()
+
 	for event := range allEvents {
 		switch ev := event.Data.(type) {
 		case *ConnectedEvent:
-			OnConnected(event.Context, event, ev)
+			OnConnected(ctx, event, ev)
 
 		case *DisconnectedEvent:
 			// Do nothing.
@@ -526,7 +645,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			adapterErrors <- gerrs.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
 
 		case *ChannelMessageEvent:
-			request, err := OnChannelMessage(event.Context, event, ev)
+			request, err := OnChannelMessage(ctx, event, ev)
 			if request != nil {
 				commandRequests <- *request
 			}
@@ -535,7 +654,7 @@ func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 			}
 
 		case *DirectMessageEvent:
-			request, err := OnDirectMessage(event.Context, event, ev)
+			request, err := OnDirectMessage(ctx, event, ev)
 			if request != nil {
 				commandRequests <- *request
 			}

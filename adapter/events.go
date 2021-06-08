@@ -17,7 +17,6 @@
 package adapter
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -41,9 +40,6 @@ type ProviderEvent struct {
 
 	// The adapter that generated the event
 	Adapter Adapter
-
-	// The event's context
-	Context context.Context
 }
 
 // AuthenticationErrorEvent indicates failure to authenticate
