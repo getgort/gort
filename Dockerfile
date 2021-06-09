@@ -12,14 +12,14 @@ WORKDIR /gort
 COPY go.mod go.sum /gort/
 RUN go mod download
 
-# Part 1a: Execute the tests in a containerized Golang environment
+# Part 1a: Execute quick tests in a containerized Golang environment
 #
 FROM gomodules as test
 
 WORKDIR /gort
 COPY . /gort
 RUN --mount=type=cache,target=/root/.cache/go-build \
-  go test -v ./...
+  go test -v -short ./...
 
 # Part 3: Compile the binary in a containerized Golang environment
 #

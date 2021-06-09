@@ -47,6 +47,10 @@ var (
 var ctx = context.TODO()
 
 func TestPostgresDataAccessMain(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute/2)
 	defer cancel()
 
