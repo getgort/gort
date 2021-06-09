@@ -82,8 +82,6 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
-const ServiceName = "gort-controller"
-
 // Adapter represents a connection to a chat provider.
 type Adapter interface {
 	// GetChannelInfo provides info on a specific provider channel accessible
@@ -176,7 +174,7 @@ func GetCommandEntry(ctx context.Context, tokens []string) (data.CommandEntry, e
 
 // OnConnected handles ConnectedEvent events.
 func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent) {
-	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "OnConnected")
 	defer sp.End()
 
@@ -212,7 +210,7 @@ func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent
 // instance to the commands channel.
 // TODO Support direct in-channel mentions.
 func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
-	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "OnChannelMessage")
 	defer sp.End()
 
@@ -246,7 +244,7 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 
 // OnDirectMessage handles DirectMessageEvent events.
 func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
-	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "OnDirectMessage")
 	defer sp.End()
 
@@ -292,7 +290,7 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 // valid command trigger is identified.
 func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
 	// Start trace span
-	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "TriggerCommand")
 	defer sp.End()
 
@@ -629,7 +627,7 @@ func startAdapters() (<-chan *ProviderEvent, chan error) {
 func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 	allEvents <-chan *ProviderEvent, adapterErrors chan<- error) {
 
-	tr := otel.GetTracerProvider().Tracer(ServiceName)
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(context.Background(), "Incoming Adapter Event")
 	defer sp.End()
 

@@ -22,9 +22,12 @@ import (
 	"fmt"
 	"strings"
 
+	"go.opentelemetry.io/otel"
+
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerr "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/telemetry"
 )
 
 type bundleData struct {
@@ -39,6 +42,10 @@ type bundleCommandData struct {
 
 // BundleCreate TBD
 func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundle) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleCreate")
+	defer sp.End()
+
 	if bundle.Name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -97,6 +104,10 @@ func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundl
 
 // BundleDelete TBD
 func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleDelete")
+	defer sp.End()
+
 	if name == "" {
 		return errs.ErrEmptyBundleName
 	}
@@ -146,6 +157,10 @@ func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version str
 
 // BundleDisable TBD
 func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleDisable")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
@@ -174,6 +189,10 @@ func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) err
 
 // BundleEnable TBD
 func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleEnable")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
@@ -202,6 +221,10 @@ func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version str
 
 // BundleEnabledVersion TBD
 func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name string) (string, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleEnabledVersion")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return "", err
@@ -230,6 +253,10 @@ func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name stri
 
 // BundleExists TBD
 func (da PostgresDataAccess) BundleExists(ctx context.Context, name, version string) (bool, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleExists")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return false, err
@@ -246,6 +273,10 @@ func (da PostgresDataAccess) BundleExists(ctx context.Context, name, version str
 
 // BundleGet TBD
 func (da PostgresDataAccess) BundleGet(ctx context.Context, name, version string) (data.Bundle, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleGet")
+	defer sp.End()
+
 	if name == "" {
 		return data.Bundle{}, errs.ErrEmptyBundleName
 	}
@@ -275,6 +306,10 @@ func (da PostgresDataAccess) BundleGet(ctx context.Context, name, version string
 
 // BundleList TBD
 func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleList")
+	defer sp.End()
+
 	// This is hacky as fuck. I know.
 	// I'll optimize later.
 
@@ -329,6 +364,10 @@ func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, err
 
 // BundleListVersions TBD
 func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleListVersions")
+	defer sp.End()
+
 	// This is hacky as fuck. I know.
 	// I'll optimize later.
 
@@ -382,6 +421,10 @@ func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string
 
 // BundleUpdate TBD
 func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundle) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "BundleUpdate")
+	defer sp.End()
+
 	if bundle.Name == "" {
 		return errs.ErrEmptyBundleName
 	}

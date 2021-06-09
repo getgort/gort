@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package version
+package telemetry
 
 const (
-	// Version is the current version of Gort
-	Version = "0.5.8-dev.0"
+	// ServiceName is the name of the service for the purposes of
+	ServiceName = "gort-controller"
 )

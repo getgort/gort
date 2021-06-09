@@ -19,13 +19,20 @@ package postgres
 import (
 	"context"
 
+	"go.opentelemetry.io/otel"
+
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerr "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/telemetry"
 )
 
 // GroupAddUser adds a user to a group
 func (da PostgresDataAccess) GroupAddUser(ctx context.Context, groupname string, username string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupAddUser")
+	defer sp.End()
+
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -67,6 +74,10 @@ func (da PostgresDataAccess) GroupAddUser(ctx context.Context, groupname string,
 
 // GroupCreate creates a new user group.
 func (da PostgresDataAccess) GroupCreate(ctx context.Context, group rest.Group) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupCreate")
+	defer sp.End()
+
 	if group.Name == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -96,6 +107,10 @@ func (da PostgresDataAccess) GroupCreate(ctx context.Context, group rest.Group) 
 
 // GroupDelete deletes a group.
 func (da PostgresDataAccess) GroupDelete(ctx context.Context, groupname string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupDelete")
+	defer sp.End()
+
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -136,6 +151,10 @@ func (da PostgresDataAccess) GroupDelete(ctx context.Context, groupname string) 
 
 // GroupExists is used to determine whether a group exists in the data store.
 func (da PostgresDataAccess) GroupExists(ctx context.Context, groupname string) (bool, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupExists")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return false, err
@@ -155,6 +174,10 @@ func (da PostgresDataAccess) GroupExists(ctx context.Context, groupname string) 
 
 // GroupGet gets a specific group.
 func (da PostgresDataAccess) GroupGet(ctx context.Context, groupname string) (rest.Group, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupGet")
+	defer sp.End()
+
 	if groupname == "" {
 		return rest.Group{}, errs.ErrEmptyGroupName
 	}
@@ -194,6 +217,10 @@ func (da PostgresDataAccess) GroupGrantRole(ctx context.Context) error {
 // GroupList returns a list of all known groups in the datastore.
 // Passwords are not included. Nice try.
 func (da PostgresDataAccess) GroupList(ctx context.Context) ([]rest.Group, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupList")
+	defer sp.End()
+
 	groups := make([]rest.Group, 0)
 
 	db, err := da.connect(ctx, "gort")
@@ -224,6 +251,10 @@ func (da PostgresDataAccess) GroupList(ctx context.Context) ([]rest.Group, error
 
 // GroupListUsers returns a list of all known users in a group.
 func (da PostgresDataAccess) GroupListUsers(ctx context.Context, groupname string) ([]rest.User, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupListUsers")
+	defer sp.End()
+
 	users := make([]rest.User, 0)
 
 	db, err := da.connect(ctx, "gort")
@@ -261,6 +292,10 @@ func (da PostgresDataAccess) GroupListUsers(ctx context.Context, groupname strin
 
 // GroupRemoveUser removes a user from a group.
 func (da PostgresDataAccess) GroupRemoveUser(ctx context.Context, groupname string, username string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupRemoveUser")
+	defer sp.End()
+
 	if groupname == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -297,6 +332,10 @@ func (da PostgresDataAccess) GroupRevokeRole(ctx context.Context) error {
 // groupname is empty or if the group doesn't exist.
 // TODO Should we let this create groups that don't exist?
 func (da PostgresDataAccess) GroupUpdate(ctx context.Context, group rest.Group) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "GroupUpdate")
+	defer sp.End()
+
 	if group.Name == "" {
 		return errs.ErrEmptyGroupName
 	}
@@ -330,7 +369,7 @@ func (da PostgresDataAccess) GroupUpdate(ctx context.Context, group rest.Group) 
 
 // GroupUserList comments TBD
 func (da PostgresDataAccess) GroupUserList(ctx context.Context, group string) ([]rest.User, error) {
-	return []rest.User{}, errs.ErrNotImplemented
+	return nil, errs.ErrNotImplemented
 }
 
 // GroupUserAdd comments TBD

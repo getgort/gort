@@ -55,8 +55,8 @@ func TestPostgresDataAccessMain(t *testing.T) {
 	defer cancel()
 
 	cleanup, err := startDatabaseContainer(ctx, t)
-	defer cleanup()
 	assert.NoError(t, err, "failed to start database container")
+	defer cleanup()
 
 	t.Run("testInitialize", testInitialize)
 

@@ -24,6 +24,8 @@ import (
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerr "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/telemetry"
+	"go.opentelemetry.io/otel"
 
 	_ "github.com/lib/pq" // Load the Postgres drivers
 )
@@ -41,6 +43,10 @@ func NewPostgresDataAccess(configs data.DatabaseConfigs) PostgresDataAccess {
 
 // Initialize sets up the database.
 func (da PostgresDataAccess) Initialize(ctx context.Context) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "Initialize")
+	defer sp.End()
+
 	// Does the database exist? If not, create it.
 	err := da.ensureGortDatabaseExists(ctx)
 	if err != nil {

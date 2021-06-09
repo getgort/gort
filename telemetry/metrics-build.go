@@ -25,10 +25,6 @@ import (
 	"go.opentelemetry.io/otel/unit"
 )
 
-const (
-	ServiceName = "gort-controller"
-)
-
 var meterProvider metric.MeterProvider
 
 func BuildPromExporter() (*prometheus.Exporter, error) {

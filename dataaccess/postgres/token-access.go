@@ -20,15 +20,22 @@ import (
 	"context"
 	"time"
 
+	"go.opentelemetry.io/otel"
+
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerr "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/telemetry"
 )
 
 // TokenEvaluate will test a token for validity. It returns true if the token
 // exists and is still within its valid period; false otherwise.
 func (da PostgresDataAccess) TokenEvaluate(ctx context.Context, tokenString string) bool {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "TokenEvaluate")
+	defer sp.End()
+
 	token, err := da.TokenRetrieveByToken(ctx, tokenString)
 	if err != nil {
 		return false
@@ -41,6 +48,10 @@ func (da PostgresDataAccess) TokenEvaluate(ctx context.Context, tokenString stri
 // expiration duration. Any existing token for this user will be automatically
 // invalidated. If the user doesn't exist an error is returned.
 func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string, duration time.Duration) (rest.Token, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "TokenGenerate")
+	defer sp.End()
+
 	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return rest.Token{}, err
@@ -90,6 +101,10 @@ func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string,
 // TokenInvalidate immediately invalidates the specified token. An error is
 // returned if the token doesn't exist.
 func (da PostgresDataAccess) TokenInvalidate(ctx context.Context, tokenString string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "TokenInvalidate")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
@@ -108,6 +123,10 @@ func (da PostgresDataAccess) TokenInvalidate(ctx context.Context, tokenString st
 // TokenRetrieveByUser retrieves the token associated with a username. An
 // error is returned if no such token (or user) exists.
 func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username string) (rest.Token, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "TokenRetrieveByUser")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return rest.Token{}, err
@@ -137,6 +156,10 @@ func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username s
 // TokenRetrieveByToken retrieves the token by its value. An error is returned
 // if no such token exists.
 func (da PostgresDataAccess) TokenRetrieveByToken(ctx context.Context, tokenString string) (rest.Token, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "TokenRetrieveByToken")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return rest.Token{}, err

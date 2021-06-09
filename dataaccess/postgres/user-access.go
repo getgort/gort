@@ -23,10 +23,16 @@ import (
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerr "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/telemetry"
+	"go.opentelemetry.io/otel"
 )
 
 // UserAuthenticate authenticates a username/password combination.
 func (da PostgresDataAccess) UserAuthenticate(ctx context.Context, username string, password string) (bool, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserAuthenticate")
+	defer sp.End()
+
 	exists, err := da.UserExists(ctx, username)
 	if err != nil {
 		return false, err
@@ -57,6 +63,10 @@ func (da PostgresDataAccess) UserAuthenticate(ctx context.Context, username stri
 // UserCreate is used to create a new Gort user in the data store. An error is
 // returned if the username is empty or if a user already exists.
 func (da PostgresDataAccess) UserCreate(ctx context.Context, user rest.User) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserCreate")
+	defer sp.End()
+
 	if user.Username == "" {
 		return errs.ErrEmptyUserName
 	}
@@ -97,6 +107,10 @@ func (da PostgresDataAccess) UserCreate(ctx context.Context, user rest.User) err
 // returned if the username parameter is empty or if the user doesn't
 // exist.
 func (da PostgresDataAccess) UserDelete(ctx context.Context, username string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserDelete")
+	defer sp.End()
+
 	if username == "" {
 		return errs.ErrEmptyUserName
 	}
@@ -144,6 +158,10 @@ func (da PostgresDataAccess) UserDelete(ctx context.Context, username string) er
 // UserExists is used to determine whether a Gort user with the given username
 // exists in the data store.
 func (da PostgresDataAccess) UserExists(ctx context.Context, username string) (bool, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserExists")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return false, err
@@ -164,6 +182,10 @@ func (da PostgresDataAccess) UserExists(ctx context.Context, username string) (b
 // UserGet returns a user from the data store. An error is returned if the
 // username parameter is empty or if the user doesn't exist.
 func (da PostgresDataAccess) UserGet(ctx context.Context, username string) (rest.User, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserGet")
+	defer sp.End()
+
 	if username == "" {
 		return rest.User{}, errs.ErrEmptyUserName
 	}
@@ -192,6 +214,10 @@ func (da PostgresDataAccess) UserGet(ctx context.Context, username string) (rest
 // UserGetByEmail returns a user from the data store. An error is returned if
 // the email parameter is empty or if the user doesn't exist.
 func (da PostgresDataAccess) UserGetByEmail(ctx context.Context, email string) (rest.User, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserGetByEmail")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return rest.User{}, err
@@ -216,6 +242,10 @@ func (da PostgresDataAccess) UserGetByEmail(ctx context.Context, email string) (
 // UserList returns a list of all known users in the datastore.
 // Passwords are not included. Nice try.
 func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserList")
+	defer sp.End()
+
 	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return nil, err
@@ -245,6 +275,10 @@ func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) 
 // UserUpdate is used to update an existing user. An error is returned if the
 // username is empty or if the user doesn't exist.
 func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserUpdate")
+	defer sp.End()
+
 	if user.Username == "" {
 		return errs.ErrEmptyUserName
 	}
@@ -306,6 +340,10 @@ func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) err
 
 // UserGroupList comments TBD
 func (da PostgresDataAccess) UserGroupList(ctx context.Context, username string) ([]rest.Group, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserGroupList")
+	defer sp.End()
+
 	groups := make([]rest.Group, 0)
 
 	db, err := da.connect(ctx, "gort")
@@ -336,6 +374,10 @@ func (da PostgresDataAccess) UserGroupList(ctx context.Context, username string)
 
 // UserGroupAdd comments TBD
 func (da PostgresDataAccess) UserGroupAdd(ctx context.Context, username string, groupname string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserGroupAdd")
+	defer sp.End()
+
 	if username == "" {
 		return errs.ErrEmptyUserName
 	}
@@ -380,6 +422,10 @@ func (da PostgresDataAccess) UserGroupAdd(ctx context.Context, username string, 
 
 // UserGroupDelete comments TBD
 func (da PostgresDataAccess) UserGroupDelete(ctx context.Context, username string, groupname string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "UserGroupDelete")
+	defer sp.End()
+
 	if username == "" {
 		return errs.ErrEmptyUserName
 	}
