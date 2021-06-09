@@ -44,10 +44,10 @@ var (
 	da PostgresDataAccess
 )
 
-var ctx = context.Background()
+var ctx = context.TODO()
 
 func TestPostgresDataAccessMain(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute/2)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute/2)
 	defer cancel()
 
 	cleanup, err := startDatabaseContainer(ctx, t)
@@ -102,7 +102,7 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 	}
 
 	cleanup := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		ctx, cancel := context.WithTimeout(context.TODO(), 20*time.Second)
 		defer cancel()
 
 		id := resp.ID
@@ -137,7 +137,7 @@ func testInitialize(t *testing.T) {
 			t.Error("timeout waiting for database:", timeout)
 			t.FailNow()
 		}
-		db, err := da.connect("postgres")
+		db, err := da.connect(context.TODO(), "postgres")
 
 		if db != nil && err == nil {
 			t.Log("database is ready!")
@@ -162,7 +162,7 @@ func testDatabaseExists(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test database "gort" exists
-	conn, err := da.connect("gort")
+	conn, err := da.connect(context.TODO(), "gort")
 	assert.NoError(t, err)
 	defer conn.Close()
 
@@ -173,7 +173,7 @@ func testDatabaseExists(t *testing.T) {
 	}
 
 	// Meta-test: non-existant database should return nil connection
-	nconn, err := da.connect("doesntexist")
+	nconn, err := da.connect(context.TODO(), "doesntexist")
 	assert.Error(t, err)
 	assert.Nil(t, nconn)
 }
@@ -181,19 +181,19 @@ func testDatabaseExists(t *testing.T) {
 func testTablesExist(t *testing.T) {
 	expectedTables := []string{"users", "groups", "groupusers", "tokens", "bundles"}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(context.TODO(), "gort")
 	assert.NoError(t, err)
 	defer db.Close()
 
 	// Expects these tables
 	for _, table := range expectedTables {
-		b, err := da.tableExists(table, db)
+		b, err := da.tableExists(context.TODO(), table, db)
 		assert.NoError(t, err)
 		assert.True(t, b)
 	}
 
 	// Expect not to find this one.
-	b, err := da.tableExists("doestexist", db)
+	b, err := da.tableExists(context.TODO(), "doestexist", db)
 	assert.NoError(t, err)
 	assert.False(t, b)
 }

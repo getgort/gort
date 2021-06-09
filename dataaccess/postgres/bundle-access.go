@@ -47,18 +47,18 @@ func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundl
 		return errs.ErrEmptyBundleVersion
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	exists, err := da.doBundleExists(tx, bundle.Name, bundle.Version)
+	exists, err := da.doBundleExists(ctx, tx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	} else if exists {
@@ -66,21 +66,21 @@ func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundl
 	}
 
 	// Save bundle
-	err = da.doBundleInsert(tx, bundle)
+	err = da.doBundleInsert(ctx, tx, bundle)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	// Save permissions
-	err = da.doBundleInsertPermissions(tx, bundle)
+	err = da.doBundleInsertPermissions(ctx, tx, bundle)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	// Save commands
-	err = da.doBundleInsertCommands(tx, bundle)
+	err = da.doBundleInsertCommands(ctx, tx, bundle)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -105,31 +105,31 @@ func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version str
 		return errs.ErrEmptyBundleVersion
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	exists, err := da.doBundleExists(tx, name, version)
+	exists, err := da.doBundleExists(ctx, tx, name, version)
 	if err != nil {
 		return err
 	} else if !exists {
 		return errs.ErrNoSuchBundle
 	}
 
-	err = da.doBundleDisable(tx, name)
+	err = da.doBundleDisable(ctx, tx, name)
 	if err != nil {
 		tx.Rollback()
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	err = da.doBundleDelete(tx, name, version)
+	err = da.doBundleDelete(ctx, tx, name, version)
 	if err != nil {
 		tx.Rollback()
 		return gerr.Wrap(errs.ErrDataAccess, err)
@@ -146,18 +146,18 @@ func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version str
 
 // BundleDisable TBD
 func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) error {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	err = da.doBundleDisable(tx, name)
+	err = da.doBundleDisable(ctx, tx, name)
 	if err != nil {
 		tx.Rollback()
 		return gerr.Wrap(errs.ErrDataAccess, err)
@@ -174,18 +174,18 @@ func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) err
 
 // BundleEnable TBD
 func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version string) error {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	err = da.doBundleEnable(tx, name, version)
+	err = da.doBundleEnable(ctx, tx, name, version)
 	if err != nil {
 		tx.Rollback()
 		return gerr.Wrap(errs.ErrDataAccess, err)
@@ -202,18 +202,18 @@ func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version str
 
 // BundleEnabledVersion TBD
 func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name string) (string, error) {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return "", err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return "", gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	enabled, err := da.doBundleEnabledVersion(tx, name)
+	enabled, err := da.doBundleEnabledVersion(ctx, tx, name)
 	if err != nil {
 		tx.Rollback()
 		return "", gerr.Wrap(errs.ErrDataAccess, err)
@@ -230,18 +230,18 @@ func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name stri
 
 // BundleExists TBD
 func (da PostgresDataAccess) BundleExists(ctx context.Context, name, version string) (bool, error) {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return false, err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return da.doBundleExists(tx, name, version)
+	return da.doBundleExists(ctx, tx, name, version)
 }
 
 // BundleGet TBD
@@ -254,18 +254,18 @@ func (da PostgresDataAccess) BundleGet(ctx context.Context, name, version string
 		return data.Bundle{}, errs.ErrEmptyBundleVersion
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return data.Bundle{}, err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	b, err := da.doBundleGet(tx, name, version)
+	b, err := da.doBundleGet(ctx, tx, name, version)
 	if err != nil {
 		return data.Bundle{}, err
 	}
@@ -278,20 +278,20 @@ func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, err
 	// This is hacky as fuck. I know.
 	// I'll optimize later.
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return []data.Bundle{}, err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		tx.Rollback()
 		return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query := `SELECT name, version FROM bundles`
-	rows, err := tx.Query(query)
+	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
 		tx.Rollback()
 		return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
@@ -314,7 +314,7 @@ func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, err
 
 	bundles := make([]data.Bundle, 0)
 	for _, bd := range bds {
-		bundle, err := da.doBundleGet(tx, bd.BundleName, bd.BundleVersion)
+		bundle, err := da.doBundleGet(ctx, tx, bd.BundleName, bd.BundleVersion)
 		if err != nil {
 			tx.Rollback()
 			return []data.Bundle{}, err
@@ -332,20 +332,20 @@ func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string
 	// This is hacky as fuck. I know.
 	// I'll optimize later.
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return []data.Bundle{}, err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		tx.Rollback()
 		return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query := `SELECT name, version FROM bundles WHERE name=$1`
-	rows, err := tx.Query(query, name)
+	rows, err := tx.QueryContext(ctx, query, name)
 	if err != nil {
 		tx.Rollback()
 		return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
@@ -368,7 +368,7 @@ func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string
 
 	bundles := make([]data.Bundle, 0)
 	for _, bd := range bds {
-		bundle, err := da.doBundleGet(tx, bd.BundleName, bd.BundleVersion)
+		bundle, err := da.doBundleGet(ctx, tx, bd.BundleName, bd.BundleVersion)
 		if err != nil {
 			tx.Rollback()
 			return []data.Bundle{}, err
@@ -390,31 +390,31 @@ func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundl
 		return errs.ErrEmptyBundleVersion
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	exists, err := da.doBundleExists(tx, bundle.Name, bundle.Version)
+	exists, err := da.doBundleExists(ctx, tx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	} else if !exists {
 		return errs.ErrNoSuchBundle
 	}
 
-	err = da.doBundleDelete(tx, bundle.Name, bundle.Version)
+	err = da.doBundleDelete(ctx, tx, bundle.Name, bundle.Version)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	err = da.doBundleInsert(tx, bundle)
+	err = da.doBundleInsert(ctx, tx, bundle)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -427,41 +427,41 @@ func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundl
 // bundle and command names. If either is empty, it is treated as a wildcard.
 // Importantly, this must only return ENABLED commands!
 func (da PostgresDataAccess) FindCommandEntry(ctx context.Context, bundleName, commandName string) ([]data.CommandEntry, error) {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return da.doFindCommandEntry(tx, bundleName, commandName)
+	return da.doFindCommandEntry(ctx, tx, bundleName, commandName)
 }
 
-func (da PostgresDataAccess) doBundleDelete(tx *sql.Tx, name string, version string) error {
+func (da PostgresDataAccess) doBundleDelete(ctx context.Context, tx *sql.Tx, name string, version string) error {
 	query := "DELETE FROM bundle_command_rules WHERE bundle_name=$1 AND bundle_version=$2;"
-	_, err := tx.Exec(query, name, version)
+	_, err := tx.ExecContext(ctx, query, name, version)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = "DELETE FROM bundle_permissions WHERE bundle_name=$1 AND bundle_version=$2;"
-	_, err = tx.Exec(query, name, version)
+	_, err = tx.ExecContext(ctx, query, name, version)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = "DELETE FROM bundle_commands WHERE bundle_name=$1 AND bundle_version=$2;"
-	_, err = tx.Exec(query, name, version)
+	_, err = tx.ExecContext(ctx, query, name, version)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = "DELETE FROM bundles WHERE name=$1 AND version=$2;"
-	_, err = tx.Exec(query, name, version)
+	_, err = tx.ExecContext(ctx, query, name, version)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -470,10 +470,10 @@ func (da PostgresDataAccess) doBundleDelete(tx *sql.Tx, name string, version str
 }
 
 // doBundleDisable TBD
-func (da PostgresDataAccess) doBundleDisable(tx *sql.Tx, name string) error {
+func (da PostgresDataAccess) doBundleDisable(ctx context.Context, tx *sql.Tx, name string) error {
 	query := `DELETE FROM bundle_enabled WHERE bundle_name=$1`
 
-	_, err := tx.Exec(query, name)
+	_, err := tx.ExecContext(ctx, query, name)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -482,8 +482,8 @@ func (da PostgresDataAccess) doBundleDisable(tx *sql.Tx, name string) error {
 }
 
 // BundleEnable TBD
-func (da PostgresDataAccess) doBundleEnable(tx *sql.Tx, name string, version string) error {
-	enabled, err := da.doBundleEnabledVersion(tx, name)
+func (da PostgresDataAccess) doBundleEnable(ctx context.Context, tx *sql.Tx, name string, version string) error {
+	enabled, err := da.doBundleEnabledVersion(ctx, tx, name)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -499,7 +499,7 @@ func (da PostgresDataAccess) doBundleEnable(tx *sql.Tx, name string, version str
 			WHERE bundle_name=$1;`
 	}
 
-	_, err = tx.Exec(query, name, version)
+	_, err = tx.ExecContext(ctx, query, name, version)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -508,7 +508,7 @@ func (da PostgresDataAccess) doBundleEnable(tx *sql.Tx, name string, version str
 }
 
 // BundleExists TBD
-func (da PostgresDataAccess) doBundleEnabledVersion(tx *sql.Tx, name string) (string, error) {
+func (da PostgresDataAccess) doBundleEnabledVersion(ctx context.Context, tx *sql.Tx, name string) (string, error) {
 	query := `SELECT
 		COALESCE(
 		(SELECT bundle_version FROM bundle_enabled WHERE bundle_name=$1),
@@ -517,7 +517,7 @@ func (da PostgresDataAccess) doBundleEnabledVersion(tx *sql.Tx, name string) (st
 
 	enabled := ""
 
-	err := tx.QueryRow(query, name).Scan(&enabled)
+	err := tx.QueryRowContext(ctx, query, name).Scan(&enabled)
 	if err != nil {
 		return "", gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -526,11 +526,11 @@ func (da PostgresDataAccess) doBundleEnabledVersion(tx *sql.Tx, name string) (st
 }
 
 // BundleExists TBD
-func (da PostgresDataAccess) doBundleExists(tx *sql.Tx, name string, version string) (bool, error) {
+func (da PostgresDataAccess) doBundleExists(ctx context.Context, tx *sql.Tx, name string, version string) (bool, error) {
 	query := "SELECT EXISTS(SELECT 1 FROM bundles WHERE name=$1 AND version=$2)"
 	exists := false
 
-	err := tx.QueryRow(query, name, version).Scan(&exists)
+	err := tx.QueryRowContext(ctx, query, name, version).Scan(&exists)
 	if err != nil {
 		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -538,7 +538,7 @@ func (da PostgresDataAccess) doBundleExists(tx *sql.Tx, name string, version str
 	return exists, nil
 }
 
-func (da PostgresDataAccess) doBundleGet(tx *sql.Tx, name string, version string) (data.Bundle, error) {
+func (da PostgresDataAccess) doBundleGet(ctx context.Context, tx *sql.Tx, name string, version string) (data.Bundle, error) {
 	query := `SELECT gort_bundle_version, name, version, author, homepage,
 			description, long_description, docker_image, docker_tag,
 			install_timestamp, install_user
@@ -546,7 +546,7 @@ func (da PostgresDataAccess) doBundleGet(tx *sql.Tx, name string, version string
 		WHERE name=$1 AND version=$2`
 
 	bundle := data.Bundle{}
-	row := tx.QueryRow(query, name, version)
+	row := tx.QueryRowContext(ctx, query, name, version)
 	err := row.Scan(&bundle.GortBundleVersion, &bundle.Name, &bundle.Version,
 		&bundle.Author, &bundle.Homepage, &bundle.Description,
 		&bundle.LongDescription, &bundle.Docker.Image, &bundle.Docker.Tag,
@@ -555,20 +555,20 @@ func (da PostgresDataAccess) doBundleGet(tx *sql.Tx, name string, version string
 		return bundle, gerr.Wrap(errs.ErrNoSuchBundle, err)
 	}
 
-	enabledVersion, err := da.doBundleEnabledVersion(tx, name)
+	enabledVersion, err := da.doBundleEnabledVersion(ctx, tx, name)
 	if err != nil {
 		return bundle, gerr.Wrap(fmt.Errorf("failed to get bundle enabled version"), err)
 	}
 	bundle.Enabled = (bundle.Version == enabledVersion)
 
 	// Load bundle permissions
-	bundle.Permissions, err = da.doBundlePermissionsGet(tx, name, version)
+	bundle.Permissions, err = da.doBundlePermissionsGet(ctx, tx, name, version)
 	if err != nil {
 		return bundle, gerr.Wrap(fmt.Errorf("failed to get bundle permissions"), err)
 	}
 
 	// Load all commands (and their rules) for this bundle
-	commandSlice, err := da.doBundleCommandsGet(tx, name, version, "")
+	commandSlice, err := da.doBundleCommandsGet(ctx, tx, name, version, "")
 	if err != nil {
 		return bundle, gerr.Wrap(fmt.Errorf("failed to get bundle commands"), err)
 	}
@@ -585,7 +585,7 @@ func (da PostgresDataAccess) doBundleGet(tx *sql.Tx, name string, version string
 // doBundleCommandsDataGet is a helper method that retrieves zero or more
 // commands for the specified bundle name+version, along with the owning
 // bundle's name and version. Empty string parameters are treated as wildcards.
-func (da PostgresDataAccess) doBundleCommandsDataGet(tx *sql.Tx, bundleName, bundleVersion, commandName string, enabledOnly bool) ([]bundleCommandData, error) {
+func (da PostgresDataAccess) doBundleCommandsDataGet(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion, commandName string, enabledOnly bool) ([]bundleCommandData, error) {
 	var query string
 
 	if bundleName == "" {
@@ -609,7 +609,7 @@ func (da PostgresDataAccess) doBundleCommandsDataGet(tx *sql.Tx, bundleName, bun
 			WHERE bundle_commands.bundle_name LIKE $1 AND bundle_commands.bundle_version LIKE $2 AND name LIKE $3`
 	}
 
-	rows, err := tx.Query(query, bundleName, bundleVersion, commandName)
+	rows, err := tx.QueryContext(ctx, query, bundleName, bundleVersion, commandName)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -632,8 +632,8 @@ func (da PostgresDataAccess) doBundleCommandsDataGet(tx *sql.Tx, bundleName, bun
 }
 
 // doBundleCommandGet empty strings become wildcards
-func (da PostgresDataAccess) doBundleCommandsGet(tx *sql.Tx, bundleName, bundleVersion, commandName string) ([]*data.BundleCommand, error) {
-	bcd, err := da.doBundleCommandsDataGet(tx, bundleName, bundleVersion, commandName, false)
+func (da PostgresDataAccess) doBundleCommandsGet(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion, commandName string) ([]*data.BundleCommand, error) {
+	bcd, err := da.doBundleCommandsDataGet(ctx, tx, bundleName, bundleVersion, commandName, false)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -641,7 +641,7 @@ func (da PostgresDataAccess) doBundleCommandsGet(tx *sql.Tx, bundleName, bundleV
 	commands := make([]*data.BundleCommand, 0)
 
 	for _, bc := range bcd {
-		bc.BundleCommand.Rules, err = da.doBundleCommandRulesGet(tx, bundleName, bundleVersion, bc.Name)
+		bc.BundleCommand.Rules, err = da.doBundleCommandRulesGet(ctx, tx, bundleName, bundleVersion, bc.Name)
 		if err != nil {
 			return nil, gerr.Wrap(fmt.Errorf("failed to get bundle command rules"), err)
 		}
@@ -655,8 +655,8 @@ func (da PostgresDataAccess) doBundleCommandsGet(tx *sql.Tx, bundleName, bundleV
 // doFindCommandEntry returns all command entries for any enabled bundle
 // matching the specified bundle and command names. The bundle parameter may be
 // empty, in which case it will match all bundles.
-func (da PostgresDataAccess) doFindCommandEntry(tx *sql.Tx, bundle, command string) ([]data.CommandEntry, error) {
-	bcd, err := da.doBundleCommandsDataGet(tx, bundle, "", command, true)
+func (da PostgresDataAccess) doFindCommandEntry(ctx context.Context, tx *sql.Tx, bundle, command string) ([]data.CommandEntry, error) {
+	bcd, err := da.doBundleCommandsDataGet(ctx, tx, bundle, "", command, true)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -667,13 +667,13 @@ func (da PostgresDataAccess) doFindCommandEntry(tx *sql.Tx, bundle, command stri
 		entry := data.CommandEntry{}
 
 		// Load the appropriate bundle
-		entry.Bundle, err = da.doBundleGet(tx, cd.BundleName, cd.BundleVersion)
+		entry.Bundle, err = da.doBundleGet(ctx, tx, cd.BundleName, cd.BundleVersion)
 		if err != nil {
 			return nil, gerr.Wrap(errs.ErrDataAccess, err)
 		}
 
 		// Load the relevant bundle command (there should be exactly one)
-		commands, err := da.doBundleCommandsGet(tx, cd.BundleName, cd.BundleVersion, cd.Name)
+		commands, err := da.doBundleCommandsGet(ctx, tx, cd.BundleName, cd.BundleVersion, cd.Name)
 		if err != nil {
 			return nil, gerr.Wrap(errs.ErrDataAccess, err)
 		}
@@ -688,12 +688,12 @@ func (da PostgresDataAccess) doFindCommandEntry(tx *sql.Tx, bundle, command stri
 	return entries, nil
 }
 
-func (da PostgresDataAccess) doBundleCommandRulesGet(tx *sql.Tx, bundleName, bundleVersion, commandName string) ([]string, error) {
+func (da PostgresDataAccess) doBundleCommandRulesGet(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion, commandName string) ([]string, error) {
 	cmdQuery := `SELECT rule
 		FROM bundle_command_rules
 		WHERE bundle_name=$1 AND bundle_version=$2 AND command_name=$3`
 
-	rows, err := tx.Query(cmdQuery, bundleName, bundleVersion, commandName)
+	rows, err := tx.QueryContext(ctx, cmdQuery, bundleName, bundleVersion, commandName)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -714,14 +714,14 @@ func (da PostgresDataAccess) doBundleCommandRulesGet(tx *sql.Tx, bundleName, bun
 	return rules, nil
 }
 
-func (da PostgresDataAccess) doBundlePermissionsGet(tx *sql.Tx, bundleName, bundleVersion string) ([]string, error) {
+func (da PostgresDataAccess) doBundlePermissionsGet(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion string) ([]string, error) {
 	// Load permissions
 	query := `SELECT permission
 		FROM bundle_permissions
 		WHERE bundle_name=$1 AND bundle_version=$2
 		ORDER BY index`
 
-	rows, err := tx.Query(query, bundleName, bundleVersion)
+	rows, err := tx.QueryContext(ctx, query, bundleName, bundleVersion)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -744,13 +744,13 @@ func (da PostgresDataAccess) doBundlePermissionsGet(tx *sql.Tx, bundleName, bund
 	return permissions, nil
 }
 
-func (da PostgresDataAccess) doBundleInsert(tx *sql.Tx, bundle data.Bundle) error {
+func (da PostgresDataAccess) doBundleInsert(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
 	query := `INSERT INTO bundles (gort_bundle_version, name, version, author,
 		homepage, description, long_description, docker_image,
 		docker_tag, install_user)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`
 
-	_, err := tx.Exec(query, bundle.GortBundleVersion, bundle.Name, bundle.Version,
+	_, err := tx.ExecContext(ctx, query, bundle.GortBundleVersion, bundle.Name, bundle.Version,
 		bundle.Author, bundle.Homepage, bundle.Description, bundle.LongDescription,
 		bundle.Docker.Image, bundle.Docker.Tag, bundle.InstalledBy)
 
@@ -767,7 +767,7 @@ func (da PostgresDataAccess) doBundleInsert(tx *sql.Tx, bundle data.Bundle) erro
 	return nil
 }
 
-func (da PostgresDataAccess) doBundleInsertCommandRules(
+func (da PostgresDataAccess) doBundleInsertCommandRules(ctx context.Context,
 	tx *sql.Tx, bundle data.Bundle, command *data.BundleCommand) error {
 
 	query := `INSERT INTO bundle_command_rules
@@ -775,7 +775,7 @@ func (da PostgresDataAccess) doBundleInsertCommandRules(
 		VALUES ($1, $2, $3, $4);`
 
 	for _, rule := range command.Rules {
-		_, err := tx.Exec(query, bundle.Name, bundle.Version, command.Name, rule)
+		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version, command.Name, rule)
 		if err != nil {
 			if strings.Contains(err.Error(), "violates") {
 				err = gerr.Wrap(errs.ErrFieldRequired, err)
@@ -790,7 +790,7 @@ func (da PostgresDataAccess) doBundleInsertCommandRules(
 	return nil
 }
 
-func (da PostgresDataAccess) doBundleInsertCommands(tx *sql.Tx, bundle data.Bundle) error {
+func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
 	query := `INSERT INTO bundle_commands
 		(bundle_name, bundle_version, name, description, executable)
 		VALUES ($1, $2, $3, $4, $5);`
@@ -798,7 +798,7 @@ func (da PostgresDataAccess) doBundleInsertCommands(tx *sql.Tx, bundle data.Bund
 	for name, cmd := range bundle.Commands {
 		cmd.Name = name
 
-		_, err := tx.Exec(query, bundle.Name, bundle.Version,
+		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
 			cmd.Name, cmd.Description, cmd.Executable)
 
 		if err != nil {
@@ -811,7 +811,7 @@ func (da PostgresDataAccess) doBundleInsertCommands(tx *sql.Tx, bundle data.Bund
 			return err
 		}
 
-		err = da.doBundleInsertCommandRules(tx, bundle, cmd)
+		err = da.doBundleInsertCommandRules(ctx, tx, bundle, cmd)
 		if err != nil {
 			return err
 		}
@@ -820,13 +820,13 @@ func (da PostgresDataAccess) doBundleInsertCommands(tx *sql.Tx, bundle data.Bund
 	return nil
 }
 
-func (da PostgresDataAccess) doBundleInsertPermissions(tx *sql.Tx, bundle data.Bundle) error {
+func (da PostgresDataAccess) doBundleInsertPermissions(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
 	query := `INSERT INTO bundle_permissions
 		(bundle_name, bundle_version, index, permission)
 		VALUES ($1, $2, $3, $4);`
 
 	for i, perm := range bundle.Permissions {
-		_, err := tx.Exec(query, bundle.Name, bundle.Version, i, perm)
+		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version, i, perm)
 		if err != nil {
 			if strings.Contains(err.Error(), "violates") {
 				err = gerr.Wrap(errs.ErrFieldRequired, err)

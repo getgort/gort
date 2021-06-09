@@ -71,7 +71,7 @@ func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string,
 		ValidUntil: validUntil,
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return rest.Token{}, err
 	}
@@ -79,7 +79,7 @@ func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string,
 
 	query := `INSERT INTO tokens (token, username, valid_from, valid_until)
 	VALUES ($1, $2, $3, $4);`
-	_, err = db.Exec(query, token.Token, token.User, token.ValidFrom, token.ValidUntil)
+	_, err = db.ExecContext(ctx, query, token.Token, token.User, token.ValidFrom, token.ValidUntil)
 	if err != nil {
 		return rest.Token{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -90,14 +90,14 @@ func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string,
 // TokenInvalidate immediately invalidates the specified token. An error is
 // returned if the token doesn't exist.
 func (da PostgresDataAccess) TokenInvalidate(ctx context.Context, tokenString string) error {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	query := `DELETE FROM tokens WHERE token=$1;`
-	_, err = db.Exec(query, tokenString)
+	_, err = db.ExecContext(ctx, query, tokenString)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -108,7 +108,7 @@ func (da PostgresDataAccess) TokenInvalidate(ctx context.Context, tokenString st
 // TokenRetrieveByUser retrieves the token associated with a username. An
 // error is returned if no such token (or user) exists.
 func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username string) (rest.Token, error) {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return rest.Token{}, err
 	}
@@ -122,7 +122,7 @@ func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username s
 	token := rest.Token{}
 
 	err = db.
-		QueryRow(query, username).
+		QueryRowContext(ctx, query, username).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 
 	if err != nil {
@@ -137,7 +137,7 @@ func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username s
 // TokenRetrieveByToken retrieves the token by its value. An error is returned
 // if no such token exists.
 func (da PostgresDataAccess) TokenRetrieveByToken(ctx context.Context, tokenString string) (rest.Token, error) {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return rest.Token{}, err
 	}
@@ -150,7 +150,7 @@ func (da PostgresDataAccess) TokenRetrieveByToken(ctx context.Context, tokenStri
 
 	token := rest.Token{}
 	err = db.
-		QueryRow(query, tokenString).
+		QueryRowContext(ctx, query, tokenString).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 
 	if err != nil {

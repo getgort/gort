@@ -50,14 +50,14 @@ func (da PostgresDataAccess) GroupAddUser(ctx context.Context, groupname string,
 		return errs.ErrNoSuchUser
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	query := `INSERT INTO groupusers (groupname, username) VALUES ($1, $2);`
-	_, err = db.Exec(query, groupname, username)
+	_, err = db.ExecContext(ctx, query, groupname, username)
 	if err != nil {
 		err = gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -79,14 +79,14 @@ func (da PostgresDataAccess) GroupCreate(ctx context.Context, group rest.Group) 
 		return errs.ErrGroupExists
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	query := `INSERT INTO groups (groupname) VALUES ($1);`
-	_, err = db.Exec(query, group.Name)
+	_, err = db.ExecContext(ctx, query, group.Name)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -113,20 +113,20 @@ func (da PostgresDataAccess) GroupDelete(ctx context.Context, groupname string) 
 		return errs.ErrNoSuchGroup
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	query := `DELETE FROM groupusers WHERE groupname=$1;`
-	_, err = db.Exec(query, groupname)
+	_, err = db.ExecContext(ctx, query, groupname)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = `DELETE FROM groups WHERE groupname=$1;`
-	_, err = db.Exec(query, groupname)
+	_, err = db.ExecContext(ctx, query, groupname)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -136,7 +136,7 @@ func (da PostgresDataAccess) GroupDelete(ctx context.Context, groupname string) 
 
 // GroupExists is used to determine whether a group exists in the data store.
 func (da PostgresDataAccess) GroupExists(ctx context.Context, groupname string) (bool, error) {
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return false, err
 	}
@@ -145,7 +145,7 @@ func (da PostgresDataAccess) GroupExists(ctx context.Context, groupname string) 
 	query := "SELECT EXISTS(SELECT 1 FROM groups WHERE groupname=$1)"
 	exists := false
 
-	err = db.QueryRow(query, groupname).Scan(&exists)
+	err = db.QueryRowContext(ctx, query, groupname).Scan(&exists)
 	if err != nil {
 		return false, gerr.Wrap(errs.ErrNoSuchGroup, err)
 	}
@@ -159,7 +159,7 @@ func (da PostgresDataAccess) GroupGet(ctx context.Context, groupname string) (re
 		return rest.Group{}, errs.ErrEmptyGroupName
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return rest.Group{}, err
 	}
@@ -171,7 +171,7 @@ func (da PostgresDataAccess) GroupGet(ctx context.Context, groupname string) (re
 		WHERE groupname=$1`
 
 	group := rest.Group{}
-	err = db.QueryRow(query, groupname).Scan(&group.Name)
+	err = db.QueryRowContext(ctx, query, groupname).Scan(&group.Name)
 	if err != nil {
 		return group, gerr.Wrap(errs.ErrNoSuchGroup, err)
 	}
@@ -196,14 +196,14 @@ func (da PostgresDataAccess) GroupGrantRole(ctx context.Context) error {
 func (da PostgresDataAccess) GroupList(ctx context.Context) ([]rest.Group, error) {
 	groups := make([]rest.Group, 0)
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return groups, err
 	}
 	defer db.Close()
 
 	query := `SELECT groupname FROM groups`
-	rows, err := db.Query(query)
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return groups, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -226,7 +226,7 @@ func (da PostgresDataAccess) GroupList(ctx context.Context) ([]rest.Group, error
 func (da PostgresDataAccess) GroupListUsers(ctx context.Context, groupname string) ([]rest.User, error) {
 	users := make([]rest.User, 0)
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return users, err
 	}
@@ -240,7 +240,7 @@ func (da PostgresDataAccess) GroupListUsers(ctx context.Context, groupname strin
 		WHERE groupname = $1
 	)`
 
-	rows, err := db.Query(query, groupname)
+	rows, err := db.QueryContext(ctx, query, groupname)
 	if err != nil {
 		return users, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -273,14 +273,14 @@ func (da PostgresDataAccess) GroupRemoveUser(ctx context.Context, groupname stri
 		return errs.ErrNoSuchGroup
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	query := "DELETE FROM groupusers WHERE groupname=$1 AND username=$2;"
-	_, err = db.Exec(query, groupname, username)
+	_, err = db.ExecContext(ctx, query, groupname, username)
 	if err != nil {
 		err = gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -309,7 +309,7 @@ func (da PostgresDataAccess) GroupUpdate(ctx context.Context, group rest.Group) 
 		return errs.ErrNoSuchGroup
 	}
 
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ func (da PostgresDataAccess) GroupUpdate(ctx context.Context, group rest.Group) 
 	SET groupname=$1
 	WHERE groupname=$1;`
 
-	_, err = db.Exec(query, group.Name)
+	_, err = db.ExecContext(ctx, query, group.Name)
 	if err != nil {
 		err = gerr.Wrap(errs.ErrDataAccess, err)
 	}

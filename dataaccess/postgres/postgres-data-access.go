@@ -42,83 +42,83 @@ func NewPostgresDataAccess(configs data.DatabaseConfigs) PostgresDataAccess {
 // Initialize sets up the database.
 func (da PostgresDataAccess) Initialize(ctx context.Context) error {
 	// Does the database exist? If not, create it.
-	err := da.ensureGortDatabaseExists()
+	err := da.ensureGortDatabaseExists(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Establish a connection to the "gort" database
-	db, err := da.connect("gort")
+	db, err := da.connect(ctx, "gort")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	// Check whether the users table exists
-	exists, err := da.tableExists("users", db)
+	exists, err := da.tableExists(ctx, "users", db)
 	if err != nil {
 		return err
 	}
 
 	// If not, assume none of them do. Create them all.
 	if !exists {
-		err = da.createUsersTable(db)
+		err = da.createUsersTable(ctx, db)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Check whether the users table exists
-	exists, err = da.tableExists("groups", db)
+	exists, err = da.tableExists(ctx, "groups", db)
 	if err != nil {
 		return err
 	}
 
 	// If not, assume none of them do. Create them all.
 	if !exists {
-		err = da.createGroupsTable(db)
+		err = da.createGroupsTable(ctx, db)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Check whether the users table exists
-	exists, err = da.tableExists("groupusers", db)
+	exists, err = da.tableExists(ctx, "groupusers", db)
 	if err != nil {
 		return err
 	}
 
 	// If not, assume none of them do. Create them all.
 	if !exists {
-		err = da.createGroupUsersTable(db)
+		err = da.createGroupUsersTable(ctx, db)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Check whether the tokens table exists
-	exists, err = da.tableExists("tokens", db)
+	exists, err = da.tableExists(ctx, "tokens", db)
 	if err != nil {
 		return err
 	}
 
 	// If not, assume none of them do. Create them all.
 	if !exists {
-		err = da.createTokensTable(db)
+		err = da.createTokensTable(ctx, db)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Check whether the bundles table exists
-	exists, err = da.tableExists("bundles", db)
+	exists, err = da.tableExists(ctx, "bundles", db)
 	if err != nil {
 		return err
 	}
 
 	// If not, assume none of them do. Create them all.
 	if !exists {
-		err = da.createBundlesTables(db)
+		err = da.createBundlesTables(ctx, db)
 		if err != nil {
 			return err
 		}
@@ -127,9 +127,9 @@ func (da PostgresDataAccess) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (da PostgresDataAccess) gortDatabaseExists(db *sql.DB) (bool, error) {
-	rows, err := db.Query("SELECT datname " +
-		"FROM pg_database " +
+func (da PostgresDataAccess) gortDatabaseExists(ctx context.Context, db *sql.DB) (bool, error) {
+	rows, err := db.QueryContext(ctx, "SELECT datname "+
+		"FROM pg_database "+
 		"WHERE datistemplate = false AND datname = 'gort'")
 	if err != nil {
 		return false, gerr.Wrap(errs.ErrDataAccess, err)
@@ -153,7 +153,7 @@ func (da PostgresDataAccess) gortDatabaseExists(db *sql.DB) (bool, error) {
 	return false, nil
 }
 
-func (da PostgresDataAccess) connect(dbname string) (*sql.DB, error) {
+func (da PostgresDataAccess) connect(ctx context.Context, dbname string) (*sql.DB, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		da.configs.Host, da.configs.Port, da.configs.User,
@@ -164,7 +164,7 @@ func (da PostgresDataAccess) connect(dbname string) (*sql.DB, error) {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	err = db.Ping()
+	err = db.PingContext(ctx)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -172,7 +172,7 @@ func (da PostgresDataAccess) connect(dbname string) (*sql.DB, error) {
 	return db, nil
 }
 
-func (da PostgresDataAccess) createBundlesTables(db *sql.DB) error {
+func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB) error {
 	var err error
 
 	createBundlesQuery := `CREATE TABLE bundles (
@@ -233,7 +233,7 @@ func (da PostgresDataAccess) createBundlesTables(db *sql.DB) error {
 	);
 	`
 
-	_, err = db.Exec(createBundlesQuery)
+	_, err = db.ExecContext(ctx, createBundlesQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -241,14 +241,14 @@ func (da PostgresDataAccess) createBundlesTables(db *sql.DB) error {
 	return nil
 }
 
-func (da PostgresDataAccess) createGroupsTable(db *sql.DB) error {
+func (da PostgresDataAccess) createGroupsTable(ctx context.Context, db *sql.DB) error {
 	var err error
 
 	createGroupQuery := `CREATE TABLE groups (
 		groupname TEXT PRIMARY KEY
 	  );`
 
-	_, err = db.Exec(createGroupQuery)
+	_, err = db.ExecContext(ctx, createGroupQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -256,7 +256,7 @@ func (da PostgresDataAccess) createGroupsTable(db *sql.DB) error {
 	return nil
 }
 
-func (da PostgresDataAccess) createGroupUsersTable(db *sql.DB) error {
+func (da PostgresDataAccess) createGroupUsersTable(ctx context.Context, db *sql.DB) error {
 	var err error
 
 	createGroupUsersQuery := `CREATE TABLE groupusers (
@@ -265,7 +265,7 @@ func (da PostgresDataAccess) createGroupUsersTable(db *sql.DB) error {
 		PRIMARY KEY (groupname, username)
 	);`
 
-	_, err = db.Exec(createGroupUsersQuery)
+	_, err = db.ExecContext(ctx, createGroupUsersQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -273,7 +273,7 @@ func (da PostgresDataAccess) createGroupUsersTable(db *sql.DB) error {
 	return nil
 }
 
-func (da PostgresDataAccess) createTokensTable(db *sql.DB) error {
+func (da PostgresDataAccess) createTokensTable(ctx context.Context, db *sql.DB) error {
 	var err error
 
 	createTokensQuery := `CREATE TABLE tokens (
@@ -287,7 +287,7 @@ func (da PostgresDataAccess) createTokensTable(db *sql.DB) error {
 	CREATE UNIQUE INDEX tokens_token ON tokens (token);
 	`
 
-	_, err = db.Exec(createTokensQuery)
+	_, err = db.ExecContext(ctx, createTokensQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -295,7 +295,7 @@ func (da PostgresDataAccess) createTokensTable(db *sql.DB) error {
 	return nil
 }
 
-func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
+func (da PostgresDataAccess) createUsersTable(ctx context.Context, db *sql.DB) error {
 	var err error
 
 	createUserQuery := `CREATE TABLE users (
@@ -305,7 +305,7 @@ func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
 		username TEXT PRIMARY KEY
 	  );`
 
-	_, err = db.Exec(createUserQuery)
+	_, err = db.ExecContext(ctx, createUserQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -315,20 +315,20 @@ func (da PostgresDataAccess) createUsersTable(db *sql.DB) error {
 
 // ensureGortDatabaseExists simply checks whether the "gort" database exists,
 // and creates the empty database if it doesn't.
-func (da PostgresDataAccess) ensureGortDatabaseExists() error {
-	db, err := da.connect("postgres")
+func (da PostgresDataAccess) ensureGortDatabaseExists(ctx context.Context) error {
+	db, err := da.connect(ctx, "postgres")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	exists, err := da.gortDatabaseExists(db)
+	exists, err := da.gortDatabaseExists(ctx, db)
 	if err != nil {
 		return err
 	}
 
 	if !exists {
-		_, err := db.Exec("CREATE DATABASE Gort")
+		_, err := db.ExecContext(ctx, "CREATE DATABASE Gort")
 		if err != nil {
 			return gerr.Wrap(errs.ErrDataAccess, err)
 		}
@@ -337,10 +337,10 @@ func (da PostgresDataAccess) ensureGortDatabaseExists() error {
 	return nil
 }
 
-func (da PostgresDataAccess) tableExists(table string, db *sql.DB) (bool, error) {
+func (da PostgresDataAccess) tableExists(ctx context.Context, table string, db *sql.DB) (bool, error) {
 	var result string
 
-	rows, err := db.Query(fmt.Sprintf("SELECT to_regclass('public.%s');", table))
+	rows, err := db.QueryContext(ctx, fmt.Sprintf("SELECT to_regclass('public.%s');", table))
 	if err != nil {
 		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
