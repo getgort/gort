@@ -58,7 +58,7 @@ var (
 	// ErrURLFormat indicates badly formatted URL.
 	ErrURLFormat = errors.New("invalid URL format")
 
-	ErrInsecureURL = errors.New("insecure URL provided, please use https or set allowInsecure")
+	ErrInsecureURL = errors.New("insecure URL provided, please use https or set allow_insecure")
 )
 
 // GortClient comments to be written...
