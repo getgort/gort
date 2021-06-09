@@ -38,8 +38,8 @@ FROM ubuntu:20.04 as image
 #
 RUN apt update                                              \
   && apt-get -y --force-yes install --no-install-recommends \
-  ssh                                                     \
-  ca-certificates                                         \
+  ssh                                                       \
+  ca-certificates                                           \
   && apt-get clean                                          \
   && apt-get autoclean                                      \
   && apt-get autoremove                                     \
@@ -47,8 +47,8 @@ RUN apt update                                              \
 
 RUN ssh-keygen -b 2048 -f /root/.ssh/id_rsa -P ''
 
-COPY --from=builder /gort/gort .
+COPY --from=builder /gort/gort /bin
 
 EXPOSE 4000
 
-CMD [ "/gort", "start", "-v" ]
+CMD [ "gort", "start", "-v" ]

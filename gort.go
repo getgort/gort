@@ -36,53 +36,70 @@ import (
 	"github.com/getgort/gort/version"
 )
 
-var configfile string
+var (
+	cmdRootConfigfile string
 
-var verboseCount int
+	cmdRootVerboseCount int
 
-var rootCmd = &cobra.Command{
-	Use:   "gort",
-	Short: "Bringing the power of the command line to chat",
-	Long:  `Bringing the power of the command line to chat.`,
-}
+	cmdRoot = &cobra.Command{
+		Use:   "gort",
+		Short: "Bringing the power of the command line to chat",
+		Long:  `Bringing the power of the command line to chat.`,
+	}
+)
 
-var startCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Immediately start the Gort server",
-	Long:  `Immediately start the Gort server.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		err := startGort()
-		if err != nil {
-			telemetry.Errors().WithError(err).Commit(context.TODO())
-			log.WithError(err).Fatal("Fatal service error")
-		}
-	},
-}
+var (
+	cmdStart = &cobra.Command{
+		Use:   "start",
+		Short: "Immediately start the Gort server",
+		Long:  `Immediately start the Gort server.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			err := startGort()
+			if err != nil {
+				log.WithError(err).Fatal("Fatal service error")
+			}
+		},
+	}
+)
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print Gort's version number",
-	Long:  `All software has versions. This is Gort's.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Gort ChatOps Engine v%s\n", version.Version)
-	},
-}
+var (
+	cmdVersionShort bool
+
+	cmdVersion = &cobra.Command{
+		Use:   "version",
+		Short: "Print Gort's version number",
+		Long:  `All software has versions. This is Gort's.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if cmdVersionShort {
+				fmt.Println(version.Version)
+				return
+			}
+
+			fmt.Printf("Gort ChatOps Engine v%s\n", version.Version)
+		},
+	}
+)
 
 func initializeCommands() {
-	startCmd.Flags().StringVarP(
-		&configfile,
+	cmdStart.Flags().StringVarP(
+		&cmdRootConfigfile,
 		"config", "c", "config.yml", "The location of the config file to use")
 
-	startCmd.Flags().CountVarP(
-		&verboseCount,
+	cmdStart.Flags().CountVarP(
+		&cmdRootVerboseCount,
 		"verbose", "v", "Verbose mode (can be used multiple times)")
 
-	rootCmd.AddCommand(startCmd)
-	rootCmd.AddCommand(versionCmd)
+	cmdRoot.AddCommand(cmdStart)
+
+	cmdVersion.Flags().BoolVarP(
+		&cmdVersionShort,
+		"short", "s", false, "Print only the version number")
+
+	cmdRoot.AddCommand(cmdVersion)
 }
 
-func initializeConfig(configfile string) error {
-	err := config.Initialize(configfile)
+func initializeConfig(cmdRootConfigfile string) error {
+	err := config.Initialize(cmdRootConfigfile)
 	if err != nil {
 		return err
 	}
@@ -120,10 +137,10 @@ func installAdapters() error {
 }
 
 func startGort() error {
-	setLoggerVerbosity(verboseCount)
+	setLoggerVerbosity(cmdRootVerboseCount)
 
 	// Load the Gort configuration.
-	err := initializeConfig(configfile)
+	err := initializeConfig(cmdRootConfigfile)
 	if err != nil {
 		return err
 	}

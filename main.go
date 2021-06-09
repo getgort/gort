@@ -21,5 +21,5 @@ func init() {
 }
 
 func main() {
-	rootCmd.Execute()
+	cmdRoot.Execute()
 }

@@ -25,33 +25,36 @@ import (
 	"go.opentelemetry.io/otel/unit"
 )
 
-var meterProvider metric.MeterProvider
+var (
+	PrometheusExporter *prometheus.Exporter
 
-func BuildPromExporter() (*prometheus.Exporter, error) {
+	MeterProvider metric.MeterProvider
+)
+
+func init() {
 	// Create and configure the Prometheus exporter
-	exporter, err := prometheus.NewExportPipeline(prometheus.Config{})
+	var err error
+	PrometheusExporter, err = prometheus.NewExportPipeline(prometheus.Config{})
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	meterProvider = exporter.MeterProvider()
+	MeterProvider = PrometheusExporter.MeterProvider()
 
 	if err := buildCounters(); err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	if err := buildRuntimeObservers(); err != nil {
-		return nil, err
+		panic(err)
 	}
-
-	return exporter, nil
 }
 
 func buildCounters() error {
 	var err error
 
 	// Retrieve the meter from the meter provider.
-	meter := meterProvider.Meter(ServiceName)
+	meter := MeterProvider.Meter(ServiceName)
 
 	countErrors, err = meter.NewInt64Counter("gort_controller_errors_total",
 		metric.WithDescription("Total number of errors recorded by the Gort controller."),
@@ -80,7 +83,7 @@ func buildCounters() error {
 func buildRuntimeObservers() error {
 	var err error
 
-	meter := meterProvider.Meter(ServiceName)
+	meter := MeterProvider.Meter(ServiceName)
 
 	var m runtime.MemStats
 	_, err = meter.NewInt64UpDownSumObserver("gort_controller_memory_usage_bytes",

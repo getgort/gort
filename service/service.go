@@ -154,12 +154,7 @@ func addHealthzMethodToRouter(router *mux.Router) {
 }
 
 func addMetricsToRouter(router *mux.Router) error {
-	exporter, err := telemetry.BuildPromExporter()
-	if err != nil {
-		return err
-	}
-
-	router.Handle("/v2/metrics", exporter)
+	router.Handle("/v2/metrics", telemetry.PrometheusExporter)
 	return nil
 }
 

@@ -13,7 +13,6 @@ GIT_REPOSITORY = $(GIT_URL)/$(GIT_ORGANIZATION)/$(PROJECT)
 ############################
 REGISTRY_URL = getgort
 IMAGE_NAME = $(REGISTRY_URL)/$(PROJECT)
-IMAGE_TAG = latest
 
 help:
 	# Commands:
@@ -43,7 +42,8 @@ build: clean
 	@go build -a -installsuffix cgo -o bin/$(PROJECT) $(GIT_REPOSITORY)
 
 image: test
-	@DOCKER_BUILDKIT=1 docker build --target image -t $(IMAGE_NAME):$(IMAGE_TAG) --network host .
+	@DOCKER_BUILDKIT=1 docker build --target image -t $(IMAGE_NAME):latest --network host .
+	@docker tag $(IMAGE_NAME):latest $(IMAGE_NAME):$(shell docker run -it $(IMAGE_NAME):latest gort version -s)
 
-push:
-	@docker push $(IMAGE_NAME):$(IMAGE_TAG)
+push: image
+	@docker push $(IMAGE_NAME):$(shell docker run -it $(IMAGE_NAME):latest gort version -s)
