@@ -91,7 +91,7 @@ bundles:
     - echo
 
   docker:
-    image: clockworksoul/relaytest
+    image: getgort/relaytest
     tag: latest
 
   commands:
@@ -109,7 +109,7 @@ bundles:
     - echo
 
   docker:
-    image: clockworksoul/relaytest
+    image: getgort/relaytest
     tag: latest
 
   commands:

@@ -2,7 +2,7 @@
 
 An incomplete list of tasks for Gort by milestone. Tasks listed within a milestone are mostly unordered.
 
-This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If what you want to add doesn't have an open issue, please [create one of these as well](https://github.com/clockworksoul/Gort/issues).
+This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If what you want to add doesn't have an open issue, please [create one of these as well](https://github.com/getgort/gort/issues).
 
 ## Milestone 4 (Command Bundles) -- _COMPLETE!_ ✅
 

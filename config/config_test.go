@@ -68,7 +68,7 @@ func TestLoadConfiguration(t *testing.T) {
 	assert.Len(t, cb, 2)
 	assert.Equal(t, "echo", cb[0].Name)
 	assert.Equal(t, "A default bundle with echo commands.", cb[0].Description)
-	assert.Equal(t, "clockworksoul/relaytest", cb[0].Docker.Image)
+	assert.Equal(t, "getgort/relaytest", cb[0].Docker.Image)
 	assert.Equal(t, "latest", cb[0].Docker.Tag)
 
 	assert.Len(t, cb[0].Commands, 2)

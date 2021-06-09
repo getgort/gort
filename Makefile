@@ -5,13 +5,13 @@
 ############################
 PROJECT = gort
 GIT_URL = github.com
-GIT_ORGANIZATION = clockworksoul
+GIT_ORGANIZATION = getgort
 GIT_REPOSITORY = $(GIT_URL)/$(GIT_ORGANIZATION)/$(PROJECT)
 
 ############################
 ## Docker Registry Info
 ############################
-REGISTRY_URL = clockworksoul
+REGISTRY_URL = getgort
 IMAGE_NAME = $(REGISTRY_URL)/$(PROJECT)
 IMAGE_TAG = latest
 
@@ -34,25 +34,16 @@ help:
 clean:
 	if [ -d "bin" ]; then rm -R bin; fi
 
-test_begin:
-	@docker stop foo_postgres | true
-	@docker rm foo_postgres | true
-	@docker run -d -e POSTGRES_USER=gort -e POSTGRES_PASSWORD=password -p 5432:5432 --name foo_postgres postgres:13
-
-test: test_begin
+test:
 	@DOCKER_BUILDKIT=1 docker build --target test -t foo_$(PROJECT)_foo --network host .
 	@docker rmi foo_$(PROJECT)_foo
-	@docker stop foo_postgres
-	@docker rm foo_postgres
 
 build: clean
 	mkdir -p bin
 	@go build -a -installsuffix cgo -o bin/$(PROJECT) $(GIT_REPOSITORY)
 
-image: test_begin
+image: test
 	@DOCKER_BUILDKIT=1 docker build --target image -t $(IMAGE_NAME):$(IMAGE_TAG) --network host .
-	@docker stop foo_postgres
-	@docker rm foo_postgres
 
 push:
 	@docker push $(IMAGE_NAME):$(IMAGE_TAG)

@@ -61,4 +61,4 @@ Note that you'll need a proper API key in the config first!
 
 ## Gortctl
 
-The `gortctl` administration CLI can be found [in its own repository](https://github.com/clockworksoul/gortctl).
+The `gortctl` administration CLI can be found [in its own repository](https://github.com/getgort/gortctl).
