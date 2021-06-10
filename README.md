@@ -47,7 +47,7 @@ Active heavy development. The date that various [milestones](https://docs.google
 * Milestone 3: 24 January 2019
 * Milestone 4: 17 March 2019
 * Milestone 5: 7 June 2021
-* Milestone 6: *TBD*
+* Milestone 6: 10 June 2021
 * Milestone 7: *TBD*
 * Milestone 8: *TBD*
 * Release candidate 1: *TBD*
