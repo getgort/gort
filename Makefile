@@ -44,7 +44,8 @@ build: clean
 
 image: test
 	@echo Building image $(IMAGE_NAME):$(IMAGE_TAG)
-	@DOCKER_BUILDKIT=1 docker build --target image -t $(IMAGE_NAME):$(IMAGE_TAG) --network host .
+	@DOCKER_BUILDKIT=1 docker build --target image -t $(IMAGE_NAME):latest --network host .
+	@docker tag $(IMAGE_NAME):latest $(IMAGE_NAME):$(IMAGE_TAG)
 
 push: image
 	@docker push $(IMAGE_NAME):$(IMAGE_TAG)
