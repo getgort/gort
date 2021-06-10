@@ -43,7 +43,7 @@ type bundleCommandData struct {
 // BundleCreate TBD
 func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundle) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleCreate")
+	ctx, sp := tr.Start(ctx, "postgres.BundleCreate")
 	defer sp.End()
 
 	if bundle.Name == "" {
@@ -105,7 +105,7 @@ func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundl
 // BundleDelete TBD
 func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleDelete")
+	ctx, sp := tr.Start(ctx, "postgres.BundleDelete")
 	defer sp.End()
 
 	if name == "" {
@@ -158,7 +158,7 @@ func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version str
 // BundleDisable TBD
 func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleDisable")
+	ctx, sp := tr.Start(ctx, "postgres.BundleDisable")
 	defer sp.End()
 
 	db, err := da.connect(ctx, "gort")
@@ -190,7 +190,7 @@ func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) err
 // BundleEnable TBD
 func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleEnable")
+	ctx, sp := tr.Start(ctx, "postgres.BundleEnable")
 	defer sp.End()
 
 	db, err := da.connect(ctx, "gort")
@@ -222,7 +222,7 @@ func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version str
 // BundleEnabledVersion TBD
 func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name string) (string, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleEnabledVersion")
+	ctx, sp := tr.Start(ctx, "postgres.BundleEnabledVersion")
 	defer sp.End()
 
 	db, err := da.connect(ctx, "gort")
@@ -254,7 +254,7 @@ func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name stri
 // BundleExists TBD
 func (da PostgresDataAccess) BundleExists(ctx context.Context, name, version string) (bool, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleExists")
+	ctx, sp := tr.Start(ctx, "postgres.BundleExists")
 	defer sp.End()
 
 	db, err := da.connect(ctx, "gort")
@@ -274,7 +274,7 @@ func (da PostgresDataAccess) BundleExists(ctx context.Context, name, version str
 // BundleGet TBD
 func (da PostgresDataAccess) BundleGet(ctx context.Context, name, version string) (data.Bundle, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleGet")
+	ctx, sp := tr.Start(ctx, "postgres.BundleGet")
 	defer sp.End()
 
 	if name == "" {
@@ -307,7 +307,7 @@ func (da PostgresDataAccess) BundleGet(ctx context.Context, name, version string
 // BundleList TBD
 func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleList")
+	ctx, sp := tr.Start(ctx, "postgres.BundleList")
 	defer sp.End()
 
 	// This is hacky as fuck. I know.
@@ -365,7 +365,7 @@ func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, err
 // BundleListVersions TBD
 func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleListVersions")
+	ctx, sp := tr.Start(ctx, "postgres.BundleListVersions")
 	defer sp.End()
 
 	// This is hacky as fuck. I know.
@@ -422,7 +422,7 @@ func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string
 // BundleUpdate TBD
 func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundle) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "BundleUpdate")
+	ctx, sp := tr.Start(ctx, "postgres.BundleUpdate")
 	defer sp.End()
 
 	if bundle.Name == "" {

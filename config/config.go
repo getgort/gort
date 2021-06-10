@@ -17,7 +17,6 @@
 package config
 
 import (
-	"context"
 	"crypto/md5"
 	"errors"
 	"io"
@@ -30,7 +29,6 @@ import (
 
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
-	"github.com/getgort/gort/telemetry"
 )
 
 const (
@@ -107,7 +105,6 @@ func BeginChangeCheck(frequency time.Duration) {
 				if lastReloadWorked {
 					lastReloadWorked = false
 					log.WithError(err).Error("Config reload failed")
-					telemetry.Errors().WithError(err).Commit(context.TODO())
 				}
 			}
 		}
@@ -132,6 +129,11 @@ func GetDockerConfigs() data.DockerConfigs {
 // GetGortServerConfigs returns the data wrapper for the "gort" config section.
 func GetGortServerConfigs() data.GortServerConfigs {
 	return config.GortServerConfigs
+}
+
+// GetJaegerConfigs returns the data wrapper for the "jaeger" config section.
+func GetJaegerConfigs() data.JaegerConfigs {
+	return config.JaegerConfigs
 }
 
 // GetGlobalConfigs returns the data wrapper for the "global" config section.

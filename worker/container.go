@@ -23,12 +23,18 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/getgort/gort/telemetry"
+	"go.opentelemetry.io/otel"
 )
 
 // BuildContainerLogChannel accepts a pointer to a Docker client.Client and a
 // container ID and returns a string channel that provides all events from the
 // container's standard output and error streams.
 func BuildContainerLogChannel(ctx context.Context, client *client.Client, containerID string) (<-chan string, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "container.BuildContainerLogChannel")
+	defer sp.End()
+
 	options := types.ContainerLogsOptions{Follow: true, ShowStdout: true, ShowStderr: true}
 	out, err := client.ContainerLogs(ctx, containerID, options)
 	if err != nil {
@@ -45,6 +51,10 @@ func BuildContainerLogChannel(ctx context.Context, client *client.Client, contai
 // emitted by the container's standard output stream, and a second for standard
 // error.
 func BuildContainerLogChannels(ctx context.Context, client *client.Client, containerID string) (stdout, stderr <-chan string, err error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "container.BuildContainerLogChannels")
+	defer sp.End()
+
 	var outr, errr io.ReadCloser
 
 	outr, err = client.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{Follow: true, ShowStdout: true})

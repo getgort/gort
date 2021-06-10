@@ -22,6 +22,7 @@ type GortConfig struct {
 	GlobalConfigs     GlobalConfigs     `yaml:"global,omitempty"`
 	DatabaseConfigs   DatabaseConfigs   `yaml:"database,omitempty"`
 	DockerConfigs     DockerConfigs     `yaml:"docker,omitempty"`
+	JaegerConfigs     JaegerConfigs     `yaml:"jaeger,omitempty"`
 	SlackProviders    []SlackProvider   `yaml:"slack,omitempty"`
 	BundleConfigs     []Bundle          `yaml:"bundles,omitempty"`
 }
@@ -58,4 +59,11 @@ type DatabaseConfigs struct {
 // This will move into the relay config(s) eventually.
 type DockerConfigs struct {
 	DockerHost string `yaml:"host,omitempty"`
+}
+
+// JaegerConfigs is the data wrapper for the "jaeger" section.
+type JaegerConfigs struct {
+	Endpoint string `yaml:"endpoint,omitempty"`
+	Password string `yaml:"password,omitempty"`
+	Username string `yaml:"username,omitempty"`
 }

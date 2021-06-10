@@ -25,9 +25,12 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/telemetry"
-	log "github.com/sirupsen/logrus"
 )
 
 // Worker represents a container executor. It has a lifetime of a single command execution.
@@ -71,7 +74,11 @@ func NewWorker(image string, tag string, entryPoint string, commandParams ...str
 
 // Start triggers a worker to run a container according to its settings.
 // It returns a string channel that emits the container's combined stdout and stderr streams.
-func (w *Worker) Start() (<-chan string, error) {
+func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	_, sp := tr.Start(ctx, "worker.Start")
+	defer sp.End()
+
 	// Track time spent in this method
 	startTime := time.Now()
 
@@ -83,12 +90,21 @@ func (w *Worker) Start() (<-chan string, error) {
 		WithField("image", w.ImageName).
 		WithField("entry", entryPoint).
 		WithField("params", strings.Join(w.CommandParameters, " "))
+	if sp.SpanContext().HasTraceID() {
+		event = event.WithField("trace.id", sp.SpanContext().TraceID())
+	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), w.ExecutionTimeout)
+	sp.SetAttributes(
+		attribute.String("image", w.ImageName),
+		attribute.String("entry", entryPoint),
+		attribute.String("params", strings.Join(w.CommandParameters, " ")),
+	)
+
+	ctx, cancel := context.WithTimeout(ctx, w.ExecutionTimeout)
 	defer cancel()
 
 	// Start the image pull. This blocks until the pull is complete.
-	err := w.pullImage(false)
+	err := w.pullImage(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -103,21 +119,37 @@ func (w *Worker) Start() (<-chan string, error) {
 		cfg.Entrypoint = []string{entryPoint}
 	}
 
-	resp, err := cli.ContainerCreate(ctx, &cfg, nil, nil, nil, "")
+	// Create the container
+	resp, err := func() (container.ContainerCreateCreatedBody, error) {
+		ctx, sp := tr.Start(ctx, "docker.ContainerCreate")
+		defer sp.End()
+		return cli.ContainerCreate(ctx, &cfg, nil, nil, nil, "")
+	}()
 	if err != nil {
 		return nil, err
 	}
 
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+	// Start the container
+	err = func() error {
+		ctx, sp := tr.Start(ctx, "docker.ContainerStart")
+		defer sp.End()
+		return cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+	}()
+	if err != nil {
 		return nil, err
 	}
+
+	// Make sure the container is cleaned up when we're done
 	defer func() {
-		c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		ctx, sp := tr.Start(ctx, "docker.ContainerCleanup")
+		defer sp.End()
+
+		ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 
 		duration := 10 * time.Second
-		w.DockerClient.ContainerStop(c, resp.ID, &duration)
-		w.DockerClient.ContainerRemove(c, resp.ID, types.ContainerRemoveOptions{})
+		w.DockerClient.ContainerStop(ctx, resp.ID, &duration)
+		w.DockerClient.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{})
 		event.Trace("container stopped and removed")
 	}()
 
@@ -126,26 +158,36 @@ func (w *Worker) Start() (<-chan string, error) {
 		chwait, errs := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 		event = event.WithField("duration", time.Since(startTime))
 
+		var status int64
+
 		select {
 		case ok := <-chwait:
 			if ok.Error != nil && ok.Error.Message != "" {
 				event = event.WithError(fmt.Errorf(ok.Error.Message))
-				telemetry.Errors().WithError(fmt.Errorf(ok.Error.Message)).Commit(context.TODO())
+				sp.SetAttributes(attribute.String("error", ok.Error.Message))
+				telemetry.Errors().WithError(fmt.Errorf(ok.Error.Message)).Commit(ctx)
 			}
 
-			event.WithField("status", ok.StatusCode).
+			status = ok.StatusCode
+			event.WithField("duration", time.Since(startTime)).
+				WithField("status", status).
 				Info("Worker completed")
-			w.ExitStatus <- ok.StatusCode
 
 		case err := <-errs:
+			status = 500
 			event.WithField("duration", time.Since(startTime)).
+				WithField("status", status).
 				WithError(err).
 				Error("Error running container")
-			w.ExitStatus <- 500
+			sp.SetAttributes(attribute.String("error", err.Error()))
 		}
+
+		w.ExitStatus <- status
+		sp.SetAttributes(attribute.Int64("status", status))
 	}()
 
-	// Build the channel that will stream back the container logs
+	// Build the channel that will stream back the container logs.
+	// Blocks until the container stops.
 	logs, err := BuildContainerLogChannel(ctx, cli, resp.ID)
 	if err != nil {
 		return nil, err
@@ -162,12 +204,11 @@ func (w *Worker) Stopped() <-chan int64 {
 
 // imageExistsLocally returns true if the specified image is present and
 // accessible to the docker daemon.
-func (w *Worker) imageExistsLocally(image string) (bool, error) {
+func (w *Worker) imageExistsLocally(ctx context.Context, image string) (bool, error) {
 	if strings.IndexByte(image, ':') == -1 {
 		image += ":latest"
 	}
 
-	ctx := context.TODO()
 	images, err := w.DockerClient.ImageList(ctx, types.ImageListOptions{})
 	if err != nil {
 		return false, err
@@ -185,12 +226,15 @@ func (w *Worker) imageExistsLocally(image string) (bool, error) {
 }
 
 // pullImage pull the worker's image. It blocks until the pull is complete.
-func (w *Worker) pullImage(force bool) error {
+func (w *Worker) pullImage(ctx context.Context, force bool) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	_, sp := tr.Start(ctx, "worker.pullImage")
+	defer sp.End()
+
 	cli := w.DockerClient
-	ctx := context.TODO()
 	imageName := w.ImageName
 
-	exists, err := w.imageExistsLocally(imageName)
+	exists, err := w.imageExistsLocally(ctx, imageName)
 	if err != nil {
 		return err
 	}

@@ -17,12 +17,13 @@
 package data
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 )
 
-// BundleInfo wraps a minimal amount of data abount a bundle.
+// BundleInfo wraps a minimal amount of data about a bundle.
 type BundleInfo struct {
 	Name           string
 	Versions       []string
@@ -74,10 +75,13 @@ type CommandEntry struct {
 // a chat provider.
 type CommandRequest struct {
 	CommandEntry
-	Adapter    string   // The name of the adapter this request originated from.
-	ChannelID  string   // The channel that the request originated in.
-	UserID     string   // The ID of the user making this request.
-	Parameters []string // Tokenized command parameters
+	Adapter    string          // The name of the adapter this request originated from.
+	ChannelID  string          // The provider ID of the channel that the request originated in.
+	Context    context.Context // The request context
+	Parameters []string        // Tokenized command parameters
+	UserID     string          // The provider ID of user making this request.
+	UserEmail  string          // The email address associated with the user making the request
+	UserName   string          // The gort username of the user making the request
 }
 
 // CommandString is a convenience method that outputs the normalized command

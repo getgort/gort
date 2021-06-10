@@ -47,7 +47,7 @@ database:
 
   # The password for connecting to Gort's PostgreSQL database. Alternatively,
   # this value can (and should) be specified via the GORT_DB_PASSWORD envvar.
-  password: "veryKleverPassw0rd!"
+  password: veryKleverPassw0rd!
 
   # Set this to true to have Gort connect to its database using SSL.
   # Defaults to false.
@@ -67,6 +67,19 @@ database:
 # Move this to the relay config later.
 docker:
   host: unix:///var/run/docker.sock
+
+jaeger:
+  # The URL for the Jaeger collector that spans are sent to. If not set then
+  # no exporter will be created.
+  endpoint: http://localhost:14268/api/traces
+
+  # The username to be used in the authorization header sent for all requests
+  # to the collector. If not set no username will be passed.
+  username: gort
+
+  # The password to be used in the authorization header sent for all requests
+  # to the collector.
+  password: veryKleverPassw0rd!
 
 slack:
 - # An arbitrary name for human labelling purposes.

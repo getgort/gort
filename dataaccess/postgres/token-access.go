@@ -33,7 +33,7 @@ import (
 // exists and is still within its valid period; false otherwise.
 func (da PostgresDataAccess) TokenEvaluate(ctx context.Context, tokenString string) bool {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "TokenEvaluate")
+	ctx, sp := tr.Start(ctx, "postgres.TokenEvaluate")
 	defer sp.End()
 
 	token, err := da.TokenRetrieveByToken(ctx, tokenString)
@@ -49,7 +49,7 @@ func (da PostgresDataAccess) TokenEvaluate(ctx context.Context, tokenString stri
 // invalidated. If the user doesn't exist an error is returned.
 func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string, duration time.Duration) (rest.Token, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "TokenGenerate")
+	ctx, sp := tr.Start(ctx, "postgres.TokenGenerate")
 	defer sp.End()
 
 	exists, err := da.UserExists(ctx, username)
@@ -102,7 +102,7 @@ func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string,
 // returned if the token doesn't exist.
 func (da PostgresDataAccess) TokenInvalidate(ctx context.Context, tokenString string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "TokenInvalidate")
+	ctx, sp := tr.Start(ctx, "postgres.TokenInvalidate")
 	defer sp.End()
 
 	db, err := da.connect(ctx, "gort")
@@ -124,7 +124,7 @@ func (da PostgresDataAccess) TokenInvalidate(ctx context.Context, tokenString st
 // error is returned if no such token (or user) exists.
 func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username string) (rest.Token, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "TokenRetrieveByUser")
+	ctx, sp := tr.Start(ctx, "postgres.TokenRetrieveByUser")
 	defer sp.End()
 
 	db, err := da.connect(ctx, "gort")
@@ -157,7 +157,7 @@ func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username s
 // if no such token exists.
 func (da PostgresDataAccess) TokenRetrieveByToken(ctx context.Context, tokenString string) (rest.Token, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "TokenRetrieveByToken")
+	ctx, sp := tr.Start(ctx, "postgres.TokenRetrieveByToken")
 	defer sp.End()
 
 	db, err := da.connect(ctx, "gort")

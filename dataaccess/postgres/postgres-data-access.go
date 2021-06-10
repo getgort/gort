@@ -44,7 +44,7 @@ func NewPostgresDataAccess(configs data.DatabaseConfigs) PostgresDataAccess {
 // Initialize sets up the database.
 func (da PostgresDataAccess) Initialize(ctx context.Context) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "Initialize")
+	ctx, sp := tr.Start(ctx, "postgres.Initialize")
 	defer sp.End()
 
 	// Does the database exist? If not, create it.

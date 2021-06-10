@@ -3,7 +3,7 @@ version: '3'
 services:
   gort:
     image: getgort/gort:latest
-    command: "/gort start -v"
+    command: "gort start -v"
     ports:
       - "4000:4000"
     volumes:
@@ -11,6 +11,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - GORT_DB_PASSWORD=veryKleverPassw0rd
+    networks:
+      - gort
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.21
+    ports:
+      - 16686:16686
+      - 14268:14268
     networks:
       - gort
 

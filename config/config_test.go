@@ -63,6 +63,13 @@ func TestLoadConfiguration(t *testing.T) {
 	assert.Equal(t, "https://emoji.slack-edge.com/T023V8ZFQEQ/gort/78a0c1607eeb1f29.png", cs[0].IconURL)
 	assert.Equal(t, "Gort", cs[0].BotName)
 
+	cj := config.JaegerConfigs
+	assert.NotNil(t, cj)
+	assert.NotEmpty(t, cj)
+	assert.Equal(t, cj.Endpoint, "http://localhost:14268/api/traces")
+	assert.Equal(t, cj.Username, "gort")
+	assert.Equal(t, cj.Password, "veryKleverPassw0rd!")
+
 	cb := config.BundleConfigs
 	assert.NotNil(t, cb)
 	assert.Len(t, cb, 2)

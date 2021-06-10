@@ -25,6 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/getgort/gort/bundles"
@@ -175,7 +176,7 @@ func GetCommandEntry(ctx context.Context, tokens []string) (data.CommandEntry, e
 // OnConnected handles ConnectedEvent events.
 func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "OnConnected")
+	ctx, sp := tr.Start(ctx, "adapter.OnConnected")
 	defer sp.End()
 
 	ctx, err := setContextIdentityData(ctx, event.Adapter, "", event.Info.User.ID)
@@ -184,13 +185,15 @@ func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent
 		return
 	}
 
-	le := adapterLogEntry(ctx, nil, event, sp)
+	le := adapterLogEntry(ctx, nil, event)
+	addSpanAttributes(ctx, sp, event)
 
 	le.Info("Connection established to provider")
 
 	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
+		addSpanAttributes(ctx, sp, err)
 		le.WithError(err).Error("Failed to get channels list")
 		return
 	}
@@ -200,6 +203,7 @@ func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent
 		err := event.Adapter.SendMessage(c.ID, message)
 		if err != nil {
 			telemetry.Errors().WithError(err).Commit(ctx)
+			addSpanAttributes(ctx, sp, err)
 			le.WithError(err).Error("Failed to send greeting")
 		}
 	}
@@ -211,7 +215,7 @@ func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent
 // TODO Support direct in-channel mentions.
 func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMessageEvent) (*data.CommandRequest, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "OnChannelMessage")
+	ctx, sp := tr.Start(ctx, "adapter.OnChannelMessage")
 	defer sp.End()
 
 	ctx, err := setContextIdentityData(ctx, event.Adapter, data.ChannelID, data.UserID)
@@ -234,10 +238,10 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	// Remove the "trigger character" (!)
 	rawCommandText = rawCommandText[1:]
 
-	adapterLogEntry(ctx, nil, event, sp).
-		WithField("event", event.EventType).
-		WithField("command", rawCommandText).
+	adapterLogEntry(ctx, nil, event).
+		WithField("command.raw", rawCommandText).
 		Debug("Got message")
+	addSpanAttributes(ctx, sp, event, attribute.String("command.raw", rawCommandText))
 
 	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
@@ -245,7 +249,7 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 // OnDirectMessage handles DirectMessageEvent events.
 func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMessageEvent) (*data.CommandRequest, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "OnDirectMessage")
+	ctx, sp := tr.Start(ctx, "adapter.OnDirectMessage")
 	defer sp.End()
 
 	ctx, err := setContextIdentityData(ctx, event.Adapter, data.ChannelID, data.UserID)
@@ -259,10 +263,10 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 		rawCommandText = rawCommandText[1:]
 	}
 
-	adapterLogEntry(ctx, nil, event, sp).
-		WithField("event", event.EventType).
+	adapterLogEntry(ctx, nil, event).
 		WithField("command.raw", rawCommandText).
 		Debug("Got direct message")
+	addSpanAttributes(ctx, sp, event, attribute.String("command.raw", rawCommandText))
 
 	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
 }
@@ -291,7 +295,7 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
 	// Start trace span
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "TriggerCommand")
+	ctx, sp := tr.Start(ctx, "adapter.TriggerCommand")
 	defer sp.End()
 
 	// If identity data isn't set, ensure that it's set
@@ -301,7 +305,8 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 	}
 
 	// Define parent log entry
-	le := adapterLogEntry(ctx, nil, adapter, sp)
+	le := adapterLogEntry(ctx, nil, adapter)
+	addSpanAttributes(ctx, sp, adapter)
 
 	// Tokenize the raw command and look up the command entry
 	params := TokenizeParameters(rawCommand)
@@ -330,6 +335,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 	// Update log entry with command info
 	le = adapterLogEntry(ctx, le, command)
 	le.Debug("Found matching command+bundle")
+	addSpanAttributes(ctx, sp, command)
 
 	info, ok := GetChatUser(ctx)
 	if !ok {
@@ -371,6 +377,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 
 	// Update log entry with Gort user info
 	le = adapterLogEntry(ctx, le)
+	addSpanAttributes(ctx, sp)
 
 	if autocreated {
 		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
@@ -382,17 +389,21 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 	}
 
 	request := data.CommandRequest{
+		Adapter:      adapter.GetName(),
 		CommandEntry: command,
 		ChannelID:    channelID,
-		Adapter:      adapter.GetName(),
-		Parameters:   params[1:],
+		Context:      ctx,
+		UserEmail:    gortUser.Email,
 		UserID:       userID,
+		UserName:     gortUser.Username,
+		Parameters:   params[1:],
 	}
 
 	// Update log entry with command info
-	le = adapterLogEntry(ctx, le, command)
-
+	le = adapterLogEntry(ctx, le, request)
 	le.Info("Triggering command")
+
+	addSpanAttributes(ctx, sp, request)
 
 	return &request, nil
 }
@@ -417,6 +428,11 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 		e = e.WithField("gort.user.name", user.Username)
 	}
 
+	sp := trace.SpanFromContext(ctx)
+	if sp.SpanContext().HasTraceID() {
+		e = e.WithField("trace.id", sp.SpanContext().TraceID())
+	}
+
 	for _, i := range obs {
 		switch o := i.(type) {
 		case Adapter:
@@ -439,9 +455,13 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 		case data.CommandEntry:
 			e = adapterLogEntry(ctx, e, o.Bundle, o.Command)
 
+		case data.CommandRequest:
+			e = adapterLogEntry(ctx, e, o.CommandEntry, o.Bundle).
+				WithField("command.params", strings.Join(o.Parameters, " "))
+
 		case trace.Span:
 			if o.SpanContext().HasTraceID() {
-				e = log.WithField("id", o.SpanContext().TraceID())
+				e = e.WithField("trace.id", o.SpanContext().TraceID())
 			}
 
 		case error:
@@ -453,6 +473,82 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 	}
 
 	return e
+}
+
+// addSpanAttributes is a helper that pre-populates a log event
+func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
+	attr := []attribute.KeyValue{}
+
+	if ui, ok := GetChatUser(ctx); ok {
+		attr = append(attr,
+			attribute.String("provider.user.email", ui.Email),
+			attribute.String("provider.user.id", ui.ID),
+		)
+	}
+
+	if ci, ok := GetChatChannel(ctx); ok {
+		attr = append(attr,
+			attribute.String("provider.channel.name", ci.Name),
+			attribute.String("provider.channel.id", ci.ID),
+		)
+	}
+
+	if user, ok := GetGortUser(ctx); ok {
+		attr = append(attr,
+			attribute.String("gort.user.name", user.Username),
+		)
+	}
+
+	for _, i := range obs {
+		switch o := i.(type) {
+		case Adapter:
+			attr = append(attr,
+				attribute.String("adapter.name", o.GetName()),
+			)
+
+		case *ProviderEvent:
+			attr = append(attr,
+				attribute.String("event", o.EventType),
+				attribute.String("adapter.name", o.Info.Provider.Name),
+				attribute.String("adapter.type", o.Info.Provider.Type),
+			)
+
+		case data.Bundle:
+			attr = append(attr,
+				attribute.String("bundle.name", o.Name),
+				attribute.String("bundle.version", o.Version),
+				attribute.Bool("bundle.default", o.Default),
+			)
+
+		case data.BundleCommand:
+			attr = append(attr,
+				attribute.String("command.executable", o.Executable),
+				attribute.String("command.name", o.Name),
+			)
+
+		case data.CommandEntry:
+			addSpanAttributes(ctx, sp, o.Bundle, o.Command)
+
+		case data.CommandRequest:
+			addSpanAttributes(ctx, sp, o.CommandEntry, o.Bundle)
+			attr = append(attr,
+				attribute.String("command.params", strings.Join(o.Parameters, " ")),
+			)
+
+		case attribute.KeyValue:
+			attr = append(attr, o)
+
+		case error:
+			attr = append(attr,
+				attribute.String("error", o.Error()),
+			)
+
+		default:
+			panic(fmt.Sprintf("I don't know how to get attributes from a %T", i))
+		}
+	}
+
+	sp.SetAttributes(attr...)
 }
 
 func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
@@ -510,7 +606,7 @@ func findOrMakeGortUser(ctx context.Context, info *UserInfo) (rest.User, bool, e
 	}
 
 	// We can create the user... unless the instance hasn't been bootstrapped.
-	bootstrapped, err := da.UserExists(ctx, "admin")
+	bootstrapped, err := da.UserExists(ctx, "adapter.admin")
 	if err != nil {
 		return rest.User{}, false, err
 	}
@@ -627,45 +723,51 @@ func startAdapters() (<-chan *ProviderEvent, chan error) {
 func startProviderEventListening(commandRequests chan<- data.CommandRequest,
 	allEvents <-chan *ProviderEvent, adapterErrors chan<- error) {
 
+	for event := range allEvents {
+		handleIncomingEvent(event, commandRequests, adapterErrors)
+	}
+}
+
+func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.CommandRequest, adapterErrors chan<- error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(context.Background(), "Incoming Adapter Event")
+	ctx, sp := tr.Start(context.Background(), "adapter.handleIncomingEvent")
 	defer sp.End()
 
-	for event := range allEvents {
-		switch ev := event.Data.(type) {
-		case *ConnectedEvent:
-			OnConnected(ctx, event, ev)
+	sp.SetAttributes(attribute.String("event.type", event.EventType))
 
-		case *DisconnectedEvent:
-			// Do nothing.
+	switch ev := event.Data.(type) {
+	case *ConnectedEvent:
+		OnConnected(ctx, event, ev)
 
-		case *AuthenticationErrorEvent:
-			adapterErrors <- gerrs.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
+	case *DisconnectedEvent:
+		// Do nothing.
 
-		case *ChannelMessageEvent:
-			request, err := OnChannelMessage(ctx, event, ev)
-			if request != nil {
-				commandRequests <- *request
-			}
-			if err != nil {
-				adapterErrors <- err
-			}
+	case *AuthenticationErrorEvent:
+		adapterErrors <- gerrs.Wrap(ErrAuthenticationFailure, errors.New(ev.Msg))
 
-		case *DirectMessageEvent:
-			request, err := OnDirectMessage(ctx, event, ev)
-			if request != nil {
-				commandRequests <- *request
-			}
-			if err != nil {
-				adapterErrors <- err
-			}
-
-		case *ErrorEvent:
-			adapterErrors <- ev
-
-		default:
-			log.WithField("type", fmt.Sprintf("%T", ev)).Warn("Unknown event type")
+	case *ChannelMessageEvent:
+		request, err := OnChannelMessage(ctx, event, ev)
+		if request != nil {
+			commandRequests <- *request
 		}
+		if err != nil {
+			adapterErrors <- err
+		}
+
+	case *DirectMessageEvent:
+		request, err := OnDirectMessage(ctx, event, ev)
+		if request != nil {
+			commandRequests <- *request
+		}
+		if err != nil {
+			adapterErrors <- err
+		}
+
+	case *ErrorEvent:
+		adapterErrors <- ev
+
+	default:
+		log.WithField("type", fmt.Sprintf("%T", ev)).Warn("Unknown event type")
 	}
 }
 

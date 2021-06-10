@@ -25,7 +25,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 - Functional health check endpoint. ✅
 - Observability
   - Metrics endpoint ✅
-  - Distributed tracing
+  - Distributed tracing ✅ (only supports Jaeger for MVP)
 - Command audit log
   - All commands MUST be written to the database
     - Including a unique identifier, Gort user ID and email, full command as typed, command+bundle (and version), originating adapter+channel, and status code

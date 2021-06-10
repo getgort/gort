@@ -145,6 +145,11 @@ func startGort() error {
 		return err
 	}
 
+	err = telemetry.CreateAndRegisterExporters()
+	if err != nil {
+		return err
+	}
+
 	log.WithField("version", version.Version).Infof("Starting Gort")
 
 	err = installAdapters()
