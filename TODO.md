@@ -20,7 +20,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
   - Figure how we want to do it. ✅
   - Actually DO it. ✅
 
-## Milestone 6 (Focus on Observability)
+## Milestone 6 (Focus on Observability) -- _COMPLETE!_ ✅
 
 - Functional health check endpoint. ✅
 - Observability
