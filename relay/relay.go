@@ -18,6 +18,7 @@ package relay
 
 import (
 	"context"
+	"time"
 
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
@@ -119,7 +120,21 @@ func handleRequest(ctx context.Context, commandRequest data.CommandRequest) data
 		return response
 	}
 
-	return start(ctx, worker, response)
+	response.Duration = time.Since(response.Command.Timestamp)
+	response = start(ctx, worker, response)
+
+	da, err := dataaccess.Get()
+	if err != nil {
+		response.Status = ExitIoErr
+		response.Error = err
+		response.Title = "Failed to access data access layer"
+		response.Output = []string{err.Error()}
+		return response
+	}
+
+	da.RequestClose(ctx, response)
+
+	return response
 }
 
 func start(ctx context.Context, worker *worker.Worker, response data.CommandResponse) data.CommandResponse {

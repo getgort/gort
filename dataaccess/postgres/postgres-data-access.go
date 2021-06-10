@@ -30,6 +30,10 @@ import (
 	_ "github.com/lib/pq" // Load the Postgres drivers
 )
 
+const (
+	DatabaseGort = "gort"
+)
+
 // PostgresDataAccess is a data access implementation backed by a database.
 type PostgresDataAccess struct {
 	configs data.DatabaseConfigs
@@ -47,14 +51,56 @@ func (da PostgresDataAccess) Initialize(ctx context.Context) error {
 	ctx, sp := tr.Start(ctx, "postgres.Initialize")
 	defer sp.End()
 
+	if err := da.initializeGortData(ctx); err != nil {
+		return gerr.Wrap(fmt.Errorf("failed to initialize gort data"), err)
+	}
+	if err := da.initializeAuditData(ctx); err != nil {
+		return gerr.Wrap(fmt.Errorf("failed to initialize audit data"), err)
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) initializeAuditData(ctx context.Context) error {
 	// Does the database exist? If not, create it.
-	err := da.ensureGortDatabaseExists(ctx)
+	err := da.ensureDatabaseExists(ctx, DatabaseGort)
+	if err != nil {
+		return gerr.Wrap(fmt.Errorf("cannot ensure gort database exists"), err)
+	}
+
+	// Establish a connection to the "gort" database
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return gerr.Wrap(fmt.Errorf("cannot connect to gort database"), err)
+	}
+	defer db.Close()
+
+	// Check whether the users table exists
+	exists, err := da.tableExists(ctx, "commands", db)
+	if err != nil {
+		return err
+	}
+
+	// If not, assume none of them do. Create them all.
+	if !exists {
+		err = da.createCommandsTable(ctx, db)
+		if err != nil {
+			return gerr.Wrap(fmt.Errorf("failed to create commands table"), err)
+		}
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
+	// Does the database exist? If not, create it.
+	err := da.ensureDatabaseExists(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
 
 	// Establish a connection to the "gort" database
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
@@ -74,7 +120,7 @@ func (da PostgresDataAccess) Initialize(ctx context.Context) error {
 		}
 	}
 
-	// Check whether the users table exists
+	// Check whether the groups table exists
 	exists, err = da.tableExists(ctx, "groups", db)
 	if err != nil {
 		return err
@@ -88,7 +134,7 @@ func (da PostgresDataAccess) Initialize(ctx context.Context) error {
 		}
 	}
 
-	// Check whether the users table exists
+	// Check whether the groupusers table exists
 	exists, err = da.tableExists(ctx, "groupusers", db)
 	if err != nil {
 		return err
@@ -133,10 +179,12 @@ func (da PostgresDataAccess) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (da PostgresDataAccess) gortDatabaseExists(ctx context.Context, db *sql.DB) (bool, error) {
-	rows, err := db.QueryContext(ctx, "SELECT datname "+
-		"FROM pg_database "+
-		"WHERE datistemplate = false AND datname = 'gort'")
+func (da PostgresDataAccess) databaseExists(ctx context.Context, db *sql.DB, dbName string) (bool, error) {
+	const query = `SELECT datname
+		FROM pg_database
+		WHERE datistemplate = false AND datname = $1`
+
+	rows, err := db.QueryContext(ctx, query, dbName)
 	if err != nil {
 		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -147,7 +195,7 @@ func (da PostgresDataAccess) gortDatabaseExists(ctx context.Context, db *sql.DB)
 	for rows.Next() {
 		rows.Scan(&datname)
 
-		if datname == "gort" {
+		if datname == dbName {
 			return true, nil
 		}
 	}
@@ -182,7 +230,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 	var err error
 
 	createBundlesQuery := `CREATE TABLE bundles (
-		gort_bundle_version  INT NOT NULL CHECK(gort_bundle_version > 0),
+		gort_bundle_version INT NOT NULL CHECK(gort_bundle_version > 0),
 		name				TEXT NOT NULL CHECK(name <> ''),
 		version				TEXT NOT NULL CHECK(version <> ''),
 		author				TEXT,
@@ -321,22 +369,25 @@ func (da PostgresDataAccess) createUsersTable(ctx context.Context, db *sql.DB) e
 
 // ensureGortDatabaseExists simply checks whether the "gort" database exists,
 // and creates the empty database if it doesn't.
-func (da PostgresDataAccess) ensureGortDatabaseExists(ctx context.Context) error {
+func (da PostgresDataAccess) ensureDatabaseExists(ctx context.Context, dbName string) error {
 	db, err := da.connect(ctx, "postgres")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	exists, err := da.gortDatabaseExists(ctx, db)
+	exists, err := da.databaseExists(ctx, db, dbName)
 	if err != nil {
 		return err
 	}
 
 	if !exists {
-		_, err := db.ExecContext(ctx, "CREATE DATABASE Gort")
+		fmt.Println("GOT:", "CREATE DATABASE $1", dbName)
+		_, err := db.ExecContext(ctx, "CREATE DATABASE $1", dbName)
 		if err != nil {
-			return gerr.Wrap(errs.ErrDataAccess, err)
+			return gerr.Wrap(errs.ErrDataAccess,
+				gerr.Wrap(fmt.Errorf("failed to create database"),
+					err))
 		}
 	}
 

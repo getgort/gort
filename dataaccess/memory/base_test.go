@@ -52,4 +52,5 @@ func TestMemoryDataAccessMain(t *testing.T) {
 	t.Run("testGroupAccess", testGroupAccess)
 	t.Run("testTokenAccess", testTokenAccess)
 	t.Run("testBundleAccess", testBundleAccess)
+	t.Run("testRequestAccess", testRequestAccess)
 }

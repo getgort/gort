@@ -46,17 +46,26 @@ var (
 
 var ctx = context.TODO()
 
+// If true, the test database container won't be automatically shut down and
+// removed. This is handy for testing.
+var DoNotCleanUpDatabase = false
+
 func TestPostgresDataAccessMain(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute/2)
+	ctx, cancel := context.WithTimeout(ctx, time.Minute/2)
 	defer cancel()
 
 	cleanup, err := startDatabaseContainer(ctx, t)
 	assert.NoError(t, err, "failed to start database container")
-	defer cleanup()
+	defer func() {
+		if DoNotCleanUpDatabase {
+			return
+		}
+		cleanup()
+	}()
 
 	t.Run("testInitialize", testInitialize)
 
@@ -64,6 +73,7 @@ func TestPostgresDataAccessMain(t *testing.T) {
 	t.Run("testGroupAccess", testGroupAccess)
 	t.Run("testTokenAccess", testTokenAccess)
 	t.Run("testBundleAccess", testBundleAccess)
+	t.Run("testRequestAccess", testRequestAccess)
 }
 
 func expectErr(t *testing.T, err error, expected error) {
@@ -106,7 +116,7 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 	}
 
 	cleanup := func() {
-		ctx, cancel := context.WithTimeout(context.TODO(), 20*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 
 		id := resp.ID
@@ -132,6 +142,7 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 func testInitialize(t *testing.T) {
 	const timeout = 10 * time.Second
 	timeoutAt := time.Now().Add(timeout)
+	ctx := context.Background()
 	da = NewPostgresDataAccess(configs)
 
 	t.Log("Waiting for database to be ready")
@@ -141,7 +152,7 @@ func testInitialize(t *testing.T) {
 			t.Error("timeout waiting for database:", timeout)
 			t.FailNow()
 		}
-		db, err := da.connect(context.TODO(), "postgres")
+		db, err := da.connect(ctx, "postgres")
 
 		if db != nil && err == nil {
 			t.Log("database is ready!")
@@ -160,13 +171,14 @@ func testInitialize(t *testing.T) {
 }
 
 func testDatabaseExists(t *testing.T) {
+	ctx := context.Background()
 	da = NewPostgresDataAccess(configs)
 
 	err := da.Initialize(ctx)
 	assert.NoError(t, err)
 
 	// Test database "gort" exists
-	conn, err := da.connect(context.TODO(), "gort")
+	conn, err := da.connect(ctx, DatabaseGort)
 	assert.NoError(t, err)
 	defer conn.Close()
 
@@ -177,7 +189,7 @@ func testDatabaseExists(t *testing.T) {
 	}
 
 	// Meta-test: non-existant database should return nil connection
-	nconn, err := da.connect(context.TODO(), "doesntexist")
+	nconn, err := da.connect(ctx, "doesntexist")
 	assert.Error(t, err)
 	assert.Nil(t, nconn)
 }
@@ -185,19 +197,19 @@ func testDatabaseExists(t *testing.T) {
 func testTablesExist(t *testing.T) {
 	expectedTables := []string{"users", "groups", "groupusers", "tokens", "bundles"}
 
-	db, err := da.connect(context.TODO(), "gort")
+	db, err := da.connect(ctx, "gort")
 	assert.NoError(t, err)
 	defer db.Close()
 
 	// Expects these tables
 	for _, table := range expectedTables {
-		b, err := da.tableExists(context.TODO(), table, db)
+		b, err := da.tableExists(ctx, table, db)
 		assert.NoError(t, err)
 		assert.True(t, b)
 	}
 
 	// Expect not to find this one.
-	b, err := da.tableExists(context.TODO(), "doestexist", db)
+	b, err := da.tableExists(ctx, "doestexist", db)
 	assert.NoError(t, err)
 	assert.False(t, b)
 }

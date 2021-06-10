@@ -79,6 +79,8 @@ type CommandRequest struct {
 	ChannelID  string          // The provider ID of the channel that the request originated in.
 	Context    context.Context // The request context
 	Parameters []string        // Tokenized command parameters
+	RequestID  int64           // A unique requestID
+	Timestamp  time.Time       // The time this request was triggered
 	UserID     string          // The provider ID of user making this request.
 	UserEmail  string          // The email address associated with the user making the request
 	UserName   string          // The gort username of the user making the request
@@ -102,9 +104,10 @@ func (r CommandRequest) CommandString() string {
 // TODO Add a request ID that correcponds with the request, so that we can more
 // directly link it back to its user and adapter of origin.
 type CommandResponse struct {
-	Command CommandRequest
-	Status  int64
-	Title   string   // Command Error
-	Output  []string // Contents of the commands stdout.
-	Error   error
+	Command  CommandRequest
+	Duration time.Duration
+	Status   int64
+	Title    string   // Command Error
+	Output   []string // Contents of the commands stdout.
+	Error    error
 }

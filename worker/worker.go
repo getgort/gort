@@ -169,14 +169,12 @@ func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
 			}
 
 			status = ok.StatusCode
-			event.WithField("duration", time.Since(startTime)).
-				WithField("status", status).
+			event.WithField("status", status).
 				Info("Worker completed")
 
 		case err := <-errs:
 			status = 500
-			event.WithField("duration", time.Since(startTime)).
-				WithField("status", status).
+			event.WithField("status", status).
 				WithError(err).
 				Error("Error running container")
 			sp.SetAttributes(attribute.String("error", err.Error()))

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -298,20 +299,42 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 	ctx, sp := tr.Start(ctx, "adapter.TriggerCommand")
 	defer sp.End()
 
-	// If identity data isn't set, ensure that it's set
-	ctx, err := setContextIdentityData(ctx, adapter, channelID, userID)
+	da, err := dataaccess.Get()
 	if err != nil {
 		return nil, err
 	}
 
+	// If identity data isn't set, ensure that it's set
+	ctx, err = setContextIdentityData(ctx, adapter, channelID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	request := data.CommandRequest{
+		Adapter:   adapter.GetName(),
+		ChannelID: channelID,
+		Context:   ctx,
+		Timestamp: time.Now(),
+		UserID:    userID,
+	}
+
+	if gortUser, ok := GetGortUser(ctx); !ok {
+		request.UserName = gortUser.Username
+	}
+
+	da.RequestBegin(ctx, &request)
+
 	// Define parent log entry
-	le := adapterLogEntry(ctx, nil, adapter)
-	addSpanAttributes(ctx, sp, adapter)
+	le := adapterLogEntry(ctx, nil, adapter, request)
+	addSpanAttributes(ctx, sp, adapter, request)
 
 	// Tokenize the raw command and look up the command entry
 	params := TokenizeParameters(rawCommand)
 	le = le.WithField("command.name", params[0]).
 		WithField("command.params", strings.Join(params[1:], " "))
+
+	request.Parameters = params[1:]
+	da.RequestUpdate(ctx, request)
 
 	command, err := GetCommandEntry(ctx, params)
 	if err != nil {
@@ -331,6 +354,9 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 
 		return nil, err
 	}
+
+	request.CommandEntry = command
+	da.RequestUpdate(ctx, request)
 
 	// Update log entry with command info
 	le = adapterLogEntry(ctx, le, command)
@@ -373,6 +399,10 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 		return nil, err
 	}
 
+	request.UserEmail = gortUser.Email
+	request.UserName = gortUser.Username
+	da.RequestUpdate(ctx, request)
+
 	ctx = WithGortUser(ctx, gortUser)
 
 	// Update log entry with Gort user info
@@ -386,17 +416,6 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 		adapter.SendMessage(info.ID, message)
 
 		le.Info("Autocreating Gort user")
-	}
-
-	request := data.CommandRequest{
-		Adapter:      adapter.GetName(),
-		CommandEntry: command,
-		ChannelID:    channelID,
-		Context:      ctx,
-		UserEmail:    gortUser.Email,
-		UserID:       userID,
-		UserName:     gortUser.Username,
-		Parameters:   params[1:],
 	}
 
 	// Update log entry with command info
@@ -457,7 +476,8 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 
 		case data.CommandRequest:
 			e = adapterLogEntry(ctx, e, o.CommandEntry, o.Bundle).
-				WithField("command.params", strings.Join(o.Parameters, " "))
+				WithField("command.params", strings.Join(o.Parameters, " ")).
+				WithField("request.id", o.RequestID)
 
 		case trace.Span:
 			if o.SpanContext().HasTraceID() {
@@ -533,6 +553,7 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 			addSpanAttributes(ctx, sp, o.CommandEntry, o.Bundle)
 			attr = append(attr,
 				attribute.String("command.params", strings.Join(o.Parameters, " ")),
+				attribute.Int64("request.id", o.RequestID),
 			)
 
 		case attribute.KeyValue:

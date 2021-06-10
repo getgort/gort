@@ -41,7 +41,7 @@ func (da PostgresDataAccess) UserAuthenticate(ctx context.Context, username stri
 		return false, errs.ErrNoSuchUser
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return false, err
 	}
@@ -79,7 +79,7 @@ func (da PostgresDataAccess) UserCreate(ctx context.Context, user rest.User) err
 		return errs.ErrUserExists
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (da PostgresDataAccess) UserDelete(ctx context.Context, username string) er
 		return errs.ErrNoSuchUser
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (da PostgresDataAccess) UserExists(ctx context.Context, username string) (b
 	ctx, sp := tr.Start(ctx, "postgres.UserExists")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return false, err
 	}
@@ -190,7 +190,7 @@ func (da PostgresDataAccess) UserGet(ctx context.Context, username string) (rest
 		return rest.User{}, errs.ErrEmptyUserName
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return rest.User{}, err
 	}
@@ -218,7 +218,7 @@ func (da PostgresDataAccess) UserGetByEmail(ctx context.Context, email string) (
 	ctx, sp := tr.Start(ctx, "postgres.UserGetByEmail")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return rest.User{}, err
 	}
@@ -246,7 +246,7 @@ func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) 
 	ctx, sp := tr.Start(ctx, "postgres.UserList")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +291,7 @@ func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) err
 		return errs.ErrNoSuchUser
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func (da PostgresDataAccess) UserGroupList(ctx context.Context, username string)
 
 	groups := make([]rest.Group, 0)
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return groups, err
 	}
@@ -402,7 +402,7 @@ func (da PostgresDataAccess) UserGroupAdd(ctx context.Context, username string, 
 		return errs.ErrNoSuchGroup
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
@@ -450,7 +450,7 @@ func (da PostgresDataAccess) UserGroupDelete(ctx context.Context, username strin
 		return errs.ErrNoSuchGroup
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}

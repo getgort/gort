@@ -26,11 +26,11 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 - Observability
   - Metrics endpoint ✅
   - Distributed tracing ✅ (only supports Jaeger for MVP)
-- Command audit log
-  - All commands MUST be written to the database
-    - Including a unique identifier, Gort user ID and email, full command as typed, command+bundle (and version), originating adapter+channel, and status code
-  - Every command request MUST have a unique identifier
-    - All relevant log events MUST include this command identifier
+- Command audit log ✅
+  - All commands MUST be written to the database ✅
+    - Including a unique identifier, Gort user ID and email, full command as typed, command+bundle (and version), originating adapter+channel, and status code ✅
+  - Every command request MUST have a unique identifier ✅
+    - All relevant log events MUST include this command identifier ✅
 
 ## Milestone 7 (API-level authorization)
 
