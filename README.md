@@ -57,7 +57,7 @@ Active heavy development. The date that various [milestones](https://docs.google
 
 With Go installed, you can run (for testing) with: `go run . start`.
 
-Note that you'll need a proper API key in the config first!
+Note that you'll need [a proper API key in the config first](https://getgort.github.io/gort-guide/quickstart.html)!
 
 ## Gortctl
 
