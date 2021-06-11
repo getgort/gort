@@ -7,7 +7,7 @@ services:
     ports:
       - "4000:4000"
     volumes:
-      - ./test.yml:/config.yml
+      - ./development.yml:/config.yml
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - GORT_DB_PASSWORD=veryKleverPassw0rd
