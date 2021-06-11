@@ -75,6 +75,16 @@ func (da PostgresDataAccess) RequestBegin(ctx context.Context, req *data.Command
 	return nil
 }
 
+func (da PostgresDataAccess) RequestError(ctx context.Context, req data.CommandRequest, err error) error {
+	response := data.CommandResponse{
+		Command: req,
+		Error:   err,
+		Status:  1,
+	}
+
+	return da.RequestClose(ctx, response)
+}
+
 func (da PostgresDataAccess) RequestUpdate(ctx context.Context, req data.CommandRequest) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.RequestUpdate")
@@ -93,8 +103,8 @@ func (da PostgresDataAccess) RequestUpdate(ctx context.Context, req data.Command
 	const query = `UPDATE commands
 		SET bundle_name=$1, bundle_version=$2, command_name=$3,
 			command_executable=$4, command_parameters=$5, adapter=$6, user_id=$7,
-			user_email=$8, channel_id=$9, gort_user_name=$10, timestamp=$11
-		WHERE request_id=$12;`
+			user_email=$8, channel_id=$9, gort_user_name=$10
+		WHERE request_id=$11;`
 
 	_, err = db.ExecContext(ctx, query,
 		req.Bundle.Name,
@@ -107,7 +117,6 @@ func (da PostgresDataAccess) RequestUpdate(ctx context.Context, req data.Command
 		req.UserEmail,
 		req.ChannelID,
 		req.UserName,
-		req.Timestamp,
 		req.RequestID)
 	if err != nil {
 		err = gerr.Wrap(errs.ErrDataAccess, err)

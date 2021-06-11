@@ -310,23 +310,13 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 		return nil, err
 	}
 
-	request := data.CommandRequest{
-		Adapter:   adapter.GetName(),
-		ChannelID: channelID,
-		Context:   ctx,
-		Timestamp: time.Now(),
-		UserID:    userID,
-	}
-
-	if gortUser, ok := GetGortUser(ctx); !ok {
-		request.UserName = gortUser.Username
-	}
+	request := buildRequest(ctx, adapter, channelID, userID)
 
 	da.RequestBegin(ctx, &request)
+	addSpanAttributes(ctx, sp, adapter, request)
 
 	// Define parent log entry
 	le := adapterLogEntry(ctx, nil, adapter, request)
-	addSpanAttributes(ctx, sp, adapter, request)
 
 	// Tokenize the raw command and look up the command entry
 	params := TokenizeParameters(rawCommand)
@@ -349,7 +339,8 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
-		telemetry.Errors().WithError(err).Commit(context.TODO())
+		da.RequestError(ctx, request, err)
+		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("Command lookup failure")
 
 		return nil, err
@@ -393,6 +384,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 			adapter.SendErrorMessage(channelID, "Error", msg)
 		}
 
+		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(context.TODO())
 		le.WithError(err).Error("Can't find or create user")
 
@@ -587,6 +579,27 @@ func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
 	finders = append(finders, dal)
 
 	return finders, nil
+}
+
+func buildRequest(ctx context.Context, adapter Adapter, channelID string, userID string) data.CommandRequest {
+	request := data.CommandRequest{
+		Adapter:   adapter.GetName(),
+		ChannelID: channelID,
+		Context:   ctx,
+		Timestamp: time.Now(),
+		UserID:    userID,
+	}
+
+	if userinfo, ok := GetChatUser(ctx); ok {
+		request.UserEmail = userinfo.Email
+	}
+
+	if gortUser, ok := GetGortUser(ctx); ok {
+		request.UserEmail = gortUser.Email
+		request.UserName = gortUser.Username
+	}
+
+	return request
 }
 
 func findAllEntries(ctx context.Context, bundleName, commandName string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {

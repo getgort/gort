@@ -53,13 +53,11 @@ func testRequestBegin(t *testing.T) {
 		UserName:     "testUserName ",
 	}
 
-	t.Log("Request ID before: ", req.RequestID)
 	assert.Zero(t, req.RequestID)
 
 	err = da.RequestBegin(ctx, &req)
 	assert.NoError(t, err)
 
-	t.Log("Request ID after: ", req.RequestID)
 	assert.NotZero(t, req.RequestID)
 
 	err = da.RequestBegin(ctx, &req)
