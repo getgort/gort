@@ -163,7 +163,7 @@ func startGort() error {
 	// Listen for signals for graceful shutdown
 	go catchSignals()
 
-	// Tells the chat provider adapters (ad defined in the config) to connect.
+	// Tells the chat provider adapters (as defined in the config) to connect.
 	// Returns channels to get user command requests and adapter errors out.
 	requestsFrom, responsesTo, adapterErrorsFrom := adapter.StartListening()
 
