@@ -17,6 +17,8 @@
 package memory
 
 import (
+	"context"
+
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 )
@@ -41,6 +43,6 @@ func NewInMemoryDataAccess() *InMemoryDataAccess {
 }
 
 // Initialize initializes an InMemoryDataAccess instance.
-func (da *InMemoryDataAccess) Initialize() error {
+func (da *InMemoryDataAccess) Initialize(ctx context.Context) error {
 	return nil
 }

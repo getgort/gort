@@ -29,6 +29,7 @@ import (
 func testRequestAccess(t *testing.T) {
 	t.Run("testRequestBegin", testRequestBegin)
 	t.Run("testRequestUpdate", testRequestUpdate)
+	t.Run("testRequestClose", testRequestClose)
 }
 
 func testRequestBegin(t *testing.T) {
@@ -66,6 +67,36 @@ func testRequestBegin(t *testing.T) {
 }
 
 func testRequestUpdate(t *testing.T) {
+	ctx = context.Background()
+	bundle, err := getTestBundle()
+	assert.NoError(t, err)
+
+	entry := data.CommandEntry{
+		Bundle:  bundle,
+		Command: *bundle.Commands["echox"],
+	}
+
+	req := data.CommandRequest{
+		CommandEntry: entry,
+		Adapter:      "testAdapter",
+		ChannelID:    "testChannelID",
+		Parameters:   []string{"foo", "bar"},
+		Timestamp:    time.Now(),
+		UserID:       "testUserID   ",
+		UserEmail:    "testUserEmail",
+		UserName:     "testUserName ",
+	}
+
+	err = da.RequestUpdate(ctx, req)
+	assert.Error(t, err)
+
+	req.RequestID = 1
+
+	err = da.RequestUpdate(ctx, req)
+	assert.NoError(t, err)
+}
+
+func testRequestClose(t *testing.T) {
 	ctx = context.Background()
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)

@@ -19,11 +19,12 @@ package config
 import (
 	"testing"
 
+	"github.com/getgort/gort/data"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadConfiguration(t *testing.T) {
-	config, err := loadConfiguration("../config.yml")
+	config, err := loadConfiguration("../testing/config/complete.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -86,4 +87,35 @@ func TestLoadConfiguration(t *testing.T) {
 	assert.Equal(t, "splitecho", cb[0].Commands["splitecho"].Name)
 	assert.Equal(t, "Echos back anything sent to it, one parameter at a time.", cb[0].Commands["splitecho"].Description)
 	assert.Equal(t, "/opt/app/splitecho.sh", cb[0].Commands["splitecho"].Executable)
+}
+
+func TestIsUndefinedNil(t *testing.T) {
+	id := IsUndefined(nil)
+	assert.True(t, id)
+}
+
+func TestIsUndefinedFalse(t *testing.T) {
+	c, err := loadConfiguration("../testing/config/complete.yml")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	id := IsUndefined(c)
+	assert.False(t, id)
+}
+
+func TestIsUndefinedTrue(t *testing.T) {
+	c := data.GortConfig{}
+	id := IsUndefined(c)
+	assert.True(t, id)
+}
+
+func TestIsUndefinedTrue2(t *testing.T) {
+	c, err := loadConfiguration("../testing/config/no-database.yml")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	id := IsUndefined(c.DatabaseConfigs)
+	assert.True(t, id)
 }

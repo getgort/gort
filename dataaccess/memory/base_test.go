@@ -41,7 +41,7 @@ func expectErr(t *testing.T, err error, expected error) {
 func testInitialize(t *testing.T) {
 	da = NewInMemoryDataAccess()
 
-	err := da.Initialize()
+	err := da.Initialize(context.Background())
 	assert.NoError(t, err)
 }
 

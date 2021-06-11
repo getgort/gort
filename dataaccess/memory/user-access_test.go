@@ -17,6 +17,7 @@
 package memory
 
 import (
+	"context"
 	"testing"
 
 	"github.com/getgort/gort/data/rest"
@@ -38,7 +39,7 @@ func testUserAccess(t *testing.T) {
 func testUserNotExists(t *testing.T) {
 	var exists bool
 
-	err := da.Initialize()
+	err := da.Initialize(context.Background())
 	assert.NoError(t, err)
 
 	exists, _ = da.UserExists(ctx, "test-not-exists")

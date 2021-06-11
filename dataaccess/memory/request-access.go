@@ -41,9 +41,22 @@ func (da *InMemoryDataAccess) RequestBegin(ctx context.Context, req *data.Comman
 }
 
 // Will not implement
-func (da *InMemoryDataAccess) RequestUpdate(ctx context.Context, result data.CommandResponse) error {
+func (da *InMemoryDataAccess) RequestUpdate(ctx context.Context, result data.CommandRequest) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	_, sp := tr.Start(ctx, "memory.RequestUpdate")
+	defer sp.End()
+
+	if result.RequestID == 0 {
+		return fmt.Errorf("command request ID unset")
+	}
+
+	return nil
+}
+
+// Will not implement
+func (da *InMemoryDataAccess) RequestClose(ctx context.Context, result data.CommandResponse) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	_, sp := tr.Start(ctx, "memory.RequestClose")
 	defer sp.End()
 
 	if result.Command.RequestID == 0 {

@@ -22,6 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -165,6 +166,17 @@ func CurrentState() State {
 	return currentState
 }
 
+// IsUndefined is a helper method that is used to determine whether config
+// sections are present.
+func IsUndefined(c interface{}) bool {
+	if c == nil {
+		return true
+	}
+
+	v := reflect.ValueOf(c)
+	return v.IsZero()
+}
+
 // Updates returns a channel that emits a message whenever the underlying
 // configuration is updated. Upon creation, it will emit the current state,
 // so it never blocks.
@@ -197,8 +209,9 @@ func getMd5Sum(file string) ([]byte, error) {
 	return hashBytes, nil
 }
 
-// loadConfiguration is called by reloadConfiguration() to execute the actual
-// steps of loading the configuration.
+// loadConfiguration creates a new GortConfig from a file. It's usually called
+// by reloadConfiguration() to execute the actual steps of loading the
+//configuration.
 func loadConfiguration(file string) (*data.GortConfig, error) {
 	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)

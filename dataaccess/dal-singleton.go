@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/getgort/gort/config"
+	"github.com/getgort/gort/dataaccess/memory"
 	"github.com/getgort/gort/dataaccess/postgres"
 	"github.com/getgort/gort/telemetry"
 
@@ -110,6 +111,16 @@ func Updates() <-chan State {
 	return ch
 }
 
+func getCorrectDataAccess() DataAccess {
+	dbConfigs := config.GetDatabaseConfigs()
+
+	if config.IsUndefined(dbConfigs) {
+		return memory.NewInMemoryDataAccess()
+	}
+
+	return postgres.NewPostgresDataAccess(dbConfigs)
+}
+
 // initializeDataAccess is called by monitorConfig to initialize the data
 // access layer whenever the configuration is updated.
 func initializeDataAccess(ctx context.Context) {
@@ -119,26 +130,23 @@ func initializeDataAccess(ctx context.Context) {
 	<-configUpdates
 
 	go func() {
-		var delay time.Duration = 1
+		delay := time.Second
 
 		updateDALState(StateInitializing)
 
 		for currentState != StateInitialized {
-			dbConfigs := config.GetDatabaseConfigs()
-			dataAccessLayer = postgres.NewPostgresDataAccess(dbConfigs) // hard-coded for now
-			// dataAccessLayer = memory.NewInMemoryDataAccess()
-
+			dataAccessLayer = getCorrectDataAccess()
 			err := dataAccessLayer.Initialize(ctx)
 
 			if err != nil {
 				log.WithError(err).Warn("Failed to connect to data source")
-				telemetry.Errors().WithError(err).Commit(context.TODO())
+				telemetry.Errors().WithError(err).Commit(ctx)
 				log.WithField("delay", delay).Info("Waiting to try again")
 
 				updateDALState(StateError)
 
 				select {
-				case <-time.After(delay * time.Second):
+				case <-time.After(delay):
 				case configStatus := <-configUpdates:
 					// if this happens, then initializeDataAccess() was just called again.
 					// Cancel this attempt.
@@ -146,12 +154,14 @@ func initializeDataAccess(ctx context.Context) {
 						log.Debug("Starting over with new config")
 						return
 					}
+				case <-ctx.Done():
+					log.WithError(ctx.Err()).Error("Could not initialize DAL")
+					return
 				}
 
 				delay *= 2
-
-				if delay > 60 {
-					delay = 60
+				if delay > 10*time.Second {
+					delay = 10 * time.Second
 				}
 			} else {
 				log.WithField("type", fmt.Sprintf("%T", dataAccessLayer)).
