@@ -21,10 +21,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/dataaccess/memory"
 	"github.com/getgort/gort/dataaccess/postgres"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestInitializeDataAccess(t *testing.T) {

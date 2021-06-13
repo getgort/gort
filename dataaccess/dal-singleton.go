@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/dataaccess/memory"
 	"github.com/getgort/gort/dataaccess/postgres"
 	"github.com/getgort/gort/telemetry"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -206,7 +206,7 @@ func updateDALState(newState State) {
 
 	// Sadly, this needs to track and remove closed channels.
 	for _, ch := range stateChangeListeners {
-		updateDALStateTryEmit(ch, newState)
+		go updateDALStateTryEmit(ch, newState)
 	}
 }
 
@@ -223,7 +223,7 @@ func updateDALStateTryEmit(ch chan State, newState State) {
 	select {
 	case ch <- newState:
 		// Everything is good
-	default:
+	case <-time.After(1 * time.Second):
 		// Channel is blocking. Ignore for now.
 		// Eventually GC should close it and we can remove.
 	}
