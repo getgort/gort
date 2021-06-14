@@ -33,9 +33,9 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
     - All relevant log events MUST include this command identifier ✅
 
 ## Milestone 7 (API-level authorization)
-
 - Document permissions model and how auth is expected to work.
 - User and group permission assignment
+  - "group role grant" and "group role revoke"
 - Bundle/command permission assignment
 - Command invocations can be associated with a user; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html).
 - Audit log for all API actions (user, timestamp, action taken, method (Slack, API, etc.))

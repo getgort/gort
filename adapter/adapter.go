@@ -113,6 +113,13 @@ type Adapter interface {
 	SendMessage(channel string, message string) error
 }
 
+type RequestorIdentity struct {
+	Adapter     Adapter
+	ChatUser    *UserInfo
+	ChatChannel *ChannelInfo
+	GortUser    *rest.User
+}
+
 // AddAdapter adds an adapter.
 func AddAdapter(a Adapter) {
 	name := a.GetName()
@@ -180,12 +187,6 @@ func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent
 	ctx, sp := tr.Start(ctx, "adapter.OnConnected")
 	defer sp.End()
 
-	ctx, err := setContextIdentityData(ctx, event.Adapter, "", event.Info.User.ID)
-	if err != nil {
-		log.WithError(err).Error("failed to set context identity data")
-		return
-	}
-
 	le := adapterLogEntry(ctx, nil, event)
 	addSpanAttributes(ctx, sp, event)
 
@@ -219,11 +220,6 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	ctx, sp := tr.Start(ctx, "adapter.OnChannelMessage")
 	defer sp.End()
 
-	ctx, err := setContextIdentityData(ctx, event.Adapter, data.ChannelID, data.UserID)
-	if err != nil {
-		return nil, err
-	}
-
 	rawCommandText := data.Text
 
 	// If this isn't prepended by a trigger character, ignore.
@@ -236,15 +232,20 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 		return nil, nil
 	}
 
+	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
+	if err != nil {
+		return nil, err
+	}
+
 	// Remove the "trigger character" (!)
 	rawCommandText = rawCommandText[1:]
 
-	adapterLogEntry(ctx, nil, event).
+	adapterLogEntry(ctx, nil, event, id).
 		WithField("command.raw", rawCommandText).
 		Debug("Got message")
 	addSpanAttributes(ctx, sp, event, attribute.String("command.raw", rawCommandText))
 
-	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
+	return TriggerCommand(ctx, rawCommandText, id)
 }
 
 // OnDirectMessage handles DirectMessageEvent events.
@@ -253,23 +254,23 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 	ctx, sp := tr.Start(ctx, "adapter.OnDirectMessage")
 	defer sp.End()
 
-	ctx, err := setContextIdentityData(ctx, event.Adapter, data.ChannelID, data.UserID)
-	if err != nil {
-		return nil, err
-	}
-
 	rawCommandText := data.Text
 
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
 	}
 
-	adapterLogEntry(ctx, nil, event).
+	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	adapterLogEntry(ctx, nil, event, id).
 		WithField("command.raw", rawCommandText).
 		Debug("Got direct message")
 	addSpanAttributes(ctx, sp, event, attribute.String("command.raw", rawCommandText))
 
-	return TriggerCommand(ctx, rawCommandText, event.Adapter, data.ChannelID, data.UserID)
+	return TriggerCommand(ctx, rawCommandText, id)
 }
 
 // StartListening instructs all relays to establish connections, receives all
@@ -293,7 +294,7 @@ func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, 
 
 // TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
 // valid command trigger is identified.
-func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, channelID string, userID string) (*data.CommandRequest, error) {
+func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity) (*data.CommandRequest, error) {
 	// Start trace span
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "adapter.TriggerCommand")
@@ -304,19 +305,11 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 		return nil, err
 	}
 
-	// If identity data isn't set, ensure that it's set
-	ctx, err = setContextIdentityData(ctx, adapter, channelID, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	request := buildRequest(ctx, adapter, channelID, userID)
-
+	request := buildRequest(ctx, id)
 	da.RequestBegin(ctx, &request)
-	addSpanAttributes(ctx, sp, adapter, request)
 
-	// Define parent log entry
-	le := adapterLogEntry(ctx, nil, adapter, request)
+	addSpanAttributes(ctx, sp, id, request)
+	le := adapterLogEntry(ctx, nil, id, request)
 
 	// Tokenize the raw command and look up the command entry
 	params := TokenizeParameters(rawCommand)
@@ -326,6 +319,53 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 	request.Parameters = params[1:]
 	da.RequestUpdate(ctx, request)
 
+	if id.GortUser == nil {
+		var autocreated bool
+
+		if id.GortUser, autocreated, err = findOrMakeGortUser(ctx, id.ChatUser); err != nil {
+			switch {
+			case gerrs.Is(err, ErrSelfRegistrationOff):
+				msg := "I'm terribly sorry, but either I don't " +
+					"have a Gort account for you, or your Slack chat handle has " +
+					"not been registered. Currently, only registered users can " +
+					"interact with me.\n\n\nYou'll need to ask a Gort " +
+					"administrator to fix this situation and to register your " +
+					"Slack handle."
+				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Account", msg)
+			case gerrs.Is(err, ErrGortNotBootstrapped):
+				msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
+					"use `gortctl` to properly bootstrap the Gort environment " +
+					"before proceeding."
+				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Not Bootstrapped?", msg)
+			default:
+				msg := "An unexpected error has occurred"
+				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", msg)
+			}
+
+			da.RequestError(ctx, request, err)
+			telemetry.Errors().WithError(err).Commit(context.TODO())
+			le.WithError(err).Error("Can't find or create user")
+
+			return nil, err
+		}
+
+		request.UserEmail = id.GortUser.Email
+		request.UserName = id.GortUser.Username
+		da.RequestUpdate(ctx, request)
+
+		addSpanAttributes(ctx, sp, id.GortUser)
+		le := adapterLogEntry(ctx, nil, id.GortUser)
+
+		if autocreated {
+			message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
+				"owner of a shiny new Gort account named `%s`!",
+				id.GortUser.Username)
+			id.Adapter.SendMessage(id.ChatUser.ID, message)
+
+			le.Info("Autocreating Gort user")
+		}
+	}
+
 	command, err := GetCommandEntry(ctx, params)
 	if err != nil {
 		switch {
@@ -333,10 +373,10 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
 				"If this is not expected, you should contact a Gort administrator.",
 				params[0])
-			adapter.SendErrorMessage(channelID, "No Such Command", msg)
+			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
 		default:
 			msg := formatCommandErrorMessage(command, params, err.Error())
-			adapter.SendErrorMessage(channelID, "Error", msg)
+			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", msg)
 		}
 
 		da.RequestError(ctx, request, err)
@@ -354,67 +394,8 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 	le.Debug("Found matching command+bundle")
 	addSpanAttributes(ctx, sp, command)
 
-	info, ok := GetChatUser(ctx)
-	if !ok {
-		info, err = adapter.GetUserInfo(userID)
-		if err != nil {
-			return nil, err
-		}
-		ctx = WithChatUser(ctx, info)
-	}
-
-	gortUser, autocreated, err := findOrMakeGortUser(ctx, info)
-	if err != nil {
-		switch {
-		case gerrs.Is(err, ErrSelfRegistrationOff):
-			msg := "I'm terribly sorry, but either I don't " +
-				"have a Gort account for you, or your Slack chat handle has " +
-				"not been registered. Currently, only registered users can " +
-				"interact with me.\n\n\nYou'll need to ask a Gort " +
-				"administrator to fix this situation and to register your " +
-				"Slack handle."
-			adapter.SendErrorMessage(channelID, "No Such Account", msg)
-		case gerrs.Is(err, ErrGortNotBootstrapped):
-			msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
-				"use `gortctl` to properly bootstrap the Gort environment " +
-				"before proceeding."
-			adapter.SendErrorMessage(channelID, "Not Bootstrapped?", msg)
-		default:
-			msg := formatCommandErrorMessage(command, params, err.Error())
-			adapter.SendErrorMessage(channelID, "Error", msg)
-		}
-
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(context.TODO())
-		le.WithError(err).Error("Can't find or create user")
-
-		return nil, err
-	}
-
-	request.UserEmail = gortUser.Email
-	request.UserName = gortUser.Username
-	da.RequestUpdate(ctx, request)
-
-	ctx = WithGortUser(ctx, gortUser)
-
-	// Update log entry with Gort user info
-	le = adapterLogEntry(ctx, le)
-	addSpanAttributes(ctx, sp)
-
-	if autocreated {
-		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
-			"owner of a shiny new Gort account named `%s`!",
-			gortUser.Username)
-		adapter.SendMessage(info.ID, message)
-
-		le.Info("Autocreating Gort user")
-	}
-
 	// Update log entry with command info
-	le = adapterLogEntry(ctx, le, request)
 	le.Info("Triggering command")
-
-	addSpanAttributes(ctx, sp, request)
 
 	return &request, nil
 }
@@ -423,20 +404,6 @@ func TriggerCommand(ctx context.Context, rawCommand string, adapter Adapter, cha
 func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log.Entry {
 	if e == nil {
 		e = log.WithContext(ctx)
-	}
-
-	if ui, ok := GetChatUser(ctx); ok {
-		e = e.WithField("provider.user.email", ui.Email).
-			WithField("provider.user.id", ui.ID)
-	}
-
-	if ci, ok := GetChatChannel(ctx); ok {
-		e = e.WithField("provider.channel.name", ci.Name).
-			WithField("provider.channel.id", ci.ID)
-	}
-
-	if user, ok := GetGortUser(ctx); ok {
-		e = e.WithField("gort.user.name", user.Username)
 	}
 
 	sp := trace.SpanFromContext(ctx)
@@ -449,10 +416,24 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 		case Adapter:
 			e = e.WithField("adapter.name", o.GetName())
 
+		case ChannelInfo:
+			e = e.WithField("provider.channel.name", o.Name).
+				WithField("provider.channel.id", o.ID)
+
 		case *ProviderEvent:
 			e = e.WithField("event", o.EventType).
 				WithField("adapter.name", o.Info.Provider.Name).
 				WithField("adapter.type", o.Info.Provider.Type)
+
+		case RequestorIdentity:
+			return adapterLogEntry(ctx, e, o.Adapter, *o.ChatChannel, *o.ChatUser, *o.GortUser)
+
+		case UserInfo:
+			e = e.WithField("provider.user.email", o.Email).
+				WithField("provider.user.id", o.ID)
+
+		case rest.User:
+			e = e.WithField("gort.user.name", o.Username)
 
 		case data.Bundle:
 			e = e.WithField("bundle.name", o.Name).
@@ -491,31 +472,17 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 	attr := []attribute.KeyValue{}
 
-	if ui, ok := GetChatUser(ctx); ok {
-		attr = append(attr,
-			attribute.String("provider.user.email", ui.Email),
-			attribute.String("provider.user.id", ui.ID),
-		)
-	}
-
-	if ci, ok := GetChatChannel(ctx); ok {
-		attr = append(attr,
-			attribute.String("provider.channel.name", ci.Name),
-			attribute.String("provider.channel.id", ci.ID),
-		)
-	}
-
-	if user, ok := GetGortUser(ctx); ok {
-		attr = append(attr,
-			attribute.String("gort.user.name", user.Username),
-		)
-	}
-
 	for _, i := range obs {
 		switch o := i.(type) {
 		case Adapter:
 			attr = append(attr,
 				attribute.String("adapter.name", o.GetName()),
+			)
+
+		case ChannelInfo:
+			attr = append(attr,
+				attribute.String("provider.channel.name", o.Name),
+				attribute.String("provider.channel.id", o.ID),
 			)
 
 		case *ProviderEvent:
@@ -524,6 +491,18 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 				attribute.String("adapter.name", o.Info.Provider.Name),
 				attribute.String("adapter.type", o.Info.Provider.Type),
 			)
+
+		case RequestorIdentity:
+			addSpanAttributes(ctx, sp, o.Adapter, *o.ChatChannel, *o.ChatUser, *o.GortUser)
+
+		case UserInfo:
+			attr = append(attr,
+				attribute.String("provider.user.email", o.Email),
+				attribute.String("provider.user.id", o.ID),
+			)
+
+		case attribute.KeyValue:
+			attr = append(attr, o)
 
 		case data.Bundle:
 			attr = append(attr,
@@ -548,8 +527,10 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 				attribute.Int64("request.id", o.RequestID),
 			)
 
-		case attribute.KeyValue:
-			attr = append(attr, o)
+		case rest.User:
+			attr = append(attr,
+				attribute.String("gort.user.name", o.Username),
+			)
 
 		case error:
 			attr = append(attr,
@@ -581,22 +562,19 @@ func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
 	return finders, nil
 }
 
-func buildRequest(ctx context.Context, adapter Adapter, channelID string, userID string) data.CommandRequest {
+func buildRequest(ctx context.Context, id RequestorIdentity) data.CommandRequest {
 	request := data.CommandRequest{
-		Adapter:   adapter.GetName(),
-		ChannelID: channelID,
+		Adapter:   id.Adapter.GetName(),
+		ChannelID: id.ChatChannel.ID,
 		Context:   ctx,
 		Timestamp: time.Now(),
-		UserID:    userID,
+		UserEmail: id.ChatUser.Email,
+		UserID:    id.ChatUser.ID,
 	}
 
-	if userinfo, ok := GetChatUser(ctx); ok {
-		request.UserEmail = userinfo.Email
-	}
-
-	if gortUser, ok := GetGortUser(ctx); ok {
-		request.UserEmail = gortUser.Email
-		request.UserName = gortUser.Username
+	if id.GortUser != nil {
+		request.UserEmail = id.GortUser.Email
+		request.UserName = id.GortUser.Username
 	}
 
 	return request
@@ -618,11 +596,11 @@ func findAllEntries(ctx context.Context, bundleName, commandName string, finder 
 }
 
 // findOrMakeGortUser ...
-func findOrMakeGortUser(ctx context.Context, info *UserInfo) (rest.User, bool, error) {
+func findOrMakeGortUser(ctx context.Context, info *UserInfo) (*rest.User, bool, error) {
 	// Get the data access interface.
 	da, err := dataaccess.Get()
 	if err != nil {
-		return rest.User{}, false, err
+		return nil, false, err
 	}
 
 	// Try to figure out what user we're working with here.
@@ -631,33 +609,33 @@ func findOrMakeGortUser(ctx context.Context, info *UserInfo) (rest.User, bool, e
 	if gerrs.Is(err, errs.ErrNoSuchUser) {
 		exists = false
 	} else if err != nil {
-		return user, false, err
+		return nil, false, err
 	}
 
 	// It already exists. Exist.
 	if exists {
-		return user, false, nil
+		return &user, false, nil
 	}
 
 	// We can create the user... unless the instance hasn't been bootstrapped.
-	bootstrapped, err := da.UserExists(ctx, "adapter.admin")
+	bootstrapped, err := da.UserExists(ctx, "admin")
 	if err != nil {
-		return rest.User{}, false, err
+		return nil, false, err
 	}
 	if !bootstrapped {
-		return rest.User{}, false, ErrGortNotBootstrapped
+		return nil, false, ErrGortNotBootstrapped
 	}
 
 	// Now we know it doesn't exist. If self-registration is off, exit with
 	// an error.
 	if !config.GetGortServerConfigs().AllowSelfRegistration {
-		return user, false, ErrSelfRegistrationOff
+		return nil, false, ErrSelfRegistrationOff
 	}
 
 	// Generate a random password for the auto-created user.
 	randomPassword, err := data.GenerateRandomToken(32)
 	if err != nil {
-		return rest.User{}, false, err
+		return nil, false, err
 	}
 
 	// Let's create the user!
@@ -672,7 +650,7 @@ func findOrMakeGortUser(ctx context.Context, info *UserInfo) (rest.User, bool, e
 		WithField("user.email", user.Email).
 		Info("User auto-created")
 
-	return user, true, da.UserCreate(ctx, user)
+	return &user, true, da.UserCreate(ctx, user)
 }
 
 // TODO Replace this with something resembling a template. Eventually.
@@ -695,44 +673,38 @@ func formatCommandErrorMessage(command data.CommandEntry, params []string, outpu
 	)
 }
 
-func setContextIdentityData(ctx context.Context, adapter Adapter, channelId, userId string) (context.Context, error) {
+func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, userId string) (RequestorIdentity, error) {
 	var err error
-	var ok bool
+	id := RequestorIdentity{Adapter: adapter}
 
-	if _, ok = GetChatChannel(ctx); !ok {
-		if channelId != "" {
-			channelinfo, err := adapter.GetChannelInfo(channelId)
-			if err != nil {
-				return nil, gerrs.Wrap(ErrChannelNotFound, err)
-			}
-			ctx = WithChatChannel(ctx, channelinfo)
+	if channelId != "" {
+		id.ChatChannel, err = adapter.GetChannelInfo(channelId)
+		if err != nil {
+			return id, err
 		}
 	}
 
-	var userinfo *UserInfo
-	if userinfo, ok = GetChatUser(ctx); !ok {
-		if userId != "" {
-			userinfo, err = adapter.GetUserInfo(userId)
-			if err != nil {
-				return nil, gerrs.Wrap(ErrUserNotFound, err)
-			}
-			ctx = WithChatUser(ctx, userinfo)
+	if userId != "" {
+		id.ChatUser, err = adapter.GetUserInfo(userId)
+		if err != nil {
+			return id, err
 		}
 	}
 
-	if guser, ok := GetGortUser(ctx); !ok {
+	if id.ChatChannel != nil {
 		dal, err := dataaccess.Get()
 		if err != nil {
-			return ctx, err
+			return id, err
 		}
 
-		guser, err = dal.UserGetByEmail(ctx, userinfo.Email)
-		if err == nil {
-			ctx = WithGortUser(ctx, guser)
+		user, err := dal.UserGetByEmail(ctx, id.ChatUser.Email)
+		if err != nil {
+			return id, err
 		}
+		id.GortUser = &user
 	}
 
-	return ctx, nil
+	return id, nil
 }
 
 func startAdapters() (<-chan *ProviderEvent, chan error) {
