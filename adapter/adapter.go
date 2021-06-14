@@ -334,8 +334,8 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Account", msg)
 			case gerrs.Is(err, ErrGortNotBootstrapped):
 				msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
-					"use `gortctl` to properly bootstrap the Gort environment " +
-					"before proceeding."
+					"use `gort bootstrap` to properly bootstrap the Gort " +
+					"environment before proceeding."
 				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Not Bootstrapped?", msg)
 			default:
 				msg := "An unexpected error has occurred"

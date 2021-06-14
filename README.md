@@ -39,7 +39,7 @@ A WIP design doc, including rough milestones (but not dates) [can be seen here](
 
 ## Status of this project
 
-Active heavy development. The date that various [milestones](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit#heading=h.8qveejpms515) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
+Active heavy development. The date that various [milestones](TODO.md) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
 
 * Project created: 27 December 2018
 * Milestone 1: 7 January 2019
@@ -50,15 +50,58 @@ Active heavy development. The date that various [milestones](https://docs.google
 * Milestone 6: 10 June 2021
 * Milestone 7: *TBD*
 * Milestone 8: *TBD*
+* Milestone 9: *TBD*
 * Release candidate 1: *TBD*
 * Release!: *TBD*
 
-## How to run
+## How to run the Gort controller
 
 With Go installed, you can run (for testing) with: `go run . start`.
 
 Note that you'll need [a proper API key in the config first](https://getgort.github.io/gort-guide/quickstart.html)!
 
-## Gortctl
+## The Gort Client
 
-The `gortctl` administration CLI can be found [in its own repository](https://github.com/getgort/gortctl).
+The `gort` binary also serves as the controller administration CLI.
+
+### Configuring client profiles
+
+The `gort` client uses an INI-formatted configuration file, conventionally
+located in the `profile` file in a `.gort` directory in your home directory.
+This is where you can store connection credentials to allow `gort` to interact
+with the Gort's Controller's REST API.
+
+An example `.gort/profile` file might look like this:
+
+```ini
+[defaults]
+profile = gort
+
+[gort]
+password = "seekrit#password"
+url = https://gort.mycompany.com:4000
+user = me
+
+[preprod]
+password = "anotherseekrit#password"
+url = https://gort.preprod.mycompany.com:4000
+user = me
+```
+
+Comments begin with a `#` character; if your password contains a `#`,
+surround the entire password in quotes, as illustrated above.
+
+You can store multiple "profiles" in this file, with a different name
+for each (here, we have `gort` and `preprod`). Whichever one is noted
+as the default (in the `defaults` section) will be used by
+`gort`. However, you can pass the `--profile=$PROFILE` option to
+`gort` to use a different set of credentials.
+
+While you can add profiles to this file manually, you can also use the
+`gort profile create` command to help.
+
+### Getting help
+
+The `gort` executable contains a number of commands and sub-commands.
+Help is available for all of them by passing the `--help` option.
+Start with `gort --help`, and go from there.

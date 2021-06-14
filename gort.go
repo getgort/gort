@@ -28,6 +28,7 @@ import (
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/adapter/slack"
+	"github.com/getgort/gort/cmd"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/relay"
@@ -89,13 +90,19 @@ func initializeCommands() {
 		&cmdRootVerboseCount,
 		"verbose", "v", "Verbose mode (can be used multiple times)")
 
-	cmdRoot.AddCommand(cmdStart)
-
 	cmdVersion.Flags().BoolVarP(
 		&cmdVersionShort,
 		"short", "s", false, "Print only the version number")
 
+	cmdRoot.AddCommand(cmdStart)
 	cmdRoot.AddCommand(cmdVersion)
+
+	cmdRoot.AddCommand(cmd.GetBootstrapCmd())
+	cmdRoot.AddCommand(cmd.GetBundleCmd())
+	cmdRoot.AddCommand(cmd.GetGroupCmd())
+	cmdRoot.AddCommand(cmd.GetUserCmd())
+
+	cmdRoot.PersistentFlags().StringVarP(&cmd.FlagGortProfile, "profile", "P", "", "Gort profile to use")
 }
 
 func initializeConfig(cmdRootConfigfile string) error {

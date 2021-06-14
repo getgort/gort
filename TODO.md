@@ -32,7 +32,12 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
   - Every command request MUST have a unique identifier ✅
     - All relevant log events MUST include this command identifier ✅
 
-## Milestone 7 (API-level authorization)
+## Milestone 7 -- Merge `gort` and `gortctl` into one single binary
+
+- As it says on the tin: merge GOrtthe [gortctl](https://github.com/getgort/gortctl) commands into the main Gort repo
+- Deprecate `gortctl`.
+
+## Milestone 8 (API-level authorization)
 - Document permissions model and how auth is expected to work.
 - User and group permission assignment
   - "group role grant" and "group role revoke"
@@ -49,7 +54,3 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
   - Requirement: Support relay tagging and selection at the bundle/command level
 - Break the `relay` package into a standalone service
 - Include support for Kafka (and others? NATS?)
-
-## Milestone X (Necessary but not attached to a milestone)
-
-- Bundled version of `gortctl`
