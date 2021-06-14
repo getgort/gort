@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -53,14 +54,21 @@ const (
 )
 
 var (
-	badListenerEvents    = make(chan chan State) // Notified if there's an error emitting status
-	config               *data.GortConfig
-	configFile           string
-	currentState         = StateConfigUninitialized
-	lastReloadWorked     = true // Used to keep prevent log spam
-	md5sum               = []byte{}
-	stateChangeListeners = make([]chan State, 0)
+	config      *data.GortConfig
+	configFile  string
+	configMutex = sync.RWMutex{}
 
+	lastReloadWorked = true // Used to keep prevent log spam
+	md5sum           = []byte{}
+
+	stateChangeListeners      = make([]chan State, 0)
+	stateChangeListenersMutex = sync.Mutex{}
+
+	currentState = StateConfigUninitialized
+	stateMutex   = sync.RWMutex{}
+)
+
+var (
 	// ErrConfigFileNotFound is returned by Initialize() if the specified
 	// config file doesn't exist.
 	ErrConfigFileNotFound = errors.New("config file doesn't exist")
@@ -73,10 +81,6 @@ var (
 	// methods if the config file exists but can't be loaded.
 	ErrConfigUnloadable = errors.New("can't load config file")
 )
-
-func init() {
-	go watchBadConfigListenerEvents()
-}
 
 // State represents a possible state of the config.
 type State byte
@@ -101,49 +105,75 @@ func BeginChangeCheck(frequency time.Duration) {
 
 	go func() {
 		for range ticker.C {
-			err := reloadConfiguration()
-			if err != nil {
-				if lastReloadWorked {
-					lastReloadWorked = false
-					log.WithError(err).Error("Config reload failed")
-				}
+			if err := reloadConfiguration(); err != nil && lastReloadWorked {
+				lastReloadWorked = false
+				log.WithError(err).Error("Config reload failed")
 			}
 		}
 	}()
 }
 
+// CurrentState returns the current state of the config.
+func CurrentState() State {
+	stateMutex.RLock()
+	defer stateMutex.RUnlock()
+
+	return currentState
+}
+
 // GetBundleConfigs returns the data wrapper for the "bundles" config section.
 func GetBundleConfigs() []data.Bundle {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
 	return config.BundleConfigs
 }
 
 // GetDatabaseConfigs returns the data wrapper for the "database" config section.
 func GetDatabaseConfigs() data.DatabaseConfigs {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
 	return config.DatabaseConfigs
 }
 
 // GetDockerConfigs returns the data wrapper for the "docker" config section.
 func GetDockerConfigs() data.DockerConfigs {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
 	return config.DockerConfigs
 }
 
 // GetGortServerConfigs returns the data wrapper for the "gort" config section.
 func GetGortServerConfigs() data.GortServerConfigs {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
 	return config.GortServerConfigs
 }
 
 // GetJaegerConfigs returns the data wrapper for the "jaeger" config section.
 func GetJaegerConfigs() data.JaegerConfigs {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
 	return config.JaegerConfigs
 }
 
 // GetGlobalConfigs returns the data wrapper for the "global" config section.
 func GetGlobalConfigs() data.GlobalConfigs {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
 	return config.GlobalConfigs
 }
 
 // GetSlackProviders returns the data wrapper for the "slack" config section.
 func GetSlackProviders() []data.SlackProvider {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
 	return config.SlackProviders
 }
 
@@ -161,11 +191,6 @@ func Initialize(file string) error {
 	return reloadConfiguration()
 }
 
-// CurrentState returns the current state of the config.
-func CurrentState() State {
-	return currentState
-}
-
 // IsUndefined is a helper method that is used to determine whether config
 // sections are present.
 func IsUndefined(c interface{}) bool {
@@ -181,12 +206,12 @@ func IsUndefined(c interface{}) bool {
 // configuration is updated. Upon creation, it will emit the current state,
 // so it never blocks.
 func Updates() <-chan State {
-	ch := make(chan State)
-	stateChangeListeners = append(stateChangeListeners, ch)
+	stateChangeListenersMutex.Lock()
+	defer stateChangeListenersMutex.Unlock()
 
-	go func() {
-		ch <- currentState
-	}()
+	ch := make(chan State, 1)
+	stateChangeListeners = append(stateChangeListeners, ch)
+	ch <- CurrentState()
 
 	return ch
 }
@@ -236,35 +261,13 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 	return &config, nil
 }
 
-func standardizeBundleConfig(b data.Bundle) data.Bundle {
-	b.Default = true
-	b.Enabled = true
-
-	if b.Commands == nil {
-		return b
-	}
-
-	for name, command := range b.Commands {
-		command.Name = name
-	}
-
-	return b
-}
-
-func standardizeDatabaseConfig(dbc *data.DatabaseConfigs) {
-	if dbc.Password == "" {
-		log.Debug("Config database password empty; using envvar ", EnvDatabasePassword)
-
-		if dbc.Password = os.Getenv(EnvDatabasePassword); dbc.Password == "" {
-			log.Debug("Config database password cannot be found")
-		}
-	}
-}
-
 //  reloadConfiguration is called by both BeginChangeCheck() and Initialize()
 // to determine whether the config file has changed (or is new) and reload if
 // it has.
 func reloadConfiguration() error {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+
 	sum, err := getMd5Sum(configFile)
 	if err != nil {
 		return gerrs.Wrap(ErrHashFailure, err)
@@ -275,7 +278,7 @@ func reloadConfiguration() error {
 		if err != nil {
 			// If we're already initialized, keep the original config.
 			// If not, set the state to 'error'.
-			if currentState == StateConfigUninitialized {
+			if CurrentState() == StateConfigUninitialized {
 				updateConfigState(StateConfigError)
 			}
 
@@ -300,7 +303,7 @@ func reloadConfiguration() error {
 }
 
 func setLogFormatter() {
-	dev := GetGortServerConfigs().DevelopmentMode
+	dev := config.GortServerConfigs.DevelopmentMode
 
 	if dev {
 		log.SetFormatter(
@@ -332,52 +335,46 @@ func slicesAreEqual(a, b []byte) bool {
 	return true
 }
 
+func standardizeBundleConfig(b data.Bundle) data.Bundle {
+	b.Default = true
+	b.Enabled = true
+
+	if b.Commands == nil {
+		return b
+	}
+
+	for name, command := range b.Commands {
+		command.Name = name
+	}
+
+	return b
+}
+
+func standardizeDatabaseConfig(dbc *data.DatabaseConfigs) {
+	if dbc.Password == "" {
+		log.Debug("Config database password empty; using envvar ", EnvDatabasePassword)
+
+		if dbc.Password = os.Getenv(EnvDatabasePassword); dbc.Password == "" {
+			log.Debug("Config database password cannot be found")
+		}
+	}
+}
+
 // updateConfigState updates the state and emits the new state to any listeners.
 func updateConfigState(newState State) {
+	stateMutex.Lock()
+	defer stateMutex.Unlock()
+
 	currentState = newState
 
 	log.WithField("state", newState).Trace("Config state update")
 
-	// Sadly, this needs to track and remove closed channels.
 	for _, ch := range stateChangeListeners {
-		updateConfigStateTryEmit(ch, newState)
-	}
-}
+		timer := time.NewTimer(100 * time.Millisecond)
 
-// updateConfigStateTryEmit will attempt to emit to a listener. If the channel is
-// closed, it is removed from the listeners list. Blocking channels are ignored.
-func updateConfigStateTryEmit(ch chan State, newState State) {
-	defer func() {
-		if r := recover(); r != nil {
-			badListenerEvents <- ch
+		select {
+		case ch <- newState:
+		case <-timer.C:
 		}
-	}()
-
-	select {
-	case ch <- newState:
-		// Everything is good
-	default:
-		// Channel is blocking. Ignore for now.
-		// Eventually GC should close it and we can remove.
-	}
-}
-
-// watchBadConfigListenerEvents call be init to observe the badListenerEvents
-// channel, and removes any bad channels that it hears about.
-func watchBadConfigListenerEvents() {
-	badListenerEvents = make(chan chan State)
-
-	log.Trace("Cleaning up closed channel")
-
-	for chbad := range badListenerEvents {
-		newChs := make([]chan State, 0)
-
-		for _, ch := range stateChangeListeners {
-			if chbad != ch {
-				newChs = append(newChs, ch)
-			}
-		}
-
-		stateChangeListeners = newChs
 	}
 }

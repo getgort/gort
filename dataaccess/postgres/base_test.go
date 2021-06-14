@@ -52,7 +52,7 @@ var DoNotCleanUpDatabase = false
 
 func TestPostgresDataAccessMain(t *testing.T) {
 	ctx, cancel = context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+	// defer cancel()
 
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")

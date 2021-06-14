@@ -19,6 +19,7 @@ package dataaccess
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/getgort/gort/config"
@@ -49,18 +50,23 @@ const (
 )
 
 var (
-	badListenerEvents    = make(chan chan State) // Notified if there's an error emitting status
-	configListener       <-chan config.State
-	currentState         State
-	dataAccessLayer      DataAccess
-	stateChangeListeners []chan State
+	// badListenerEvents    = make(chan chan State) // Notified if there's an error emitting status
+	configListener = config.Updates()
+	dataAccess     DataAccess
+
+	currentState State
+	stateMutex   = sync.Mutex{}
+
+	stateChangeListeners      []chan State
+	stateChangeListenersMutex = sync.RWMutex{}
+
+	configUpdates = config.Updates()
 )
 
 func init() {
 	stateChangeListeners = make([]chan State, 0)
 
 	go monitorConfig(context.Background())
-	go watchBadDALListenerEvents()
 }
 
 // State represents a possible state of the data access layer.
@@ -84,15 +90,18 @@ func (s State) String() string {
 // Get provides an interface to the data access layer. If the state is not
 // 'initialized', this will return an error.
 func Get() (DataAccess, error) {
-	if currentState != StateInitialized {
+	if CurrentState() != StateInitialized {
 		return nil, fmt.Errorf("data access layer not initialized")
 	}
 
-	return dataAccessLayer, nil
+	return dataAccess, nil
 }
 
 // CurrentState returns the current state of the data access layer.
 func CurrentState() State {
+	stateMutex.Lock()
+	defer stateMutex.Unlock()
+
 	return currentState
 }
 
@@ -101,12 +110,12 @@ func CurrentState() State {
 // configuration changes. Upon creation, it will emit the current state,
 // so it never blocks.
 func Updates() <-chan State {
-	ch := make(chan State)
-	stateChangeListeners = append(stateChangeListeners, ch)
+	stateChangeListenersMutex.Lock()
+	defer stateChangeListenersMutex.Unlock()
 
-	go func() {
-		ch <- currentState
-	}()
+	ch := make(chan State, 1)
+	stateChangeListeners = append(stateChangeListeners, ch)
+	ch <- CurrentState()
 
 	return ch
 }
@@ -124,8 +133,6 @@ func getCorrectDataAccess() DataAccess {
 // initializeDataAccess is called by monitorConfig to initialize the data
 // access layer whenever the configuration is updated.
 func initializeDataAccess(ctx context.Context) {
-	configUpdates := config.Updates()
-
 	// Ignore current status
 	<-configUpdates
 
@@ -134,9 +141,9 @@ func initializeDataAccess(ctx context.Context) {
 
 		updateDALState(StateInitializing)
 
-		for currentState != StateInitialized {
-			dataAccessLayer = getCorrectDataAccess()
-			err := dataAccessLayer.Initialize(ctx)
+		for CurrentState() != StateInitialized {
+			dataAccess = getCorrectDataAccess()
+			err := dataAccess.Initialize(ctx)
 
 			if err != nil {
 				log.WithError(err).Warn("Failed to connect to data source")
@@ -164,7 +171,7 @@ func initializeDataAccess(ctx context.Context) {
 					delay = 10 * time.Second
 				}
 			} else {
-				log.WithField("type", fmt.Sprintf("%T", dataAccessLayer)).
+				log.WithField("type", fmt.Sprintf("%T", dataAccess)).
 					Info("Connection to data source established")
 				updateDALState(StateInitialized)
 			}
@@ -175,8 +182,6 @@ func initializeDataAccess(ctx context.Context) {
 // monitorConfig monitors config.Updates(), and updates the data access
 // singleton whenever a change is observed.
 func monitorConfig(ctx context.Context) {
-	configListener = config.Updates()
-
 	// ConfigListener always emits the current state upon creation.
 	lastConfigState := <-configListener
 
@@ -200,51 +205,21 @@ func monitorConfig(ctx context.Context) {
 
 // updateDALState updates the state and emits the new state to any listeners.
 func updateDALState(newState State) {
+	stateMutex.Lock()
 	currentState = newState
+	stateMutex.Unlock()
 
-	log.WithField("status", newState).Trace("Received status update")
+	log.WithField("state", newState).Trace("Config status update")
 
-	// Sadly, this needs to track and remove closed channels.
+	stateChangeListenersMutex.RLock()
+	defer stateChangeListenersMutex.RUnlock()
+
 	for _, ch := range stateChangeListeners {
-		updateDALStateTryEmit(ch, newState)
-	}
-}
+		timer := time.NewTimer(100 * time.Millisecond)
 
-// updateDALStateTryEmit will attempt to emit to a listener. If the channel is
-// closed, it is removed from the listeners list. Blocking channels are ignored.
-func updateDALStateTryEmit(ch chan State, newState State) {
-	defer func() {
-		if r := recover(); r != nil {
-			// The channel was closed.
-			badListenerEvents <- ch
+		select {
+		case ch <- newState:
+		case <-timer.C:
 		}
-	}()
-
-	select {
-	case ch <- newState:
-		// Everything is good
-	default:
-		// Channel is blocking. Ignore for now.
-		// Eventually GC should close it and we can remove.
-	}
-}
-
-// watchBadDALListenerEvents call be init to observe the badListenerEvents
-// channel, and removes any bad channels that it hears about.
-func watchBadDALListenerEvents() {
-	badListenerEvents = make(chan chan State)
-
-	log.Trace("Cleaning up closed channel")
-
-	for chbad := range badListenerEvents {
-		newChs := make([]chan State, 0)
-
-		for _, ch := range stateChangeListeners {
-			if chbad != ch {
-				newChs = append(newChs, ch)
-			}
-		}
-
-		stateChangeListeners = newChs
 	}
 }

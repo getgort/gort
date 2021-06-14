@@ -38,6 +38,9 @@ test:
 	@DOCKER_BUILDKIT=1 docker build --target test -t foo_$(PROJECT)_foo --network host .
 	@docker rmi foo_$(PROJECT)_foo
 
+test-local:
+	@go test -count=1 -timeout 60s -cover -race ./...
+
 build: clean
 	mkdir -p bin
 	@go build -a -installsuffix cgo -o bin/$(PROJECT) $(GIT_REPOSITORY)

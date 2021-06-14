@@ -17,49 +17,18 @@
 package dataaccess
 
 import (
-	"context"
 	"testing"
-	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/dataaccess/memory"
 	"github.com/getgort/gort/dataaccess/postgres"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-)
-
-var (
-	ctx    context.Context
-	cancel context.CancelFunc
 )
 
 func init() {
-	logrus.SetLevel(logrus.FatalLevel) // Limit unnecessary config init logs
-}
-
-func TestInitializeDataAccess(t *testing.T) {
-	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	err := config.Initialize("../testing/config/no-database.yml")
-	assert.NoError(t, err)
-
-	initializeDataAccess(ctx)
-
-	for state := range Updates() {
-		if state == StateInitialized {
-			break
-		}
-
-		if state == StateError {
-			t.Error("Failed to initialize DAL")
-			t.FailNow()
-		}
-	}
-
-	dal, err := Get()
-	assert.NoError(t, err)
-	assert.NotNil(t, dal)
+	log.SetLevel(log.FatalLevel) // Limit unnecessary config init logs
 }
 
 // If there's no "database" section in the config, use the in-memopry DAL.
