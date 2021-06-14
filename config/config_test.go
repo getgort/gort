@@ -17,6 +17,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/getgort/gort/data"
@@ -27,6 +28,7 @@ func TestLoadConfiguration(t *testing.T) {
 	config, err := loadConfiguration("../testing/config/complete.yml")
 	if err != nil {
 		t.Error(err.Error())
+		t.FailNow()
 	}
 
 	cglobal := config.GlobalConfigs
@@ -98,6 +100,7 @@ func TestIsUndefinedFalse(t *testing.T) {
 	c, err := loadConfiguration("../testing/config/complete.yml")
 	if err != nil {
 		t.Error(err.Error())
+		t.FailNow()
 	}
 
 	id := IsUndefined(c)
@@ -114,8 +117,46 @@ func TestIsUndefinedTrue2(t *testing.T) {
 	c, err := loadConfiguration("../testing/config/no-database.yml")
 	if err != nil {
 		t.Error(err.Error())
+		t.FailNow()
 	}
 
 	id := IsUndefined(c.DatabaseConfigs)
 	assert.True(t, id)
+}
+
+func TestStandardizeDatabaseConfigNone(t *testing.T) {
+	config, err := loadConfiguration("../testing/config/no-database-password.yml")
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+
+	standardizeDatabaseConfig(&config.DatabaseConfigs)
+
+	dbp := config.DatabaseConfigs.Password
+
+	assert.Empty(t, dbp)
+}
+
+func TestStandardizeDatabaseConfigDefined(t *testing.T) {
+	const expected = "someRandomPassword"
+
+	err := os.Setenv(EnvDatabasePassword, expected)
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+
+	config, err := loadConfiguration("../testing/config/no-database-password.yml")
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+
+	standardizeDatabaseConfig(&config.DatabaseConfigs)
+
+	dbp := config.DatabaseConfigs.Password
+
+	assert.NotEmpty(t, dbp)
+	assert.Equal(t, dbp, expected)
 }

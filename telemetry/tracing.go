@@ -17,6 +17,7 @@
 package telemetry
 
 import (
+	"context"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -53,7 +54,7 @@ func CreateAndRegisterExporters() error {
 
 func updateTracerProviders() error {
 	jc := config.GetJaegerConfigs()
-	event := log.NewEntry(log.StandardLogger())
+	event := log.WithContext(context.TODO())
 
 	if jc.Endpoint == "" {
 		// Set the tracer provider with null set.

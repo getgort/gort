@@ -37,23 +37,6 @@ While some effort will be made to support existing functionality (such as Cog bu
 
 A WIP design doc, including rough milestones (but not dates) [can be seen here](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit?usp=sharing). Feel free to add questions or comments.
 
-## Status of this project
-
-Active heavy development. The date that various [milestones](TODO.md) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
-
-* Project created: 27 December 2018
-* Milestone 1: 7 January 2019
-* Milestone 2: 21 January 2019
-* Milestone 3: 24 January 2019
-* Milestone 4: 17 March 2019
-* Milestone 5: 7 June 2021
-* Milestone 6: 10 June 2021
-* Milestone 7: *TBD*
-* Milestone 8: *TBD*
-* Milestone 9: *TBD*
-* Release candidate 1: *TBD*
-* Release!: *TBD*
-
 ## How to run the Gort controller
 
 With Go installed, you can run (for testing) with: `go run . start`.
@@ -105,3 +88,20 @@ While you can add profiles to this file manually, you can also use the
 The `gort` executable contains a number of commands and sub-commands.
 Help is available for all of them by passing the `--help` option.
 Start with `gort --help`, and go from there.
+
+## Status of this project
+
+Active heavy development. The date that various [milestones](TODO.md) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
+
+* Project created: 27 December 2018
+* Milestone 1: 7 January 2019
+* Milestone 2: 21 January 2019
+* Milestone 3: 24 January 2019
+* Milestone 4: 17 March 2019
+* Milestone 5: 7 June 2021
+* Milestone 6: 10 June 2021
+* Milestone 7: *TBD*
+* Milestone 8: *TBD*
+* Milestone 9: *TBD*
+* Release candidate 1: *TBD*
+* Release!: *TBD*

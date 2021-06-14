@@ -226,9 +226,6 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 		return nil, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
-	// Properly load the database configs.
-	standardizeDatabaseConfig(&config.DatabaseConfigs)
-
 	// Make sure that the command names get set correctly.
 	if config.BundleConfigs != nil {
 		for i, b := range config.BundleConfigs {
@@ -290,6 +287,9 @@ func reloadConfiguration() error {
 		lastReloadWorked = true
 
 		setLogFormatter()
+
+		// Properly load the database configs.
+		standardizeDatabaseConfig(&cp.DatabaseConfigs)
 
 		updateConfigState(StateConfigInitialized)
 

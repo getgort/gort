@@ -24,11 +24,9 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/adapter/slack"
-	"github.com/getgort/gort/cmd"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/relay"
@@ -37,76 +35,8 @@ import (
 	"github.com/getgort/gort/version"
 )
 
-var (
-	cmdRootConfigfile string
-
-	cmdRootVerboseCount int
-
-	cmdRoot = &cobra.Command{
-		Use:   "gort",
-		Short: "Bringing the power of the command line to chat",
-		Long:  `Bringing the power of the command line to chat.`,
-	}
-)
-
-var (
-	cmdStart = &cobra.Command{
-		Use:   "start",
-		Short: "Immediately start the Gort server",
-		Long:  `Immediately start the Gort server.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			err := startGort()
-			if err != nil {
-				log.WithError(err).Fatal("Fatal service error")
-			}
-		},
-	}
-)
-
-var (
-	cmdVersionShort bool
-
-	cmdVersion = &cobra.Command{
-		Use:   "version",
-		Short: "Print Gort's version number",
-		Long:  `All software has versions. This is Gort's.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if cmdVersionShort {
-				fmt.Println(version.Version)
-				return
-			}
-
-			fmt.Printf("Gort ChatOps Engine v%s\n", version.Version)
-		},
-	}
-)
-
-func initializeCommands() {
-	cmdStart.Flags().StringVarP(
-		&cmdRootConfigfile,
-		"config", "c", "config.yml", "The location of the config file to use")
-
-	cmdStart.Flags().CountVarP(
-		&cmdRootVerboseCount,
-		"verbose", "v", "Verbose mode (can be used multiple times)")
-
-	cmdVersion.Flags().BoolVarP(
-		&cmdVersionShort,
-		"short", "s", false, "Print only the version number")
-
-	cmdRoot.AddCommand(cmdStart)
-	cmdRoot.AddCommand(cmdVersion)
-
-	cmdRoot.AddCommand(cmd.GetBootstrapCmd())
-	cmdRoot.AddCommand(cmd.GetBundleCmd())
-	cmdRoot.AddCommand(cmd.GetGroupCmd())
-	cmdRoot.AddCommand(cmd.GetUserCmd())
-
-	cmdRoot.PersistentFlags().StringVarP(&cmd.FlagGortProfile, "profile", "P", "", "Gort profile to use")
-}
-
-func initializeConfig(cmdRootConfigfile string) error {
-	err := config.Initialize(cmdRootConfigfile)
+func initializeConfig(configFile string) error {
+	err := config.Initialize(configFile)
 	if err != nil {
 		return err
 	}
@@ -143,11 +73,11 @@ func installAdapters() error {
 	return nil
 }
 
-func startGort() error {
-	setLoggerVerbosity(cmdRootVerboseCount)
+func startGort(configFile string, verboseCount int) error {
+	setLoggerVerbosity(verboseCount)
 
 	// Load the Gort configuration.
-	err := initializeConfig(cmdRootConfigfile)
+	err := initializeConfig(configFile)
 	if err != nil {
 		return err
 	}
@@ -247,4 +177,8 @@ func startServer(config data.GortServerConfigs) {
 			log.WithError(err).Fatal("Fatal service error")
 		}
 	}()
+}
+
+func main() {
+	GetRootCmd().Execute()
 }
