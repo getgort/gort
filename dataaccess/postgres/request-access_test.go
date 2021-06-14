@@ -17,7 +17,6 @@
 package postgres
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -33,7 +32,6 @@ func testRequestAccess(t *testing.T) {
 }
 
 func testRequestBegin(t *testing.T) {
-	ctx = context.Background()
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 
@@ -65,7 +63,6 @@ func testRequestBegin(t *testing.T) {
 }
 
 func testRequestUpdate(t *testing.T) {
-	ctx = context.Background()
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 
@@ -95,7 +92,6 @@ func testRequestUpdate(t *testing.T) {
 }
 
 func testRequestClose(t *testing.T) {
-	ctx = context.Background()
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 

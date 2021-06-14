@@ -100,6 +100,7 @@ func testBundleEnable(t *testing.T) {
 	assert.NoError(t, err)
 	if enabled != "" {
 		t.Error("Expected no version to be enabled")
+		t.FailNow()
 	}
 
 	// Reload and verify enabled value is false
@@ -114,8 +115,8 @@ func testBundleEnable(t *testing.T) {
 	enabled, err = da.BundleEnabledVersion(ctx, bundle.Name)
 	assert.NoError(t, err)
 	if enabled != bundle.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
-			bundle.Version, enabled)
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundle.Version, enabled)
+		t.FailNow()
 		t.FailNow()
 	}
 
@@ -146,8 +147,8 @@ func testBundleEnableTwo(t *testing.T) {
 	assert.NoError(t, err)
 
 	if enabled != bundleA.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
-			bundleA.Version, enabled)
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundleA.Version, enabled)
+		t.FailNow()
 		t.FailNow()
 	}
 
@@ -168,8 +169,8 @@ func testBundleEnableTwo(t *testing.T) {
 	assert.NoError(t, err)
 
 	if enabled != bundleA.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
-			bundleA.Version, enabled)
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundleA.Version, enabled)
+		t.FailNow()
 		t.FailNow()
 	}
 
@@ -177,8 +178,8 @@ func testBundleEnableTwo(t *testing.T) {
 	assert.NoError(t, err)
 
 	if enabled != bundleA.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
-			bundleA.Version, enabled)
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundleA.Version, enabled)
+		t.FailNow()
 		t.FailNow()
 	}
 
@@ -190,8 +191,8 @@ func testBundleEnableTwo(t *testing.T) {
 	assert.NoError(t, err)
 
 	if enabled != bundleB.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
-			bundleB.Version, enabled)
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundleB.Version, enabled)
+		t.FailNow()
 		t.FailNow()
 	}
 }
@@ -206,6 +207,7 @@ func testBundleExists(t *testing.T) {
 	exists, _ = da.BundleExists(ctx, bundle.Name, bundle.Version)
 	if exists {
 		t.Error("Bundle should not exist now")
+		t.FailNow()
 	}
 
 	err = da.BundleCreate(ctx, bundle)
@@ -215,6 +217,7 @@ func testBundleExists(t *testing.T) {
 	exists, _ = da.BundleExists(ctx, bundle.Name, bundle.Version)
 	if !exists {
 		t.Error("Bundle should exist now")
+		t.FailNow()
 	}
 }
 
@@ -245,6 +248,7 @@ func testBundleDelete(t *testing.T) {
 	exists, _ := da.BundleExists(ctx, bundle.Name, bundle.Version)
 	if exists {
 		t.Error("Shouldn't exist anymore!")
+		t.FailNow()
 	}
 }
 
@@ -280,6 +284,7 @@ func testBundleGet(t *testing.T) {
 	exists, _ := da.BundleExists(ctx, bundleCreate.Name, bundleCreate.Version)
 	if !exists {
 		t.Error("Bundle should exist now, but it doesn't")
+		t.FailNow()
 	}
 
 	// Load the bundle from the data store. Expect no error
@@ -316,6 +321,7 @@ func testBundleList(t *testing.T) {
 		}
 
 		t.Errorf("Expected len(bundles) = 4; got %d", len(bundles))
+		t.FailNow()
 	}
 }
 
@@ -338,6 +344,7 @@ func testBundleListVersions(t *testing.T) {
 		}
 
 		t.Errorf("Expected len(bundles) = 2; got %d", len(bundles))
+		t.FailNow()
 	}
 }
 

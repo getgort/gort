@@ -24,15 +24,25 @@ import (
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/dataaccess/memory"
 	"github.com/getgort/gort/dataaccess/postgres"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	ctx    context.Context
+	cancel context.CancelFunc
+)
+
+func init() {
+	logrus.SetLevel(logrus.FatalLevel) // Limit unnecessary config init logs
+}
+
 func TestInitializeDataAccess(t *testing.T) {
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	err := config.Initialize("../testing/config/no-database.yml")
 	assert.NoError(t, err)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
 	initializeDataAccess(ctx)
 
@@ -43,6 +53,7 @@ func TestInitializeDataAccess(t *testing.T) {
 
 		if state == StateError {
 			t.Error("Failed to initialize DAL")
+			t.FailNow()
 		}
 	}
 

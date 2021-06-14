@@ -41,22 +41,22 @@ var (
 		User:       "gort",
 	}
 
-	da PostgresDataAccess
+	ctx    context.Context
+	cancel context.CancelFunc
+	da     PostgresDataAccess
 )
-
-var ctx = context.TODO()
 
 // If true, the test database container won't be automatically shut down and
 // removed. This is handy for testing.
 var DoNotCleanUpDatabase = false
 
 func TestPostgresDataAccessMain(t *testing.T) {
+	ctx, cancel = context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, time.Minute/2)
-	defer cancel()
 
 	cleanup, err := startDatabaseContainer(ctx, t)
 	assert.NoError(t, err, "failed to start database container")
@@ -142,7 +142,6 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 func testInitialize(t *testing.T) {
 	const timeout = 10 * time.Second
 	timeoutAt := time.Now().Add(timeout)
-	ctx := context.Background()
 	da = NewPostgresDataAccess(configs)
 
 	t.Log("Waiting for database to be ready")
@@ -171,7 +170,6 @@ func testInitialize(t *testing.T) {
 }
 
 func testDatabaseExists(t *testing.T) {
-	ctx := context.Background()
 	da = NewPostgresDataAccess(configs)
 
 	err := da.Initialize(ctx)

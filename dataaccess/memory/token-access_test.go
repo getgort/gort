@@ -44,14 +44,17 @@ func testTokenGenerate(t *testing.T) {
 
 	if token.Duration != 10*time.Minute {
 		t.Errorf("Duration mismatch: %v vs %v\n", token.Duration, 10*time.Minute)
+		t.FailNow()
 	}
 
 	if token.User != "test_generate" {
 		t.Error("User mismatch")
+		t.FailNow()
 	}
 
 	if token.ValidFrom.Add(10*time.Minute) != token.ValidUntil {
 		t.Error("Validity duration mismatch")
+		t.FailNow()
 	}
 }
 
@@ -72,6 +75,7 @@ func testTokenRetrieveByUser(t *testing.T) {
 
 	if token.Token != rtoken.Token {
 		t.Error("token mismatch")
+		t.FailNow()
 	}
 }
 
@@ -92,6 +96,7 @@ func testTokenRetrieveByToken(t *testing.T) {
 
 	if token.Token != rtoken.Token {
 		t.Error("token mismatch")
+		t.FailNow()
 	}
 }
 
@@ -106,12 +111,14 @@ func testTokenExpiry(t *testing.T) {
 
 	if token.IsExpired() {
 		t.Error("Expected token to be unexpired")
+		t.FailNow()
 	}
 
 	time.Sleep(time.Second)
 
 	if !token.IsExpired() {
 		t.Error("Expected token to be expired")
+		t.FailNow()
 	}
 }
 
@@ -126,6 +133,7 @@ func testTokenInvalidate(t *testing.T) {
 
 	if !da.TokenEvaluate(ctx, token.Token) {
 		t.Error("Expected token to be valid")
+		t.FailNow()
 	}
 
 	err = da.TokenInvalidate(ctx, token.Token)
@@ -133,5 +141,6 @@ func testTokenInvalidate(t *testing.T) {
 
 	if da.TokenEvaluate(ctx, token.Token) {
 		t.Error("Expected token to be invalid")
+		t.FailNow()
 	}
 }

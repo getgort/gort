@@ -33,7 +33,7 @@
 package main
 
 import (
-	"log"
+	"context"
 
 	"github.com/spf13/cobra"
 )
@@ -65,6 +65,7 @@ func GetStartCmd() *cobra.Command {
 }
 
 func startCmd(cmd *cobra.Command, args []string) error {
-	log.Fatal(startGort(flagStartConfigfile, flagStartVerboseCount))
-	return nil
+	ctx := context.Background()
+
+	return startGort(ctx, flagStartConfigfile, flagStartVerboseCount)
 }

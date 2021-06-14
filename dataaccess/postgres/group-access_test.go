@@ -40,6 +40,7 @@ func testGroupExists(t *testing.T) {
 	exists, _ = da.GroupExists(ctx, "test-exists")
 	if exists {
 		t.Error("Group should not exist now")
+		t.FailNow()
 	}
 
 	// Now we add a group to find.
@@ -49,6 +50,7 @@ func testGroupExists(t *testing.T) {
 	exists, _ = da.GroupExists(ctx, "test-exists")
 	if !exists {
 		t.Error("Group should exist now")
+		t.FailNow()
 	}
 }
 
@@ -88,6 +90,7 @@ func testGroupDelete(t *testing.T) {
 	exists, _ := da.GroupExists(ctx, "test-delete")
 	if exists {
 		t.Error("Shouldn't exist anymore!")
+		t.FailNow()
 	}
 }
 
@@ -110,6 +113,7 @@ func testGroupGet(t *testing.T) {
 	exists, _ := da.GroupExists(ctx, "test-get")
 	if !exists {
 		t.Error("Group should exist now")
+		t.FailNow()
 	}
 
 	// Expect no error
@@ -117,6 +121,7 @@ func testGroupGet(t *testing.T) {
 	assert.NoError(t, err)
 	if group.Name != "test-get" {
 		t.Errorf("Group name mismatch: %q is not \"test-get\"", group.Name)
+		t.FailNow()
 	}
 }
 
@@ -135,11 +140,13 @@ func testGroupList(t *testing.T) {
 
 	if len(groups) != 4 {
 		t.Errorf("Expected len(groups) = 4; got %d", len(groups))
+		t.FailNow()
 	}
 
 	for _, u := range groups {
 		if u.Name == "" {
 			t.Error("Expected non-empty name")
+			t.FailNow()
 		}
 	}
 }
@@ -164,10 +171,12 @@ func testGroupAddUser(t *testing.T) {
 
 	if len(group.Users) != 1 {
 		t.Error("Users list empty")
+		t.FailNow()
 	}
 
 	if len(group.Users) > 0 && group.Users[0].Username != "bar" {
 		t.Error("Wrong user!")
+		t.FailNow()
 	}
 }
 
@@ -186,10 +195,12 @@ func testGroupRemoveUser(t *testing.T) {
 
 	if len(group.Users) != 1 {
 		t.Error("Users list empty")
+		t.FailNow()
 	}
 
 	if len(group.Users) > 0 && group.Users[0].Username != "bat" {
 		t.Error("Wrong user!")
+		t.FailNow()
 	}
 
 	err = da.GroupRemoveUser(ctx, "foo", "bat")
@@ -200,5 +211,6 @@ func testGroupRemoveUser(t *testing.T) {
 
 	if len(group.Users) != 0 {
 		t.Error("User not removed")
+		t.FailNow()
 	}
 }

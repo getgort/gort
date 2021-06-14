@@ -32,7 +32,7 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	err := dataAccessLayer.UserDelete(r.Context(), params["username"])
 
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 }
@@ -48,7 +48,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), params["username"])
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 	if !exists {
@@ -58,7 +58,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := dataAccessLayer.UserGet(r.Context(), params["username"])
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -71,7 +71,7 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), params["username"])
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 	if !exists {
@@ -81,7 +81,7 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 
 	groups, err := dataAccessLayer.UserGroupList(r.Context(), params["username"])
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -93,7 +93,7 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := dataAccessLayer.UserList(r.Context())
 
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -117,7 +117,7 @@ func handlePutUser(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), user.Username)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -128,7 +128,7 @@ func handlePutUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 }

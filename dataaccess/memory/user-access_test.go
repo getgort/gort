@@ -17,7 +17,6 @@
 package memory
 
 import (
-	"context"
 	"testing"
 
 	"github.com/getgort/gort/data/rest"
@@ -39,12 +38,13 @@ func testUserAccess(t *testing.T) {
 func testUserNotExists(t *testing.T) {
 	var exists bool
 
-	err := da.Initialize(context.Background())
+	err := da.Initialize(ctx)
 	assert.NoError(t, err)
 
 	exists, _ = da.UserExists(ctx, "test-not-exists")
 	if exists {
 		t.Error("User should not exist now")
+		t.FailNow()
 	}
 }
 
@@ -73,6 +73,7 @@ func testUserAuthenticate(t *testing.T) {
 	expectErr(t, err, errs.ErrNoSuchUser)
 	if authenticated {
 		t.Error("Expected false")
+		t.FailNow()
 	}
 
 	// Expect no error
@@ -88,12 +89,14 @@ func testUserAuthenticate(t *testing.T) {
 	assert.NoError(t, err)
 	if authenticated {
 		t.Error("Expected false")
+		t.FailNow()
 	}
 
 	authenticated, err = da.UserAuthenticate(ctx, "test-auth", "password")
 	assert.NoError(t, err)
 	if !authenticated {
 		t.Error("Expected true")
+		t.FailNow()
 	}
 }
 func testUserExists(t *testing.T) {
@@ -102,6 +105,7 @@ func testUserExists(t *testing.T) {
 	exists, _ = da.UserExists(ctx, "test-exists")
 	if exists {
 		t.Error("User should not exist now")
+		t.FailNow()
 	}
 
 	// Now we add a user to find.
@@ -112,6 +116,7 @@ func testUserExists(t *testing.T) {
 	exists, _ = da.UserExists(ctx, "test-exists")
 	if !exists {
 		t.Error("User should exist now")
+		t.FailNow()
 	}
 }
 
@@ -138,6 +143,7 @@ func testUserDelete(t *testing.T) {
 	exists, _ := da.UserExists(ctx, "test-delete")
 	if exists {
 		t.Error("Shouldn't exist anymore!")
+		t.FailNow()
 	}
 }
 
@@ -161,6 +167,7 @@ func testUserGet(t *testing.T) {
 	exists, _ := da.UserExists(ctx, "test-get")
 	if !exists {
 		t.Error("User should exist now")
+		t.FailNow()
 	}
 
 	// Expect no error
@@ -168,6 +175,7 @@ func testUserGet(t *testing.T) {
 	assert.NoError(t, err)
 	if user.Username != "test-get" {
 		t.Errorf("User name mismatch: %q is not \"test-get\"", user.Username)
+		t.FailNow()
 	}
 }
 
@@ -190,15 +198,18 @@ func testUserList(t *testing.T) {
 		}
 
 		t.Errorf("Expected len(users) = 4; got %d", len(users))
+		t.FailNow()
 	}
 
 	for _, u := range users {
 		if u.Password != "" {
 			t.Error("Expected empty password")
+			t.FailNow()
 		}
 
 		if u.Username == "" {
 			t.Error("Expected non-empty username")
+			t.FailNow()
 		}
 	}
 }
@@ -220,6 +231,7 @@ func testUserUpdate(t *testing.T) {
 	user1, _ := da.UserGet(ctx, "test-update")
 	if userA.Email != user1.Email {
 		t.Errorf("Email mistatch: %q vs %q", userA.Email, user1.Email)
+		t.FailNow()
 	}
 
 	// Do the update
@@ -231,5 +243,6 @@ func testUserUpdate(t *testing.T) {
 	user2, _ := da.UserGet(ctx, "test-update")
 	if userB.Email != user2.Email {
 		t.Errorf("Email mistatch: %q vs %q", userB.Email, user2.Email)
+		t.FailNow()
 	}
 }

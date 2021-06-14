@@ -54,7 +54,7 @@ func CreateAndRegisterExporters() error {
 
 func updateTracerProviders() error {
 	jc := config.GetJaegerConfigs()
-	event := log.WithContext(context.TODO())
+	event := log.WithContext(context.Background())
 
 	if jc.Endpoint == "" {
 		// Set the tracer provider with null set.

@@ -61,7 +61,7 @@ func handleGetBundleVersions(w http.ResponseWriter, r *http.Request) {
 
 	bundles, err := dataAccessLayer.BundleListVersions(r.Context(), name)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	} else if len(bundles) == 0 {
 		http.Error(w, "No bundles found", http.StatusNoContent)
@@ -79,7 +79,7 @@ func handleDeleteBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 	err := dataAccessLayer.BundleDelete(r.Context(), name, version)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 }
@@ -92,7 +92,7 @@ func handleGetBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 	bundle, err := dataAccessLayer.BundleGet(r.Context(), name, version)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -117,18 +117,18 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 	if enabledValue[0] == 'F' {
 		version, err = dataAccessLayer.BundleEnabledVersion(r.Context(), name)
 		if err != nil {
-			respondAndLogError(w, err)
+			respondAndLogError(r.Context(), w, err)
 			return
 		}
 	}
 
 	exists, err := dataAccessLayer.BundleExists(r.Context(), name, version)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 	if !exists {
-		respondAndLogError(w, errs.ErrNoSuchBundle)
+		respondAndLogError(r.Context(), w, errs.ErrNoSuchBundle)
 		return
 	}
 
@@ -137,7 +137,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 		err = json.NewDecoder(r.Body).Decode(&bundle)
 		if err != nil {
-			respondAndLogError(w, gerrs.ErrUnmarshal)
+			respondAndLogError(r.Context(), w, gerrs.ErrUnmarshal)
 			return
 		}
 
@@ -146,7 +146,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 		err = dataAccessLayer.BundleUpdate(r.Context(), bundle)
 		if err != nil {
-			respondAndLogError(w, err)
+			respondAndLogError(r.Context(), w, err)
 			return
 		}
 	}
@@ -157,7 +157,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 		err = dataAccessLayer.BundleDisable(r.Context(), name)
 	}
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 }
@@ -169,7 +169,7 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&bundle)
 	if err != nil {
-		respondAndLogError(w, gerrs.ErrUnmarshal)
+		respondAndLogError(r.Context(), w, gerrs.ErrUnmarshal)
 		return
 	}
 
@@ -179,7 +179,7 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 
 	err = dataAccessLayer.BundleCreate(r.Context(), bundle)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 }

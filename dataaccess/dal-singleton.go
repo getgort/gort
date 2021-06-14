@@ -59,7 +59,7 @@ var (
 func init() {
 	stateChangeListeners = make([]chan State, 0)
 
-	go monitorConfig()
+	go monitorConfig(context.Background())
 	go watchBadDALListenerEvents()
 }
 
@@ -174,7 +174,7 @@ func initializeDataAccess(ctx context.Context) {
 
 // monitorConfig monitors config.Updates(), and updates the data access
 // singleton whenever a change is observed.
-func monitorConfig() {
+func monitorConfig(ctx context.Context) {
 	configListener = config.Updates()
 
 	// ConfigListener always emits the current state upon creation.

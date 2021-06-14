@@ -102,7 +102,7 @@ type Adapter interface {
 
 	// Listen causes the Adapter to initiate a connection to its provider and
 	// begin relaying back events (including errors) via the returned channel.
-	Listen() <-chan *ProviderEvent
+	Listen(ctx context.Context) <-chan *ProviderEvent
 
 	// SendErrorMessage sends an error message to a specified channel.
 	// TODO Create a MessageBuilder at some point to replace this.
@@ -275,13 +275,13 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 // StartListening instructs all relays to establish connections, receives all
 // events from all relays, and forwards them to the various On* handler functions.
-func StartListening() (<-chan data.CommandRequest, chan<- data.CommandResponse, <-chan error) {
+func StartListening(ctx context.Context) (<-chan data.CommandRequest, chan<- data.CommandResponse, <-chan error) {
 	log.Debug("Instructing relays to establish connections")
 
 	commandRequests := make(chan data.CommandRequest)
 	commandResponses := make(chan data.CommandResponse)
 
-	allEvents, adapterErrors := startAdapters()
+	allEvents, adapterErrors := startAdapters(ctx)
 
 	// Start listening for events coming from the chat provider
 	go startProviderEventListening(commandRequests, allEvents, adapterErrors)
@@ -343,7 +343,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			}
 
 			da.RequestError(ctx, request, err)
-			telemetry.Errors().WithError(err).Commit(context.TODO())
+			telemetry.Errors().WithError(err).Commit(ctx)
 			le.WithError(err).Error("Can't find or create user")
 
 			return nil, err
@@ -707,17 +707,16 @@ func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, use
 	return id, nil
 }
 
-func startAdapters() (<-chan *ProviderEvent, chan error) {
+func startAdapters(ctx context.Context) (<-chan *ProviderEvent, chan error) {
 	allEvents := make(chan *ProviderEvent)
 
-	// TODO This isn't currently used. Use this, or remove it.
 	adapterErrors := make(chan error, len(config.GetSlackProviders()))
 
 	for k, a := range adapterLookup {
 		log.WithField("adapter.name", k).Debug("Starting adapter")
 
 		go func(adapter Adapter) {
-			for event := range adapter.Listen() {
+			for event := range adapter.Listen(ctx) {
 				allEvents <- event
 			}
 		}(a)

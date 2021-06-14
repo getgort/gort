@@ -73,7 +73,7 @@ func installAdapters() error {
 	return nil
 }
 
-func startGort(configFile string, verboseCount int) error {
+func startGort(ctx context.Context, configFile string, verboseCount int) error {
 	setLoggerVerbosity(verboseCount)
 
 	// Load the Gort configuration.
@@ -95,14 +95,14 @@ func startGort(configFile string, verboseCount int) error {
 	}
 
 	// Start the Gort REST web service
-	startServer(config.GetGortServerConfigs())
+	startServer(ctx, config.GetGortServerConfigs())
 
 	// Listen for signals for graceful shutdown
 	go catchSignals()
 
 	// Tells the chat provider adapters (as defined in the config) to connect.
 	// Returns channels to get user command requests and adapter errors out.
-	requestsFrom, responsesTo, adapterErrorsFrom := adapter.StartListening()
+	requestsFrom, responsesTo, adapterErrorsFrom := adapter.StartListening(ctx)
 
 	// Starts the relay (currently just a local goroutine).
 	// Returns channels to send user command request in and get command
@@ -123,7 +123,7 @@ func startGort(configFile string, verboseCount int) error {
 
 		// An adapter is reporting an error.
 		case aerr := <-adapterErrorsFrom:
-			telemetry.Errors().WithError(aerr).Commit(context.TODO())
+			telemetry.Errors().WithError(aerr).Commit(ctx)
 			log.WithError(aerr).Error("Error reported by adapter")
 		}
 	}
@@ -145,9 +145,9 @@ func catchSignals() {
 	os.Exit(0)
 }
 
-func startServer(config data.GortServerConfigs) {
+func startServer(ctx context.Context, config data.GortServerConfigs) {
 	// Build the service representation
-	server := service.BuildRESTServer(config.APIAddress)
+	server := service.BuildRESTServer(ctx, config.APIAddress)
 
 	// Start watching the
 	go func() {
@@ -173,7 +173,7 @@ func startServer(config data.GortServerConfigs) {
 			err = server.ListenAndServe()
 		}
 		if err != nil {
-			telemetry.Errors().WithError(err).Commit(context.TODO())
+			telemetry.Errors().WithError(err).Commit(ctx)
 			log.WithError(err).Fatal("Fatal service error")
 		}
 	}()

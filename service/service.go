@@ -98,7 +98,7 @@ type RESTServer struct {
 }
 
 // BuildRESTServer builds a RESTServer.
-func BuildRESTServer(addr string) *RESTServer {
+func BuildRESTServer(ctx context.Context, addr string) *RESTServer {
 	dalUpdate := dataaccess.Updates()
 
 	for dalState := range dalUpdate {
@@ -111,7 +111,7 @@ func BuildRESTServer(addr string) *RESTServer {
 	dataAccessLayer, err = dataaccess.Get()
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to data access layer")
-		telemetry.Errors().WithError(err).Commit(context.TODO())
+		telemetry.Errors().WithError(err).Commit(ctx)
 	}
 
 	requests := make(chan RequestEvent)
@@ -122,7 +122,7 @@ func BuildRESTServer(addr string) *RESTServer {
 	err = addMetricsToRouter(router)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to add metrics endpoint to controller router")
-		telemetry.Errors().WithError(err).Commit(context.TODO())
+		telemetry.Errors().WithError(err).Commit(ctx)
 	}
 
 	addHealthzMethodToRouter(router)
@@ -227,7 +227,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	user := rest.User{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		respondAndLogError(w, gerrs.ErrUnmarshal)
+		respondAndLogError(r.Context(), w, gerrs.ErrUnmarshal)
 		return
 	}
 
@@ -239,20 +239,20 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	exists, err := dataAccessLayer.UserExists(r.Context(), username)
 	if err != nil {
 		le.WithError(err).Error("Authentication: failed to find user")
-		telemetry.Errors().WithError(err).Commit(context.TODO())
+		telemetry.Errors().WithError(err).Commit(r.Context())
 		return
 	}
 
 	if !exists {
 		http.Error(w, "No such user", http.StatusBadRequest)
 		le.Error("Authentication: No such user")
-		telemetry.Errors().WithError(fmt.Errorf("no such user")).Commit(context.TODO())
+		telemetry.Errors().WithError(fmt.Errorf("no such user")).Commit(r.Context())
 		return
 	}
 
 	authenticated, err := dataAccessLayer.UserAuthenticate(r.Context(), username, password)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -263,7 +263,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 	token, err := dataAccessLayer.TokenGenerate(r.Context(), username, 10*time.Minute)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -274,7 +274,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	users, err := dataAccessLayer.UserList(r.Context())
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -290,21 +290,21 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	user := rest.User{}
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		respondAndLogError(w, gerrs.ErrUnmarshal)
+		respondAndLogError(r.Context(), w, gerrs.ErrUnmarshal)
 		return
 	}
 
 	// Set user defaults where necessary.
 	user, err = bootstrapUserWithDefaults(user)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
 	// Persist our shiny new user to the database.
 	err = dataAccessLayer.UserCreate(r.Context(), user)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -312,14 +312,14 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	group := rest.Group{Name: "admin"}
 	err = dataAccessLayer.GroupCreate(r.Context(), group)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
 	// Add the admin user to the admin group.
 	err = dataAccessLayer.GroupAddUser(r.Context(), group.Name, user.Username)
 	if err != nil {
-		respondAndLogError(w, err)
+		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
@@ -350,7 +350,7 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(m)
 }
 
-func respondAndLogError(w http.ResponseWriter, err error) {
+func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 	status := http.StatusInternalServerError
 	msg := err.Error()
 
@@ -414,7 +414,7 @@ func respondAndLogError(w http.ResponseWriter, err error) {
 	// Something else?
 	default:
 		log.WithError(err).Warn("Unhandled server error")
-		telemetry.Errors().WithError(err).Commit(context.TODO())
+		telemetry.Errors().WithError(err).Commit(ctx)
 		status = http.StatusInternalServerError
 		log.WithError(err).WithField("status", status).Error(msg)
 	}
