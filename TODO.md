@@ -38,16 +38,25 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 - Deprecate `gortctl` and archive [its repo](https://github.com/getgort/gortctl). ✅
 
 ## Milestone 8 (API-level authorization)
-- Document permissions model and how auth is expected to work.
-- User and group permission assignment
-  - "group role grant" and "group role revoke"
+
+- Document permissions model and how auth is expected to work; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html).
+- Command (as entered by a user into chat) interpretation ✅
+  - Command test tokenizer and parser ✅
+  - Ability to specify command option behavior in bundles (equivalent to `rules/ParseOption`)
+- Rules
+  - Rule tokenizer and parser
+  - Database schema
+  - `rule create|destroy|etc` command
+- Roles
+  - Database schema
+  - `role create|destroy` command
+  - `group grant|revoke` command
 - Bundle/command permission assignment
-- Command invocations can be associated with a user; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html).
-- Audit log for all API actions (user, timestamp, action taken, method (Slack, API, etc.))
+- Runtime command authorization
 
-**_(Publicly release v0.7.0-alpha.0 at this point)_**
+**_(Publicly release v0.8.0-alpha.0 at this point)_**
 
-## Milestone 8 (Remote relays)
+## Milestone 9 (Remote relays)
 
 - Document relay architecture
   - Requirement: Allow a quick-start-friendly "simple mode" with a local relay
