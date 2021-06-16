@@ -14,62 +14,55 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
 
 	"github.com/getgort/gort/client"
-	"github.com/getgort/gort/data/rest"
 	"github.com/spf13/cobra"
 )
 
 const (
-	groupCreateUse   = "create"
-	groupCreateShort = "Create an existing group"
-	groupCreateLong  = "Create an existing group."
+	groupDeleteUse   = "delete"
+	groupDeleteShort = "Delete an existing group"
+	groupDeleteLong  = "Delete an existing group."
 )
 
-// GetGroupCreateCmd is a command
-func GetGroupCreateCmd() *cobra.Command {
+// GetGroupDeleteCmd is a command
+func GetGroupDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   groupCreateUse,
-		Short: groupCreateShort,
-		Long:  groupCreateLong,
-		RunE:  groupCreateCmd,
+		Use:   groupDeleteUse,
+		Short: groupDeleteShort,
+		Long:  groupDeleteLong,
+		RunE:  groupDeleteCmd,
 		Args:  cobra.ExactArgs(1),
 	}
 
 	return cmd
 }
 
-func groupCreateCmd(cmd *cobra.Command, args []string) error {
+func groupDeleteCmd(cmd *cobra.Command, args []string) error {
+	gortClient, err := client.Connect(FlagGortProfile)
+	if err != nil {
+		return err
+	}
+
 	groupname := args[0]
 
-	c, err := client.Connect(FlagGortProfile)
+	group, err := gortClient.GroupGet(groupname)
 	if err != nil {
 		return err
 	}
 
-	// Only allow this operation if the group doesn't already exist.
-	exists, err := c.GroupExists(groupname)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return client.ErrResourceExists
-	}
+	fmt.Printf("Deleting group %s... ", group.Name)
 
-	group := rest.Group{Name: groupname}
-
-	// Client GroupCreate will create the gort config if necessary, and append
-	// the new credentials to it.
-	err = c.GroupSave(group)
+	err = gortClient.GroupDelete(group.Name)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Group %q created.\n", group.Name)
+	fmt.Println("Successful")
 
 	return nil
 }

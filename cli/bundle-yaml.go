@@ -14,50 +14,57 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
+	yaml "gopkg.in/yaml.v3"
 )
 
 const (
-	userListUse   = "list"
-	userListShort = "List all existing users"
-	userListLong  = "List all existing users."
+	bundleYamlUse   = "yaml"
+	bundleYamlShort = "Retrieve the raw YAML for a bundle."
+	bundleYamlLong  = "Retrieve the raw YAML for a bundle."
 )
 
-// GetUserListCmd is a command
-func GetUserListCmd() *cobra.Command {
+// GetBundleYamlCmd is a command
+func GetBundleYamlCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   userListUse,
-		Short: userListShort,
-		Long:  userListLong,
-		RunE:  userListCmd,
+		Use:   bundleYamlUse,
+		Short: bundleYamlShort,
+		Long:  bundleYamlLong,
+		RunE:  bundleYamlCmd,
+		Args:  cobra.ExactArgs(2),
 	}
 
 	return cmd
 }
 
-func userListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%-10s%-20s%s\n"
+func bundleYamlCmd(cmd *cobra.Command, args []string) error {
+	name := args[0]
+	version := args[1]
+
+	// TODO Implement that no specified version returns enabled version.
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	users, err := gortClient.UserList()
+	bundle, err := gortClient.BundleGet(name, version)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf(format, "USERNAME", "FULL NAME", "EMAIL ADDRESS")
-	for _, u := range users {
-		fmt.Printf(format, u.Username, u.FullName, u.Email)
+	bytes, err := yaml.Marshal(bundle)
+	if err != nil {
+		return err
 	}
+
+	fmt.Println(string(bytes))
 
 	return nil
 }

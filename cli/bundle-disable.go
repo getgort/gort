@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -24,39 +24,46 @@ import (
 )
 
 const (
-	groupAddUse   = "add"
-	groupAddShort = "Add a user to an existing group"
-	groupAddLong  = "Add a user to an existing group."
+	bundleDisableUse   = "disable"
+	bundleDisableShort = "Disable a bundle"
+	bundleDisableLong  = "Disable a bundle."
 )
 
-// GetGroupAddCmd is a command
-func GetGroupAddCmd() *cobra.Command {
+// cogctl bundle disable --help
+// Usage: cogctl bundle disable [OPTIONS] NAME
+
+//   Disable a bundle by name.
+
+// Options:
+//   --help  Show this message and exit.
+
+// GetBundleDisableCmd is a command
+func GetBundleDisableCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   groupAddUse,
-		Short: groupAddShort,
-		Long:  groupAddLong,
-		RunE:  groupAddCmd,
-		Args:  cobra.ExactArgs(2),
+		Use:   bundleDisableUse,
+		Short: bundleDisableShort,
+		Long:  bundleDisableLong,
+		RunE:  bundleDisableCmd,
+		Args:  cobra.ExactArgs(1),
 	}
 
 	return cmd
 }
 
-func groupAddCmd(cmd *cobra.Command, args []string) error {
-	groupname := args[0]
-	username := args[1]
+func bundleDisableCmd(cmd *cobra.Command, args []string) error {
+	bundleName := args[0]
 
-	gortClient, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = gortClient.GroupMemberAdd(groupname, username)
+	err = c.BundleDisable(bundleName)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("User added to %s: %s\n", groupname, username)
+	fmt.Printf("Bundle \"%s\" disabled.\n", bundleName)
 
 	return nil
 }

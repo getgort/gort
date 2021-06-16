@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"github.com/getgort/gort/data/rest"

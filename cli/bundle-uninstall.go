@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -24,40 +24,39 @@ import (
 )
 
 const (
-	groupListUse   = "list"
-	groupListShort = "List all existing groups"
-	groupListLong  = "List all existing groups."
+	bundleUninstallUse   = "uninstall"
+	bundleUninstallShort = "Uninstall a bundle"
+	bundleUninstallLong  = "Uninstall a bundle."
 )
 
-// GetGroupListCmd is a command
-func GetGroupListCmd() *cobra.Command {
+// GetBundleUninstallCmd is a command
+func GetBundleUninstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   groupListUse,
-		Short: groupListShort,
-		Long:  groupListLong,
-		RunE:  groupListCmd,
+		Use:   bundleUninstallUse,
+		Short: bundleUninstallShort,
+		Long:  bundleUninstallLong,
+		RunE:  bundleUninstallCmd,
+		Args:  cobra.ExactArgs(2),
 	}
 
 	return cmd
 }
 
-func groupListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%s\n"
+func bundleUninstallCmd(cmd *cobra.Command, args []string) error {
+	bundleName := args[0]
+	bundleVersion := args[1]
 
-	gortClient, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	groups, err := gortClient.GroupList()
+	err = c.BundleUninstall(bundleName, bundleVersion)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf(format, "GROUP NAME")
-	for _, g := range groups {
-		fmt.Printf(format, g.Name)
-	}
+	fmt.Printf("Bundle %q uninstalled.\n", bundleName)
 
 	return nil
 }

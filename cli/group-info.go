@@ -14,57 +14,60 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v3"
 )
 
 const (
-	bundleYamlUse   = "yaml"
-	bundleYamlShort = "Retrieve the raw YAML for a bundle."
-	bundleYamlLong  = "Retrieve the raw YAML for a bundle."
+	groupInfoUse   = "info"
+	groupInfoShort = "Retrieve information about an existing group"
+	groupInfoLong  = "Retrieve information about an existing group."
 )
 
-// GetBundleYamlCmd is a command
-func GetBundleYamlCmd() *cobra.Command {
+// GetGroupInfoCmd is a command
+func GetGroupInfoCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   bundleYamlUse,
-		Short: bundleYamlShort,
-		Long:  bundleYamlLong,
-		RunE:  bundleYamlCmd,
-		Args:  cobra.ExactArgs(2),
+		Use:   groupInfoUse,
+		Short: groupInfoShort,
+		Long:  groupInfoLong,
+		RunE:  groupInfoCmd,
+		Args:  cobra.ExactArgs(1),
 	}
 
 	return cmd
 }
 
-func bundleYamlCmd(cmd *cobra.Command, args []string) error {
-	name := args[0]
-	version := args[1]
-
-	// TODO Implement that no specified version returns enabled version.
+func groupInfoCmd(cmd *cobra.Command, args []string) error {
+	groupname := args[0]
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	bundle, err := gortClient.BundleGet(name, version)
+	//
+	// TODO Maybe multiplex the following queries with gofuncs?
+	// (when there's more than one)
+	//
+
+	users, err := gortClient.GroupMemberList(groupname)
 	if err != nil {
 		return err
 	}
 
-	bytes, err := yaml.Marshal(bundle)
-	if err != nil {
-		return err
-	}
+	// TODO Add "roles" here when its supported.
 
-	fmt.Println(string(bytes))
+	const format = `Name   %s
+Users  %s
+`
+
+	fmt.Printf(format, groupname, strings.Join(userNames(users), ", "))
 
 	return nil
 }

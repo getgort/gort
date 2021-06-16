@@ -14,49 +14,47 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
 
-	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
+
+	"github.com/getgort/gort/version"
 )
 
 const (
-	bundleEnableUse   = "enable"
-	bundleEnableShort = "Enable a bundle"
-	bundleEnableLong  = "Enable a bundle."
+	versionUse   = "version"
+	versionShort = "Perform operations on versions"
+	versionLong  = "Allows you to perform version administration."
 )
 
-// GetBundleEnableCmd is a command
-func GetBundleEnableCmd() *cobra.Command {
+var (
+	flagVersionShort bool
+)
+
+// GetVersionCmd version
+func GetVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   bundleEnableUse,
-		Short: bundleEnableShort,
-		Long:  bundleEnableLong,
-		RunE:  bundleEnableCmd,
-		Args:  cobra.ExactArgs(2),
+		Use:   versionUse,
+		Short: versionShort,
+		Long:  versionLong,
+		RunE:  versionCmd,
 	}
+
+	cmd.Flags().BoolVarP(&flagVersionShort, "short", "s", false, "Print only the version number")
 
 	return cmd
 }
 
-func bundleEnableCmd(cmd *cobra.Command, args []string) error {
-	bundleName := args[0]
-	bundleVersion := args[1]
-
-	c, err := client.Connect(FlagGortProfile)
-	if err != nil {
-		return err
+func versionCmd(cmd *cobra.Command, args []string) error {
+	if flagVersionShort {
+		fmt.Println(version.Version)
+		return nil
 	}
 
-	err = c.BundleEnable(bundleName, bundleVersion)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Bundle \"%s\" version %s enabled.\n", bundleName, bundleVersion)
+	fmt.Printf("Gort ChatOps Engine v%s\n", version.Version)
 
 	return nil
 }

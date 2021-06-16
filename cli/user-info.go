@@ -14,49 +14,64 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
 )
 
 const (
-	groupRemoveUserUse   = "remove-user"
-	groupRemoveUserShort = "Remove a user from an existing group"
-	groupRemoveUserLong  = "Remove a user from an existing group."
+	userInfoUse   = "info"
+	userInfoShort = "Retrieve information about an existing user"
+	userInfoLong  = "Retrieve information about an existing user."
 )
 
-// GetGroupRemoveUserCmd is a command
-func GetGroupRemoveUserCmd() *cobra.Command {
+// GetUserInfoCmd is a command
+func GetUserInfoCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   groupRemoveUserUse,
-		Short: groupRemoveUserShort,
-		Long:  groupRemoveUserLong,
-		RunE:  groupRemoveUserCmd,
-		Args:  cobra.ExactArgs(2),
+		Use:   userInfoUse,
+		Short: userInfoShort,
+		Long:  userInfoLong,
+		RunE:  userInfoCmd,
+		Args:  cobra.ExactArgs(1),
 	}
 
 	return cmd
 }
 
-func groupRemoveUserCmd(cmd *cobra.Command, args []string) error {
-	groupname := args[0]
-	username := args[1]
-
+func userInfoCmd(cmd *cobra.Command, args []string) error {
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = gortClient.GroupMemberDelete(groupname, username)
+	//
+	// TODO Maybe multiplex the following queries with goroutines?
+	//
+
+	username := args[0]
+
+	user, err := gortClient.UserGet(username)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("User removed from %s: %s\n", groupname, username)
+	groups, err := gortClient.UserGroupList(username)
+	if err != nil {
+		return err
+	}
+
+	const format = `Name       %s
+Full Name  %s
+Email      %s
+Groups     %s
+`
+
+	fmt.Printf(format, user.Username, user.FullName, user.Email, strings.Join(groupNames(groups), ", "))
 
 	return nil
 }

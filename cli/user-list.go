@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -24,39 +24,40 @@ import (
 )
 
 const (
-	bundleUninstallUse   = "uninstall"
-	bundleUninstallShort = "Uninstall a bundle"
-	bundleUninstallLong  = "Uninstall a bundle."
+	userListUse   = "list"
+	userListShort = "List all existing users"
+	userListLong  = "List all existing users."
 )
 
-// GetBundleUninstallCmd is a command
-func GetBundleUninstallCmd() *cobra.Command {
+// GetUserListCmd is a command
+func GetUserListCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   bundleUninstallUse,
-		Short: bundleUninstallShort,
-		Long:  bundleUninstallLong,
-		RunE:  bundleUninstallCmd,
-		Args:  cobra.ExactArgs(2),
+		Use:   userListUse,
+		Short: userListShort,
+		Long:  userListLong,
+		RunE:  userListCmd,
 	}
 
 	return cmd
 }
 
-func bundleUninstallCmd(cmd *cobra.Command, args []string) error {
-	bundleName := args[0]
-	bundleVersion := args[1]
+func userListCmd(cmd *cobra.Command, args []string) error {
+	const format = "%-10s%-20s%s\n"
 
-	c, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = c.BundleUninstall(bundleName, bundleVersion)
+	users, err := gortClient.UserList()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Bundle %q uninstalled.\n", bundleName)
+	fmt.Printf(format, "USERNAME", "FULL NAME", "EMAIL ADDRESS")
+	for _, u := range users {
+		fmt.Printf(format, u.Username, u.FullName, u.Email)
+	}
 
 	return nil
 }

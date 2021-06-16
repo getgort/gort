@@ -14,47 +14,50 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
 
+	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
-
-	"github.com/getgort/gort/version"
 )
 
 const (
-	versionUse   = "version"
-	versionShort = "Perform operations on versions"
-	versionLong  = "Allows you to perform version administration."
+	groupListUse   = "list"
+	groupListShort = "List all existing groups"
+	groupListLong  = "List all existing groups."
 )
 
-var (
-	flagVersionShort bool
-)
-
-// GetVersionCmd version
-func GetVersionCmd() *cobra.Command {
+// GetGroupListCmd is a command
+func GetGroupListCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   versionUse,
-		Short: versionShort,
-		Long:  versionLong,
-		RunE:  versionCmd,
+		Use:   groupListUse,
+		Short: groupListShort,
+		Long:  groupListLong,
+		RunE:  groupListCmd,
 	}
-
-	cmd.Flags().BoolVarP(&flagVersionShort, "short", "s", false, "Print only the version number")
 
 	return cmd
 }
 
-func versionCmd(cmd *cobra.Command, args []string) error {
-	if flagVersionShort {
-		fmt.Println(version.Version)
-		return nil
+func groupListCmd(cmd *cobra.Command, args []string) error {
+	const format = "%s\n"
+
+	gortClient, err := client.Connect(FlagGortProfile)
+	if err != nil {
+		return err
 	}
 
-	fmt.Printf("Gort ChatOps Engine v%s\n", version.Version)
+	groups, err := gortClient.GroupList()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf(format, "GROUP NAME")
+	for _, g := range groups {
+		fmt.Printf(format, g.Name)
+	}
 
 	return nil
 }

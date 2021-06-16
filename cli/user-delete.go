@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -24,45 +24,45 @@ import (
 )
 
 const (
-	groupDeleteUse   = "delete"
-	groupDeleteShort = "Delete an existing group"
-	groupDeleteLong  = "Delete an existing group."
+	userDeleteUse   = "delete"
+	userDeleteShort = "Delete an existing user"
+	userDeleteLong  = "Delete an existing user."
 )
 
-// GetGroupDeleteCmd is a command
-func GetGroupDeleteCmd() *cobra.Command {
+// GetUserDeleteCmd is a command
+func GetUserDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   groupDeleteUse,
-		Short: groupDeleteShort,
-		Long:  groupDeleteLong,
-		RunE:  groupDeleteCmd,
+		Use:   userDeleteUse,
+		Short: userDeleteShort,
+		Long:  userDeleteLong,
+		RunE:  userDeleteCmd,
 		Args:  cobra.ExactArgs(1),
 	}
 
 	return cmd
 }
 
-func groupDeleteCmd(cmd *cobra.Command, args []string) error {
+func userDeleteCmd(cmd *cobra.Command, args []string) error {
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	groupname := args[0]
+	username := args[0]
 
-	group, err := gortClient.GroupGet(groupname)
+	user, err := gortClient.UserGet(username)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Deleting group %s... ", group.Name)
+	fmt.Printf("Deleting user %s (%s)... ", user.Username, user.Email)
 
-	err = gortClient.GroupDelete(group.Name)
+	err = gortClient.UserDelete(user.Username)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Successful")
+	fmt.Println("Successful.")
 
 	return nil
 }
