@@ -100,7 +100,7 @@ Active heavy development. The date that various [milestones](TODO.md) have been 
 * Milestone 4: 17 March 2019
 * Milestone 5: 7 June 2021
 * Milestone 6: 10 June 2021
-* Milestone 7: *TBD*
+* Milestone 7: 15 June 2021
 * Milestone 8: *TBD*
 * Milestone 9: *TBD*
 * Release candidate 1: *TBD*
