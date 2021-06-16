@@ -32,7 +32,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
   - Every command request MUST have a unique identifier ✅
     - All relevant log events MUST include this command identifier ✅
 
-## Milestone 7 -- Merge `gortctl` functionality into the `gort` controller binary -- _COMPLETE!_ ✅
+## Milestone 7 (Merge `gortctl` functionality into `gort` binary) -- _COMPLETE!_ ✅
 
 - As it says on the tin: merge merge the [gortctl](https://github.com/getgort/gortctl) commands into the main Gort repo ✅
 - Deprecate `gortctl` and archive [its repo](https://github.com/getgort/gortctl). ✅
