@@ -119,7 +119,7 @@ bundles:
   description: A default bundle that provides curl.
 
   permissions:
-    - echo
+    - curl
 
   docker:
     image: getgort/relaytest
