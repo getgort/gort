@@ -94,6 +94,10 @@ func Tokenize(s string) (RuleTokens, error) {
 			case "have":
 				return rt, fmt.Errorf("expected command; got '%s'", s)
 			default:
+				if !isNamespaced(s) {
+					return rt, fmt.Errorf("commands must be in the format 'bundle:command'")
+				}
+
 				bappend(b, s)
 			}
 
@@ -183,4 +187,10 @@ func bappend(b *strings.Builder, s string) {
 		b.WriteRune(' ')
 	}
 	b.WriteString(s)
+}
+
+var namespacedPattern = regexp.MustCompile(`[^:]+:[^:]+`)
+
+func isNamespaced(s string) bool {
+	return namespacedPattern.MatchString(s)
 }

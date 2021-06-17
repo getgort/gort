@@ -62,6 +62,7 @@ func TestTokenizeErrors(t *testing.T) {
 	inputs := []string{
 		``,
 		`foo:bar`,
+		`foobar allow`,
 		`foo:bar allow foo`,
 		`foo:bar with allow`,
 		`foo:bar with option['delete'] == true`,
