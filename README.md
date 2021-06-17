@@ -1,5 +1,7 @@
 # Gort
 
+[![Tests](https://github.com/getgort/gort/actions/workflows/test.yaml/badge.svg)](https://github.com/getgort/gort/actions/workflows/test.yaml)
+
 **This project is a work in progress under active heavy development. It is not production (or even alpha) ready! Follow for updates!**
 
 Gort is a chatbot framework designed from the ground up for chatops.
@@ -20,12 +22,12 @@ This gives us the opportunity to consider and possibly redefine what Cog was mea
 
 The primary goal of this project is to re-implement the core features of Cog that made it stand out among other chatops tools. Specifically, to:
 
-* define arbitrary command functionality in any programming language,
-* package those commands into bundles that can be installed in Gort,
-* allow users to trigger commands through Slack or another chat provider and be presented with the output,
-* execute triggered commands anywhere a relay is installed using a tag-based targeting system,
-* regulate the use of commands with a built-in authentication/authorization system,
-* and record activity in an audit log.
+- define arbitrary command functionality in any programming language,
+- package those commands into bundles that can be installed in Gort,
+- allow users to trigger commands through Slack or another chat provider and be presented with the output,
+- execute triggered commands anywhere a relay is installed using a tag-based targeting system,
+- regulate the use of commands with a built-in authentication/authorization system,
+- and record activity in an audit log.
 
 This includes all of the [high-level features listed in the Cog documentation](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/introducing_cog.html#current-featuress).
 
@@ -93,15 +95,15 @@ Start with `gort --help`, and go from there.
 
 Active heavy development. The date that various [milestones](TODO.md) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
 
-* Project created: 27 December 2018
-* Milestone 1: 7 January 2019
-* Milestone 2: 21 January 2019
-* Milestone 3: 24 January 2019
-* Milestone 4: 17 March 2019
-* Milestone 5: 7 June 2021
-* Milestone 6: 10 June 2021
-* Milestone 7: 15 June 2021
-* Milestone 8: *TBD*
-* Milestone 9: *TBD*
-* Release candidate 1: *TBD*
-* Release!: *TBD*
+- Project created: 27 December 2018
+- Milestone 1: 7 January 2019
+- Milestone 2: 21 January 2019
+- Milestone 3: 24 January 2019
+- Milestone 4: 17 March 2019
+- Milestone 5: 7 June 2021
+- Milestone 6: 10 June 2021
+- Milestone 7: 15 June 2021
+- Milestone 8: _TBD_
+- Milestone 9: _TBD_
+- Release candidate 1: _TBD_
+- Release!: _TBD_
