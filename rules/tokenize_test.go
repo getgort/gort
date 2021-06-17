@@ -60,14 +60,21 @@ func TestTokenize(t *testing.T) {
 
 func TestTokenizeErrors(t *testing.T) {
 	inputs := []string{
+		``,
 		`foo:bar`,
 		`foo:bar allow foo`,
 		`foo:bar with allow`,
 		`foo:bar with option['delete'] == true`,
+		`foo:bar with with option['delete'] == true allow`,
 		`foo:bar with option['delete'] == true allow foo`,
 		`foo:bar with option['delete'] == true must`,
+		`foo:bar with option['delete'] == true must allow`,
 		`foo:bar with option['delete'] == true must have`,
+		`foo:bar with option['delete'] == true must have and`,
 		`foo:bar with option['delete'] == true must have allow`,
+		`with option['delete'] == true allow`,
+		`must have foo:read`,
+		`allow`,
 	}
 
 	for _, str := range inputs {

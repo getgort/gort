@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package rules
+package command
 
 import (
 	"testing"

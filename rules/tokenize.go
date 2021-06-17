@@ -48,26 +48,42 @@ func Tokenize(s string) (RuleTokens, error) {
 	)
 
 	rt := RuleTokens{Conditions: []string{}, Permissions: []string{}}
-	b := &strings.Builder{}
+
+	if s == "" {
+		return rt, fmt.Errorf("empty rule")
+	}
 
 	// This is a primitive state machine. Regex just wasn't powerful enough.
 	// Sorry.
 
 	currentState := StateCommand
+	b := &strings.Builder{}
 
 	for _, s := range reSplit.Split(s, -1) {
 		switch currentState {
 		case StateCommand:
 			switch s {
 			case "with":
+				if b.Len() == 0 && len(rt.Conditions) == 0 {
+					return rt, fmt.Errorf("expected command; got '%s'", s)
+				}
+
 				rt.Command = b.String()
 				b.Reset()
 				currentState = StateConditions
 			case "must":
+				if b.Len() == 0 && len(rt.Conditions) == 0 {
+					return rt, fmt.Errorf("expected command; got '%s'", s)
+				}
+
 				rt.Command = b.String()
 				b.Reset()
 				currentState = StatePermissionsMust
 			case "allow":
+				if b.Len() == 0 && len(rt.Conditions) == 0 {
+					return rt, fmt.Errorf("expected command; got '%s'", s)
+				}
+
 				rt.Command = b.String()
 				b.Reset()
 				currentState = StateEnd
@@ -76,7 +92,7 @@ func Tokenize(s string) (RuleTokens, error) {
 			case "or":
 				fallthrough
 			case "have":
-				return rt, fmt.Errorf("unexpected keyword %s", s)
+				return rt, fmt.Errorf("expected command; got '%s'", s)
 			default:
 				bappend(b, s)
 			}
@@ -103,7 +119,7 @@ func Tokenize(s string) (RuleTokens, error) {
 			case "with":
 				fallthrough
 			case "have":
-				return rt, fmt.Errorf("unexpected keyword %s", s)
+				return rt, fmt.Errorf("unexpected keyword '%s'", s)
 			default:
 				bappend(b, s)
 			}
@@ -113,7 +129,7 @@ func Tokenize(s string) (RuleTokens, error) {
 			case "have":
 				currentState = StatePermissionsHave
 			default:
-				return rt, fmt.Errorf("expected have got %s", s)
+				return rt, fmt.Errorf("expected have; got %s", s)
 			}
 
 		case StatePermissionsHave:
@@ -121,6 +137,10 @@ func Tokenize(s string) (RuleTokens, error) {
 			case "and":
 				fallthrough
 			case "or":
+				if b.Len() == 0 && len(rt.Permissions) == 0 {
+					return rt, fmt.Errorf("expected permission; got '%s'", s)
+				}
+
 				rt.Permissions = append(rt.Permissions, b.String(), s)
 				b.Reset()
 			case "allow":
@@ -130,7 +150,7 @@ func Tokenize(s string) (RuleTokens, error) {
 			case "must":
 				fallthrough
 			case "have":
-				return rt, fmt.Errorf("unexpected keyword %s", s)
+				return rt, fmt.Errorf("unexpected keyword '%s'", s)
 			default:
 				bappend(b, s)
 			}
@@ -142,14 +162,14 @@ func Tokenize(s string) (RuleTokens, error) {
 
 	switch currentState {
 	case StateCommand:
-		return rt, fmt.Errorf("missing conditions and requirements")
+		return rt, fmt.Errorf("missing conditions and permissions clauses")
 	case StateConditions:
-		return rt, fmt.Errorf("missing requirements")
+		return rt, fmt.Errorf("missing permissions clause")
 	case StatePermissionsMust:
-		return rt, fmt.Errorf("incomplete requirements")
+		return rt, fmt.Errorf("incomplete permissions clause")
 	case StatePermissionsHave:
 		if b.Len() == 0 && len(rt.Permissions) == 0 {
-			return rt, fmt.Errorf("'must have' missing conditions")
+			return rt, fmt.Errorf("'must have' missing permissions")
 		}
 
 		rt.Permissions = append(rt.Permissions, b.String())
