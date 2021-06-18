@@ -28,7 +28,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/getgort/gort/data"
-	gerr "github.com/getgort/gort/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,14 +73,6 @@ func TestPostgresDataAccessMain(t *testing.T) {
 	t.Run("testBundleAccess", testBundleAccess)
 	t.Run("testRoleAccess", testRoleAccess)
 	t.Run("testRequestAccess", testRequestAccess)
-}
-
-func expectErr(t *testing.T, err error, expected error) {
-	if err == nil {
-		t.Fatalf("Expected error %q but didn't get one", expected)
-	} else if !gerr.Is(err, expected) {
-		t.Fatalf("Wrong error:\nExpected: %s\nGot: %s\n", expected, err)
-	}
 }
 
 func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {

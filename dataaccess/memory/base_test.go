@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	gerrs "github.com/getgort/gort/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,16 +29,6 @@ var (
 	cancel context.CancelFunc
 	da     *InMemoryDataAccess
 )
-
-func expectErr(t *testing.T, err error, expected error) {
-	if err == nil {
-		t.Error("Expected an error")
-		t.FailNow()
-	} else if !gerrs.Is(err, expected) {
-		t.Errorf("Wrong error: Expected: %q Got: %q\n", expected.Error(), err.Error())
-		t.FailNow()
-	}
-}
 
 func testInitialize(t *testing.T) {
 	ctx, cancel = context.WithTimeout(context.Background(), time.Minute)

@@ -48,7 +48,9 @@ func testLoadTestData(t *testing.T) {
 func testBundleCreate(t *testing.T) {
 	// Expect an error
 	err := da.BundleCreate(ctx, data.Bundle{})
-	expectErr(t, err, errs.ErrEmptyBundleName)
+	if !assert.Error(t, err, errs.ErrEmptyBundleName) {
+		t.FailNow()
+	}
 
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
@@ -61,7 +63,9 @@ func testBundleCreate(t *testing.T) {
 
 	// Expect an error
 	err = da.BundleCreate(ctx, bundle)
-	expectErr(t, err, errs.ErrBundleExists)
+	if !assert.Error(t, err, errs.ErrBundleExists) {
+		t.FailNow()
+	}
 }
 
 func testBundleCreateMissingRequired(t *testing.T) {
@@ -75,14 +79,18 @@ func testBundleCreateMissingRequired(t *testing.T) {
 	originalGortBundleVersion := bundle.GortBundleVersion
 	bundle.GortBundleVersion = 0
 	err = da.BundleCreate(ctx, bundle)
-	expectErr(t, err, errs.ErrFieldRequired)
+	if !assert.Error(t, err, errs.ErrFieldRequired) {
+		t.FailNow()
+	}
 	bundle.GortBundleVersion = originalGortBundleVersion
 
 	// Description
 	originalDescription := bundle.Description
 	bundle.Description = ""
 	err = da.BundleCreate(ctx, bundle)
-	expectErr(t, err, errs.ErrFieldRequired)
+	if !assert.Error(t, err, errs.ErrFieldRequired) {
+		t.FailNow()
+	}
 	bundle.Description = originalDescription
 }
 
@@ -103,6 +111,11 @@ func testBundleEnable(t *testing.T) {
 		t.FailNow()
 	}
 
+	// Reload and verify enabled value is false
+	bundle, err = da.BundleGet(ctx, bundle.Name, bundle.Version)
+	assert.NoError(t, err)
+	assert.False(t, bundle.Enabled)
+
 	// Enable and verify
 	err = da.BundleEnable(ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
@@ -110,10 +123,13 @@ func testBundleEnable(t *testing.T) {
 	enabled, err = da.BundleEnabledVersion(ctx, bundle.Name)
 	assert.NoError(t, err)
 	if enabled != bundle.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q",
-			bundle.Version, enabled)
+		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundle.Version, enabled)
 		t.FailNow()
 	}
+
+	bundle, err = da.BundleGet(ctx, bundle.Name, bundle.Version)
+	assert.NoError(t, err)
+	assert.True(t, bundle.Enabled)
 
 	// Should now delete cleanly
 	err = da.BundleDelete(ctx, bundle.Name, bundle.Version)
@@ -211,15 +227,21 @@ func testBundleExists(t *testing.T) {
 func testBundleDelete(t *testing.T) {
 	// Delete blank bundle
 	err := da.BundleDelete(ctx, "", "0.0.1")
-	expectErr(t, err, errs.ErrEmptyBundleName)
+	if !assert.Error(t, err, errs.ErrEmptyBundleName) {
+		t.FailNow()
+	}
 
 	// Delete blank bundle
 	err = da.BundleDelete(ctx, "foo", "")
-	expectErr(t, err, errs.ErrEmptyBundleVersion)
+	if !assert.Error(t, err, errs.ErrEmptyBundleVersion) {
+		t.FailNow()
+	}
 
 	// Delete bundle that doesn't exist
 	err = da.BundleDelete(ctx, "no-such-bundle", "0.0.1")
-	expectErr(t, err, errs.ErrNoSuchBundle)
+	if !assert.Error(t, err, errs.ErrNoSuchBundle) {
+		t.FailNow()
+	}
 
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
@@ -244,15 +266,21 @@ func testBundleGet(t *testing.T) {
 
 	// Empty bundle name. Expect a ErrEmptyBundleName.
 	_, err = da.BundleGet(ctx, "", "0.0.1")
-	expectErr(t, err, errs.ErrEmptyBundleName)
+	if !assert.Error(t, err, errs.ErrEmptyBundleName) {
+		t.FailNow()
+	}
 
 	// Empty bundle name. Expect a ErrEmptyBundleVersion.
 	_, err = da.BundleGet(ctx, "test-get", "")
-	expectErr(t, err, errs.ErrEmptyBundleVersion)
+	if !assert.Error(t, err, errs.ErrEmptyBundleVersion) {
+		t.FailNow()
+	}
 
 	// Bundle that doesn't exist. Expect a ErrNoSuchBundle.
 	_, err = da.BundleGet(ctx, "test-get", "0.0.1")
-	expectErr(t, err, errs.ErrNoSuchBundle)
+	if !assert.Error(t, err, errs.ErrNoSuchBundle) {
+		t.FailNow()
+	}
 
 	// Get the test bundle. Expect no error.
 	bundleCreate, err := getTestBundle()
@@ -281,10 +309,12 @@ func testBundleGet(t *testing.T) {
 	// This is set automatically on save, so we copy it here for the sake of the tests.
 	bundleCreate.InstalledOn = bundleGet.InstalledOn
 
-	assert.Equal(t, bundleCreate, bundleGet)
 	assert.Equal(t, bundleCreate.Docker, bundleGet.Docker)
 	assert.ElementsMatch(t, bundleCreate.Permissions, bundleGet.Permissions)
 	assert.Equal(t, bundleCreate.Commands, bundleGet.Commands)
+
+	// Compare everything for good measure
+	assert.Equal(t, bundleCreate, bundleGet)
 }
 
 func testBundleList(t *testing.T) {

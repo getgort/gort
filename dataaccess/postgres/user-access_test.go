@@ -54,7 +54,7 @@ func testUserCreate(t *testing.T) {
 
 	// Expect an error
 	err = da.UserCreate(ctx, user)
-	expectErr(t, err, errs.ErrEmptyUserName)
+	assert.Error(t, err, errs.ErrEmptyUserName)
 
 	// Expect no error
 	err = da.UserCreate(ctx, rest.User{Username: "test-create", Email: "test-create@bar.com"})
@@ -63,14 +63,14 @@ func testUserCreate(t *testing.T) {
 
 	// Expect an error
 	err = da.UserCreate(ctx, rest.User{Username: "test-create", Email: "test-create@bar.com"})
-	expectErr(t, err, errs.ErrUserExists)
+	assert.Error(t, err, errs.ErrUserExists)
 }
 
 func testUserAuthenticate(t *testing.T) {
 	var err error
 
 	authenticated, err := da.UserAuthenticate(ctx, "test-auth", "no-match")
-	expectErr(t, err, errs.ErrNoSuchUser)
+	assert.Error(t, err, errs.ErrNoSuchUser)
 	if authenticated {
 		t.Error("Expected false")
 		t.FailNow()
@@ -123,15 +123,15 @@ func testUserExists(t *testing.T) {
 func testUserDelete(t *testing.T) {
 	// Delete blank user
 	err := da.UserDelete(ctx, "")
-	expectErr(t, err, errs.ErrEmptyUserName)
+	assert.Error(t, err, errs.ErrEmptyUserName)
 
 	// Delete admin user
 	err = da.UserDelete(ctx, "admin")
-	expectErr(t, err, errs.ErrAdminUndeletable)
+	assert.Error(t, err, errs.ErrAdminUndeletable)
 
 	// Delete user that doesn't exist
 	err = da.UserDelete(ctx, "no-such-user")
-	expectErr(t, err, errs.ErrNoSuchUser)
+	assert.Error(t, err, errs.ErrNoSuchUser)
 
 	user := rest.User{Username: "test-delete", Email: "foo1.example.com"}
 	da.UserCreate(ctx, user) // This has its own test
@@ -153,11 +153,11 @@ func testUserGet(t *testing.T) {
 
 	// Expect an error
 	_, err = da.UserGet(ctx, "")
-	expectErr(t, err, errs.ErrEmptyUserName)
+	assert.Error(t, err, errs.ErrEmptyUserName)
 
 	// Expect an error
 	_, err = da.UserGet(ctx, "test-get")
-	expectErr(t, err, errs.ErrNoSuchUser)
+	assert.Error(t, err, errs.ErrNoSuchUser)
 
 	err = da.UserCreate(ctx, rest.User{Username: "test-get", Email: "test-get@foo.com"})
 	defer da.UserDelete(ctx, "test-get")
@@ -217,11 +217,11 @@ func testUserList(t *testing.T) {
 func testUserUpdate(t *testing.T) {
 	// Update blank user
 	err := da.UserUpdate(ctx, rest.User{})
-	expectErr(t, err, errs.ErrEmptyUserName)
+	assert.Error(t, err, errs.ErrEmptyUserName)
 
 	// Update user that doesn't exist
 	err = da.UserUpdate(ctx, rest.User{Username: "no-such-user"})
-	expectErr(t, err, errs.ErrNoSuchUser)
+	assert.Error(t, err, errs.ErrNoSuchUser)
 
 	userA := rest.User{Username: "test-update", Email: "foo1.example.com"}
 	da.UserCreate(ctx, userA)

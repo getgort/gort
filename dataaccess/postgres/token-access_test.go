@@ -60,7 +60,7 @@ func testTokenGenerate(t *testing.T) {
 
 func testTokenRetrieveByUser(t *testing.T) {
 	_, err := da.TokenRetrieveByUser(ctx, "no-such-user")
-	expectErr(t, err, errs.ErrNoSuchToken)
+	assert.Error(t, err, errs.ErrNoSuchToken)
 
 	err = da.UserCreate(ctx, rest.User{Username: "test_uretrieve", Email: "test_uretrieve"})
 	defer da.UserDelete(ctx, "test_uretrieve")
@@ -81,7 +81,7 @@ func testTokenRetrieveByUser(t *testing.T) {
 
 func testTokenRetrieveByToken(t *testing.T) {
 	_, err := da.TokenRetrieveByToken(ctx, "no-such-token")
-	expectErr(t, err, errs.ErrNoSuchToken)
+	assert.Error(t, err, errs.ErrNoSuchToken)
 
 	err = da.UserCreate(ctx, rest.User{Username: "test_tretrieve", Email: "test_tretrieve"})
 	defer da.UserDelete(ctx, "test_tretrieve")
