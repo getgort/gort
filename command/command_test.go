@@ -19,6 +19,7 @@ package command
 import (
 	"testing"
 
+	"github.com/getgort/gort/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,12 +31,32 @@ func TestParseEmpty(t *testing.T) {
 func TestParseDefaults(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:              {"curl", map[string]CommandOption{}, []string{"localhost"}},
-		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}}, []string{"localhost"}},
-		`curl --ssl localhost`:        {"curl", map[string]CommandOption{"ssl": {Name: "ssl"}}, []string{"localhost"}},
-		`curl -Ik -- --ssl localhost`: {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}}, []string{"--ssl", "localhost"}},
-		`echo -n foo bar`:             {"echo", map[string]CommandOption{"n": {Name: "n"}}, []string{"foo", "bar"}},
-		`echo -n foo -E bar`:          {"echo", map[string]CommandOption{"n": {Name: "n"}}, []string{"foo", "-E", "bar"}},
-		`echo -n "foo bar"`:           {"echo", map[string]CommandOption{"n": {Name: "n"}}, []string{"foo bar"}},
+		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl --ssl localhost`:        {"curl", map[string]CommandOption{"ssl": {"ssl", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl -Ik -- --ssl localhost`: {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}}, []string{"--ssl", "localhost"}},
+		`echo -n foo bar`:             {"echo", map[string]CommandOption{"n": {"n", types.BoolValue{true}}}, []string{"foo", "bar"}},
+		`echo -n foo -E bar`:          {"echo", map[string]CommandOption{"n": {"n", types.BoolValue{true}}}, []string{"foo", "-E", "bar"}},
+		`echo -n "foo bar"`:           {"echo", map[string]CommandOption{"n": {"n", types.BoolValue{true}}}, []string{"foo bar"}},
+	}
+
+	for test, expected := range tests {
+		tokens, err := Tokenize(test)
+		assert.NoError(t, err, test)
+
+		actual, err := Parse(tokens)
+		assert.NoError(t, err, test)
+
+		assert.Equal(t, expected, actual, test)
+	}
+}
+
+func TestParseBareFlagsAreTrue(t *testing.T) {
+	tv := types.BoolValue{true}
+
+	tests := map[string]Command{
+		`curl -Ik localhost`: {"curl", map[string]CommandOption{"I": {"I", tv}, "k": {"k", tv}}, []string{"localhost"}},
+		`echo -n foo -E bar`: {"echo", map[string]CommandOption{"n": {"n", tv}}, []string{"foo", "-E", "bar"}},
+		`echo -n "foo bar"`:  {"echo", map[string]CommandOption{"n": {"n", tv}}, []string{"foo bar"}},
 	}
 
 	for test, expected := range tests {
@@ -52,10 +73,10 @@ func TestParseDefaults(t *testing.T) {
 func TestParseAgnosticDashesTrue(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:              {"curl", map[string]CommandOption{}, []string{"localhost"}},
-		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"Ik": {Name: "Ik"}}, []string{"localhost"}},
-		`curl --ssl localhost`:        {"curl", map[string]CommandOption{"ssl": {Name: "ssl"}}, []string{"localhost"}},
-		`curl -Ik --ssl localhost`:    {"curl", map[string]CommandOption{"Ik": {Name: "Ik"}, "ssl": {Name: "ssl"}}, []string{"localhost"}},
-		`curl -Ik -- --ssl localhost`: {"curl", map[string]CommandOption{"Ik": {Name: "Ik"}}, []string{"--ssl", "localhost"}},
+		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"Ik": {"Ik", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl --ssl localhost`:        {"curl", map[string]CommandOption{"ssl": {"ssl", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl -Ik --ssl localhost`:    {"curl", map[string]CommandOption{"Ik": {"Ik", types.BoolValue{true}}, "ssl": {"ssl", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl -Ik -- --ssl localhost`: {"curl", map[string]CommandOption{"Ik": {"Ik", types.BoolValue{true}}}, []string{"--ssl", "localhost"}},
 	}
 
 	options := []ParseOption{ParseAgnosticDashes(true)}
@@ -74,12 +95,12 @@ func TestParseAgnosticDashesTrue(t *testing.T) {
 func TestParseAssumeOptionArgumentsTrue(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:              {"curl", map[string]CommandOption{}, []string{"localhost"}},
-		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k", Value: "localhost"}}, []string{}},
-		`curl --ssl localhost`:        {"curl", map[string]CommandOption{"ssl": {Name: "ssl", Value: "localhost"}}, []string{}},
-		`curl -Ik --ssl localhost`:    {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}, "ssl": {Name: "ssl", Value: "localhost"}}, []string{}},
-		`curl -Ik -- --ssl localhost`: {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}}, []string{"--ssl", "localhost"}},
-		`echo -n foo bar`:             {"echo", map[string]CommandOption{"n": {Name: "n", Value: "foo"}}, []string{"bar"}},
-		`echo -n "foo bar"`:           {"echo", map[string]CommandOption{"n": {Name: "n", Value: "foo bar"}}, []string{}},
+		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.StringValue{"localhost", '\u0000'}}}, []string{}},
+		`curl --ssl localhost`:        {"curl", map[string]CommandOption{"ssl": {"ssl", types.StringValue{"localhost", '\u0000'}}}, []string{}},
+		`curl -Ik --ssl localhost`:    {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}, "ssl": {"ssl", types.StringValue{"localhost", '\u0000'}}}, []string{}},
+		`curl -Ik -- --ssl localhost`: {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}}, []string{"--ssl", "localhost"}},
+		`echo -n foo bar`:             {"echo", map[string]CommandOption{"n": {"n", types.StringValue{"foo", '\u0000'}}}, []string{"bar"}},
+		`echo -n "foo bar"`:           {"echo", map[string]CommandOption{"n": {"n", types.StringValue{"foo bar", '\u0000'}}}, []string{}},
 	}
 
 	options := []ParseOption{ParseAssumeOptionArguments(true)}
@@ -98,12 +119,12 @@ func TestParseAssumeOptionArgumentsTrue(t *testing.T) {
 func TestParseAssumeOptionArgumentsFalse(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:              {"curl", map[string]CommandOption{}, []string{"localhost"}},
-		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}}, []string{"localhost"}},
-		`curl --ssl localhost`:        {"curl", map[string]CommandOption{"ssl": {Name: "ssl"}}, []string{"localhost"}},
-		`curl -Ik --ssl localhost`:    {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}, "ssl": {Name: "ssl"}}, []string{"localhost"}},
-		`curl -Ik -- --ssl localhost`: {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}}, []string{"--ssl", "localhost"}},
-		`echo -n foo bar`:             {"echo", map[string]CommandOption{"n": {Name: "n"}}, []string{"foo", "bar"}},
-		`echo -n "foo bar"`:           {"echo", map[string]CommandOption{"n": {Name: "n"}}, []string{"foo bar"}},
+		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl --ssl localhost`:        {"curl", map[string]CommandOption{"ssl": {"ssl", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl -Ik --ssl localhost`:    {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}, "ssl": {"ssl", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl -Ik -- --ssl localhost`: {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}}, []string{"--ssl", "localhost"}},
+		`echo -n foo bar`:             {"echo", map[string]CommandOption{"n": {"n", types.BoolValue{true}}}, []string{"foo", "bar"}},
+		`echo -n "foo bar"`:           {"echo", map[string]CommandOption{"n": {"n", types.BoolValue{true}}}, []string{"foo bar"}},
 	}
 
 	options := []ParseOption{ParseAssumeOptionArguments(false)}
@@ -122,9 +143,9 @@ func TestParseAssumeOptionArgumentsFalse(t *testing.T) {
 func TestParseOptionHasArgument(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:                 {"curl", map[string]CommandOption{}, []string{"localhost"}},
-		`curl -Ik localhost`:             {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}}, []string{"localhost"}},
-		`curl --ssl localhost`:           {"curl", map[string]CommandOption{"ssl": {Name: "ssl"}}, []string{"localhost"}},
-		`curl -Ik --cert file localhost`: {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}, "cert": {Name: "cert", Value: "file"}}, []string{"localhost"}},
+		`curl -Ik localhost`:             {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl --ssl localhost`:           {"curl", map[string]CommandOption{"ssl": {"ssl", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl -Ik --cert file localhost`: {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}, "cert": {"cert", types.StringValue{"file", '\u0000'}}}, []string{"localhost"}},
 	}
 
 	options := []ParseOption{
@@ -148,10 +169,10 @@ func TestParseOptionHasArgument(t *testing.T) {
 func TestParseOptionAlias(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:                 {"curl", map[string]CommandOption{}, []string{"localhost"}},
-		`curl -Ik localhost`:             {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}}, []string{"localhost"}},
-		`curl --ssl localhost`:           {"curl", map[string]CommandOption{"ssl": {Name: "ssl"}}, []string{"localhost"}},
-		`curl -Ik --cert file localhost`: {"curl", map[string]CommandOption{"I": {Name: "I"}, "k": {Name: "k"}, "cert": {Name: "cert", Value: "file"}}, []string{"localhost"}},
-		`curl -E file localhost`:         {"curl", map[string]CommandOption{"cert": {Name: "cert", Value: "file"}}, []string{"localhost"}},
+		`curl -Ik localhost`:             {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl --ssl localhost`:           {"curl", map[string]CommandOption{"ssl": {"ssl", types.BoolValue{true}}}, []string{"localhost"}},
+		`curl -Ik --cert file localhost`: {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{true}}, "k": {"k", types.BoolValue{true}}, "cert": {"cert", types.StringValue{"file", '\u0000'}}}, []string{"localhost"}},
+		`curl -E file localhost`:         {"curl", map[string]CommandOption{"cert": {"cert", types.StringValue{"file", '\u0000'}}}, []string{"localhost"}},
 	}
 
 	options := []ParseOption{
