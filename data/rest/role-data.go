@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
-package version
+package rest
 
-const (
-	// Version is the current version of Gort
-	Version = "0.7.3-dev.0"
-)
+type Role struct {
+	Name        string
+	Permissions []RolePermission
+}
+
+type RolePermission struct {
+	BundleName string
+	Permission string
+}

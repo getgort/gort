@@ -176,6 +176,13 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 		}
 	}
 
+	if !exists {
+		err = da.createRolesTables(ctx, db)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -253,6 +260,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		CONSTRAINT			unq_bundle_enabled UNIQUE(bundle_name),
 		PRIMARY KEY			(bundle_name),
 		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
+		ON DELETE CASCADE
 	);
 
 	CREATE TABLE bundle_permissions (
@@ -263,6 +271,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		CONSTRAINT			unq_bundle_permission UNIQUE(bundle_name, bundle_version, index),
 		PRIMARY KEY			(bundle_name, bundle_version, index),
 		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
+		ON DELETE CASCADE
 	);
 
 	CREATE TABLE bundle_commands (
@@ -274,6 +283,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		CONSTRAINT			unq_bundle_command UNIQUE(bundle_name, bundle_version, name),
 		PRIMARY KEY			(bundle_name, bundle_version, name),
 		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
+		ON DELETE CASCADE
 	);
 
 	CREATE TABLE bundle_command_rules (
@@ -283,7 +293,8 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		rule				TEXT NOT NULL CHECK(rule <> ''),
 		PRIMARY KEY			(bundle_name, bundle_version, command_name),
 		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
-			REFERENCES bundle_commands(bundle_name, bundle_version, name)
+		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
+		ON DELETE CASCADE
 	);
 	`
 
@@ -320,6 +331,42 @@ func (da PostgresDataAccess) createGroupUsersTable(ctx context.Context, db *sql.
 	);`
 
 	_, err = db.ExecContext(ctx, createGroupUsersQuery)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) createRolesTables(ctx context.Context, db *sql.DB) error {
+	var err error
+
+	createRolesQuery := `CREATE TABLE roles (
+		role_name		TEXT NOT NULL,
+		PRIMARY KEY 	(role_name)
+	);
+
+	CREATE TABLE group_roles (
+		group_name		TEXT NOT NULL,
+		role_name		TEXT NOT NULL,
+		CONSTRAINT		unq_group_role UNIQUE(group_name, role_name),
+		PRIMARY KEY		(group_name, role_name),
+		FOREIGN KEY 	(group_name) REFERENCES groups(groupname)
+		ON DELETE CASCADE
+	);
+
+	CREATE TABLE role_permissions (
+		role_name			TEXT NOT NULL,
+		bundle_name			TEXT NOT NULL,
+		permission			TEXT NOT NULL,
+		CONSTRAINT			unq_role_permission UNIQUE(role_name, bundle_name, permission),
+		PRIMARY KEY			(role_name, bundle_name, permission),
+		FOREIGN KEY 		(role_name) REFERENCES roles(role_name)
+		ON DELETE CASCADE
+	);
+	`
+
+	_, err = db.ExecContext(ctx, createRolesQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}

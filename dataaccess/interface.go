@@ -53,14 +53,21 @@ type DataAccess interface {
 	GroupDelete(ctx context.Context, groupname string) error
 	GroupExists(ctx context.Context, groupname string) (bool, error)
 	GroupGet(ctx context.Context, groupname string) (rest.Group, error)
-	GroupGrantRole(ctx context.Context) error
+	GroupGrantRole(ctx context.Context, groupname, rolename string) error
 	GroupList(ctx context.Context) ([]rest.Group, error)
+	GroupListRoles(ctx context.Context, groupname string) ([]rest.Role, error)
+	GroupListUsers(ctx context.Context, groupname string) ([]rest.User, error)
 	GroupRemoveUser(ctx context.Context, groupname string, username string) error
-	GroupRevokeRole(ctx context.Context) error
+	GroupRevokeRole(ctx context.Context, groupname, rolename string) error
 	GroupUpdate(ctx context.Context, group rest.Group) error
-	GroupUserList(ctx context.Context, groupname string) ([]rest.User, error)
 	GroupUserAdd(ctx context.Context, groupname string, username string) error
 	GroupUserDelete(ctx context.Context, groupname string, username string) error
+
+	RoleCreate(ctx context.Context, rolename string) error
+	RoleDelete(ctx context.Context, rolename string) error
+	RoleGet(ctx context.Context, rolename string) (rest.Role, error)
+	RoleGrantPermission(ctx context.Context, rolename, bundle, permission string) error
+	RoleRevokePermission(ctx context.Context, rolename, bundle, permission string) error
 
 	TokenEvaluate(ctx context.Context, token string) bool
 	TokenGenerate(ctx context.Context, username string, duration time.Duration) (rest.Token, error)

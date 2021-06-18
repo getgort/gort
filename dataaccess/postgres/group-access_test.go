@@ -32,6 +32,7 @@ func testGroupAccess(t *testing.T) {
 	t.Run("testGroupList", testGroupList)
 	t.Run("testGroupAddUser", testGroupAddUser)
 	t.Run("testGroupRemoveUser", testGroupRemoveUser)
+	t.Run("testGroupGrantRole", testGroupGrantRole)
 }
 
 func testGroupExists(t *testing.T) {
@@ -60,7 +61,7 @@ func testGroupCreate(t *testing.T) {
 
 	// Expect an error
 	err = da.GroupCreate(ctx, group)
-	expectErr(t, err, errs.ErrEmptyGroupName)
+	assert.Error(t, err, errs.ErrEmptyGroupName)
 
 	// Expect no error
 	err = da.GroupCreate(ctx, rest.Group{Name: "test-create"})
@@ -69,17 +70,17 @@ func testGroupCreate(t *testing.T) {
 
 	// Expect an error
 	err = da.GroupCreate(ctx, rest.Group{Name: "test-create"})
-	expectErr(t, err, errs.ErrGroupExists)
+	assert.Error(t, err, errs.ErrGroupExists)
 }
 
 func testGroupDelete(t *testing.T) {
 	// Delete blank group
 	err := da.GroupDelete(ctx, "")
-	expectErr(t, err, errs.ErrEmptyGroupName)
+	assert.Error(t, err, errs.ErrEmptyGroupName)
 
 	// Delete group that doesn't exist
 	err = da.GroupDelete(ctx, "no-such-group")
-	expectErr(t, err, errs.ErrNoSuchGroup)
+	assert.Error(t, err, errs.ErrNoSuchGroup)
 
 	da.GroupCreate(ctx, rest.Group{Name: "test-delete"}) // This has its own test
 	defer da.GroupDelete(ctx, "test-delete")
@@ -100,11 +101,11 @@ func testGroupGet(t *testing.T) {
 
 	// Expect an error
 	_, err = da.GroupGet(ctx, "")
-	expectErr(t, err, errs.ErrEmptyGroupName)
+	assert.Error(t, err, errs.ErrEmptyGroupName)
 
 	// Expect an error
 	_, err = da.GroupGet(ctx, "test-get")
-	expectErr(t, err, errs.ErrNoSuchGroup)
+	assert.Error(t, err, errs.ErrNoSuchGroup)
 
 	da.GroupCreate(ctx, rest.Group{Name: "test-get"})
 	defer da.GroupDelete(ctx, "test-get")
@@ -123,6 +124,61 @@ func testGroupGet(t *testing.T) {
 		t.Errorf("Group name mismatch: %q is not \"test-get\"", group.Name)
 		t.FailNow()
 	}
+}
+
+func testGroupGrantRole(t *testing.T) {
+	var err error
+
+	groupName := "group-group-grant-role"
+	roleName := "role-group-grant-role"
+	bundleName := "bundle-group-grant-role"
+	permissionName := "perm-group-grant-role"
+
+	da.GroupCreate(ctx, rest.Group{Name: groupName})
+	defer da.GroupDelete(ctx, groupName)
+
+	err = da.RoleCreate(ctx, roleName)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	err = da.RoleGrantPermission(ctx, roleName, bundleName, permissionName)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	err = da.GroupGrantRole(ctx, groupName, roleName)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	expectedRoles := []rest.Role{
+		{
+			Name:        roleName,
+			Permissions: []rest.RolePermission{{BundleName: bundleName, Permission: permissionName}},
+		},
+	}
+
+	roles, err := da.GroupListRoles(ctx, groupName)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	assert.Equal(t, expectedRoles, roles)
+
+	err = da.GroupRevokeRole(ctx, groupName, roleName)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	expectedRoles = []rest.Role{}
+
+	roles, err = da.GroupListRoles(ctx, groupName)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	assert.Equal(t, expectedRoles, roles)
 }
 
 func testGroupList(t *testing.T) {
@@ -153,13 +209,13 @@ func testGroupList(t *testing.T) {
 
 func testGroupAddUser(t *testing.T) {
 	err := da.GroupAddUser(ctx, "foo", "bar")
-	expectErr(t, err, errs.ErrNoSuchGroup)
+	assert.Error(t, err, errs.ErrNoSuchGroup)
 
 	da.GroupCreate(ctx, rest.Group{Name: "foo"})
 	defer da.GroupDelete(ctx, "foo")
 
 	err = da.GroupAddUser(ctx, "foo", "bar")
-	expectErr(t, err, errs.ErrNoSuchUser)
+	assert.Error(t, err, errs.ErrNoSuchUser)
 
 	da.UserCreate(ctx, rest.User{Username: "bar", Email: "bar"})
 	defer da.UserDelete(ctx, "bar")

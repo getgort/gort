@@ -14,9 +14,20 @@
  * limitations under the License.
  */
 
-package version
+package errs
 
-const (
-	// Version is the current version of Gort
-	Version = "0.7.3-dev.0"
+import (
+	"errors"
 )
+
+// ErrNoSuchRole indicates...
+var ErrNoSuchRole = errors.New("no such role")
+
+// ErrEmptyRoleName indicates...
+var ErrEmptyRoleName = errors.New("role name is empty")
+
+// ErrEmptyRoleName indicates...
+var ErrEmptyPermission = errors.New("permission is empty")
+
+// ErrRoleExists TBD
+var ErrRoleExists = errors.New("role already exists")

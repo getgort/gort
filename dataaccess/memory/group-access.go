@@ -126,8 +126,29 @@ func (da *InMemoryDataAccess) GroupGet(ctx context.Context, groupname string) (r
 }
 
 // GroupGrantRole grants one or more roles to a group.
-func (da *InMemoryDataAccess) GroupGrantRole(ctx context.Context) error {
-	return errs.ErrNotImplemented
+func (da *InMemoryDataAccess) GroupGrantRole(ctx context.Context, groupname, rolename string) error {
+	b, err := da.GroupExists(ctx, groupname)
+	if err != nil {
+		return err
+	} else if !b {
+		return errs.ErrNoSuchGroup
+	}
+
+	b, err = da.RoleExists(ctx, rolename)
+	if err != nil {
+		return err
+	} else if !b {
+		return errs.ErrNoSuchRole
+	}
+
+	m := da.grouproles[groupname]
+	if m == nil {
+		m = make(map[string]*rest.Role)
+		da.grouproles[groupname] = m
+	}
+
+	m[rolename] = da.roles[rolename]
+	return nil
 }
 
 // GroupList returns a list of all known groups in the datastore.
@@ -140,6 +161,25 @@ func (da *InMemoryDataAccess) GroupList(ctx context.Context) ([]rest.Group, erro
 	}
 
 	return list, nil
+}
+
+func (da *InMemoryDataAccess) GroupListRoles(ctx context.Context, groupname string) ([]rest.Role, error) {
+	roles := []rest.Role{}
+
+	gr := da.grouproles[groupname]
+	if gr == nil {
+		return roles, nil
+	}
+
+	for _, r := range gr {
+		roles = append(roles, *r)
+	}
+
+	return roles, nil
+}
+
+func (da *InMemoryDataAccess) GroupListUsers(ctx context.Context, groupname string) ([]rest.User, error) {
+	return nil, errs.ErrNotImplemented
 }
 
 // GroupRemoveUser removes one or more users from a group.
@@ -169,8 +209,29 @@ func (da *InMemoryDataAccess) GroupRemoveUser(ctx context.Context, groupname str
 }
 
 // GroupRevokeRole revokes one or more roles from a group.
-func (da *InMemoryDataAccess) GroupRevokeRole(ctx context.Context) error {
-	return errs.ErrNotImplemented
+func (da *InMemoryDataAccess) GroupRevokeRole(ctx context.Context, groupname, rolename string) error {
+	b, err := da.GroupExists(ctx, groupname)
+	if err != nil {
+		return err
+	} else if !b {
+		return errs.ErrNoSuchGroup
+	}
+
+	b, err = da.RoleExists(ctx, rolename)
+	if err != nil {
+		return err
+	} else if !b {
+		return errs.ErrNoSuchRole
+	}
+
+	m := da.grouproles[groupname]
+	if m == nil {
+		m = make(map[string]*rest.Role)
+		da.grouproles[groupname] = m
+	}
+
+	delete(m, rolename)
+	return nil
 }
 
 // GroupUpdate is used to update an existing group. An error is returned if the
@@ -192,11 +253,6 @@ func (da *InMemoryDataAccess) GroupUpdate(ctx context.Context, group rest.Group)
 	da.groups[group.Name] = &group
 
 	return nil
-}
-
-// GroupUserList comments TBD
-func (da *InMemoryDataAccess) GroupUserList(ctx context.Context, group string) ([]rest.User, error) {
-	return []rest.User{}, errs.ErrNotImplemented
 }
 
 // GroupUserAdd comments TBD

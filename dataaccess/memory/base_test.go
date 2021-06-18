@@ -53,10 +53,10 @@ func testInitialize(t *testing.T) {
 
 func TestMemoryDataAccessMain(t *testing.T) {
 	t.Run("testInitialize", testInitialize)
-
 	t.Run("testUserAccess", testUserAccess)
 	t.Run("testGroupAccess", testGroupAccess)
 	t.Run("testTokenAccess", testTokenAccess)
 	t.Run("testBundleAccess", testBundleAccess)
+	t.Run("testRoleAccess", testRoleAccess)
 	t.Run("testRequestAccess", testRequestAccess)
 }
