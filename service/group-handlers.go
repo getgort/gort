@@ -73,6 +73,41 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleDeleteGroupRole handles "DELETE "/v2/groups/{groupname}/roles/{rolename}""
+func handleDeleteGroupRole(w http.ResponseWriter, r *http.Request) {
+	var exists bool
+	var err error
+
+	params := mux.Vars(r)
+	groupname := params["groupname"]
+	rolename := params["rolename"]
+
+	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+	if !exists {
+		http.Error(w, "no such group", http.StatusNotFound)
+		return
+	}
+
+	exists, err = dataAccessLayer.RoleExists(r.Context(), rolename)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+	if !exists {
+		http.Error(w, "no such role", http.StatusNotFound)
+		return
+	}
+
+	err = dataAccessLayer.GroupRevokeRole(r.Context(), groupname, rolename)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+}
+
 // handleGetGroup handles "GET /v2/groups/{groupname}"
 func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -130,6 +165,30 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(group.Users)
+}
+
+// handleGetGroupRoles handles "GET /v2/groups/{groupname}/roles"
+func handleGetGroupRoles(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	groupname := params["groupname"]
+
+	exists, err := dataAccessLayer.GroupExists(r.Context(), groupname)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+	if !exists {
+		http.Error(w, "no such group", http.StatusNotFound)
+		return
+	}
+
+	roles, err := dataAccessLayer.GroupListRoles(r.Context(), groupname)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(roles)
 }
 
 // handlePutGroup handles "PUT /v2/groups/{groupname}"
@@ -200,6 +259,41 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handlePutGroupRole handles "PUT "/v2/groups/{groupname}/roles/{rolename}""
+func handlePutGroupRole(w http.ResponseWriter, r *http.Request) {
+	var exists bool
+	var err error
+
+	params := mux.Vars(r)
+	groupname := params["groupname"]
+	rolename := params["rolename"]
+
+	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+	if !exists {
+		http.Error(w, "no such group", http.StatusNotFound)
+		return
+	}
+
+	exists, err = dataAccessLayer.RoleExists(r.Context(), rolename)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+	if !exists {
+		http.Error(w, "no such role", http.StatusNotFound)
+		return
+	}
+
+	err = dataAccessLayer.GroupGrantRole(r.Context(), groupname, rolename)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+}
+
 func addGroupMethodsToRouter(router *mux.Router) {
 	// Basic group methods
 	router.Handle("/v2/groups", otelhttp.NewHandler(http.HandlerFunc(handleGetGroups), "handleGetGroups")).Methods("GET")
@@ -211,4 +305,9 @@ func addGroupMethodsToRouter(router *mux.Router) {
 	router.Handle("/v2/groups/{groupname}/members", otelhttp.NewHandler(http.HandlerFunc(handleGetGroupMembers), "handleGetGroupMembers")).Methods("GET")
 	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteGroupMember), "handleDeleteGroupMember")).Methods("DELETE")
 	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(http.HandlerFunc(handlePutGroupMember), "handlePutGroupMember")).Methods("PUT")
+
+	// Group roles
+	router.Handle("/v2/groups/{groupname}/roles", otelhttp.NewHandler(http.HandlerFunc(handleGetGroupRoles), "handleGetGroupMembers")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteGroupRole), "handleDeleteGroupMember")).Methods("DELETE")
+	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(http.HandlerFunc(handlePutGroupRole), "handlePutGroupMember")).Methods("PUT")
 }

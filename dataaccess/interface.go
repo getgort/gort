@@ -66,6 +66,7 @@ type DataAccess interface {
 	RoleCreate(ctx context.Context, rolename string) error
 	RoleDelete(ctx context.Context, rolename string) error
 	RoleGet(ctx context.Context, rolename string) (rest.Role, error)
+	RoleExists(ctx context.Context, rolename string) (bool, error)
 	RoleGrantPermission(ctx context.Context, rolename, bundle, permission string) error
 	RoleRevokePermission(ctx context.Context, rolename, bundle, permission string) error
 
