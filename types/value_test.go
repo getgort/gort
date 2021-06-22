@@ -17,26 +17,31 @@
 package types
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGuessTypedValue(t *testing.T) {
-	tests := map[string]interface{}{
-		`true`:      BoolValue{true},
-		`false`:     BoolValue{false},
-		`0.0`:       FloatValue{0.0},
-		`.10`:       FloatValue{0.10},
-		`-1.0`:      FloatValue{-1.0},
-		`0`:         IntValue{0},
-		`10`:        IntValue{10},
-		`-1`:        IntValue{-1},
-		`"testing"`: StringValue{"testing", '"'},
-		`'testing'`: StringValue{"testing", '\''},
-		`""`:        StringValue{"", '"'},
-		`''`:        StringValue{"", '\''},
-		`arbitrary`: StringValue{"arbitrary", '\u0000'},
+	tests := map[string]Value{
+		`true`:       BoolValue{true},
+		`false`:      BoolValue{false},
+		`0.0`:        FloatValue{0.0},
+		`.10`:        FloatValue{0.10},
+		`-1.0`:       FloatValue{-1.0},
+		`0`:          IntValue{0},
+		`10`:         IntValue{10},
+		`-1`:         IntValue{-1},
+		`"testing"`:  StringValue{"testing", '"'},
+		`'testing'`:  StringValue{"testing", '\''},
+		`""`:         StringValue{``, '"'},
+		`''`:         StringValue{``, '\''},
+		`'"'`:        StringValue{`"`, '\''},
+		`arbitrary`:  StringValue{"arbitrary", '\u0000'},
+		`/.*/`:       RegexValue{`.*`},
+		`/.*//`:      RegexValue{`.*/`},
+		`"/\".*\"/"`: RegexValue{`\".*\"`},
 	}
 
 	for input, expected := range tests {
@@ -49,12 +54,52 @@ func TestGuessTypedValue(t *testing.T) {
 	}
 }
 
+func TestValueEvaluation(t *testing.T) {
+	type Expected struct {
+		Value   Value
+		String  string
+		Resolve interface{}
+	}
+
+	tests := map[string]Expected{
+		`true`:       {BoolValue{true}, "true", true},
+		`0.0`:        {FloatValue{0.0}, "0.000000", 0.0},
+		`-1.0`:       {FloatValue{-1.0}, "-1.000000", -1.0},
+		`0`:          {IntValue{0}, "0", 0},
+		`10`:         {IntValue{10}, "10", 10},
+		`-1`:         {IntValue{-1}, "-1", -1},
+		`"testing"`:  {StringValue{"testing", '"'}, "testing", "testing"},
+		`'testing'`:  {StringValue{"testing", '\''}, "testing", "testing"},
+		`arbitrary`:  {StringValue{"arbitrary", '\u0000'}, "arbitrary", "arbitrary"},
+		`/.*/`:       {RegexValue{`.*`}, `.*`, regexp.MustCompilePOSIX(`.*`)},
+		`/.*//`:      {RegexValue{`.*/`}, `.*/`, regexp.MustCompilePOSIX(`.*/`)},
+		`"/\".*\"/"`: {RegexValue{`\".*\"`}, `\".*\"`, regexp.MustCompilePOSIX(`\".*\"`)},
+	}
+
+	for input, expected := range tests {
+		term, err := GuessTypedValue(input, false)
+		if !assert.NoError(t, err, input) {
+			continue
+		}
+
+		resolved, err := term.Resolve()
+		if !assert.NoError(t, err, input) {
+			continue
+		}
+
+		assert.Equal(t, expected.Value, term, input)
+		assert.Equal(t, expected.String, term.String(), input)
+		assert.Equal(t, expected.Resolve, resolved, input)
+	}
+}
+
 func TestGuessTypesValueStrict(t *testing.T) {
 	tests := map[string]interface{}{
 		`"testing"`: StringValue{"testing", '"'},
 		`'testing'`: StringValue{"testing", '\''},
 		`""`:        StringValue{"", '"'},
 		`''`:        StringValue{"", '\''},
+		`'/.*/'`:    RegexValue{`.*`},
 	}
 
 	for input, expected := range tests {

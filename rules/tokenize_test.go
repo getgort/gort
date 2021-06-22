@@ -22,6 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestTokenize tests that various valid rule constructions resolve to
+// produce the expected data structures.
 func TestTokenize(t *testing.T) {
 	inputs := map[string]RuleTokens{
 		`foo:bar allow`: {`foo:bar`, []string{}, []string{}},
@@ -58,6 +60,8 @@ func TestTokenize(t *testing.T) {
 	}
 }
 
+// TestTokenizeErrors tests that various invalid rule constructions generate
+// an error.
 func TestTokenizeErrors(t *testing.T) {
 	inputs := []string{
 		``,
@@ -80,8 +84,6 @@ func TestTokenizeErrors(t *testing.T) {
 
 	for _, str := range inputs {
 		_, err := Tokenize(str)
-		if assert.Error(t, err, str) {
-			t.Log(err)
-		}
+		assert.Error(t, err, str)
 	}
 }

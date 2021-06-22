@@ -98,12 +98,12 @@ func Parse(tokens []string, options ...ParseOption) (Command, error) {
 
 			// Expect an option:
 			if hasArgument {
-				value, err := types.GuessTypedValue(t, false)
+				term, err := types.GuessTypedValue(t, false)
 				if err != nil {
 					return cmd, err
 				}
 
-				lastOption.Value = value
+				lastOption.Value = term
 				cmd.Options[lastOption.Name] = *lastOption
 				lastOption = nil
 				continue

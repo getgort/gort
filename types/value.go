@@ -20,43 +20,88 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 type Value interface {
-	forcingFunction()
+	String() string
+	Resolve() (interface{}, error)
 }
 
+// BoolValue is a literal boolean value.
 type BoolValue struct {
 	Value bool
 }
 
-func (v BoolValue) forcingFunction() {}
+func (v BoolValue) String() string {
+	return fmt.Sprintf("%t", v.Value)
+}
 
+func (v BoolValue) Resolve() (interface{}, error) {
+	return v.Value, nil
+}
+
+// IntValue is a literal integer value.
 type IntValue struct {
 	Value int
 }
 
-func (v IntValue) forcingFunction() {}
-
-type StringValue struct {
-	Value       string
-	QuoteFlavor rune
+func (v IntValue) String() string {
+	return fmt.Sprintf("%d", v.Value)
 }
 
-func (v StringValue) forcingFunction() {}
+func (v IntValue) Resolve() (interface{}, error) {
+	return v.Value, nil
+}
 
+// StringValue is a literal string value.
+type StringValue struct {
+	Value string
+	Quote rune
+}
+
+func (v StringValue) String() string {
+	return v.Value
+}
+
+func (v StringValue) Resolve() (interface{}, error) {
+	return v.Value, nil
+}
+
+// FloatValue is a literal floating point value.
 type FloatValue struct {
 	Value float64
 }
 
-func (v FloatValue) forcingFunction() {}
+func (v FloatValue) String() string {
+	return fmt.Sprintf("%f", v.Value)
+}
+
+func (v FloatValue) Resolve() (interface{}, error) {
+	return v.Value, nil
+}
+
+// RegexValue describes a regular expression. Its Resolve() function returns
+// the product of `regexp.CompilePOSIX(v.Value)`.
+type RegexValue struct {
+	Value string
+}
+
+func (v RegexValue) String() string {
+	return v.Value
+}
+
+func (v RegexValue) Resolve() (interface{}, error) {
+	return regexp.CompilePOSIX(v.Value)
+}
 
 var (
-	reInt    = regexp.MustCompile(`^-?[0-9]+$`)
-	reFloat  = regexp.MustCompile(`^-?[0-9]*\.[0-9]+$`)
-	reBool   = regexp.MustCompile(`^(true|false)$`)
-	reString = regexp.MustCompile(`^[\"\'].*[\"\']$`)
+	reInt        = regexp.MustCompile(`^-?[0-9]+$`)
+	reFloat      = regexp.MustCompile(`^-?[0-9]*\.[0-9]+$`)
+	reBool       = regexp.MustCompile(`^(true|false)$`)
+	reString     = regexp.MustCompile(`^[\"\'].*[\"\']$`)
+	reStringTrim = regexp.MustCompile(`(^[\"\']?|[\"\']?$)`)
+	reRegex      = regexp.MustCompile(`^[\"\']?/.*/[\"\']?$`)
+	reRegexTrim  = regexp.MustCompile(`(^[\"\']?/|/[\"\']?$)`)
 )
 
 // GuessTypedValue accepts a string, attempts to determine its type, and based
@@ -78,14 +123,18 @@ func GuessTypedValue(str string, strictStrings bool) (Value, error) {
 		value, err := strconv.Atoi(str)
 		return IntValue{Value: value}, err
 
+	case reRegex.MatchString(str):
+		value := reRegexTrim.ReplaceAllString(str, "")
+		return RegexValue{Value: value}, nil
+
 	case reString.MatchString(str):
 		quoteFlavor := str[0]
-		value := strings.Trim(str, `"'`)
-		return StringValue{Value: value, QuoteFlavor: rune(quoteFlavor)}, nil
+		value := reStringTrim.ReplaceAllString(str, "")
+		return StringValue{Value: value, Quote: rune(quoteFlavor)}, nil
 
 	default:
 		if !strictStrings {
-			return StringValue{Value: str, QuoteFlavor: '\u0000'}, nil
+			return StringValue{Value: str, Quote: '\u0000'}, nil
 		}
 
 		return nil, fmt.Errorf("unknown type: %s", str)
