@@ -23,12 +23,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseEmpty(t *testing.T) {
+func TestCommandParseEmpty(t *testing.T) {
 	_, err := Parse([]string{})
 	assert.Error(t, err)
 }
 
-func TestParseDefaults(t *testing.T) {
+func TestCommandParseDefaults(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:              {"curl", map[string]CommandOption{}, []string{"localhost"}},
 		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{Value: true}}, "k": {"k", types.BoolValue{Value: true}}}, []string{"localhost"}},
@@ -50,7 +50,32 @@ func TestParseDefaults(t *testing.T) {
 	}
 }
 
-func TestParseBareFlagsAreTrue(t *testing.T) {
+func TestCommandTypes(t *testing.T) {
+	test := `test --flag --int 10 --float 0.1 --notregex "/^foo$/" --string str this is text`
+
+	expected := Command{"test",
+		map[string]CommandOption{
+			"flag":     {"flag", types.BoolValue{Value: true}},
+			"int":      {"int", types.IntValue{Value: 10}},
+			"float":    {"float", types.FloatValue{Value: 0.1}},
+			"notregex": {"notregex", types.StringValue{Value: `/^foo$/`}},
+			"string":   {"string", types.StringValue{Value: "str"}},
+		},
+		[]string{"this", "is", "text"},
+	}
+
+	options := []ParseOption{ParseAssumeOptionArguments(true)}
+
+	tokens, err := Tokenize(test)
+	assert.NoError(t, err, test)
+
+	actual, err := Parse(tokens, options...)
+	assert.NoError(t, err, test)
+
+	assert.Equal(t, expected, actual, test)
+}
+
+func TestCommandParseBareFlagsAreTrue(t *testing.T) {
 	tv := types.BoolValue{Value: true}
 
 	tests := map[string]Command{
@@ -70,7 +95,7 @@ func TestParseBareFlagsAreTrue(t *testing.T) {
 	}
 }
 
-func TestParseAgnosticDashesTrue(t *testing.T) {
+func TestCommandParseAgnosticDashesTrue(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:              {"curl", map[string]CommandOption{}, []string{"localhost"}},
 		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"Ik": {"Ik", types.BoolValue{Value: true}}}, []string{"localhost"}},
@@ -92,7 +117,7 @@ func TestParseAgnosticDashesTrue(t *testing.T) {
 	}
 }
 
-func TestParseAssumeOptionArgumentsTrue(t *testing.T) {
+func TestCommandParseAssumeOptionArgumentsTrue(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:              {"curl", map[string]CommandOption{}, []string{"localhost"}},
 		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{Value: true}}, "k": {"k", types.StringValue{Value: "localhost", Quote: '\u0000'}}}, []string{}},
@@ -116,7 +141,7 @@ func TestParseAssumeOptionArgumentsTrue(t *testing.T) {
 	}
 }
 
-func TestParseAssumeOptionArgumentsFalse(t *testing.T) {
+func TestCommandParseAssumeOptionArgumentsFalse(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:              {"curl", map[string]CommandOption{}, []string{"localhost"}},
 		`curl -Ik localhost`:          {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{Value: true}}, "k": {"k", types.BoolValue{Value: true}}}, []string{"localhost"}},
@@ -140,7 +165,7 @@ func TestParseAssumeOptionArgumentsFalse(t *testing.T) {
 	}
 }
 
-func TestParseOptionHasArgument(t *testing.T) {
+func TestCommandParseOptionHasArgument(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:                 {"curl", map[string]CommandOption{}, []string{"localhost"}},
 		`curl -Ik localhost`:             {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{Value: true}}, "k": {"k", types.BoolValue{Value: true}}}, []string{"localhost"}},
@@ -166,7 +191,7 @@ func TestParseOptionHasArgument(t *testing.T) {
 	}
 }
 
-func TestParseOptionAlias(t *testing.T) {
+func TestCommandParseOptionAlias(t *testing.T) {
 	tests := map[string]Command{
 		`curl localhost`:                 {"curl", map[string]CommandOption{}, []string{"localhost"}},
 		`curl -Ik localhost`:             {"curl", map[string]CommandOption{"I": {"I", types.BoolValue{Value: true}}, "k": {"k", types.BoolValue{Value: true}}}, []string{"localhost"}},

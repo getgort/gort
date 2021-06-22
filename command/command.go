@@ -98,7 +98,7 @@ func Parse(tokens []string, options ...ParseOption) (Command, error) {
 
 			// Expect an option:
 			if hasArgument {
-				term, err := types.GuessTypedValue(t, false)
+				term, err := types.Infer(t, true, false)
 				if err != nil {
 					return cmd, err
 				}
