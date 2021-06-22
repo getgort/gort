@@ -45,10 +45,9 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
   - Ability to specify command option behavior in bundles (equivalent to `rules/ParseOption`)
 - Rules
   - Rule tokenizer and parser
-  - Database schema
-  - `rule create|destroy|etc` command
+
 - Roles
-  - Database schema
+  - Database schema ✅
   - `role create|destroy` command
   - `group grant|revoke` command
 - Bundle/command permission assignment
