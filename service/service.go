@@ -125,14 +125,19 @@ func BuildRESTServer(ctx context.Context, addr string) *RESTServer {
 		telemetry.Errors().WithError(err).Commit(ctx)
 	}
 
-	addHealthzMethodToRouter(router)
-	addBundleMethodsToRouter(router)
-	addGroupMethodsToRouter(router)
-	addUserMethodsToRouter(router)
+	addAllMethodsToRouter(router)
 
 	server := &http.Server{Addr: addr, Handler: router}
 
 	return &RESTServer{server, requests}
+}
+
+func addAllMethodsToRouter(router *mux.Router) {
+	addHealthzMethodToRouter(router)
+	addBundleMethodsToRouter(router)
+	addGroupMethodsToRouter(router)
+	addRoleMethodsToRouter(router)
+	addUserMethodsToRouter(router)
 }
 
 // Requests retrieves the channel to which user request events are sent.
