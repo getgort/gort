@@ -3,112 +3,90 @@ package service
 import (
 	"net/http"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateRole(t *testing.T) {
 	router := createTestRouter()
 
 	// Check role doesn't exist
-	status := jsonRequest(t, router, "GET", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusNotFound)
+	NewResponseTester("GET", "http://example.com/v2/roles/testrole").WithStatus(http.StatusNotFound).Test(t, router)
 
 	// Create role
-	status = jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Expect role exists
-	status = jsonRequest(t, router, "GET", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("GET", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 }
 
 func TestDeleteRole(t *testing.T) {
 	router := createTestRouter()
 
 	// Create role
-	status := jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Delete role
-	status = jsonRequest(t, router, "DELETE", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("DELETE", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Check role doesn't exist
-	status = jsonRequest(t, router, "GET", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusNotFound)
-
+	NewResponseTester("GET", "http://example.com/v2/roles/testrole").WithStatus(http.StatusNotFound).Test(t, router)
 }
 
 func TestGrantRolePermission(t *testing.T) {
 	router := createTestRouter()
 
 	// Create role
-	status := jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant permission
-	status = jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission").WithStatus(http.StatusOK).Test(t, router)
 }
 
 func TestGrantRolePermissionInvalidRole(t *testing.T) {
 	router := createTestRouter()
 
 	// Create role
-	status := jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant permission to different role
-	status = jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole2/bundles/testbundle/permissions/testpermission", nil, nil)
-	assert.Equal(t, status, http.StatusNotFound)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole2/bundles/testbundle/permissions/testpermission").WithStatus(http.StatusNotFound).Test(t, router)
 }
 
 func TestRevokeRolePermission(t *testing.T) {
 	router := createTestRouter()
 
 	// Create role
-	status := jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant permission
-	status = jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission").WithStatus(http.StatusOK).Test(t, router)
 
 	// Revoke permission
-	status = jsonRequest(t, router, "DELETE", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("DELETE", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission").WithStatus(http.StatusOK).Test(t, router)
 }
 
 func TestRevokeRolePermissionInvalidRole(t *testing.T) {
 	router := createTestRouter()
 
 	// Create role
-	status := jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant permission
-	status = jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission").WithStatus(http.StatusOK).Test(t, router)
 
 	// Revoke permission from different role
-	status = jsonRequest(t, router, "DELETE", "http://example.com/v2/roles/testrole2/bundles/testbundle/permissions/testpermission", nil, nil)
-	assert.Equal(t, status, http.StatusNotFound)
+	NewResponseTester("DELETE", "http://example.com/v2/roles/testrole2/bundles/testbundle/permissions/testpermission").WithStatus(http.StatusNotFound).Test(t, router)
 }
 
 func TestRevokeRolePermissionInvalidPermission(t *testing.T) {
 	router := createTestRouter()
 
 	// Create role
-	status := jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant permission
-	status = jsonRequest(t, router, "PUT", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("PUT", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission").WithStatus(http.StatusOK).Test(t, router)
 
 	// Revoke permission that doesn't exist, will be ignored and return 200
 	// NOTE: Should we check for this? There may be implications with versioning.
-	status = jsonRequest(t, router, "DELETE", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission2", nil, nil)
-	assert.Equal(t, status, http.StatusOK)
+	NewResponseTester("DELETE", "http://example.com/v2/roles/testrole/bundles/testbundle/permissions/testpermission2").WithStatus(http.StatusOK).Test(t, router)
 }
