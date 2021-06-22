@@ -14,9 +14,16 @@
  * limitations under the License.
  */
 
-package version
+package rules
 
-const (
-	// Version is the current version of Gort
-	Version = "0.7.6-dev.0"
-)
+import "github.com/getgort/gort/types"
+
+// Expression describes a single
+type Expression struct {
+	A, B     types.Value
+	Operator Operator
+}
+
+func (e Expression) Evaluate() (bool, error) {
+	return e.Operator(e.A, e.B)
+}
