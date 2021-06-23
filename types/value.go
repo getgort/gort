@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 type Value interface {
@@ -213,5 +214,17 @@ func (v StringValue) Resolve() (interface{}, error) {
 }
 
 func (v StringValue) String() string {
-	return v.Value
+	b := strings.Builder{}
+
+	if v.Quote != '\u0000' {
+		b.WriteRune(v.Quote)
+	}
+
+	b.WriteString(v.Value)
+
+	if v.Quote != '\u0000' {
+		b.WriteRune(v.Quote)
+	}
+
+	return b.String()
 }

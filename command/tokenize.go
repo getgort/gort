@@ -64,6 +64,7 @@ func Tokenize(input string) ([]string, error) {
 
 		// Everything inside a pair of quotes is added to the same token.
 		case ch == quote:
+			b.WriteRune(ch)
 			tokens = append(tokens, b.String())
 			quote = RuneNull
 			b.Reset()
@@ -73,11 +74,10 @@ func Tokenize(input string) ([]string, error) {
 			fallthrough
 
 		case ch == '\'':
+			b.WriteRune(ch)
 			if quote == RuneNull {
 				quote = ch
 				quoteStart = i
-			} else {
-				b.WriteRune(ch)
 			}
 
 		// Anything else gets appended to the current token.

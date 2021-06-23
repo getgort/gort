@@ -44,23 +44,3 @@ func TestLoadBundle(t *testing.T) {
 	assert.Len(t, b.Commands["echox"].Rules, 1)
 	assert.Equal(t, "must have test:echox", b.Commands["echox"].Rules[0])
 }
-
-func TestSplitCommand(t *testing.T) {
-	var bundle, command string
-	var err error
-
-	bundle, command, err = SplitCommand("foo:bar")
-	assert.Equal(t, "foo", bundle)
-	assert.Equal(t, "bar", command)
-	assert.Nil(t, err)
-
-	bundle, command, err = SplitCommand("bat")
-	assert.Equal(t, "", bundle)
-	assert.Equal(t, "bat", command)
-	assert.Nil(t, err)
-
-	bundle, command, err = SplitCommand("foo:bar:bat")
-	assert.Equal(t, "", bundle)
-	assert.Equal(t, "", command)
-	assert.NotNil(t, err)
-}
