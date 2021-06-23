@@ -16,8 +16,12 @@
 
 package rules
 
-import "fmt"
+func Parse(rt RuleTokens) (Rule, error) {
+	r := Rule{
+		Command:     rt.Command,
+		Conditions:  []Expression{},
+		Permissions: rt.Permissions,
+	}
 
-func Parse(tokens RuleTokens) (Rule, error) {
-	return Rule{}, fmt.Errorf("not implemented")
+	return r, nil
 }

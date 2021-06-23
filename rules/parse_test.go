@@ -15,3 +15,45 @@
  */
 
 package rules
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestParse(t *testing.T) {
+	inputs := map[string]Rule{
+		`foo:bar allow`: {Command: "foo:bar", Conditions: []Expression{}, Permissions: []string{}},
+		`foo:bar with option['delete'] == true must have foo:destroy`: {Command: "foo:bar", Conditions: []Expression{}, Permissions: []string{"foo:destroy"}},
+	}
+
+	for in, expected := range inputs {
+		rt, err := Tokenize(in)
+		if !assert.NoError(t, err, in) {
+			continue
+		}
+
+		for i, c := range rt.Conditions {
+			t.Log(i, c)
+
+			// Patterns:
+			//
+			// 1 each of:
+			//
+			// $VALUE_A
+			// any $SET_A
+			// all $SET_A
+			//
+			// OP $VALUE_B
+			// in $SET_B
+		}
+
+		rule, err := Parse(rt)
+		if !assert.NoError(t, err, in) {
+			continue
+		}
+
+		assert.Equal(t, expected, rule, in)
+	}
+}

@@ -22,7 +22,9 @@ import (
 )
 
 type Rule struct {
-	Conditions []Expression
+	Command     string
+	Conditions  []Expression
+	Permissions []string
 }
 
 // Matches returns true iff the Rule's stated conditions evaluate to true.

@@ -441,14 +441,13 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		return nil, err
 	}
 
-	// Set the rule options and args. We probably won't do it like this long-term.
+	// Loop over the rules and evaluate them one-by-one.
 	for _, r := range rules {
 		// If the rule's conditions don't evaluate to true, ignore it.
 		if !r.Matches(cmdInput.Options, cmdInput.Parameters) {
 			continue
 		}
 
-		// TODO Load user permissions
 		permissions, err := getUserPermissions(ctx, id.GortUser)
 		if err != nil {
 			da.RequestError(ctx, request, err)
