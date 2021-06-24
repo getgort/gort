@@ -26,8 +26,8 @@ import (
 
 const (
 	versionUse   = "version"
-	versionShort = "Perform operations on versions"
-	versionLong  = "Allows you to perform version administration."
+	versionShort = "Display version and build information"
+	versionLong  = "Displays version and build information."
 )
 
 var (

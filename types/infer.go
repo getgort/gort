@@ -69,3 +69,18 @@ func Infer(str string, basicTypes, strictStrings bool) (Value, error) {
 		return nil, fmt.Errorf("unknown type: %s", str)
 	}
 }
+
+func InferAll(strs []string, basicTypes, strictStrings bool) ([]Value, error) {
+	values := []Value{}
+
+	for _, s := range strs {
+		v, err := Infer(s, basicTypes, strictStrings)
+		if err != nil {
+			return nil, err
+		}
+
+		values = append(values, v)
+	}
+
+	return values, nil
+}

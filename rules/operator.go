@@ -17,25 +17,27 @@
 package rules
 
 import (
+	"fmt"
+
 	"github.com/getgort/gort/types"
 )
 
 type Operator func(a, b types.Value) (bool, error)
 
-func OperatorEquals(a, b types.Value) (bool, error) {
+func Equals(a, b types.Value) (bool, error) {
 	return a.Equals(b)
 }
 
-func OperatorNotEquals(a, b types.Value) (bool, error) {
+func NotEquals(a, b types.Value) (bool, error) {
 	eq, err := a.Equals(b)
 	return !eq, err
 }
 
-func OperatorLessThan(a, b types.Value) (bool, error) {
+func LessThan(a, b types.Value) (bool, error) {
 	return a.LessThan(b)
 }
 
-func OperatorLessThanOrEqualTo(a, b types.Value) (bool, error) {
+func LessThanOrEqualTo(a, b types.Value) (bool, error) {
 	lt, err := a.LessThan(b)
 	if err != nil {
 		return false, err
@@ -49,7 +51,7 @@ func OperatorLessThanOrEqualTo(a, b types.Value) (bool, error) {
 	return lt || eq, nil
 }
 
-func OperatorGreaterThan(a, b types.Value) (bool, error) {
+func GreaterThan(a, b types.Value) (bool, error) {
 	lt, err := a.LessThan(b)
 	if err != nil {
 		return false, err
@@ -63,7 +65,11 @@ func OperatorGreaterThan(a, b types.Value) (bool, error) {
 	return !(lt || eq), nil
 }
 
-func OperatorGreaterThanOrEqualTo(a, b types.Value) (bool, error) {
+func GreaterThanOrEqualTo(a, b types.Value) (bool, error) {
 	lt, err := a.LessThan(b)
 	return !lt, err
+}
+
+func In(a, b types.Value) (bool, error) {
+	return false, fmt.Errorf("not implemented")
 }

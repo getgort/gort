@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
-package version
+package rules
 
-const (
-	// Version is the current version of Gort
-	Version = "0.7.7-dev.0"
-)
+func Parse(rt RuleTokens) (Rule, error) {
+	r := Rule{
+		Command:     rt.Command,
+		Conditions:  []Expression{},
+		Permissions: rt.Permissions,
+	}
+
+	return r, nil
+}

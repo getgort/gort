@@ -24,7 +24,7 @@ import (
 )
 
 func TestOperatorEquals(t *testing.T) {
-	evaluate := OperatorEquals
+	evaluate := Equals
 
 	result, err := evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 42})
 	if !assert.NoError(t, err) {
@@ -44,7 +44,7 @@ func TestOperatorEquals(t *testing.T) {
 }
 
 func TestOperatorNotEquals(t *testing.T) {
-	evaluate := OperatorNotEquals
+	evaluate := NotEquals
 
 	result, err := evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 42})
 	if !assert.NoError(t, err) {
@@ -64,7 +64,7 @@ func TestOperatorNotEquals(t *testing.T) {
 }
 
 func TestOperatorLessThan(t *testing.T) {
-	evaluate := OperatorLessThan
+	evaluate := LessThan
 
 	result, err := evaluate(types.IntValue{Value: 21}, types.IntValue{Value: 42})
 	if !assert.NoError(t, err) {
@@ -92,7 +92,7 @@ func TestOperatorLessThan(t *testing.T) {
 }
 
 func TestOperatorLessThanOrEqualTo(t *testing.T) {
-	evaluate := OperatorLessThanOrEqualTo
+	evaluate := LessThanOrEqualTo
 
 	result, err := evaluate(types.IntValue{Value: 21}, types.IntValue{Value: 42})
 	if !assert.NoError(t, err) {
@@ -120,7 +120,7 @@ func TestOperatorLessThanOrEqualTo(t *testing.T) {
 }
 
 func TestOperatorGreaterThan(t *testing.T) {
-	evaluate := OperatorGreaterThan
+	evaluate := GreaterThan
 
 	result, err := evaluate(types.IntValue{Value: 21}, types.IntValue{Value: 42})
 	if !assert.NoError(t, err) {
@@ -148,7 +148,7 @@ func TestOperatorGreaterThan(t *testing.T) {
 }
 
 func TestOperatorGreaterThanOrEqualTo(t *testing.T) {
-	evaluate := OperatorGreaterThanOrEqualTo
+	evaluate := GreaterThanOrEqualTo
 
 	result, err := evaluate(types.IntValue{Value: 21}, types.IntValue{Value: 42})
 	if !assert.NoError(t, err) {
