@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/types"
 )
 
@@ -28,7 +27,7 @@ type Rule struct {
 }
 
 // Matches returns true iff the Rule's stated conditions evaluate to true.
-func (r Rule) Matches(options map[string]command.CommandOption, args []types.Value) bool {
+func (r Rule) Matches(options map[string]types.Value, args []types.Value) bool {
 	// TODO: Create an "arg" and "option" Value type.
 	return false
 }

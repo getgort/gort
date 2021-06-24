@@ -48,6 +48,7 @@ Flags:
   -h, --help              help for bootstrap
   -n, --name string       Full name of the bootstrapped user (default "Gort Administrator")
   -p, --password string   Password for the bootstrapped user (default generated)
+  -i, --allow-insecure    Permit http URLs to be used
 
 Global Flags:
   -P, --profile string   Gort profile to use

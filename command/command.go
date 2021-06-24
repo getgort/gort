@@ -39,6 +39,16 @@ type Command struct {
 	Parameters CommandParameters
 }
 
+func (c Command) OptionsValues() map[string]types.Value {
+	m := map[string]types.Value{}
+
+	for _, o := range c.Options {
+		m[o.Name] = o.Value
+	}
+
+	return m
+}
+
 // CommandOption represents a command option or flag, and its string
 // value (if any).
 type CommandOption struct {

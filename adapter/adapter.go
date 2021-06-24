@@ -42,10 +42,16 @@ import (
 	"github.com/getgort/gort/version"
 )
 
+const (
+	CommandsRequireAtLeastOneRule = false
+)
+
 var (
 	// All existant adapters keyed by name
 	adapterLookup = map[string]Adapter{}
 )
+
+const unexpectedError = "An unexpected error has occurred. Please check the logs for more information."
 
 var (
 	// ErrAdapterNameCollision is emitted by AddAdapter() if two adapters
@@ -250,6 +256,8 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 
 	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
 	if err != nil {
+		telemetry.Errors().WithError(err).Commit(ctx)
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
 		return nil, err
 	}
 
@@ -278,6 +286,8 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
 	if err != nil {
+		telemetry.Errors().WithError(err).Commit(ctx)
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
 		return nil, err
 	}
 
@@ -355,7 +365,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			telemetry.Errors().WithError(err).Commit(ctx)
 			le.WithError(err).Error("Can't find or create user")
 
-			return nil, err
+			return nil, fmt.Errorf("can't find or create user: %w", err)
 		}
 
 		request.UserEmail = id.GortUser.Email
@@ -380,9 +390,10 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 	if err != nil {
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Command tokenization failure")
+		le.WithError(err).Error("Command tokenization error")
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
 
-		return nil, err
+		return nil, fmt.Errorf("command tokenization error: %w", err)
 	}
 
 	le = le.WithField("command.name", tokens[0]).
@@ -391,21 +402,29 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 	request.Parameters = tokens[1:]
 	da.RequestUpdate(ctx, request)
 
+	// Build a temporary Command using default tokenization rules.
 	cmdInput, err := command.Parse(tokens)
 	if err != nil {
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Command parse failure")
+		le.WithError(err).Error("Command parse error")
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
 
-		return nil, err
+		return nil, fmt.Errorf("command parse error: %w", err)
 	}
 
+	// Try to find the relevant command entry.
 	cmdEntry, err := GetCommandEntry(ctx, cmdInput.Bundle, cmdInput.Command)
 	if err != nil {
 		switch {
 		case gerrs.Is(err, ErrNoSuchCommand):
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
 				"If this is not expected, you should contact a Gort administrator.",
+				tokens[0])
+			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
+		case gerrs.Is(err, ErrMultipleCommands):
+			msg := fmt.Sprintf("The command %s matches multiple bundles.\n"+
+				"Please namespace your command using the bundle name: `bundle:command`.",
 				tokens[0])
 			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
 		default:
@@ -415,9 +434,23 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Command lookup failure")
+		le.WithError(err).Error("Command lookup error")
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
 
-		return nil, err
+		return nil, fmt.Errorf("command lookup error: %w", err)
+	}
+
+	// Now that we have a command entry, we can re-create the complete Command value.
+	tokens[0] = cmdEntry.Bundle.Name + ":" + cmdEntry.Command.Name
+	// TODO Set parse options based on the CommandEntry settings.
+	cmdInput, err = command.Parse(tokens)
+	if err != nil {
+		da.RequestError(ctx, request, err)
+		telemetry.Errors().WithError(err).Commit(ctx)
+		le.WithError(err).Error("Command parse error")
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+
+		return nil, fmt.Errorf("command parse error: %w", err)
 	}
 
 	request.CommandEntry = cmdEntry
@@ -436,15 +469,31 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 	if err != nil {
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Rule load failure")
+		le.WithError(err).Error("Rule load error")
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+
+		return nil, fmt.Errorf("rule load error: %w", err)
+	}
+
+	if CommandsRequireAtLeastOneRule && len(rules) == 0 {
+		msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
+			"In order for a command to be executable, it must have at least one rule.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Rules Defined", msg)
+
+		err = fmt.Errorf("no rules defined")
+		da.RequestError(ctx, request, err)
+		telemetry.Errors().WithError(err).Commit(ctx)
+		le.WithError(err).Error("No rules defined")
 
 		return nil, err
 	}
 
 	// Loop over the rules and evaluate them one-by-one.
 	for _, r := range rules {
+		le.Debugf("Evaluating rule: %v", r)
+
 		// If the rule's conditions don't evaluate to true, ignore it.
-		if !r.Matches(cmdInput.Options, cmdInput.Parameters) {
+		if !r.Matches(cmdInput.OptionsValues(), cmdInput.Parameters) {
 			continue
 		}
 
@@ -453,19 +502,21 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			da.RequestError(ctx, request, err)
 			telemetry.Errors().WithError(err).Commit(ctx)
 			le.WithError(err).Error("User permission load failure")
+			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
 
-			return nil, err
+			return nil, fmt.Errorf("user permission load error: %w", err)
 		}
 
 		if !r.Allowed(permissions) {
-			msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdInput.Bundle, cmdInput.Command)
+			msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
 			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Permission Denied", msg)
 
+			err = fmt.Errorf("permission denied")
 			da.RequestError(ctx, request, err)
 			telemetry.Errors().WithError(err).Commit(ctx)
 			le.WithError(err).Error("Permission Denied")
 
-			return nil, fmt.Errorf("permission denied")
+			return nil, err
 		}
 	}
 
@@ -487,6 +538,10 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 	}
 
 	for _, i := range obs {
+		if i == nil {
+			continue
+		}
+
 		switch o := i.(type) {
 		case Adapter:
 			e = e.WithField("adapter.name", o.GetName())
@@ -501,7 +556,22 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 				WithField("adapter.type", o.Info.Provider.Type)
 
 		case RequestorIdentity:
-			return adapterLogEntry(ctx, e, o.Adapter, *o.ChatChannel, *o.ChatUser, *o.GortUser)
+			args := []interface{}{}
+
+			if o.Adapter != nil {
+				args = append(args, o.Adapter)
+			}
+			if o.ChatChannel != nil {
+				args = append(args, *o.ChatChannel)
+			}
+			if o.ChatUser != nil {
+				args = append(args, *o.ChatUser)
+			}
+			if o.GortUser != nil {
+				args = append(args, *o.GortUser)
+			}
+
+			return adapterLogEntry(ctx, e, args...)
 
 		case UserInfo:
 			e = e.WithField("provider.user.email", o.Email).
@@ -568,7 +638,22 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 			)
 
 		case RequestorIdentity:
-			addSpanAttributes(ctx, sp, o.Adapter, *o.ChatChannel, *o.ChatUser, *o.GortUser)
+			args := []interface{}{}
+
+			if o.Adapter != nil {
+				args = append(args, o.Adapter)
+			}
+			if o.ChatChannel != nil {
+				args = append(args, *o.ChatChannel)
+			}
+			if o.ChatUser != nil {
+				args = append(args, *o.ChatUser)
+			}
+			if o.GortUser != nil {
+				args = append(args, *o.GortUser)
+			}
+
+			addSpanAttributes(ctx, sp, args...)
 
 		case UserInfo:
 			attr = append(attr,
@@ -641,16 +726,32 @@ func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, use
 	var err error
 	id := RequestorIdentity{Adapter: adapter}
 
+	le := adapterLogEntry(ctx, nil, adapter).
+		WithField("channelId", channelId).
+		WithField("userId", userId)
+
 	if channelId != "" {
 		id.ChatChannel, err = adapter.GetChannelInfo(channelId)
-		if err != nil {
+		switch {
+		case err == nil:
+			le = adapterLogEntry(ctx, le, *id.ChatChannel)
+		case gerrs.Is(err, ErrChannelNotFound):
+			le.WithError(err).WithField("userId", userId).Debug("can't find user")
+		default:
+			le.WithError(err).Debug("Unexpected error getting requestor channel")
 			return id, err
 		}
 	}
 
 	if userId != "" {
 		id.ChatUser, err = adapter.GetUserInfo(userId)
-		if err != nil {
+		switch {
+		case err == nil:
+			le = adapterLogEntry(ctx, le, *id.ChatUser)
+		case gerrs.Is(err, errs.ErrNoSuchUser):
+			le.WithError(err).WithField("userId", userId).Debug("can't find user")
+		default:
+			le.WithError(err).Debug("Unexpected error getting requestor user")
 			return id, err
 		}
 	}
@@ -662,11 +763,19 @@ func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, use
 		}
 
 		user, err := dal.UserGetByEmail(ctx, id.ChatUser.Email)
-		if err != nil {
+		switch {
+		case err == nil:
+			id.GortUser = &user
+			le = adapterLogEntry(ctx, le, *id.GortUser)
+		case gerrs.Is(err, errs.ErrNoSuchUser):
+			le.WithError(err).WithField("userId", userId).Debug("can't find user")
+		default:
+			le.WithError(err).Debug("Unexpected error getting requestor user by email")
 			return id, err
 		}
-		id.GortUser = &user
 	}
+
+	le.Info("requestor identity built")
 
 	return id, nil
 }
@@ -798,6 +907,7 @@ func formatCommandOutput(command data.CommandEntry, params []string, output stri
 }
 
 // TODO: Replace this with a single DB query! THIS IS HORRIBLY INEFFICIENT!
+// Also, move this into the DAL.
 func getUserPermissions(ctx context.Context, gortUser *rest.User) (map[string]interface{}, error) {
 	pp := map[string]interface{}{}
 
@@ -874,14 +984,15 @@ func loadAndParseRules(ce data.CommandEntry) ([]rules.Rule, error) {
 	rr := []rules.Rule{}
 
 	for i, r := range ce.Command.Rules {
-		tokens, err := rules.Tokenize(r)
+		tokens, err := rules.Tokenize(fmt.Sprintf("%s:%s %s", ce.Bundle.Name, ce.Command.Name, r))
+
 		if err != nil {
-			return rr, fmt.Errorf("cannot tokenize %s:%s rule %d (%s): %w", ce.Bundle.Name, ce.Command.Executable, i+1, r, err)
+			return rr, fmt.Errorf("cannot tokenize %s:%s rule %d (%s): %w", ce.Bundle.Name, ce.Command.Name, i+1, r, err)
 		}
 
 		rule, err := rules.Parse(tokens)
 		if err != nil {
-			return rr, fmt.Errorf("cannot parse rule %s:%s rule %d (%s): %w", ce.Bundle.Name, ce.Command.Executable, i+1, r, err)
+			return rr, fmt.Errorf("cannot parse rule %s:%s rule %d (%s): %w", ce.Bundle.Name, ce.Command.Name, i+1, r, err)
 		}
 
 		rr = append(rr, rule)
