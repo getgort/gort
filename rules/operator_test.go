@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/getgort/gort/types"
@@ -26,151 +27,82 @@ import (
 func TestOperatorEquals(t *testing.T) {
 	evaluate := Equals
 
-	result, err := evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.True(t, result) {
-		t.FailNow()
-	}
+	result := evaluate(types.IntValue{V: 42}, types.IntValue{V: 42})
+	assert.True(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 21})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.False(t, result) {
-		t.FailNow()
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 21})
+	assert.False(t, result)
+}
+
+func TestOperatorRegexpEquals(t *testing.T) {
+	re := regexp.MustCompile(`^(.*)\s+([!>=]{1,2}|in)\s+(.*)$`)
+	test := "option['delete'] in true"
+
+	subs := re.FindStringSubmatch(test)
+
+	for _, s := range subs {
+		t.Log(s)
 	}
 }
 
 func TestOperatorNotEquals(t *testing.T) {
 	evaluate := NotEquals
 
-	result, err := evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.False(t, result) {
-		t.FailNow()
-	}
+	result := evaluate(types.IntValue{V: 42}, types.IntValue{V: 42})
+	assert.False(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 21})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.True(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 21})
+	assert.True(t, result)
 }
 
 func TestOperatorLessThan(t *testing.T) {
 	evaluate := LessThan
 
-	result, err := evaluate(types.IntValue{Value: 21}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.True(t, result) {
-		t.FailNow()
-	}
+	result := evaluate(types.IntValue{V: 21}, types.IntValue{V: 42})
+	assert.True(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.False(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 42})
+	assert.False(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 21})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.False(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 21})
+	assert.False(t, result)
 }
 
 func TestOperatorLessThanOrEqualTo(t *testing.T) {
 	evaluate := LessThanOrEqualTo
 
-	result, err := evaluate(types.IntValue{Value: 21}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.True(t, result) {
-		t.FailNow()
-	}
+	result := evaluate(types.IntValue{V: 21}, types.IntValue{V: 42})
+	assert.True(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.True(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 42})
+	assert.True(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 21})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.False(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 21})
+	assert.False(t, result)
 }
 
 func TestOperatorGreaterThan(t *testing.T) {
 	evaluate := GreaterThan
 
-	result, err := evaluate(types.IntValue{Value: 21}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.False(t, result) {
-		t.FailNow()
-	}
+	result := evaluate(types.IntValue{V: 21}, types.IntValue{V: 42})
+	assert.False(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.False(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 42})
+	assert.False(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 21})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.True(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 21})
+	assert.True(t, result)
 }
 
 func TestOperatorGreaterThanOrEqualTo(t *testing.T) {
 	evaluate := GreaterThanOrEqualTo
 
-	result, err := evaluate(types.IntValue{Value: 21}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.False(t, result) {
-		t.FailNow()
-	}
+	result := evaluate(types.IntValue{V: 21}, types.IntValue{V: 42})
+	assert.False(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 42})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.True(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 42})
+	assert.True(t, result)
 
-	result, err = evaluate(types.IntValue{Value: 42}, types.IntValue{Value: 21})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.True(t, result) {
-		t.FailNow()
-	}
+	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 21})
+	assert.True(t, result)
 }

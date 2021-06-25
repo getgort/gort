@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -30,6 +31,12 @@ type RuleTokens struct {
 	Command     string
 	Conditions  []string
 	Permissions []string
+}
+
+// String is mostly used for debugging.
+func (r RuleTokens) String() string {
+	b, _ := json.Marshal(r)
+	return string(b)
 }
 
 // Tokenize accepts a raw Gort rule of the form "COMMAND [when CONDITION

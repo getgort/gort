@@ -24,6 +24,6 @@ type Expression struct {
 	Operator Operator
 }
 
-func (e Expression) Evaluate() (bool, error) {
+func (e Expression) Evaluate() bool {
 	return e.Operator(e.A, e.B)
 }

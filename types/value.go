@@ -20,211 +20,280 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 type Value interface {
-	String() string
-	Resolve() (interface{}, error)
-	Equals(Value) (bool, error)
-	LessThan(Value) (bool, error)
+	Equals(Value) bool
+	LessThan(Value) bool
+	Value() interface{}
+}
+
+type CollectionValue interface {
+	Name() string
+	Contains(Value) bool
 }
 
 // BoolValue is a literal boolean value.
 type BoolValue struct {
-	Value bool
+	V bool
 }
 
-func (v BoolValue) Equals(q Value) (bool, error) {
+func (v BoolValue) Equals(q Value) bool {
 	switch o := q.(type) {
 	case BoolValue:
-		return v.Value == o.Value, nil
+		return v.V == o.V
 	case IntValue:
-		switch o.Value {
+		switch o.V {
 		case 0:
-			return !v.Value, nil
+			return !v.V
 		case 1:
-			return v.Value, nil
+			return v.V
 		default:
-			return false, fmt.Errorf("cannot compare integer %d to bool", o.Value)
+			return false
 		}
 	case StringValue:
-		b, err := strconv.ParseBool(o.Value)
+		b, err := strconv.ParseBool(o.V)
 		if err != nil {
-			return false, err
+			return false
 		}
-		return v.Value == b, nil
+		return v.V == b
 	case RegexValue:
 		return o.Equals(v)
 	}
 
-	return false, fmt.Errorf("cannot compare %T and %T", v, q)
+	return false
 }
 
-func (v BoolValue) LessThan(q Value) (bool, error) {
-	return false, fmt.Errorf("%T is not a scalar type", v)
+func (v BoolValue) LessThan(q Value) bool {
+	return false
 }
 
-func (v BoolValue) Resolve() (interface{}, error) {
-	return v.Value, nil
-}
-
-func (v BoolValue) String() string {
-	return fmt.Sprintf("%t", v.Value)
+func (v BoolValue) Value() interface{} {
+	return v.V
 }
 
 // FloatValue is a literal floating point value.
 type FloatValue struct {
-	Value float64
+	V float64
 }
 
-func (v FloatValue) Equals(q Value) (bool, error) {
+func (v FloatValue) Equals(q Value) bool {
 	switch o := q.(type) {
 	case FloatValue:
-		return v.Value == o.Value, nil
+		return v.V == o.V
 	case IntValue:
-		asFloat := float64(o.Value)
-		return asFloat == v.Value, nil
+		asFloat := float64(o.V)
+		return asFloat == v.V
 	case RegexValue:
 		return o.Equals(v)
 	}
 
-	return false, fmt.Errorf("cannot compare %T and %T", v, q)
+	return false
 }
 
-func (v FloatValue) LessThan(q Value) (bool, error) {
+func (v FloatValue) LessThan(q Value) bool {
 	switch o := q.(type) {
 	case FloatValue:
-		return v.Value < o.Value, nil
+		return v.V < o.V
 	case IntValue:
-		asFloat := float64(o.Value)
-		return asFloat < v.Value, nil
+		asFloat := float64(o.V)
+		return asFloat < v.V
 	}
 
-	return false, fmt.Errorf("cannot compare %T and %T", v, q)
+	return false
 }
 
-func (v FloatValue) Resolve() (interface{}, error) {
-	return v.Value, nil
-}
-
-func (v FloatValue) String() string {
-	return fmt.Sprintf("%f", v.Value)
+func (v FloatValue) Value() interface{} {
+	return v.V
 }
 
 // IntValue is a literal integer value.
 type IntValue struct {
-	Value int
+	V int
 }
 
-func (v IntValue) Equals(q Value) (bool, error) {
+func (v IntValue) Equals(q Value) bool {
 	switch o := q.(type) {
 	case BoolValue:
 		return o.Equals(v)
 	case FloatValue:
 		return o.Equals(v)
 	case IntValue:
-		return v.Value == o.Value, nil
+		return v.V == o.V
 	case RegexValue:
 		return o.Equals(v)
 	}
 
-	return false, fmt.Errorf("cannot compare %T and %T", v, q)
+	return false
 }
 
-func (v IntValue) LessThan(q Value) (bool, error) {
+func (v IntValue) LessThan(q Value) bool {
 	switch o := q.(type) {
 	case IntValue:
-		return v.Value < o.Value, nil
+		return v.V < o.V
 	case FloatValue:
-		asFloat := float64(v.Value)
-		return asFloat < o.Value, nil
+		asFloat := float64(v.V)
+		return asFloat < o.V
 	}
 
-	return false, fmt.Errorf("cannot compare %T and %T", v, q)
+	return false
 }
 
-func (v IntValue) Resolve() (interface{}, error) {
-	return v.Value, nil
+func (v IntValue) Value() interface{} {
+	return v.V
 }
 
-func (v IntValue) String() string {
-	return fmt.Sprintf("%d", v.Value)
+// NullValue
+type NullValue struct{}
+
+func (v NullValue) Equals(q Value) bool {
+	switch q.(type) {
+	case NullValue:
+		return true
+	default:
+		return false
+	}
 }
 
-// RegexValue describes a regular expression. Its Resolve() function returns
-// the product of `regexp.CompilePOSIX(v.Value)`.
+func (v NullValue) LessThan(q Value) bool {
+	return false
+}
+
+func (v NullValue) Value() interface{} {
+	return nil
+}
+
+// RegexValue describes a regular expression.
 type RegexValue struct {
-	Value string
+	V string
 }
 
-func (v RegexValue) Equals(q Value) (bool, error) {
+func (v RegexValue) Pattern() (*regexp.Regexp, error) {
+	return regexp.CompilePOSIX(v.V)
+}
+
+func (v RegexValue) Equals(q Value) bool {
+	re, err := v.Pattern()
+	if err != nil {
+		return false
+	}
+
 	switch o := q.(type) {
 	case RegexValue:
-		return false, fmt.Errorf("cannot compare %T and %T", v, q)
+		return v.V == o.V
 	default:
-		resolve, err := v.Resolve()
-		if err != nil {
-			return false, err
-		}
-
-		re := resolve.(*regexp.Regexp)
-
-		return re.MatchString(o.String()), nil
+		return re.MatchString(fmt.Sprintf("%v", q.Value()))
 	}
 }
 
-func (v RegexValue) LessThan(q Value) (bool, error) {
-	return false, fmt.Errorf("%T is not a scalar type", v)
+func (v RegexValue) LessThan(q Value) bool {
+	return false
 }
 
-func (v RegexValue) Resolve() (interface{}, error) {
-	return regexp.CompilePOSIX(v.Value)
-}
-
-func (v RegexValue) String() string {
-	return v.Value
+func (v RegexValue) Value() interface{} {
+	return v.V
 }
 
 // StringValue is a literal string value.
 type StringValue struct {
-	Value string
+	V     string
 	Quote rune
 }
 
-func (v StringValue) Equals(q Value) (bool, error) {
+func (v StringValue) Equals(q Value) bool {
 	switch o := q.(type) {
 	case BoolValue:
 		return o.Equals(v)
 	case RegexValue:
 		return o.Equals(v)
 	case StringValue:
-		return v.Value == o.Value, nil
+		return v.V == o.V
 	}
 
-	return false, fmt.Errorf("cannot compare %T and %T", v, q)
+	return false
 }
 
-func (v StringValue) LessThan(q Value) (bool, error) {
-	return false, fmt.Errorf("%T is not a scalar type", v)
+func (v StringValue) LessThan(q Value) bool {
+	return false
 }
 
-func (v StringValue) Resolve() (interface{}, error) {
-	return v.Value, nil
+func (v StringValue) Value() interface{} {
+	return v.V
 }
 
-func (v StringValue) String() string {
-	b := strings.Builder{}
+// MapValue
+type MapValue struct {
+	V    map[string]Value
+	Name string
+	Key  string
+}
 
-	if v.Quote != '\u0000' {
-		b.WriteRune(v.Quote)
+func (v MapValue) Contains(q Value) bool {
+	key := fmt.Sprintf("%v", q.Value())
+
+	if _, ok := v.V[key]; ok {
+		return true
 	}
 
-	b.WriteString(v.Value)
+	return false
+}
 
-	if v.Quote != '\u0000' {
-		b.WriteRune(v.Quote)
+func (v MapValue) Equals(q Value) bool {
+	return false
+}
+
+func (v MapValue) LessThan(q Value) bool {
+	return false
+}
+
+func (v MapValue) Value() interface{} {
+	return v.V
+}
+
+// ListValue
+type ListValue struct {
+	V     []Value
+	Name  string
+	Index int
+}
+
+func (v ListValue) Contains(q Value) bool {
+	for _, i := range v.V {
+		if i.Equals(q) {
+			return true
+		}
 	}
 
-	return b.String()
+	return false
+}
+
+func (v ListValue) Equals(q Value) bool {
+	return false
+}
+
+func (v ListValue) LessThan(q Value) bool {
+	return false
+}
+
+func (v ListValue) Value() interface{} {
+	return v.V
+}
+
+// UnknownValue is returned by Parse when it can't determine a value type
+// solely by looking at it. This could indicate a function, named
+// collection(arg, option), or other named entity.
+type UnknownValue struct {
+	V string
+}
+
+func (v UnknownValue) Equals(q Value) bool {
+	return false
+}
+
+func (v UnknownValue) LessThan(q Value) bool {
+	return false
+}
+
+func (v UnknownValue) Value() interface{} {
+	return v.V
 }

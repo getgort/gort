@@ -38,7 +38,7 @@ func TestTokenize(t *testing.T) {
 		`foo:bar with arg[0] in ['baz', false, 100] must have foo:read`:                                     {`foo:bar`, []string{`arg[0] in ['baz', false, 100]`}, []string{`foo:read`}},
 		`foo:bar with any option == /^prod.*/ must have foo:read`:                                           {`foo:bar`, []string{`any option == /^prod.*/`}, []string{`foo:read`}},
 		`foo:bar with all option < 10 must have foo:read`:                                                   {`foo:bar`, []string{`all option < 10`}, []string{`foo:read`}},
-		`foo:bar with all options in ['staging', 'list'] must have foo:read`:                                {`foo:bar`, []string{`all options in ['staging', 'list']`}, []string{`foo:read`}},
+		`foo:bar with all option in ['staging', 'list'] must have foo:read`:                                 {`foo:bar`, []string{`all option in ['staging', 'list']`}, []string{`foo:read`}},
 		`foo:deploy with option["environment"] == 'prod' must have all in [site:it, site:prod, foo:deploy]`: {`foo:deploy`, []string{`option["environment"] == 'prod'`}, []string{`all in [site:it, site:prod, foo:deploy]`}},
 		`foo:deploy with option["environment"] == 'qa' must have site:test and foo:deploy`:                  {`foo:deploy`, []string{`option["environment"] == 'qa'`}, []string{`site:test`, `and`, `foo:deploy`}},
 		`foo:deploy with option["environment"] == 'stage' must have site:stage and foo:deploy`:              {`foo:deploy`, []string{`option["environment"] == 'stage'`}, []string{`site:stage`, `and`, `foo:deploy`}},

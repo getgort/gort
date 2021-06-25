@@ -32,12 +32,12 @@ func TestCommandParseEmpty(t *testing.T) {
 func TestCommandParseDefaults(t *testing.T) {
 	tests := map[string]Command{
 		`foo:curl localhost`:              {`foo`, `curl`, map[string]CommandOption{}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik localhost`:          {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl --ssl localhost`:        {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik -- --ssl localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}}, []Value{stringValue("--ssl"), stringValue("localhost")}},
-		`bar:echo -n foo bar`:             {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{Value: true}}}, []Value{stringValue("foo"), stringValue("bar")}},
-		`bar:echo -n foo -E bar`:          {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{Value: true}}}, []Value{stringValue("foo"), stringValue("-E"), stringValue("bar")}},
-		`bar:echo -n "foo bar"`:           {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{Value: true}}}, []Value{StringValue{Value: "foo bar", Quote: '"'}}},
+		`foo:curl -Ik localhost`:          {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl --ssl localhost`:        {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik -- --ssl localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}}, []Value{stringValue("--ssl"), stringValue("localhost")}},
+		`bar:echo -n foo bar`:             {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{V: true}}}, []Value{stringValue("foo"), stringValue("bar")}},
+		`bar:echo -n foo -E bar`:          {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{V: true}}}, []Value{stringValue("foo"), stringValue("-E"), stringValue("bar")}},
+		`bar:echo -n "foo bar"`:           {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{V: true}}}, []Value{StringValue{V: "foo bar", Quote: '"'}}},
 	}
 
 	for test, expected := range tests {
@@ -56,11 +56,11 @@ func TestCommandOptionTypes(t *testing.T) {
 
 	expected := Command{"", "test",
 		map[string]CommandOption{
-			"flag":     {"flag", BoolValue{Value: true}},
-			"int":      {"int", IntValue{Value: 10}},
-			"float":    {"float", FloatValue{Value: 0.1}},
-			"notregex": {"notregex", StringValue{Value: `/^foo$/`, Quote: '"'}},
-			"string":   {"string", StringValue{Value: "str"}},
+			"flag":     {"flag", BoolValue{V: true}},
+			"int":      {"int", IntValue{V: 10}},
+			"float":    {"float", FloatValue{V: 0.1}},
+			"notregex": {"notregex", StringValue{V: `/^foo$/`, Quote: '"'}},
+			"string":   {"string", StringValue{V: "str"}},
 		},
 		[]Value{stringValue("this"), stringValue("is"), stringValue("text")},
 	}
@@ -82,12 +82,12 @@ func TestCommandParameterTypes(t *testing.T) {
 	expected := Command{"", "test",
 		map[string]CommandOption{},
 		[]Value{
-			StringValue{Value: "string", Quote: '\u0000'},
-			FloatValue{Value: 10.0},
-			IntValue{Value: 42},
-			BoolValue{Value: false},
-			StringValue{Value: "foo bar", Quote: '"'},
-			StringValue{Value: "/^.*$/", Quote: '\u0000'},
+			StringValue{V: "string", Quote: '\u0000'},
+			FloatValue{V: 10.0},
+			IntValue{V: 42},
+			BoolValue{V: false},
+			StringValue{V: "foo bar", Quote: '"'},
+			StringValue{V: "/^.*$/", Quote: '\u0000'},
 		},
 	}
 
@@ -102,12 +102,12 @@ func TestCommandParameterTypes(t *testing.T) {
 }
 
 func TestCommandParseBareFlagsAreTrue(t *testing.T) {
-	tv := BoolValue{Value: true}
+	tv := BoolValue{V: true}
 
 	tests := map[string]Command{
 		`foo:curl -Ik localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", tv}, "k": {"k", tv}}, []Value{stringValue("localhost")}},
 		`bar:echo -n foo -E bar`: {`bar`, `echo`, map[string]CommandOption{"n": {"n", tv}}, []Value{stringValue("foo"), stringValue("-E"), stringValue("bar")}},
-		`bar:echo -n "foo bar"`:  {`bar`, `echo`, map[string]CommandOption{"n": {"n", tv}}, []Value{StringValue{Value: "foo bar", Quote: '"'}}},
+		`bar:echo -n "foo bar"`:  {`bar`, `echo`, map[string]CommandOption{"n": {"n", tv}}, []Value{StringValue{V: "foo bar", Quote: '"'}}},
 	}
 
 	for test, expected := range tests {
@@ -124,10 +124,10 @@ func TestCommandParseBareFlagsAreTrue(t *testing.T) {
 func TestCommandParseAgnosticDashesTrue(t *testing.T) {
 	tests := map[string]Command{
 		`foo:curl localhost`:              {`foo`, `curl`, map[string]CommandOption{}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik localhost`:          {`foo`, `curl`, map[string]CommandOption{"Ik": {"Ik", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl --ssl localhost`:        {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik --ssl localhost`:    {`foo`, `curl`, map[string]CommandOption{"Ik": {"Ik", BoolValue{Value: true}}, "ssl": {"ssl", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik -- --ssl localhost`: {`foo`, `curl`, map[string]CommandOption{"Ik": {"Ik", BoolValue{Value: true}}}, []Value{stringValue("--ssl"), stringValue("localhost")}},
+		`foo:curl -Ik localhost`:          {`foo`, `curl`, map[string]CommandOption{"Ik": {"Ik", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl --ssl localhost`:        {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik --ssl localhost`:    {`foo`, `curl`, map[string]CommandOption{"Ik": {"Ik", BoolValue{V: true}}, "ssl": {"ssl", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik -- --ssl localhost`: {`foo`, `curl`, map[string]CommandOption{"Ik": {"Ik", BoolValue{V: true}}}, []Value{stringValue("--ssl"), stringValue("localhost")}},
 	}
 
 	options := []ParseOption{ParseAgnosticDashes(true)}
@@ -146,12 +146,12 @@ func TestCommandParseAgnosticDashesTrue(t *testing.T) {
 func TestCommandParseAssumeOptionArgumentsTrue(t *testing.T) {
 	tests := map[string]Command{
 		`foo:curl localhost`:              {`foo`, `curl`, map[string]CommandOption{}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik localhost`:          {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", StringValue{Value: "localhost", Quote: '\u0000'}}}, []Value{}},
-		`foo:curl --ssl localhost`:        {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", StringValue{Value: "localhost", Quote: '\u0000'}}}, []Value{}},
-		`foo:curl -Ik --ssl localhost`:    {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}, "ssl": {"ssl", StringValue{Value: "localhost", Quote: '\u0000'}}}, []Value{}},
-		`foo:curl -Ik -- --ssl localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}}, []Value{stringValue("--ssl"), stringValue("localhost")}},
-		`bar:echo -n foo bar`:             {`bar`, `echo`, map[string]CommandOption{"n": {"n", StringValue{Value: "foo", Quote: '\u0000'}}}, []Value{stringValue("bar")}},
-		`bar:echo -n "foo bar"`:           {`bar`, `echo`, map[string]CommandOption{"n": {"n", StringValue{Value: "foo bar", Quote: '"'}}}, []Value{}},
+		`foo:curl -Ik localhost`:          {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", StringValue{V: "localhost", Quote: '\u0000'}}}, []Value{}},
+		`foo:curl --ssl localhost`:        {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", StringValue{V: "localhost", Quote: '\u0000'}}}, []Value{}},
+		`foo:curl -Ik --ssl localhost`:    {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}, "ssl": {"ssl", StringValue{V: "localhost", Quote: '\u0000'}}}, []Value{}},
+		`foo:curl -Ik -- --ssl localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}}, []Value{stringValue("--ssl"), stringValue("localhost")}},
+		`bar:echo -n foo bar`:             {`bar`, `echo`, map[string]CommandOption{"n": {"n", StringValue{V: "foo", Quote: '\u0000'}}}, []Value{stringValue("bar")}},
+		`bar:echo -n "foo bar"`:           {`bar`, `echo`, map[string]CommandOption{"n": {"n", StringValue{V: "foo bar", Quote: '"'}}}, []Value{}},
 	}
 
 	options := []ParseOption{ParseAssumeOptionArguments(true)}
@@ -170,12 +170,12 @@ func TestCommandParseAssumeOptionArgumentsTrue(t *testing.T) {
 func TestCommandParseAssumeOptionArgumentsFalse(t *testing.T) {
 	tests := map[string]Command{
 		`foo:curl localhost`:              {`foo`, `curl`, map[string]CommandOption{}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik localhost`:          {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl --ssl localhost`:        {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik --ssl localhost`:    {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}, "ssl": {"ssl", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik -- --ssl localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}}, []Value{stringValue("--ssl"), stringValue("localhost")}},
-		`bar:echo -n foo bar`:             {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{Value: true}}}, []Value{stringValue("foo"), stringValue("bar")}},
-		`bar:echo -n "foo bar"`:           {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{Value: true}}}, []Value{StringValue{Value: "foo bar", Quote: '"'}}},
+		`foo:curl -Ik localhost`:          {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl --ssl localhost`:        {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik --ssl localhost`:    {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}, "ssl": {"ssl", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik -- --ssl localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}}, []Value{stringValue("--ssl"), stringValue("localhost")}},
+		`bar:echo -n foo bar`:             {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{V: true}}}, []Value{stringValue("foo"), stringValue("bar")}},
+		`bar:echo -n "foo bar"`:           {`bar`, `echo`, map[string]CommandOption{"n": {"n", BoolValue{V: true}}}, []Value{StringValue{V: "foo bar", Quote: '"'}}},
 	}
 
 	options := []ParseOption{ParseAssumeOptionArguments(false)}
@@ -194,9 +194,9 @@ func TestCommandParseAssumeOptionArgumentsFalse(t *testing.T) {
 func TestCommandParseOptionHasArgument(t *testing.T) {
 	tests := map[string]Command{
 		`foo:curl localhost`:                 {`foo`, `curl`, map[string]CommandOption{}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik localhost`:             {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl --ssl localhost`:           {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik --cert file localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}, "cert": {"cert", StringValue{Value: "file", Quote: '\u0000'}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik localhost`:             {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl --ssl localhost`:           {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik --cert file localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}, "cert": {"cert", StringValue{V: "file", Quote: '\u0000'}}}, []Value{stringValue("localhost")}},
 	}
 
 	options := []ParseOption{
@@ -220,10 +220,10 @@ func TestCommandParseOptionHasArgument(t *testing.T) {
 func TestCommandParseOptionAlias(t *testing.T) {
 	tests := map[string]Command{
 		`foo:curl localhost`:                 {`foo`, `curl`, map[string]CommandOption{}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik localhost`:             {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl --ssl localhost`:           {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{Value: true}}}, []Value{stringValue("localhost")}},
-		`foo:curl -Ik --cert file localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{Value: true}}, "k": {"k", BoolValue{Value: true}}, "cert": {"cert", StringValue{Value: "file", Quote: '\u0000'}}}, []Value{stringValue("localhost")}},
-		`foo:curl -E file localhost`:         {`foo`, `curl`, map[string]CommandOption{"cert": {"cert", StringValue{Value: "file", Quote: '\u0000'}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik localhost`:             {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl --ssl localhost`:           {`foo`, `curl`, map[string]CommandOption{"ssl": {"ssl", BoolValue{V: true}}}, []Value{stringValue("localhost")}},
+		`foo:curl -Ik --cert file localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", BoolValue{V: true}}, "k": {"k", BoolValue{V: true}}, "cert": {"cert", StringValue{V: "file", Quote: '\u0000'}}}, []Value{stringValue("localhost")}},
+		`foo:curl -E file localhost`:         {`foo`, `curl`, map[string]CommandOption{"cert": {"cert", StringValue{V: "file", Quote: '\u0000'}}}, []Value{stringValue("localhost")}},
 	}
 
 	options := []ParseOption{
@@ -263,5 +263,5 @@ func TestSplitCommand(t *testing.T) {
 }
 
 func stringValue(s string) Value {
-	return StringValue{Value: s, Quote: '\u0000'}
+	return StringValue{V: s, Quote: '\u0000'}
 }

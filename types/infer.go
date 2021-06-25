@@ -30,6 +30,7 @@ var (
 	reRegexTrim  = regexp.MustCompile(`(^[\"\']?/|/[\"\']?$)`)
 	reString     = regexp.MustCompile(`^[\"\'].*[\"\']$`)
 	reStringTrim = regexp.MustCompile(`(^[\"\']?|[\"\']?$)`)
+	reCollection = regexp.MustCompile(`^([A-Za-z0-9_]*)\[(.*)\]$`)
 )
 
 // Infer accepts a string, attempts to determine its type, and based
@@ -42,31 +43,52 @@ func Infer(str string, basicTypes, strictStrings bool) (Value, error) {
 	switch {
 	case reBool.MatchString(str):
 		value, err := strconv.ParseBool(str)
-		return BoolValue{Value: value}, err
+		return BoolValue{V: value}, err
 
 	case reFloat.MatchString(str):
 		value, err := strconv.ParseFloat(str, 64)
-		return FloatValue{Value: value}, err
+		return FloatValue{V: value}, err
 
 	case reInt.MatchString(str):
 		value, err := strconv.Atoi(str)
-		return IntValue{Value: value}, err
+		return IntValue{V: value}, err
 
 	case !basicTypes && reRegex.MatchString(str):
 		value := reRegexTrim.ReplaceAllString(str, "")
-		return RegexValue{Value: value}, nil
+		return RegexValue{V: value}, nil
 
 	case reString.MatchString(str):
 		quoteFlavor := str[0]
 		value := reStringTrim.ReplaceAllString(str, "")
-		return StringValue{Value: value, Quote: rune(quoteFlavor)}, nil
+		return StringValue{V: value, Quote: rune(quoteFlavor)}, nil
 
-	default:
-		if !strictStrings {
-			return StringValue{Value: str, Quote: '\u0000'}, nil
+	case !basicTypes && reCollection.MatchString(str):
+		subs := reCollection.FindStringSubmatch(str)
+		name, param := subs[1], subs[2]
+		paramValue, err := Infer(param, true, true)
+		if err != nil {
+			return NullValue{}, err
 		}
 
-		return nil, fmt.Errorf("unknown type: %s", str)
+		// Determine the collection type by the type of argument.
+		// IntValue -> ListValue
+		// StringValue -> MapValue
+		// Anything else -> error
+		switch v := paramValue.(type) {
+		case IntValue:
+			return ListValue{Name: name, Index: v.Value().(int)}, nil
+		case StringValue:
+			return MapValue{Name: name, Key: v.Value().(string)}, nil
+		default:
+			return NullValue{}, fmt.Errorf("invalid collection parameter: %T", v)
+		}
+
+	default:
+		if strictStrings {
+			return UnknownValue{V: str}, nil
+		}
+
+		return StringValue{V: str}, nil
 	}
 }
 

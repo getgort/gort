@@ -28,51 +28,33 @@ func TestBoolValueEquals(t *testing.T) {
 		Input      bool
 		ComparedTo Value
 	}
-	type Expected struct {
-		Result   bool
-		HasError bool
-	}
 
-	tests := map[Test]Expected{
-		{false, BoolValue{Value: false}}:      {true, false},
-		{false, BoolValue{Value: true}}:       {false, false},
-		{true, BoolValue{Value: false}}:       {false, false},
-		{false, FloatValue{Value: 0.0}}:       {false, true},
-		{false, IntValue{Value: 0}}:           {true, false},
-		{false, RegexValue{Value: `^false$`}}: {true, false},
-		{false, StringValue{Value: "false"}}:  {true, false},
-		{true, BoolValue{Value: true}}:        {true, false},
-		{true, FloatValue{Value: 0.0}}:        {false, true},
-		{true, IntValue{Value: 1}}:            {true, false},
-		{true, RegexValue{Value: `^true$`}}:   {true, false},
-		{true, StringValue{Value: "true"}}:    {true, false},
-		{true, IntValue{Value: 2}}:            {false, true},
-		{false, StringValue{Value: "foo"}}:    {false, true},
+	tests := map[Test]bool{
+		{false, BoolValue{V: false}}:      true,
+		{false, BoolValue{V: true}}:       false,
+		{true, BoolValue{V: false}}:       false,
+		{false, FloatValue{V: 0.0}}:       false,
+		{false, IntValue{V: 0}}:           true,
+		{false, RegexValue{V: `^false$`}}: true,
+		{false, StringValue{V: "false"}}:  true,
+		{true, BoolValue{V: true}}:        true,
+		{true, FloatValue{V: 0.0}}:        false,
+		{true, IntValue{V: 1}}:            true,
+		{true, RegexValue{V: `^true$`}}:   true,
+		{true, StringValue{V: "true"}}:    true,
+		{true, IntValue{V: 2}}:            false,
+		{false, StringValue{V: "foo"}}:    false,
 	}
 
 	for test, expected := range tests {
-		input := BoolValue{Value: test.Input}
+		input := BoolValue{V: test.Input}
 		comparedTo := test.ComparedTo
 
-		result, err := input.Equals(comparedTo)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
+		result := input.Equals(comparedTo)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
-
-		result, err = comparedTo.Equals(input)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
+		result = comparedTo.Equals(input)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 	}
 }
 
@@ -82,54 +64,35 @@ func TestFloatValueEquals(t *testing.T) {
 		ComparedTo Value
 	}
 
-	type Expected struct {
-		Result   bool
-		HasError bool
-	}
-
-	tests := map[Test]Expected{
-		{0.0, BoolValue{Value: false}}:       {false, true},
-		{0.0, FloatValue{Value: 0.0}}:        {true, false},
-		{0.0, FloatValue{Value: 1.0}}:        {false, false},
-		{0.0, FloatValue{Value: -1.0}}:       {false, false},
-		{0.0, IntValue{Value: 0}}:            {true, false},
-		{0.0, RegexValue{Value: `^0.0*$`}}:   {true, false},
-		{0.0, StringValue{Value: "0.0"}}:     {false, true},
-		{1.0, BoolValue{Value: true}}:        {false, true},
-		{1.0, FloatValue{Value: 1.0}}:        {true, false},
-		{1.0, IntValue{Value: 1}}:            {true, false},
-		{1.0, RegexValue{Value: `^1.0*$`}}:   {true, false},
-		{1.0, StringValue{Value: "1.0"}}:     {false, true},
-		{-1.0, BoolValue{Value: false}}:      {false, true},
-		{-1.0, FloatValue{Value: -1.0}}:      {true, false},
-		{-1.0, IntValue{Value: -1}}:          {true, false},
-		{-1.0, RegexValue{Value: `^-1.0*$`}}: {true, false},
-		{-1.0, StringValue{Value: "-1.0"}}:   {false, true},
+	tests := map[Test]bool{
+		{0.0, BoolValue{V: false}}:          false,
+		{0.0, FloatValue{V: 0.0}}:           true,
+		{0.0, FloatValue{V: 1.0}}:           false,
+		{0.0, FloatValue{V: -1.0}}:          false,
+		{0.0, IntValue{V: 0}}:               true,
+		{0.0, RegexValue{V: `^0(.0*)?$`}}:   true,
+		{0.0, StringValue{V: "0.0"}}:        false,
+		{1.0, BoolValue{V: true}}:           false,
+		{1.0, FloatValue{V: 1.0}}:           true,
+		{1.0, IntValue{V: 1}}:               true,
+		{1.0, RegexValue{V: `^1(.0*)?$`}}:   true,
+		{1.0, StringValue{V: "1.0"}}:        false,
+		{-1.0, BoolValue{V: false}}:         false,
+		{-1.0, FloatValue{V: -1.0}}:         true,
+		{-1.0, IntValue{V: -1}}:             true,
+		{-1.0, RegexValue{V: `^-1(.0*)?$`}}: true,
+		{-1.0, StringValue{V: "-1.0"}}:      false,
 	}
 
 	for test, expected := range tests {
-		input := FloatValue{Value: test.Input}
+		input := FloatValue{V: test.Input}
 		comparedTo := test.ComparedTo
 
-		result, err := input.Equals(comparedTo)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
+		result := input.Equals(comparedTo)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
-
-		result, err = comparedTo.Equals(input)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
+		result = comparedTo.Equals(input)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 	}
 }
 
@@ -139,52 +102,33 @@ func TestIntValueEquals(t *testing.T) {
 		ComparedTo Value
 	}
 
-	type Expected struct {
-		Result   bool
-		HasError bool
-	}
-
-	tests := map[Test]Expected{
-		{0, BoolValue{Value: false}}:     {true, false},
-		{0, FloatValue{Value: 0.0}}:      {true, false},
-		{0, IntValue{Value: 0}}:          {true, false},
-		{0, RegexValue{Value: `^0*$`}}:   {true, false},
-		{0, StringValue{Value: "0"}}:     {false, true},
-		{1, BoolValue{Value: true}}:      {true, false},
-		{1, FloatValue{Value: 1.0}}:      {true, false},
-		{1, IntValue{Value: 1}}:          {true, false},
-		{1, RegexValue{Value: `^1*$`}}:   {true, false},
-		{1, StringValue{Value: "1"}}:     {false, true},
-		{-1, BoolValue{Value: false}}:    {false, true},
-		{-1, FloatValue{Value: -1.0}}:    {true, false},
-		{-1, IntValue{Value: -1}}:        {true, false},
-		{-1, RegexValue{Value: `^-1*$`}}: {true, false},
-		{-1, StringValue{Value: "-1"}}:   {false, true},
+	tests := map[Test]bool{
+		{0, BoolValue{V: false}}:     true,
+		{0, FloatValue{V: 0.0}}:      true,
+		{0, IntValue{V: 0}}:          true,
+		{0, RegexValue{V: `^0*$`}}:   true,
+		{0, StringValue{V: "0"}}:     false,
+		{1, BoolValue{V: true}}:      true,
+		{1, FloatValue{V: 1.0}}:      true,
+		{1, IntValue{V: 1}}:          true,
+		{1, RegexValue{V: `^1*$`}}:   true,
+		{1, StringValue{V: "1"}}:     false,
+		{-1, BoolValue{V: false}}:    false,
+		{-1, FloatValue{V: -1.0}}:    true,
+		{-1, IntValue{V: -1}}:        true,
+		{-1, RegexValue{V: `^-1*$`}}: true,
+		{-1, StringValue{V: "-1"}}:   false,
 	}
 
 	for test, expected := range tests {
-		input := IntValue{Value: test.Input}
+		input := IntValue{V: test.Input}
 		comparedTo := test.ComparedTo
 
-		result, err := input.Equals(comparedTo)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
+		result := input.Equals(comparedTo)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
-
-		result, err = comparedTo.Equals(input)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
+		result = comparedTo.Equals(input)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 	}
 }
 
@@ -194,46 +138,27 @@ func TestRegexValueEquals(t *testing.T) {
 		ComparedTo Value
 	}
 
-	type Expected struct {
-		Result   bool
-		HasError bool
-	}
-
-	tests := map[Test]Expected{
-		{`^false$`, BoolValue{Value: false}}: {true, false},
-		{`^false$`, BoolValue{Value: true}}:  {false, false},
-		{`^0.0*$`, FloatValue{Value: 0.0}}:   {true, false},
-		{`^0.0*$`, FloatValue{Value: 1.0}}:   {false, false},
-		{`^0$`, IntValue{Value: 0}}:          {true, false},
-		{`^0$`, IntValue{Value: 1}}:          {false, false},
-		{`^.*$`, RegexValue{Value: `^.*$`}}:  {false, true},
-		{`^foo$`, StringValue{Value: `foo`}}: {true, false},
-		{`^foo$`, StringValue{Value: "bar"}}: {false, false},
+	tests := map[Test]bool{
+		{`^false$`, BoolValue{V: false}}:  true,
+		{`^false$`, BoolValue{V: true}}:   false,
+		{`^0(.0*)?$`, FloatValue{V: 0.0}}: true,
+		{`^0(.0*)?$`, FloatValue{V: 1.0}}: false,
+		{`^0$`, IntValue{V: 0}}:           true,
+		{`^0$`, IntValue{V: 1}}:           false,
+		{`^.*$`, RegexValue{V: `^.*$`}}:   true,
+		{`^foo$`, StringValue{V: `foo`}}:  true,
+		{`^foo$`, StringValue{V: "bar"}}:  false,
 	}
 
 	for test, expected := range tests {
-		input := RegexValue{Value: test.Input}
+		input := RegexValue{V: test.Input}
 		comparedTo := test.ComparedTo
 
-		result, err := input.Equals(comparedTo)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
+		result := input.Equals(comparedTo)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
-
-		result, err = comparedTo.Equals(input)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
+		result = comparedTo.Equals(input)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 	}
 }
 
@@ -243,43 +168,24 @@ func TestStringValueEquals(t *testing.T) {
 		ComparedTo Value
 	}
 
-	type Expected struct {
-		Result   bool
-		HasError bool
-	}
-
-	tests := map[Test]Expected{
-		{"foo", BoolValue{Value: false}}:   {false, true},
-		{"foo", FloatValue{Value: 0.0}}:    {false, true},
-		{"foo", IntValue{Value: 0}}:        {false, true},
-		{"foo", RegexValue{Value: `^.*$`}}: {true, false},
-		{"foo", StringValue{Value: "foo"}}: {true, false},
-		{"foo", StringValue{Value: "0"}}:   {false, false},
+	tests := map[Test]bool{
+		{"foo", BoolValue{V: false}}:   false,
+		{"foo", FloatValue{V: 0.0}}:    false,
+		{"foo", IntValue{V: 0}}:        false,
+		{"foo", RegexValue{V: `^.*$`}}: true,
+		{"foo", StringValue{V: "foo"}}: true,
+		{"foo", StringValue{V: "0"}}:   false,
 	}
 
 	for test, expected := range tests {
-		input := StringValue{Value: test.Input}
+		input := StringValue{V: test.Input}
 		comparedTo := test.ComparedTo
 
-		result, err := input.Equals(comparedTo)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
+		result := input.Equals(comparedTo)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
-
-		result, err = comparedTo.Equals(input)
-		if expected.HasError && !assert.Error(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-		if !expected.HasError && !assert.NoError(t, err, msg(test.Input, test.ComparedTo)) {
-			continue
-		}
-
-		assert.Equal(t, expected.Result, result, msg(test.Input, test.ComparedTo))
+		result = comparedTo.Equals(input)
+		assert.Equal(t, expected, result, msg(test.Input, test.ComparedTo))
 	}
 }
 
