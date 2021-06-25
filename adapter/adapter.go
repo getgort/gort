@@ -426,7 +426,6 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("Command lookup error")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("command lookup error: %w", err)
 	}
@@ -456,7 +455,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 
 	// Retrieve the command's rules as a []rules.Rule so that we can
 	// evaluate against them.
-	rules, err := loadAndParseRules(cmdEntry)
+	ruleList, err := loadAndParseRules(cmdEntry)
 	if err != nil {
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
@@ -466,7 +465,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		return nil, fmt.Errorf("rule load error: %w", err)
 	}
 
-	if CommandsRequireAtLeastOneRule && len(rules) == 0 {
+	if CommandsRequireAtLeastOneRule && len(ruleList) == 0 {
 		msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
 			"For a command to be executable, it must have at least one rule.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
 		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Rules Defined", msg)
@@ -479,12 +478,17 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		return nil, err
 	}
 
+	env := rules.EvaluationEnvironment{
+		"option": cmdInput.OptionsValues(),
+		"arg":    cmdInput.Parameters,
+	}
+
 	// Loop over the rules and evaluate them one-by-one.
-	for _, r := range rules {
+	for _, r := range ruleList {
 		le.Debugf("Evaluating rule: %v", r)
 
 		// If the rule's conditions don't evaluate to true, ignore it.
-		if !r.Matches(cmdInput.OptionsValues(), cmdInput.Parameters) {
+		if !r.Matches(env) {
 			continue
 		}
 

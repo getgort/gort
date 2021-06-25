@@ -16,10 +16,6 @@
 
 package rules
 
-import (
-	"github.com/getgort/gort/types"
-)
-
 type Rule struct {
 	Command     string
 	Conditions  []Expression
@@ -27,14 +23,39 @@ type Rule struct {
 }
 
 // Matches returns true iff the Rule's stated conditions evaluate to true.
-func (r Rule) Matches(options map[string]types.Value, args []types.Value) bool {
-	// TODO: Create an "arg" and "option" Value type.
-	return false
+func (r Rule) Matches(env EvaluationEnvironment) bool {
+	// No conditions matches everything
+	if len(r.Conditions) == 0 {
+		return true
+	}
+
+	result := r.Conditions[0].Evaluate(env)
+
+	for i := 1; i < len(r.Conditions); i++ {
+		c := r.Conditions[i]
+
+		if c.Condition == And {
+			result = (result && c.Evaluate(env))
+			continue
+		}
+
+		if c.Condition == Or {
+			result = (result || c.Evaluate(env))
+			continue
+		}
+	}
+
+	return result
 }
 
 // Allowed returns true iff the user has all required permissions (or the rule
 // is an "allow" rule).
 func (r Rule) Allowed(permissions map[string]interface{}) bool {
-	// TODO: Create an "arg" and "option" Value type.
-	return false
+	for _, required := range r.Permissions {
+		if _, ok := permissions[required]; !ok {
+			return false
+		}
+	}
+
+	return true
 }

@@ -30,7 +30,19 @@ func Parse(rt RuleTokens) (Rule, error) {
 		Permissions: rt.Permissions,
 	}
 
+	lastCondition := Undefined
+
 	for _, c := range rt.Conditions {
+		if c == "and" {
+			lastCondition = And
+			continue
+		}
+
+		if c == "or" {
+			lastCondition = Or
+			continue
+		}
+
 		a, b, o, err := ParseExpression(c)
 		if err != nil {
 			return r, fmt.Errorf("can't parse condition: %w", err)
@@ -46,7 +58,7 @@ func Parse(rt RuleTokens) (Rule, error) {
 			return r, fmt.Errorf("can't infer value: %w", err)
 		}
 
-		r.Conditions = append(r.Conditions, Expression{A: va, B: vb, Operator: o})
+		r.Conditions = append(r.Conditions, Expression{A: va, B: vb, Operator: o, Condition: lastCondition})
 	}
 
 	return r, nil

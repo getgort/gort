@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/getgort/gort/types"
@@ -32,17 +31,6 @@ func TestOperatorEquals(t *testing.T) {
 
 	result = evaluate(types.IntValue{V: 42}, types.IntValue{V: 21})
 	assert.False(t, result)
-}
-
-func TestOperatorRegexpEquals(t *testing.T) {
-	re := regexp.MustCompile(`^(.*)\s+([!>=]{1,2}|in)\s+(.*)$`)
-	test := "option['delete'] in true"
-
-	subs := re.FindStringSubmatch(test)
-
-	for _, s := range subs {
-		t.Log(s)
-	}
 }
 
 func TestOperatorNotEquals(t *testing.T) {
