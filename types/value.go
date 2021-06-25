@@ -239,11 +239,26 @@ func (v MapValue) Contains(q Value) bool {
 }
 
 func (v MapValue) Equals(q Value) bool {
-	return false
+	value, exists := v.V[v.Key]
+
+	if bv, ok := q.(BoolValue); ok {
+		return bv.V == exists
+	}
+
+	if !exists {
+		return false
+	}
+
+	return value.Equals(q)
 }
 
 func (v MapValue) LessThan(q Value) bool {
-	return false
+	value, exists := v.V[v.Key]
+	if !exists {
+		return false
+	}
+
+	return value.LessThan(q)
 }
 
 func (v MapValue) Value() interface{} {
@@ -258,8 +273,8 @@ type ListValue struct {
 }
 
 func (v ListValue) Contains(q Value) bool {
-	for _, i := range v.V {
-		if i.Equals(q) {
+	for _, c := range v.V {
+		if c.Equals(q) {
 			return true
 		}
 	}
@@ -268,7 +283,11 @@ func (v ListValue) Contains(q Value) bool {
 }
 
 func (v ListValue) Equals(q Value) bool {
-	return false
+	if v.Index < 0 || v.Index >= len(v.V) {
+		return false
+	}
+
+	return v.V[v.Index].Equals(q)
 }
 
 func (v ListValue) LessThan(q Value) bool {

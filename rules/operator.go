@@ -47,6 +47,10 @@ func GreaterThanOrEqualTo(a, b types.Value) bool {
 }
 
 func In(a, b types.Value) bool {
-	// Not implemented
-	return false
+	coll, ok := b.(types.CollectionValue)
+	if !ok {
+		return Equals(a, b)
+	}
+
+	return coll.Contains(a)
 }

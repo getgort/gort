@@ -18,12 +18,65 @@ package rules
 
 import "github.com/getgort/gort/types"
 
-// Expression describes a single
+type LogicalOperator int
+
+const (
+	Undefined LogicalOperator = iota
+	And
+	Or
+)
+
+// Expression describes a single.
+// Condition should be Undefined for the first element, but defined for each subsequent element.
 type Expression struct {
-	A, B     types.Value
-	Operator Operator
+	A, B      types.Value
+	Operator  Operator
+	Condition LogicalOperator
 }
 
-func (e Expression) Evaluate() bool {
+type EvaluationEnvironment map[string]interface{}
+
+func (e Expression) Evaluate(env EvaluationEnvironment) bool {
+	e.A = define(e.A, env)
+	e.B = define(e.B, env)
+
 	return e.Operator(e.A, e.B)
+}
+
+func define(v types.Value, env EvaluationEnvironment) types.Value {
+	switch o := v.(type) {
+	case types.ListValue:
+		i, exists := env[o.Name]
+		if !exists {
+			return v
+		}
+
+		c, ok := i.([]types.Value)
+		if !ok {
+			return v
+		}
+
+		if o.Index < 0 || o.Index >= len(c) {
+			return v
+		}
+
+		o.V = c
+		return o
+
+	case types.MapValue:
+		i, exists := env[o.Name]
+		if !exists {
+			return v
+		}
+
+		c, ok := i.(map[string]types.Value)
+		if !ok {
+			return v
+		}
+
+		o.V = c
+		return o
+	}
+
+	return v
 }

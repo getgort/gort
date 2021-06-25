@@ -30,7 +30,14 @@ func TestParse(t *testing.T) {
 		`foo:bar allow`: {Command: "foo:bar", Conditions: []Expression{}, Permissions: []string{}},
 		`foo:bar with option['delete'] == true must have foo:destroy`: {
 			Command:     "foo:bar",
-			Conditions:  []Expression{{A: types.MapValue{Name: "option", Key: "delete"}, B: types.BoolValue{V: true}, Operator: Equals}},
+			Conditions:  []Expression{{A: types.MapValue{Name: "option", Key: "delete"}, B: types.BoolValue{V: true}, Operator: Equals, Condition: Undefined}},
+			Permissions: []string{"foo:destroy"}},
+		`foo:bar with option['delete'] == true and arg[0] == false must have foo:destroy`: {
+			Command: "foo:bar",
+			Conditions: []Expression{
+				{A: types.MapValue{Name: "option", Key: "delete"}, B: types.BoolValue{V: true}, Operator: Equals, Condition: Undefined},
+				{A: types.ListValue{Name: "arg", Index: 0}, B: types.BoolValue{V: false}, Operator: Equals, Condition: And},
+			},
 			Permissions: []string{"foo:destroy"}},
 	}
 
