@@ -17,7 +17,6 @@
 package types
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,81 +24,27 @@ import (
 
 func TestInfer(t *testing.T) {
 	tests := map[string]Value{
-		`true`:       BoolValue{true},
-		`false`:      BoolValue{false},
-		`0.0`:        FloatValue{0.0},
-		`.10`:        FloatValue{0.10},
-		`-1.0`:       FloatValue{-1.0},
-		`0`:          IntValue{0},
-		`10`:         IntValue{10},
-		`-1`:         IntValue{-1},
-		`"testing"`:  StringValue{"testing", '"'},
-		`'testing'`:  StringValue{"testing", '\''},
-		`""`:         StringValue{``, '"'},
-		`''`:         StringValue{``, '\''},
-		`'"'`:        StringValue{`"`, '\''},
-		`arbitrary`:  StringValue{"arbitrary", '\u0000'},
-		`/.*/`:       RegexValue{`.*`},
-		`/.*//`:      RegexValue{`.*/`},
-		`"/\".*\"/"`: RegexValue{`\".*\"`},
-	}
-
-	for input, expected := range tests {
-		actual, err := Infer(input, false, false)
-		if !assert.NoError(t, err, input) {
-			continue
-		}
-
-		assert.Equal(t, expected, actual)
-	}
-}
-
-func TestValueEvaluation(t *testing.T) {
-	type Expected struct {
-		Value   Value
-		String  string
-		Resolve interface{}
-	}
-
-	tests := map[string]Expected{
-		`true`:       {BoolValue{true}, "true", true},
-		`0.0`:        {FloatValue{0.0}, "0.000000", 0.0},
-		`-1.0`:       {FloatValue{-1.0}, "-1.000000", -1.0},
-		`0`:          {IntValue{0}, "0", 0},
-		`10`:         {IntValue{10}, "10", 10},
-		`-1`:         {IntValue{-1}, "-1", -1},
-		`"testing"`:  {StringValue{"testing", '"'}, `"testing"`, "testing"},
-		`'testing'`:  {StringValue{"testing", '\''}, `'testing'`, "testing"},
-		`arbitrary`:  {StringValue{"arbitrary", '\u0000'}, "arbitrary", "arbitrary"},
-		`/.*/`:       {RegexValue{`.*`}, `.*`, regexp.MustCompilePOSIX(`.*`)},
-		`/.*//`:      {RegexValue{`.*/`}, `.*/`, regexp.MustCompilePOSIX(`.*/`)},
-		`"/\".*\"/"`: {RegexValue{`\".*\"`}, `\".*\"`, regexp.MustCompilePOSIX(`\".*\"`)},
-	}
-
-	for input, expected := range tests {
-		term, err := Infer(input, false, false)
-		if !assert.NoError(t, err, input) {
-			continue
-		}
-
-		resolved, err := term.Resolve()
-		if !assert.NoError(t, err, input) {
-			continue
-		}
-
-		assert.Equal(t, expected.Value, term, input)
-		assert.Equal(t, expected.String, term.String(), input)
-		assert.Equal(t, expected.Resolve, resolved, input)
-	}
-}
-
-func TestGuessTypesValueStrict(t *testing.T) {
-	tests := map[string]interface{}{
-		`"testing"`: StringValue{"testing", '"'},
-		`'testing'`: StringValue{"testing", '\''},
-		`""`:        StringValue{"", '"'},
-		`''`:        StringValue{"", '\''},
-		`'/.*/'`:    RegexValue{`.*`},
+		`true`:          BoolValue{true},
+		`false`:         BoolValue{false},
+		`0.0`:           FloatValue{0.0},
+		`.10`:           FloatValue{0.10},
+		`-1.0`:          FloatValue{-1.0},
+		`0`:             IntValue{0},
+		`10`:            IntValue{10},
+		`-1`:            IntValue{-1},
+		`/.*/`:          RegexValue{`.*`},
+		`/.*//`:         RegexValue{`.*/`},
+		`"/\".*\"/"`:    RegexValue{`\".*\"`},
+		`"testing"`:     StringValue{"testing", '"'},
+		`'testing'`:     StringValue{"testing", '\''},
+		`""`:            StringValue{``, '"'},
+		`''`:            StringValue{``, '\''},
+		`'"'`:           StringValue{`"`, '\''},
+		`arg[0]`:        ListValue{Name: "arg", Index: 0},
+		`option["foo"]`: MapValue{Name: "option", Key: "foo"},
+		`arg`:           UnknownValue{"arg"},
+		`option`:        UnknownValue{"option"},
+		`arbitrary`:     UnknownValue{"arbitrary"},
 	}
 
 	for input, expected := range tests {
@@ -110,7 +55,36 @@ func TestGuessTypesValueStrict(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	}
+}
 
-	_, err := Infer("arbitrary", false, true)
-	assert.Error(t, err, "arbitrary")
+func TestInferInvalid(t *testing.T) {
+	tests := []string{
+		`option[option[foo]]`,
+	}
+
+	for _, input := range tests {
+		actual, err := Infer(input, false, true)
+		assert.Error(t, err, input)
+		assert.Equal(t, NullValue{}, actual, input)
+	}
+}
+
+func TestGuessTypesValueStrict(t *testing.T) {
+	tests := map[string]interface{}{
+		`"testing"`: StringValue{"testing", '"'},
+		`'testing'`: StringValue{"testing", '\''},
+		`""`:        StringValue{"", '"'},
+		`''`:        StringValue{"", '\''},
+		`'/.*/'`:    RegexValue{`.*`},
+		`arbitrary`: UnknownValue{`arbitrary`},
+	}
+
+	for input, expected := range tests {
+		actual, err := Infer(input, false, true)
+		if !assert.NoError(t, err, input) {
+			continue
+		}
+
+		assert.Equal(t, expected, actual)
+	}
 }

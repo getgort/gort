@@ -64,11 +64,11 @@ func (c CommandParameters) String() string {
 	}
 
 	b := strings.Builder{}
-	b.WriteString(c[0].String())
+	b.WriteString(fmt.Sprintf("%v", c[0]))
 
 	for i := 0; i < len(c); i++ {
 		b.WriteRune(' ')
-		b.WriteString(c[i].String())
+		b.WriteString(fmt.Sprintf("%v", c[i]))
 	}
 
 	return b.String()
@@ -236,7 +236,7 @@ func buildOption(name string, po *parseOptions) *CommandOption {
 		name = n
 	}
 
-	return &CommandOption{Name: name, Value: types.BoolValue{Value: true}}
+	return &CommandOption{Name: name, Value: types.BoolValue{V: true}}
 }
 
 func dashCount(str string) int {

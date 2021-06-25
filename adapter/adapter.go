@@ -141,20 +141,6 @@ func AddAdapter(a Adapter) {
 	adapterLookup[name] = a
 }
 
-// CommandName accepts a raw command string and returns the bundle (if
-// present) and command names.
-// func CommandNameParts(rawCommand string) (bundleName, commandName string, err error) {
-// 	var tokens []string
-
-// 	tokens, err = command.Tokenize(rawCommand)
-// 	if err != nil {
-// 		return
-// 	}
-
-// 	bundleName, commandName, err = command.SplitCommand(tokens[0])
-// 	return
-// }
-
 // GetAdapter returns the requested adapter instance, if one exists.
 // If not, an error is returned.
 func GetAdapter(name string) (Adapter, error) {
@@ -321,6 +307,8 @@ func StartListening(ctx context.Context) (<-chan data.CommandRequest, chan<- dat
 // TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
 // valid command trigger is identified. This function is at the core Gort's
 // command response capabilities, and it's the most complex in the project.
+// This looks like a long, complicated function, but it's like 75% logging
+// and tracing.
 func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity) (*data.CommandRequest, error) {
 	// Start trace span
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -385,7 +373,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		}
 	}
 
-	// Tokenize the raw command and look up the command entry
+	// Tokenize the raw command.
 	tokens, err := command.Tokenize(rawCommand)
 	if err != nil {
 		da.RequestError(ctx, request, err)
@@ -402,7 +390,10 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 	request.Parameters = tokens[1:]
 	da.RequestUpdate(ctx, request)
 
-	// Build a temporary Command using default tokenization rules.
+	// Build a temporary Command value using default tokenization rules. We'll
+	// use this to load the CommandEntry for the relevant command (as defined
+	// in a command bundle), which contains the command's parsing rules that
+	// we'll use for a final, formal Parse to get the final Command version.
 	cmdInput, err := command.Parse(tokens)
 	if err != nil {
 		da.RequestError(ctx, request, err)
@@ -477,7 +468,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 
 	if CommandsRequireAtLeastOneRule && len(rules) == 0 {
 		msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
-			"In order for a command to be executable, it must have at least one rule.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
+			"For a command to be executable, it must have at least one rule.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
 		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Rules Defined", msg)
 
 		err = fmt.Errorf("no rules defined")
@@ -526,7 +517,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 	return &request, nil
 }
 
-// adapterLogEntry is a helper that pre-populates a log event
+// adapterLogEntry is a helper that pre-populates a log event with attributes.
 func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log.Entry {
 	if e == nil {
 		e = log.WithContext(ctx)
@@ -613,11 +604,15 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 	return e
 }
 
-// addSpanAttributes is a helper that pre-populates a log event
+// addSpanAttributes is a helper that populates a tracing span with attributes.
 func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 	attr := []attribute.KeyValue{}
 
 	for _, i := range obs {
+		if i == nil {
+			continue
+		}
+
 		switch o := i.(type) {
 		case Adapter:
 			attr = append(attr,
