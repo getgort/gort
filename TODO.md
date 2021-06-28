@@ -42,9 +42,9 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 - Document permissions model and how auth is expected to work; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html).
 - Command (as entered by a user into chat) interpretation ✅
   - Command text tokenizer and parser ✅
-  - Ability to specify command option behavior in bundles (equivalent to `rules/ParseOption`)
+  - Ability to specify command option behavior in bundles (equivalent to `rules/ParseOption`) ✅
 - Rules
-  - Rule tokenizer and parser
+  - Rule tokenizer and parser ✅
 
 - Roles
   - Database schema ✅
