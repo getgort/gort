@@ -24,6 +24,8 @@ import (
 )
 
 func Parse(rt RuleTokens) (Rule, error) {
+	infer := types.Inferrer{}.ComplexTypes(true).StrictStrings(true)
+
 	r := Rule{
 		Command:     rt.Command,
 		Conditions:  []Expression{},
@@ -43,41 +45,47 @@ func Parse(rt RuleTokens) (Rule, error) {
 			continue
 		}
 
-		a, b, o, err := ParseExpression(c)
+		a, b, o, m, err := ParseExpression(c)
 		if err != nil {
 			return r, fmt.Errorf("can't parse condition: %w", err)
 		}
 
-		va, err := types.Infer(a, false, true)
+		va, err := infer.Infer(a)
 		if err != nil {
 			return r, fmt.Errorf("can't infer value: %w", err)
 		}
 
-		vb, err := types.Infer(b, false, true)
+		vb, err := infer.Infer(b)
 		if err != nil {
 			return r, fmt.Errorf("can't infer value: %w", err)
 		}
 
-		r.Conditions = append(r.Conditions, Expression{A: va, B: vb, Operator: o, Condition: lastCondition})
+		r.Conditions = append(r.Conditions, Expression{
+			A:         va,
+			B:         vb,
+			Operator:  o,
+			Modifier:  m,
+			Condition: lastCondition})
 	}
 
 	return r, nil
 }
 
 var (
-	reOperatorParts = regexp.MustCompile(`^(.*)\s+([!<>=]{1,2}|in)\s+(.*)$`)
+	reOperatorParts = regexp.MustCompile(`^(?:(all|any)\s+)?(.*)\s+([!<>=]{1,2}|in)\s+(.*)$`)
 )
 
-func ParseExpression(expr string) (a, b string, o Operator, err error) {
+func ParseExpression(expr string) (a, b string, o Operator, m CollectionOperationModifier, err error) {
 	subs := reOperatorParts.FindStringSubmatch(expr)
 
-	if len(subs) != 4 {
+	if len(subs) != 5 {
 		err = fmt.Errorf("expression doesn't conform to form A OP B")
 		return
 	}
 
-	op := subs[2]
-	a, b = subs[1], subs[3]
+	modifier := subs[1]
+	op := subs[3]
+	a, b = subs[2], subs[4]
 
 	switch op {
 	case "==":
@@ -96,6 +104,15 @@ func ParseExpression(expr string) (a, b string, o Operator, err error) {
 		o = In
 	default:
 		err = fmt.Errorf("unsupported operator: %s", op)
+	}
+
+	switch modifier {
+	case "all":
+		m = CollAll
+	case "any":
+		m = CollAny
+	default:
+		m = CollOne
 	}
 
 	return
