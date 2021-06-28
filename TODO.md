@@ -51,7 +51,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
   - `role create|destroy` command
   - `group grant|revoke` command
 - Bundle/command permission assignment
-- Runtime command authorization
+- Runtime command authorization ✅
 
 **_(Publicly release v0.8.0-alpha.0 at this point)_**
 
