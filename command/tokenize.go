@@ -35,7 +35,7 @@ func Tokenize(input string) ([]string, error) {
 	b := strings.Builder{}
 	tokens := []string{}
 
-	input = strings.Trim(input, " \t\n\v\f\r\u0085\u00A0")
+	input = strings.TrimSpace(input)
 
 	quote := RuneNull
 	quoteStart := 0

@@ -29,8 +29,9 @@ type Value interface {
 }
 
 type CollectionValue interface {
-	Name() string
+	Value
 	Contains(Value) bool
+	Elements() []Value
 }
 
 // BoolValue is a literal boolean value.
@@ -143,6 +144,200 @@ func (v IntValue) Value() interface{} {
 	return v.V
 }
 
+// ListValue
+type ListValue struct {
+	V    []Value
+	Name string
+}
+
+func (v ListValue) Contains(q Value) bool {
+	for _, c := range v.V {
+		if q.Equals(c) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (v ListValue) Elements() []Value {
+	return v.V
+}
+
+func (v ListValue) Equals(q Value) bool {
+	list, ok := q.(ListValue)
+	if !ok {
+		return false
+	}
+
+	if len(list.V) != len(v.V) {
+		return false
+	}
+
+	for i, o1 := range list.V {
+		o2 := v.V[i]
+
+		if !o1.Equals(o2) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v ListValue) LessThan(q Value) bool {
+	return false
+}
+
+func (v ListValue) Value() interface{} {
+	return v.V
+}
+
+// ListElementValue
+type ListElementValue struct {
+	V     ListValue
+	Index int
+}
+
+func (v ListElementValue) Equals(q Value) bool {
+	if v.Index < 0 || v.Index >= len(v.V.V) {
+		return false
+	}
+
+	return v.V.V[v.Index].Equals(q)
+}
+
+func (v ListElementValue) LessThan(q Value) bool {
+	if v.Index < 0 || v.Index >= len(v.V.V) {
+		return false
+	}
+
+	return v.V.V[v.Index].LessThan(q)
+}
+
+func (v ListElementValue) Value() interface{} {
+	return v.V
+}
+
+// MapValue
+type MapValue struct {
+	V    map[string]Value
+	Name string
+}
+
+// Contains returns true if q is a StringValue and that key exists in the map.
+func (v MapValue) Contains(q Value) bool {
+	str, isStr := q.(StringValue)
+	if !isStr {
+		return false
+	}
+
+	_, exists := v.V[str.V]
+
+	return exists
+}
+
+func (v MapValue) Elements() []Value {
+	values := []Value{}
+
+	for _, v := range v.V {
+		values = append(values, v)
+	}
+
+	return values
+}
+
+func (v MapValue) Equals(q Value) bool {
+	m, ok := q.(MapValue)
+	if !ok {
+		return false
+	}
+
+	if len(m.V) != len(v.V) {
+		return false
+	}
+
+	for key, o1 := range m.V {
+		o2 := v.V[key]
+
+		if !o1.Equals(o2) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v MapValue) LessThan(q Value) bool {
+	return false
+}
+
+func (v MapValue) Value() interface{} {
+	return v.V
+}
+
+// MapElementValue
+type MapElementValue struct {
+	V   MapValue
+	Key string
+}
+
+func (v MapElementValue) Equals(q Value) bool {
+	if v.Key == "" {
+		return false
+	}
+
+	value, exists := v.V.V[v.Key]
+
+	if bv, ok := q.(BoolValue); ok {
+		return bv.V == exists
+	}
+
+	if !exists {
+		return false
+	}
+
+	return value.Equals(q)
+}
+
+func (v MapElementValue) LessThan(q Value) bool {
+	if v.Key == "" {
+		return false
+	}
+
+	value, exists := v.V.V[v.Key]
+	if !exists {
+		return false
+	}
+
+	return value.LessThan(q)
+}
+
+func (v MapElementValue) Value() interface{} {
+	return v.V
+}
+
+// type NamedCollectionValue struct {
+// 	V    CollectionValue
+// 	Name string
+// }
+
+// func (v NamedCollectionValue) Contains(q Value) bool {
+// 	return v.V.Contains(q)
+// }
+
+// func (v NamedCollectionValue) Equals(q Value) bool {
+// 	return v.V.Equals(q)
+// }
+
+// func (v NamedCollectionValue) LessThan(q Value) bool {
+// 	return v.V.LessThan(q)
+// }
+
+// func (v NamedCollectionValue) Value() interface{} {
+// 	return v.V
+// }
+
 // NullValue
 type NullValue struct{}
 
@@ -218,83 +413,6 @@ func (v StringValue) LessThan(q Value) bool {
 }
 
 func (v StringValue) Value() interface{} {
-	return v.V
-}
-
-// MapValue
-type MapValue struct {
-	V    map[string]Value
-	Name string
-	Key  string
-}
-
-func (v MapValue) Contains(q Value) bool {
-	key := fmt.Sprintf("%v", q.Value())
-
-	if _, ok := v.V[key]; ok {
-		return true
-	}
-
-	return false
-}
-
-func (v MapValue) Equals(q Value) bool {
-	value, exists := v.V[v.Key]
-
-	if bv, ok := q.(BoolValue); ok {
-		return bv.V == exists
-	}
-
-	if !exists {
-		return false
-	}
-
-	return value.Equals(q)
-}
-
-func (v MapValue) LessThan(q Value) bool {
-	value, exists := v.V[v.Key]
-	if !exists {
-		return false
-	}
-
-	return value.LessThan(q)
-}
-
-func (v MapValue) Value() interface{} {
-	return v.V
-}
-
-// ListValue
-type ListValue struct {
-	V     []Value
-	Name  string
-	Index int
-}
-
-func (v ListValue) Contains(q Value) bool {
-	for _, c := range v.V {
-		if c.Equals(q) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (v ListValue) Equals(q Value) bool {
-	if v.Index < 0 || v.Index >= len(v.V) {
-		return false
-	}
-
-	return v.V[v.Index].Equals(q)
-}
-
-func (v ListValue) LessThan(q Value) bool {
-	return false
-}
-
-func (v ListValue) Value() interface{} {
 	return v.V
 }
 

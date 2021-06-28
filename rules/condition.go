@@ -16,7 +16,9 @@
 
 package rules
 
-import "github.com/getgort/gort/types"
+import (
+	"github.com/getgort/gort/types"
+)
 
 type LogicalOperator int
 
@@ -26,11 +28,20 @@ const (
 	Or
 )
 
+type CollectionOperationModifier int
+
+const (
+	CollOne CollectionOperationModifier = iota
+	CollAny
+	CollAll
+)
+
 // Expression describes a single.
 // Condition should be Undefined for the first element, but defined for each subsequent element.
 type Expression struct {
 	A, B      types.Value
 	Operator  Operator
+	Modifier  CollectionOperationModifier
 	Condition LogicalOperator
 }
 
@@ -39,14 +50,51 @@ type EvaluationEnvironment map[string]interface{}
 func (e Expression) Evaluate(env EvaluationEnvironment) bool {
 	e.A = define(e.A, env)
 	e.B = define(e.B, env)
+	coll, isColl := e.A.(types.CollectionValue)
+
+	if isColl && e.Modifier != CollOne {
+		if e.Modifier == CollAny {
+			for _, o := range coll.Elements() {
+				if e.Operator(o, e.B) {
+					return true
+				}
+			}
+			return false
+		} else if e.Modifier == CollAll {
+			for _, o := range coll.Elements() {
+				if !e.Operator(o, e.B) {
+					return false
+				}
+			}
+			return true
+		}
+	}
 
 	return e.Operator(e.A, e.B)
 }
 
 func define(v types.Value, env EvaluationEnvironment) types.Value {
 	switch o := v.(type) {
-	case types.ListValue:
-		i, exists := env[o.Name]
+	case types.UnknownValue:
+		i, exists := env[o.V]
+		if !exists {
+			return v
+		}
+
+		c, ok := i.([]types.Value)
+		if ok {
+			return types.ListValue{Name: o.V, V: c}
+		}
+
+		m, ok := i.(map[string]types.Value)
+		if ok {
+			return types.MapValue{Name: o.V, V: m}
+		}
+
+		return o
+
+	case types.ListElementValue:
+		i, exists := env[o.V.Name]
 		if !exists {
 			return v
 		}
@@ -56,15 +104,11 @@ func define(v types.Value, env EvaluationEnvironment) types.Value {
 			return v
 		}
 
-		if o.Index < 0 || o.Index >= len(c) {
-			return v
-		}
-
-		o.V = c
+		o.V.V = c
 		return o
 
-	case types.MapValue:
-		i, exists := env[o.Name]
+	case types.MapElementValue:
+		i, exists := env[o.V.Name]
 		if !exists {
 			return v
 		}
@@ -74,7 +118,7 @@ func define(v types.Value, env EvaluationEnvironment) types.Value {
 			return v
 		}
 
-		o.V = c
+		o.V.V = c
 		return o
 	}
 
