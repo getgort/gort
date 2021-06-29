@@ -77,6 +77,8 @@ func (c CommandParameters) String() string {
 // Parse accepts a slice of token strings and constructs a Command value.
 // Its behavior may be modified by passing one or more ParseOptions.
 func Parse(tokens []string, options ...ParseOption) (Command, error) {
+	infer := types.Inferrer{}.ComplexTypes(false).StrictStrings(false)
+
 	po := &parseOptions{false, false, map[string]string{}, map[string]bool{}}
 	for _, o := range options {
 		o(po)
@@ -105,7 +107,7 @@ func Parse(tokens []string, options ...ParseOption) (Command, error) {
 	for i, t := range tokens {
 		// Double slash indicates the end of options
 		if t == "--" {
-			cmd.Parameters, err = types.InferAll(tokens[i+1:], true, false)
+			cmd.Parameters, err = infer.InferAll(tokens[i+1:])
 			if err != nil {
 				return cmd, err
 			}
@@ -144,7 +146,7 @@ func Parse(tokens []string, options ...ParseOption) (Command, error) {
 
 			// Expect an option:
 			if hasArgument {
-				term, err := types.Infer(t, true, false)
+				term, err := infer.Infer(t)
 				if err != nil {
 					return cmd, err
 				}
@@ -157,7 +159,7 @@ func Parse(tokens []string, options ...ParseOption) (Command, error) {
 		}
 
 		// Not an option; not an argument. Must be command args.
-		cmd.Parameters, err = types.InferAll(tokens[i:], true, false)
+		cmd.Parameters, err = infer.InferAll(tokens[i:])
 		if err != nil {
 			return cmd, err
 		}

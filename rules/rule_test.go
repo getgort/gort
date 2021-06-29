@@ -27,6 +27,7 @@ func TestRuleMatches(t *testing.T) {
 	options := map[string]types.Value{
 		"foo": types.StringValue{V: "bar"},
 		"k":   types.BoolValue{V: true},
+		"n":   types.IntValue{V: 10},
 	}
 	args := []types.Value{types.StringValue{V: "foo"}, types.StringValue{V: "bar"}}
 	env := EvaluationEnvironment{
@@ -47,6 +48,18 @@ func TestRuleMatches(t *testing.T) {
 		`foo:bar with option['foo'] == "bat" allow`:                     false,
 		`foo:bar with arg[0] == "foo" allow`:                            true,
 		`foo:bar with option['foo'] == "bar" and arg[0] == "foo" allow`: true,
+		`foo:bar with any arg == /^f.*$/ allow`:                         true,
+		`foo:bar with all arg == /^f.*$/ allow`:                         false,
+		`foo:bar with all arg in ["foo", "bar"] allow`:                  true,
+		`foo:bar with any arg == /^blah.*/ allow`:                       false,
+		`foo:bar with arg[0] in ['foo', false, 100] allow`:              true,
+		`foo:bar with option["foo"] in ["foo", "bar"] allow`:            true,
+		`foo:bar with any option == /^prod.*/ allow`:                    false,
+		`foo:bar with any arg in ['wubba'] allow`:                       false,
+		`foo:bar with any arg in ['wubba', /^f.*/, 10] allow`:           true,
+		`foo:bar with all arg in [10, 'baz', 'wubba'] allow`:            false,
+		`foo:bar with all option < 10 allow`:                            false,
+		`foo:bar with all option in ['staging', 'list'] allow`:          false,
 	}
 
 	for in, expected := range inputs {
