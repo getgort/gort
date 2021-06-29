@@ -44,3 +44,13 @@ func userNames(users []rest.User) []string {
 
 	return names
 }
+
+func roleNames(roles []rest.Role) []string {
+	names := make([]string, 0)
+
+	for _, r := range roles {
+		names = append(names, r.Name)
+	}
+
+	return names
+}

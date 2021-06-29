@@ -18,7 +18,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -26,57 +25,40 @@ import (
 )
 
 const (
-	groupInfoUse   = "info"
-	groupInfoShort = "Retrieve information about an existing group"
-	groupInfoLong  = "Retrieve information about an existing group."
+	roleRevokePermissionUse   = "revoke-permission role bundle permission"
+	roleRevokePermissionShort = "Revoke a permission from an existing role"
+	roleRevokePermissionLong  = "Revoke a permission from an existing role."
 )
 
-// GetGroupInfoCmd is a command
-func GetGroupInfoCmd() *cobra.Command {
+// GetRoleRevokePermissionCmd is a command
+func GetRoleRevokePermissionCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   groupInfoUse,
-		Short: groupInfoShort,
-		Long:  groupInfoLong,
-		RunE:  groupInfoCmd,
-		Args:  cobra.ExactArgs(1),
+		Use:   roleRevokePermissionUse,
+		Short: roleRevokePermissionShort,
+		Long:  roleRevokePermissionLong,
+		RunE:  roleRevokePermissionCmd,
+		Args:  cobra.ExactArgs(3),
 	}
 
 	return cmd
 }
 
-func groupInfoCmd(cmd *cobra.Command, args []string) error {
-	groupname := args[0]
+func roleRevokePermissionCmd(cmd *cobra.Command, args []string) error {
+	rolename := args[0]
+	bundlename := args[1]
+	permissionname := args[2]
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	//
-	// TODO Maybe multiplex the following queries with gofuncs?
-	//
-
-	users, err := gortClient.GroupMemberList(groupname)
+	err = gortClient.RolePermissionRevoke(rolename, bundlename, permissionname)
 	if err != nil {
 		return err
 	}
 
-	roles, err := gortClient.GroupRoleList(groupname)
-	if err != nil {
-		return err
-	}
-
-	const format = `Name   %s
-Users  %s
-Roles  %s
-`
-
-	fmt.Printf(
-		format,
-		groupname,
-		strings.Join(userNames(users), ", "),
-		strings.Join(roleNames(roles), ", "),
-	)
+	fmt.Printf("Permission Revoked from %s: %s\n", rolename, permissionname)
 
 	return nil
 }

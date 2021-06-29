@@ -195,3 +195,62 @@ func (c *GortClient) GroupSave(group rest.Group) error {
 
 	return nil
 }
+
+// GroupRoleAdd adds a role to a group.
+func (c *GortClient) GroupRoleAdd(groupname string, rolename string) error {
+	url := fmt.Sprintf("%s/v2/groups/%s/roles/%s", c.profile.URL.String(), groupname, rolename)
+	resp, err := c.doRequest("PUT", url, []byte{})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return getResponseError(resp)
+	}
+
+	return nil
+}
+
+// GroupMemberDelete deletes a role from a group.
+func (c *GortClient) GroupRoleDelete(groupname string, rolename string) error {
+	url := fmt.Sprintf("%s/v2/groups/%s/roles/%s", c.profile.URL.String(), groupname, rolename)
+	resp, err := c.doRequest("DELETE", url, []byte{})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return getResponseError(resp)
+	}
+
+	return nil
+}
+
+// GroupRoleList retrieves all roles added to a group.
+func (c *GortClient) GroupRoleList(groupname string) ([]rest.Role, error) {
+	url := fmt.Sprintf("%s/v2/groups/%s/roles", c.profile.URL.String(), groupname)
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return []rest.Role{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return []rest.Role{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []rest.Role{}, err
+	}
+
+	roles := []rest.Role{}
+	err = json.Unmarshal(body, &roles)
+	if err != nil {
+		return []rest.Role{}, err
+	}
+
+	return roles, nil
+}
