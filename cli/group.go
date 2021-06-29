@@ -59,6 +59,8 @@ func GetGroupCmd() *cobra.Command {
 	cmd.AddCommand(GetGroupDeleteCmd())
 	cmd.AddCommand(GetGroupInfoCmd())
 	cmd.AddCommand(GetGroupListCmd())
+	cmd.AddCommand(GetGroupAddRoleCmd())
+	cmd.AddCommand(GetGroupRemoveRoleCmd())
 
 	return cmd
 }
