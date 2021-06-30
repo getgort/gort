@@ -34,7 +34,7 @@ commands:
       - with arg[0] == "group" must have gort:manage_groups
       - with arg[0] == "role" must have gort:manage_roles
       - with arg[0] == "user" must have gort:manage_users
-      - with arg in [ "help", "version" ] allow
+      - with arg[0] in [ "help", "version" ] allow
 
   gort-normal:
     description: "Bringing the power of the command line to chat."
@@ -44,4 +44,4 @@ commands:
       - with arg[0] == "group" must have gort:manage_groupsx
       - with arg[0] == "role" must have gort:manage_rolesx
       - with arg[0] == "user" must have gort:manage_usersx
-      - with arg in [ "help", "version" ] allow
+      - with arg[0] in [ "help", "version" ] allow

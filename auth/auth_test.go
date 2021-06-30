@@ -18,7 +18,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -70,9 +69,6 @@ func TestEvaluate2(t *testing.T) {
 	assert.NoError(t, err)
 	cmdE := data.CommandEntry{Bundle: b, Command: *b.Commands[cmd.Command]}
 
-	by, _ := json.MarshalIndent(cmd, "", "  ")
-	fmt.Println(string(by))
-
 	result, err := Evaluate(ctx, []string{"test:foo", "gort:manage_users"}, cmdE, env)
 	assert.NoError(t, err)
 	assert.True(t, result)
@@ -93,11 +89,6 @@ func parse(s string) (command.Command, rules.EvaluationEnvironment, error) {
 	env["arg"] = cmd.Parameters
 
 	return cmd, env, nil
-}
-
-func write(i interface{}) string {
-	by, _ := json.MarshalIndent(i, "", "  ")
-	return string(by)
 }
 
 func TestParseCommandEntry(t *testing.T) {
