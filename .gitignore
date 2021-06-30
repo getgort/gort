@@ -8,8 +8,11 @@
 # Test binary, build with `go test -c`
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Output of the go coverage tool
 *.out
+
+# Output of `make test-local`, which runs `go tool cover -html=coverage.out -o coverage.html`
+coverage.html
 
 # Test files and typical binary names.
 test.yml

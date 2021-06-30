@@ -39,7 +39,8 @@ test:
 	@docker rmi foo_$(PROJECT)_foo
 
 test-local:
-	@go test -count=1 -timeout 60s -cover -race ./...
+	@go test -count=1 -timeout 60s -cover -race -coverprofile=coverage.out ./...
+	@go tool cover -html=coverage.out -o coverage.html
 
 build: clean
 	mkdir -p bin
