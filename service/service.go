@@ -277,6 +277,16 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 // handleBootstrap handles "POST /bootstrap"
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	const adminUser = "admin"
+	const adminGroup = "admin"
+	const adminRole = "admin"
+	var adminPermissions = []string{
+		"manage_commands",
+		"manage_groups",
+		"manage_roles",
+		"manage_users",
+	}
+
 	users, err := dataAccessLayer.UserList(r.Context())
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -314,18 +324,40 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create admin group.
-	group := rest.Group{Name: "admin"}
-	err = dataAccessLayer.GroupCreate(r.Context(), group)
+	err = dataAccessLayer.GroupCreate(r.Context(), rest.Group{Name: adminGroup})
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
 	}
 
 	// Add the admin user to the admin group.
-	err = dataAccessLayer.GroupAddUser(r.Context(), group.Name, user.Username)
+	err = dataAccessLayer.GroupAddUser(r.Context(), adminGroup, user.Username)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
+	}
+
+	// Create an admin role
+	err = dataAccessLayer.RoleCreate(r.Context(), adminRole)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	// Add role to group
+	err = dataAccessLayer.GroupGrantRole(r.Context(), adminGroup, adminRole)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	// Finally, add the default permissions.
+	for _, p := range adminPermissions {
+		err = dataAccessLayer.RoleGrantPermission(r.Context(), adminRole, "gort", p)
+		if err != nil {
+			respondAndLogError(r.Context(), w, err)
+			return
+		}
 	}
 
 	json.NewEncoder(w).Encode(user)
