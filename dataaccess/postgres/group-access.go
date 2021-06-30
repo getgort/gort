@@ -311,7 +311,8 @@ func (da PostgresDataAccess) GroupListRoles(ctx context.Context, groupname strin
 
 	query := `SELECT role_name
 		FROM group_roles
-		WHERE group_name = $1`
+		WHERE group_name = $1
+		ORDER BY role_name`
 
 	rows, err := db.QueryContext(ctx, query, groupname)
 	if err != nil {

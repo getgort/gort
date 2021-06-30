@@ -29,6 +29,8 @@ func testRoleAccess(t *testing.T) {
 	t.Run("testRoleExists", testRoleExists)
 	t.Run("testRoleDelete", testRoleDelete)
 	t.Run("testRoleGet", testRoleGet)
+	t.Run("testRoleHasPermission", testRoleHasPermission)
+	t.Run("testRolePermissionList", testRolePermissionList)
 }
 
 func testRoleCreate(t *testing.T) {
@@ -130,4 +132,71 @@ func testRoleGet(t *testing.T) {
 	role, err = da.RoleGet(ctx, "test-get")
 	assert.NoError(t, err)
 	assert.Equal(t, expected, role)
+}
+
+func testRoleHasPermission(t *testing.T) {
+	var err error
+
+	da.RoleCreate(ctx, "role-test-role-has-permission")
+	defer da.RoleDelete(ctx, "role-test-role-has-permission")
+
+	has, err := da.RoleHasPermission(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
+	if !assert.NoError(t, err) || !assert.False(t, has) {
+		t.FailNow()
+	}
+
+	err = da.RoleGrantPermission(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	defer da.RoleRevokePermission(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
+
+	has, err = da.RoleHasPermission(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
+	if !assert.NoError(t, err) || !assert.True(t, has) {
+		t.FailNow()
+	}
+
+	has, err = da.RoleHasPermission(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-2")
+	if !assert.NoError(t, err) || !assert.False(t, has) {
+		t.FailNow()
+	}
+}
+
+func testRolePermissionList(t *testing.T) {
+	var err error
+
+	da.RoleCreate(ctx, "role-test-role-permission-list")
+	defer da.RoleDelete(ctx, "role-test-role-permission-list")
+
+	err = da.RoleGrantPermission(ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-1")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	defer da.RoleRevokePermission(ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-1")
+
+	err = da.RoleGrantPermission(ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-3")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	defer da.RoleRevokePermission(ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-3")
+
+	err = da.RoleGrantPermission(ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-2")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	defer da.RoleRevokePermission(ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-2")
+
+	// Expect a sorted list!
+	expect := []rest.RolePermission{
+		{BundleName: "test", Permission: "permission-test-role-permission-list-1"},
+		{BundleName: "test", Permission: "permission-test-role-permission-list-2"},
+		{BundleName: "test", Permission: "permission-test-role-permission-list-3"},
+	}
+
+	actual, err := da.RolePermissionList(ctx, "role-test-role-permission-list")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	assert.Equal(t, expect, actual)
 }

@@ -18,6 +18,7 @@ package memory
 
 import (
 	"context"
+	"sort"
 
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
@@ -140,6 +141,34 @@ func (da *InMemoryDataAccess) UserList(ctx context.Context) ([]rest.User, error)
 	return list, nil
 }
 
+// UserPermissions returns an alphabetically-sorted list of fully-qualified
+// (i.e., "bundle:permission") permissions available to the specified user.
+func (da *InMemoryDataAccess) UserPermissions(ctx context.Context, username string) ([]string, error) {
+	pp := []string{}
+
+	groups, err := da.UserGroupList(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, group := range groups {
+		roles, err := da.GroupListRoles(ctx, group.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, role := range roles {
+			for _, p := range role.Permissions {
+				pp = append(pp, p.BundleName+":"+p.Permission)
+			}
+		}
+	}
+
+	sort.Strings(pp)
+
+	return pp, nil
+}
+
 // UserUpdate is used to update an existing user. An error is returned if the
 // username is empty or if the user doesn't exist.
 // TODO Should we let this create users that don't exist?
@@ -161,17 +190,29 @@ func (da *InMemoryDataAccess) UserUpdate(ctx context.Context, user rest.User) er
 	return nil
 }
 
-// UserGroupList comments TBD
-func (da *InMemoryDataAccess) UserGroupList(ctx context.Context, user string) ([]rest.Group, error) {
-	return []rest.Group{}, errs.ErrNotImplemented
+// UserGroupList returns a slice of Group values representing the specified user's group memberships.
+// The groups' Users slice is never populated, and is always nil.
+func (da *InMemoryDataAccess) UserGroupList(ctx context.Context, username string) ([]rest.Group, error) {
+	groups := make([]rest.Group, 0)
+
+	for _, group := range da.groups {
+		for _, user := range group.Users {
+			if user.Username == username {
+				groups = append(groups, rest.Group{Name: group.Name})
+				continue
+			}
+		}
+	}
+
+	return groups, nil
 }
 
 // UserGroupAdd comments TBD
-func (da *InMemoryDataAccess) UserGroupAdd(ctx context.Context, user string, group string) error {
-	return errs.ErrNotImplemented
+func (da *InMemoryDataAccess) UserGroupAdd(ctx context.Context, username string, groupname string) error {
+	return da.GroupAddUser(ctx, groupname, username)
 }
 
 // UserGroupDelete comments TBD
-func (da *InMemoryDataAccess) UserGroupDelete(ctx context.Context, user string, group string) error {
-	return errs.ErrNotImplemented
+func (da *InMemoryDataAccess) UserGroupDelete(ctx context.Context, username string, groupname string) error {
+	return da.GroupUserDelete(ctx, groupname, username)
 }

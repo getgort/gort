@@ -67,8 +67,10 @@ type DataAccess interface {
 	RoleDelete(ctx context.Context, rolename string) error
 	RoleGet(ctx context.Context, rolename string) (rest.Role, error)
 	RoleExists(ctx context.Context, rolename string) (bool, error)
-	RoleGrantPermission(ctx context.Context, rolename, bundle, permission string) error
-	RoleRevokePermission(ctx context.Context, rolename, bundle, permission string) error
+	RoleGrantPermission(ctx context.Context, rolename, bundlename, permission string) error
+	RoleRevokePermission(ctx context.Context, rolename, bundlename, permission string) error
+	RoleHasPermission(ctx context.Context, rolename, bundlename, permission string) (bool, error)
+	RolePermissionList(ctx context.Context, rolename string) ([]rest.RolePermission, error)
 
 	TokenEvaluate(ctx context.Context, token string) bool
 	TokenGenerate(ctx context.Context, username string, duration time.Duration) (rest.Token, error)
@@ -86,5 +88,6 @@ type DataAccess interface {
 	UserGroupAdd(ctx context.Context, username string, groupname string) error
 	UserGroupDelete(ctx context.Context, username string, groupname string) error
 	UserList(ctx context.Context) ([]rest.User, error)
+	UserPermissions(ctx context.Context, username string) ([]string, error)
 	UserUpdate(ctx context.Context, user rest.User) error
 }

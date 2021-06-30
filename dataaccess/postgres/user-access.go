@@ -18,6 +18,7 @@ package postgres
 
 import (
 	"context"
+	"sort"
 
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
@@ -272,6 +273,40 @@ func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) 
 	return users, err
 }
 
+// UserPermissions returns an alphabetically-sorted list of fully-qualified
+// (i.e., "bundle:permission") permissions available to the specified user.
+func (da PostgresDataAccess) UserPermissions(ctx context.Context, username string) ([]string, error) {
+	// TODO This is horribly inefficient -- use a real SQL query instead!
+
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.UserPermissions")
+	defer sp.End()
+
+	pp := []string{}
+
+	groups, err := da.UserGroupList(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, group := range groups {
+		roles, err := da.GroupListRoles(ctx, group.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, role := range roles {
+			for _, p := range role.Permissions {
+				pp = append(pp, p.BundleName+":"+p.Permission)
+			}
+		}
+	}
+
+	sort.Strings(pp)
+
+	return pp, nil
+}
+
 // UserUpdate is used to update an existing user. An error is returned if the
 // username is empty or if the user doesn't exist.
 func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) error {
@@ -338,7 +373,8 @@ func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) err
 	return err
 }
 
-// UserGroupList comments TBD
+// UserGroupList returns a slice of Group values representing the specified user's group memberships.
+// The groups' Users slice is never populated, and is always nil.
 func (da PostgresDataAccess) UserGroupList(ctx context.Context, username string) ([]rest.Group, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.UserGroupList")
@@ -358,7 +394,7 @@ func (da PostgresDataAccess) UserGroupList(ctx context.Context, username string)
 		return groups, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	for rows.NextResultSet() && rows.Next() {
+	for rows.Next() {
 		group := rest.Group{}
 
 		err = rows.Scan(&group.Name)

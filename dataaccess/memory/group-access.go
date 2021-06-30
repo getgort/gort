@@ -18,6 +18,7 @@ package memory
 
 import (
 	"context"
+	"sort"
 
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
@@ -174,6 +175,8 @@ func (da *InMemoryDataAccess) GroupListRoles(ctx context.Context, groupname stri
 	for _, r := range gr {
 		roles = append(roles, *r)
 	}
+
+	sort.Slice(roles, func(i, j int) bool { return roles[i].Name < roles[j].Name })
 
 	return roles, nil
 }

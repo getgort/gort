@@ -25,45 +25,16 @@ import (
 )
 
 func testUserAccess(t *testing.T) {
-	t.Run("testUserNotExists", testUserNotExists)
-	t.Run("testUserCreate", testUserCreate)
 	t.Run("testUserAuthenticate", testUserAuthenticate)
-	t.Run("testUserExists", testUserExists)
+	t.Run("testUserCreate", testUserCreate)
 	t.Run("testUserDelete", testUserDelete)
+	t.Run("testUserExists", testUserExists)
 	t.Run("testUserGet", testUserGet)
+	t.Run("testUserGroupList", testUserGroupList)
 	t.Run("testUserList", testUserList)
+	t.Run("testUserNotExists", testUserNotExists)
+	t.Run("testUserPermissions", testUserPermissions)
 	t.Run("testUserUpdate", testUserUpdate)
-}
-
-func testUserNotExists(t *testing.T) {
-	var exists bool
-
-	err := da.Initialize(ctx)
-	assert.NoError(t, err)
-
-	exists, _ = da.UserExists(ctx, "test-not-exists")
-	if exists {
-		t.Error("User should not exist now")
-		t.FailNow()
-	}
-}
-
-func testUserCreate(t *testing.T) {
-	var err error
-	var user rest.User
-
-	// Expect an error
-	err = da.UserCreate(ctx, user)
-	assert.Error(t, err, errs.ErrEmptyUserName)
-
-	// Expect no error
-	err = da.UserCreate(ctx, rest.User{Username: "test-create", Email: "test-create@bar.com"})
-	defer da.UserDelete(ctx, "test-create")
-	assert.NoError(t, err)
-
-	// Expect an error
-	err = da.UserCreate(ctx, rest.User{Username: "test-create", Email: "test-create@bar.com"})
-	assert.Error(t, err, errs.ErrUserExists)
 }
 
 func testUserAuthenticate(t *testing.T) {
@@ -99,25 +70,23 @@ func testUserAuthenticate(t *testing.T) {
 		t.FailNow()
 	}
 }
-func testUserExists(t *testing.T) {
-	var exists bool
 
-	exists, _ = da.UserExists(ctx, "test-exists")
-	if exists {
-		t.Error("User should not exist now")
-		t.FailNow()
-	}
+func testUserCreate(t *testing.T) {
+	var err error
+	var user rest.User
 
-	// Now we add a user to find.
-	err := da.UserCreate(ctx, rest.User{Username: "test-exists", Email: "test-exists@bar.com"})
-	defer da.UserDelete(ctx, "test-exists")
+	// Expect an error
+	err = da.UserCreate(ctx, user)
+	assert.Error(t, err, errs.ErrEmptyUserName)
+
+	// Expect no error
+	err = da.UserCreate(ctx, rest.User{Username: "test-create", Email: "test-create@bar.com"})
+	defer da.UserDelete(ctx, "test-create")
 	assert.NoError(t, err)
 
-	exists, _ = da.UserExists(ctx, "test-exists")
-	if !exists {
-		t.Error("User should exist now")
-		t.FailNow()
-	}
+	// Expect an error
+	err = da.UserCreate(ctx, rest.User{Username: "test-create", Email: "test-create@bar.com"})
+	assert.Error(t, err, errs.ErrUserExists)
 }
 
 func testUserDelete(t *testing.T) {
@@ -143,6 +112,27 @@ func testUserDelete(t *testing.T) {
 	exists, _ := da.UserExists(ctx, "test-delete")
 	if exists {
 		t.Error("Shouldn't exist anymore!")
+		t.FailNow()
+	}
+}
+
+func testUserExists(t *testing.T) {
+	var exists bool
+
+	exists, _ = da.UserExists(ctx, "test-exists")
+	if exists {
+		t.Error("User should not exist now")
+		t.FailNow()
+	}
+
+	// Now we add a user to find.
+	err := da.UserCreate(ctx, rest.User{Username: "test-exists", Email: "test-exists@bar.com"})
+	defer da.UserDelete(ctx, "test-exists")
+	assert.NoError(t, err)
+
+	exists, _ = da.UserExists(ctx, "test-exists")
+	if !exists {
+		t.Error("User should exist now")
 		t.FailNow()
 	}
 }
@@ -179,6 +169,28 @@ func testUserGet(t *testing.T) {
 	}
 }
 
+func testUserGroupList(t *testing.T) {
+	da.GroupCreate(ctx, rest.Group{Name: "group-test-user-group-list-0"})
+	defer da.GroupDelete(ctx, "group-test-user-group-list-0")
+
+	da.GroupCreate(ctx, rest.Group{Name: "group-test-user-group-list-1"})
+	defer da.GroupDelete(ctx, "group-test-user-group-list-1")
+
+	da.UserCreate(ctx, rest.User{Username: "user-test-user-group-list"})
+	defer da.UserDelete(ctx, "user-test-user-group-list")
+
+	da.GroupAddUser(ctx, "group-test-user-group-list-0", "user-test-user-group-list")
+
+	expected := []rest.Group{{Name: "group-test-user-group-list-0", Users: nil}}
+
+	actual, err := da.UserGroupList(ctx, "user-test-user-group-list")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	assert.Equal(t, expected, actual)
+}
+
 func testUserList(t *testing.T) {
 	da.UserCreate(ctx, rest.User{Username: "test-list-0", Password: "password0!", Email: "test-list-0"})
 	defer da.UserDelete(ctx, "test-list-0")
@@ -212,6 +224,71 @@ func testUserList(t *testing.T) {
 			t.FailNow()
 		}
 	}
+}
+
+func testUserNotExists(t *testing.T) {
+	var exists bool
+
+	err := da.Initialize(ctx)
+	assert.NoError(t, err)
+
+	exists, _ = da.UserExists(ctx, "test-not-exists")
+	if exists {
+		t.Error("User should not exist now")
+		t.FailNow()
+	}
+}
+func testUserPermissions(t *testing.T) {
+	var err error
+
+	err = da.GroupCreate(ctx, rest.Group{Name: "test-perms"})
+	defer da.GroupDelete(ctx, "test-perms")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	err = da.UserCreate(ctx, rest.User{Username: "test-perms", Password: "password0!", Email: "test-perms"})
+	defer da.UserDelete(ctx, "test-perms")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	err = da.GroupAddUser(ctx, "test-perms", "test-perms")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	da.RoleCreate(ctx, "test-perms")
+	defer da.RoleDelete(ctx, "test-perms")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	err = da.GroupGrantRole(ctx, "test-perms", "test-perms")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	err = da.RoleGrantPermission(ctx, "test-perms", "test", "test-perms-1")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	err = da.RoleGrantPermission(ctx, "test-perms", "test", "test-perms-2")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	err = da.RoleGrantPermission(ctx, "test-perms", "test", "test-perms-0")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	// Expected: a sorted list of strings
+	expected := []string{"test:test-perms-0", "test:test-perms-1", "test:test-perms-2"}
+
+	actual, err := da.UserPermissions(ctx, "test-perms")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	assert.Equal(t, expected, actual)
 }
 
 func testUserUpdate(t *testing.T) {

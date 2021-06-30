@@ -492,7 +492,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			continue
 		}
 
-		permissions, err := getUserPermissions(ctx, id.GortUser)
+		permissions, err := da.UserPermissions(ctx, id.GortUser.Username)
 		if err != nil {
 			da.RequestError(ctx, request, err)
 			telemetry.Errors().WithError(err).Commit(ctx)
@@ -903,37 +903,6 @@ func formatCommandInputErrorMessage(cmd command.Command, params []string, output
 // TODO Replace this with something resembling a template. Eventually.
 func formatCommandOutput(command data.CommandEntry, params []string, output string) string {
 	return fmt.Sprintf("```%s```", output)
-}
-
-// TODO: Replace this with a single DB query! THIS IS HORRIBLY INEFFICIENT!
-// Also, move this into the DAL.
-func getUserPermissions(ctx context.Context, gortUser *rest.User) (map[string]interface{}, error) {
-	pp := map[string]interface{}{}
-
-	da, err := dataaccess.Get()
-	if err != nil {
-		return nil, err
-	}
-
-	groups, err := da.UserGroupList(ctx, gortUser.Username)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, group := range groups {
-		roles, err := da.GroupListRoles(ctx, group.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, role := range roles {
-			for _, p := range role.Permissions {
-				pp[p.BundleName+":"+p.Permission] = true
-			}
-		}
-	}
-
-	return pp, nil
 }
 
 func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.CommandRequest, adapterErrors chan<- error) {
