@@ -429,7 +429,6 @@ func (da PostgresDataAccess) ensureDatabaseExists(ctx context.Context, dbName st
 	}
 
 	if !exists {
-		fmt.Println("GOT:", "CREATE DATABASE $1", dbName)
 		_, err := db.ExecContext(ctx, "CREATE DATABASE $1", dbName)
 		if err != nil {
 			return gerr.Wrap(errs.ErrDataAccess,
