@@ -254,3 +254,13 @@ func dashCount(str string) int {
 
 	return count
 }
+
+// TokenizeAndParse is a helper function that combines the Tokenize and Parse functions.
+func TokenizeAndParse(str string, options ...ParseOption) (Command, error) {
+	t, err := Tokenize(str)
+	if err != nil {
+		return Command{}, err
+	}
+
+	return Parse(t, options...)
+}
