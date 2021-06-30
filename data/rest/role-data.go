@@ -16,6 +16,8 @@
 
 package rest
 
+import "fmt"
+
 type Role struct {
 	Name        string
 	Permissions []RolePermission
@@ -24,4 +26,8 @@ type Role struct {
 type RolePermission struct {
 	BundleName string
 	Permission string
+}
+
+func (r RolePermission) String() string {
+	return fmt.Sprintf("%s:%s", r.BundleName, r.Permission)
 }

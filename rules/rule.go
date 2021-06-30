@@ -16,6 +16,8 @@
 
 package rules
 
+import "sort"
+
 type Rule struct {
 	Command     string
 	Conditions  []Expression
@@ -50,9 +52,10 @@ func (r Rule) Matches(env EvaluationEnvironment) bool {
 
 // Allowed returns true iff the user has all required permissions (or the rule
 // is an "allow" rule).
-func (r Rule) Allowed(permissions map[string]interface{}) bool {
+func (r Rule) Allowed(permissions []string) bool {
 	for _, required := range r.Permissions {
-		if _, ok := permissions[required]; !ok {
+		i := sort.SearchStrings(permissions, required)
+		if len(permissions) >= i || permissions[i] != required {
 			return false
 		}
 	}

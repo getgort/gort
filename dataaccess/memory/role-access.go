@@ -18,6 +18,7 @@ package memory
 
 import (
 	"context"
+	"sort"
 
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
@@ -75,18 +76,18 @@ func (da *InMemoryDataAccess) RoleGet(ctx context.Context, name string) (rest.Ro
 	return *role, nil
 }
 
-func (da *InMemoryDataAccess) RoleGrantPermission(ctx context.Context, rolename, bundle, permission string) error {
+func (da *InMemoryDataAccess) RoleGrantPermission(ctx context.Context, rolename, bundlename, permission string) error {
 	role, ok := da.roles[rolename]
 
 	if !ok {
 		return errs.ErrNoSuchRole
 	}
 
-	role.Permissions = append(role.Permissions, rest.RolePermission{BundleName: bundle, Permission: permission})
+	role.Permissions = append(role.Permissions, rest.RolePermission{BundleName: bundlename, Permission: permission})
 	return nil
 }
 
-func (da *InMemoryDataAccess) RoleRevokePermission(ctx context.Context, rolename, bundle, permission string) error {
+func (da *InMemoryDataAccess) RoleRevokePermission(ctx context.Context, rolename, bundlename, permission string) error {
 	role, ok := da.roles[rolename]
 
 	if !ok {
@@ -95,7 +96,7 @@ func (da *InMemoryDataAccess) RoleRevokePermission(ctx context.Context, rolename
 
 	perms := []rest.RolePermission{}
 	for _, p := range role.Permissions {
-		if p.BundleName == bundle && p.Permission == permission {
+		if p.BundleName == bundlename && p.Permission == permission {
 			continue
 		}
 
@@ -105,4 +106,38 @@ func (da *InMemoryDataAccess) RoleRevokePermission(ctx context.Context, rolename
 	role.Permissions = perms
 
 	return nil
+}
+
+// RoleHasPermission returns true if the given role has been granted the
+// specified permission. It returns an error if rolename is empty or if no
+// such role exists.
+func (da *InMemoryDataAccess) RoleHasPermission(ctx context.Context, rolename, bundlename, permission string) (bool, error) {
+	perms, err := da.RolePermissionList(ctx, rolename)
+	if err != nil {
+		return false, err
+	}
+
+	for _, p := range perms {
+		if p.BundleName == bundlename && p.Permission == permission {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// RolePermissionList returns returns an alphabetically-sorted list of
+// fully-qualified (i.e., "bundle:permission") permissions granted to
+// the role.
+func (da *InMemoryDataAccess) RolePermissionList(ctx context.Context, rolename string) ([]rest.RolePermission, error) {
+	role, err := da.RoleGet(ctx, rolename)
+	if err != nil {
+		return nil, err
+	}
+
+	perms := role.Permissions
+
+	sort.Slice(perms, func(i, j int) bool { return perms[i].String() < perms[j].String() })
+
+	return perms, nil
 }

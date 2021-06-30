@@ -18,6 +18,7 @@ package postgres
 
 import (
 	"context"
+	"sort"
 
 	"go.opentelemetry.io/otel"
 
@@ -270,6 +271,44 @@ func (da PostgresDataAccess) doGetRolePermissions(ctx context.Context, name stri
 
 		perms = append(perms, perm)
 	}
+
+	return perms, nil
+}
+
+// RoleHasPermission returns true if the given role has been granted the
+// specified permission. It returns an error if rolename is empty or if no
+// such role exists.
+func (da PostgresDataAccess) RoleHasPermission(ctx context.Context, rolename, bundlename, permission string) (bool, error) {
+	// TODO Make this more efficient.
+
+	perms, err := da.RolePermissionList(ctx, rolename)
+	if err != nil {
+		return false, err
+	}
+
+	for _, p := range perms {
+		if p.BundleName == bundlename && p.Permission == permission {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// RolePermissionList returns returns an alphabetically-sorted list of
+// fully-qualified (i.e., "bundle:permission") permissions granted to
+// the role.
+func (da PostgresDataAccess) RolePermissionList(ctx context.Context, rolename string) ([]rest.RolePermission, error) {
+	// TODO Make this more efficient.
+
+	role, err := da.RoleGet(ctx, rolename)
+	if err != nil {
+		return nil, err
+	}
+
+	perms := role.Permissions
+
+	sort.Slice(perms, func(i, j int) bool { return perms[i].String() < perms[j].String() })
 
 	return perms, nil
 }
