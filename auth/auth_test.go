@@ -18,10 +18,12 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/getgort/gort/bundles"
+	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/rules"
 	"github.com/getgort/gort/types"
@@ -54,6 +56,48 @@ func TestEvaluate(t *testing.T) {
 	result, err = Evaluate(ctx, []string{"test:foo"}, cmd, envFooTrue)
 	assert.NoError(t, err)
 	assert.True(t, result)
+}
+
+func TestEvaluate2(t *testing.T) {
+	ctx := context.Background()
+
+	b, err := bundles.LoadBundle("../testing/test-default.yml")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	cmd, env, err := parse("gort:gort user --help")
+	assert.NoError(t, err)
+	cmdE := data.CommandEntry{Bundle: b, Command: *b.Commands[cmd.Command]}
+
+	by, _ := json.MarshalIndent(cmd, "", "  ")
+	fmt.Println(string(by))
+
+	result, err := Evaluate(ctx, []string{"test:foo", "gort:manage_users"}, cmdE, env)
+	assert.NoError(t, err)
+	assert.True(t, result)
+
+	result, err = Evaluate(ctx, []string{"test:foo"}, cmdE, env)
+	assert.NoError(t, err)
+	assert.False(t, result)
+}
+
+func parse(s string) (command.Command, rules.EvaluationEnvironment, error) {
+	cmd, err := command.TokenizeAndParse(s)
+	if err != nil {
+		return command.Command{}, nil, err
+	}
+
+	env := rules.EvaluationEnvironment{}
+	env["option"] = cmd.OptionsValues()
+	env["arg"] = cmd.Parameters
+
+	return cmd, env, nil
+}
+
+func write(i interface{}) string {
+	by, _ := json.MarshalIndent(i, "", "  ")
+	return string(by)
 }
 
 func TestParseCommandEntry(t *testing.T) {

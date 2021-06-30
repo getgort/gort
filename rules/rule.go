@@ -16,10 +16,6 @@
 
 package rules
 
-import (
-	"sort"
-)
-
 type Rule struct {
 	Command     string
 	Conditions  []Expression
@@ -30,8 +26,13 @@ type Rule struct {
 // is an "allow" rule).
 func (r Rule) Allowed(permissions []string) bool {
 	for _, required := range r.Permissions {
-		i := sort.SearchStrings(permissions, required)
-		if i >= len(permissions) || permissions[i] != required {
+		found := false
+
+		for i := 0; i < len(permissions) && !found; i++ {
+			found = permissions[i] == required
+		}
+
+		if !found {
 			return false
 		}
 	}

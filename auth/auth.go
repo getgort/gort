@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	// "fmt"
+
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/rules"
@@ -46,6 +48,8 @@ func Evaluate(ctx context.Context, permissions []string, cmdEntry data.CommandEn
 		return false, ErrNoRulesDefined
 	}
 
+	allowed := false
+
 	// Loop over the rules and evaluate them one-by-one.
 	for _, r := range ruleList {
 		// If the rule's conditions don't evaluate to true, ignore it.
@@ -53,12 +57,12 @@ func Evaluate(ctx context.Context, permissions []string, cmdEntry data.CommandEn
 			continue
 		}
 
-		if !r.Allowed(permissions) {
+		if allowed = r.Allowed(permissions); !allowed {
 			return false, nil
 		}
 	}
 
-	return true, nil
+	return allowed, nil
 }
 
 // ParseCommandEntry is a helper function that accepts a fully-constructed

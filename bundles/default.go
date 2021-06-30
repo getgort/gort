@@ -14,9 +14,37 @@
  * limitations under the License.
  */
 
-package version
+package bundles
 
-const (
-	// Version is the current version of Gort
-	Version = "0.7.9-dev.4"
+import (
+	"bytes"
+	_ "embed"
+	"text/template"
+
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/version"
 )
+
+//go:embed default.yml
+var s string
+
+func Default() (data.Bundle, error) {
+	args := struct {
+		Version string
+	}{
+		Version: version.Version,
+	}
+
+	t, err := template.New("default-bundle").Parse(s)
+	if err != nil {
+		return data.Bundle{}, err
+	}
+
+	buf := &bytes.Buffer{}
+	err = t.Execute(buf, args)
+	if err != nil {
+		return data.Bundle{}, err
+	}
+
+	return unmarshal(buf.Bytes())
+}

@@ -291,7 +291,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		bundle_version		TEXT NOT NULL,
 		command_name		TEXT NOT NULL,
 		rule				TEXT NOT NULL CHECK(rule <> ''),
-		PRIMARY KEY			(bundle_name, bundle_version, command_name),
+		PRIMARY KEY			(bundle_name, bundle_version, command_name, rule),
 		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
 		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
 		ON DELETE CASCADE

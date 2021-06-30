@@ -131,7 +131,7 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 }
 
 func testInitialize(t *testing.T) {
-	const timeout = 10 * time.Second
+	const timeout = 30 * time.Second
 	timeoutAt := time.Now().Add(timeout)
 	da = NewPostgresDataAccess(configs)
 

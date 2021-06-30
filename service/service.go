@@ -28,6 +28,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
@@ -351,13 +352,32 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Finally, add the default permissions.
+	// Add the default permissions.
 	for _, p := range adminPermissions {
 		err = dataAccessLayer.RoleGrantPermission(r.Context(), adminRole, "gort", p)
 		if err != nil {
 			respondAndLogError(r.Context(), w, err)
 			return
 		}
+	}
+
+	// Finally, add and enable the default bundle
+	b, err := bundles.Default()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	err = dataAccessLayer.BundleCreate(r.Context(), b)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	err = dataAccessLayer.BundleEnable(r.Context(), b.Name, b.Version)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	json.NewEncoder(w).Encode(user)

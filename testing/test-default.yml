@@ -1,0 +1,33 @@
+---
+gort_bundle_version: 1
+
+name: gort
+version: 0.0.1
+author: Matt Titmus <matthew.titmus@gmail.com>
+homepage: https://getgort.github.io/gort-guide/
+description: The default command bundle.
+long_description: |-
+  The default command bundle, which contains the administrative commands and
+  the permissions required to use them.
+  Don't change or override this unless you know what you're doing.
+
+permissions:
+  - manage_commands
+  - manage_groups
+  - manage_roles
+  - manage_users
+
+docker:
+  image: getgort/gort
+  tag: latest
+
+commands:
+  gort:
+    description: "Bringing the power of the command line to chat."
+    executable: "/bin/gort"
+    rules:
+      - with arg[0] == "bundle" must have gort:manage_commands
+      - with arg[0] == "group" must have gort:manage_groups
+      - with arg[0] == "role" must have gort:manage_roles
+      - with arg[0] == "user" must have gort:manage_users
+      - with arg in [ "help", "version" ] allow

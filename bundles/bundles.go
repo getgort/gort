@@ -33,15 +33,18 @@ var (
 
 // LoadBundle is called by ...
 func LoadBundle(file string) (data.Bundle, error) {
-	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
 		return data.Bundle{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
+	return unmarshal(dat)
+}
+
+func unmarshal(dat []byte) (data.Bundle, error) {
 	var bun data.Bundle
 
-	err = yaml.Unmarshal(dat, &bun)
+	err := yaml.Unmarshal(dat, &bun)
 	if err != nil {
 		return data.Bundle{}, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}

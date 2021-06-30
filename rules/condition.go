@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/types"
 )
 
@@ -52,22 +53,22 @@ func (e Expression) Evaluate(env EvaluationEnvironment) bool {
 	e.B = define(e.B, env)
 	coll, isColl := e.A.(types.CollectionValue)
 
-	if isColl && e.Modifier != CollOne {
-		if e.Modifier == CollAny {
-			for _, o := range coll.Elements() {
-				if e.Operator(o, e.B) {
-					return true
-				}
+	if isColl && e.Modifier == CollAny {
+		for _, o := range coll.Elements() {
+			if e.Operator(o, e.B) {
+				return true
 			}
-			return false
-		} else if e.Modifier == CollAll {
-			for _, o := range coll.Elements() {
-				if !e.Operator(o, e.B) {
-					return false
-				}
-			}
-			return true
 		}
+		return false
+	}
+
+	if isColl && e.Modifier == CollAll {
+		for _, o := range coll.Elements() {
+			if !e.Operator(o, e.B) {
+				return false
+			}
+		}
+		return true
 	}
 
 	return e.Operator(e.A, e.B)
@@ -81,13 +82,15 @@ func define(v types.Value, env EvaluationEnvironment) types.Value {
 			return v
 		}
 
-		c, ok := i.([]types.Value)
-		if ok {
+		if c, ok := i.([]types.Value); ok {
 			return types.ListValue{Name: o.V, V: c}
 		}
 
-		m, ok := i.(map[string]types.Value)
-		if ok {
+		if c, ok := i.(command.CommandParameters); ok {
+			return types.ListValue{Name: o.V, V: c}
+		}
+
+		if m, ok := i.(map[string]types.Value); ok {
 			return types.MapValue{Name: o.V, V: m}
 		}
 
@@ -99,12 +102,14 @@ func define(v types.Value, env EvaluationEnvironment) types.Value {
 			return v
 		}
 
-		c, ok := i.([]types.Value)
-		if !ok {
-			return v
+		if c, ok := i.([]types.Value); ok {
+			o.V.V = c
 		}
 
-		o.V.V = c
+		if c, ok := i.(command.CommandParameters); ok {
+			o.V.V = c
+		}
+
 		return o
 
 	case types.MapElementValue:
@@ -113,12 +118,10 @@ func define(v types.Value, env EvaluationEnvironment) types.Value {
 			return v
 		}
 
-		c, ok := i.(map[string]types.Value)
-		if !ok {
-			return v
+		if c, ok := i.(map[string]types.Value); ok {
+			o.V.V = c
 		}
 
-		o.V.V = c
 		return o
 	}
 
