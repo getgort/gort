@@ -16,10 +16,6 @@ permissions:
   - manage_groups
   - manage_roles
   - manage_users
-  - manage_commandsx
-  - manage_groupsx
-  - manage_rolesx
-  - manage_usersx
 
 docker:
   image: getgort/gort
