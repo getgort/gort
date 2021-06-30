@@ -16,12 +16,27 @@
 
 package rules
 
-import "sort"
+import (
+	"sort"
+)
 
 type Rule struct {
 	Command     string
 	Conditions  []Expression
 	Permissions []string
+}
+
+// Allowed returns true iff the user has all required permissions (or the rule
+// is an "allow" rule).
+func (r Rule) Allowed(permissions []string) bool {
+	for _, required := range r.Permissions {
+		i := sort.SearchStrings(permissions, required)
+		if i >= len(permissions) || permissions[i] != required {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Matches returns true iff the Rule's stated conditions evaluate to true.
@@ -48,17 +63,4 @@ func (r Rule) Matches(env EvaluationEnvironment) bool {
 	}
 
 	return result
-}
-
-// Allowed returns true iff the user has all required permissions (or the rule
-// is an "allow" rule).
-func (r Rule) Allowed(permissions []string) bool {
-	for _, required := range r.Permissions {
-		i := sort.SearchStrings(permissions, required)
-		if len(permissions) >= i || permissions[i] != required {
-			return false
-		}
-	}
-
-	return true
 }

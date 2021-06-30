@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/getgort/gort/auth"
 	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/config"
@@ -40,10 +41,6 @@ import (
 	"github.com/getgort/gort/rules"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/version"
-)
-
-const (
-	CommandsRequireAtLeastOneRule = false
 )
 
 var (
@@ -451,68 +448,52 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 	le.Debug("Found matching command+bundle")
 	addSpanAttributes(ctx, sp, cmdEntry)
 
-	// WORK IN PROGRESS -- EVALUATE PERMISSIONS!
-
-	// Retrieve the command's rules as a []rules.Rule so that we can
-	// evaluate against them.
-	ruleList, err := loadAndParseRules(cmdEntry)
-	if err != nil {
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Rule load error")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
-
-		return nil, fmt.Errorf("rule load error: %w", err)
-	}
-
-	if CommandsRequireAtLeastOneRule && len(ruleList) == 0 {
-		msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
-			"For a command to be executable, it must have at least one rule.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Rules Defined", msg)
-
-		err = fmt.Errorf("no rules defined")
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("No rules defined")
-
-		return nil, err
-	}
-
 	env := rules.EvaluationEnvironment{
 		"option": cmdInput.OptionsValues(),
 		"arg":    cmdInput.Parameters,
 	}
 
-	// Loop over the rules and evaluate them one-by-one.
-	for _, r := range ruleList {
-		le.Debugf("Evaluating rule: %v", r)
+	perms, err := da.UserPermissions(ctx, id.GortUser.Username)
+	if err != nil {
+		da.RequestError(ctx, request, err)
+		telemetry.Errors().WithError(err).Commit(ctx)
+		le.WithError(err).Error("User permission load failure")
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
 
-		// If the rule's conditions don't evaluate to true, ignore it.
-		if !r.Matches(env) {
-			continue
-		}
+		return nil, fmt.Errorf("user permission load error: %w", err)
+	}
 
-		permissions, err := da.UserPermissions(ctx, id.GortUser.Username)
-		if err != nil {
-			da.RequestError(ctx, request, err)
-			telemetry.Errors().WithError(err).Commit(ctx)
-			le.WithError(err).Error("User permission load failure")
+	allowed, err := auth.Evaluate(ctx, perms, cmdEntry, env)
+	if err != nil {
+		da.RequestError(ctx, request, err)
+		telemetry.Errors().WithError(err).Commit(ctx)
+
+		switch {
+		case gerrs.Is(err, auth.ErrRuleLoadError):
+			le.WithError(err).Error("Rule load error")
 			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+			return nil, fmt.Errorf("rule load error: %w", err)
 
-			return nil, fmt.Errorf("user permission load error: %w", err)
-		}
-
-		if !r.Allowed(permissions) {
-			msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Permission Denied", msg)
-
-			err = fmt.Errorf("permission denied")
-			da.RequestError(ctx, request, err)
-			telemetry.Errors().WithError(err).Commit(ctx)
-			le.WithError(err).Error("Permission Denied")
-
+		case gerrs.Is(err, auth.ErrNoRulesDefined):
+			le.WithError(err).Error("No rules defined")
+			msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
+				"For a command to be executable, it must have at least one rule.",
+				cmdEntry.Bundle.Name, cmdEntry.Command.Name)
+			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Rules Defined", msg)
 			return nil, err
 		}
+	}
+
+	if !allowed {
+		msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
+		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Permission Denied", msg)
+
+		err = fmt.Errorf("permission denied")
+		da.RequestError(ctx, request, err)
+		telemetry.Errors().WithError(err).Commit(ctx)
+		le.WithError(err).Error("Permission Denied")
+
+		return nil, err
 	}
 
 	// Update log entry with command info
@@ -946,27 +927,6 @@ func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.Comma
 	default:
 		log.WithField("type", fmt.Sprintf("%T", ev)).Warn("Unknown event type")
 	}
-}
-
-func loadAndParseRules(ce data.CommandEntry) ([]rules.Rule, error) {
-	rr := []rules.Rule{}
-
-	for i, r := range ce.Command.Rules {
-		tokens, err := rules.Tokenize(fmt.Sprintf("%s:%s %s", ce.Bundle.Name, ce.Command.Name, r))
-
-		if err != nil {
-			return rr, fmt.Errorf("cannot tokenize %s:%s rule %d (%s): %w", ce.Bundle.Name, ce.Command.Name, i+1, r, err)
-		}
-
-		rule, err := rules.Parse(tokens)
-		if err != nil {
-			return rr, fmt.Errorf("cannot parse rule %s:%s rule %d (%s): %w", ce.Bundle.Name, ce.Command.Name, i+1, r, err)
-		}
-
-		rr = append(rr, rule)
-	}
-
-	return rr, nil
 }
 
 func startAdapters(ctx context.Context) (<-chan *ProviderEvent, chan error) {

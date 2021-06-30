@@ -1,0 +1,26 @@
+---
+gort_bundle_version: 1
+
+name: test
+version: 0.0.1
+author: Matt Titmus <matthew.titmus@gmail.com>
+homepage: https://getgort.github.io/gort-guide/
+description: A test bundle.
+long_description: |-
+  This is test bundle.
+  There are many like it, but this one is mine.
+
+permissions:
+  - foo
+
+docker:
+  image: ubuntu
+  tag: 20.04
+
+commands:
+  foo:
+    description: "Echos back anything sent to it, all at once."
+    executable: "/bin/echo"
+    rules:
+      - with option["foo"] == false allow
+      - with option["foo"] == true must have test:foo
