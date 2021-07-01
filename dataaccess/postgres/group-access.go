@@ -209,10 +209,10 @@ func (da PostgresDataAccess) GroupGet(ctx context.Context, groupname string) (re
 	return group, nil
 }
 
-// GroupGrantRole grants one or more roles to a group.
-func (da PostgresDataAccess) GroupGrantRole(ctx context.Context, groupname, rolename string) error {
+// GroupRoleAdd grants one or more roles to a group.
+func (da PostgresDataAccess) GroupRoleAdd(ctx context.Context, groupname, rolename string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.GroupGrantRole")
+	ctx, sp := tr.Start(ctx, "postgres.GroupRoleAdd")
 	defer sp.End()
 
 	if rolename == "" {
@@ -414,10 +414,10 @@ func (da PostgresDataAccess) GroupRemoveUser(ctx context.Context, groupname stri
 	return err
 }
 
-// GroupRevokeRole revokes a role from a group.
-func (da PostgresDataAccess) GroupRevokeRole(ctx context.Context, groupname, rolename string) error {
+// GroupRoleDelete revokes a role from a group.
+func (da PostgresDataAccess) GroupRoleDelete(ctx context.Context, groupname, rolename string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.GroupRevokeRole")
+	ctx, sp := tr.Start(ctx, "postgres.GroupRoleDelete")
 	defer sp.End()
 
 	if groupname == "" {

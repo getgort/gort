@@ -30,7 +30,7 @@ func testGroupAccess(t *testing.T) {
 	t.Run("testGroupDelete", testGroupDelete)
 	t.Run("testGroupExists", testGroupExists)
 	t.Run("testGroupGet", testGroupGet)
-	t.Run("testGroupGrantRole", testGroupGrantRole)
+	t.Run("testGroupRoleAdd", testGroupRoleAdd)
 	t.Run("testGroupList", testGroupList)
 	t.Run("testGroupListRoles", testGroupListRoles)
 	t.Run("testGroupRemoveUser", testGroupRemoveUser)
@@ -156,7 +156,7 @@ func testGroupGet(t *testing.T) {
 	}
 }
 
-func testGroupGrantRole(t *testing.T) {
+func testGroupRoleAdd(t *testing.T) {
 	var err error
 
 	groupName := "group-group-grant-role"
@@ -172,12 +172,12 @@ func testGroupGrantRole(t *testing.T) {
 		t.FailNow()
 	}
 
-	err = da.RoleGrantPermission(ctx, roleName, bundleName, permissionName)
+	err = da.RolePermissionAdd(ctx, roleName, bundleName, permissionName)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
 
-	err = da.GroupGrantRole(ctx, groupName, roleName)
+	err = da.GroupRoleAdd(ctx, groupName, roleName)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -196,7 +196,7 @@ func testGroupGrantRole(t *testing.T) {
 
 	assert.Equal(t, expectedRoles, roles)
 
-	err = da.GroupRevokeRole(ctx, groupName, roleName)
+	err = da.GroupRoleDelete(ctx, groupName, roleName)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -255,15 +255,15 @@ func testGroupListRoles(t *testing.T) {
 		t.FailNow()
 	}
 
-	err = da.GroupGrantRole(ctx, "group-test-group-list-roles", "role-test-group-list-roles-1")
+	err = da.GroupRoleAdd(ctx, "group-test-group-list-roles", "role-test-group-list-roles-1")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	err = da.GroupGrantRole(ctx, "group-test-group-list-roles", "role-test-group-list-roles-0")
+	err = da.GroupRoleAdd(ctx, "group-test-group-list-roles", "role-test-group-list-roles-0")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	err = da.GroupGrantRole(ctx, "group-test-group-list-roles", "role-test-group-list-roles-2")
+	err = da.GroupRoleAdd(ctx, "group-test-group-list-roles", "role-test-group-list-roles-2")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}

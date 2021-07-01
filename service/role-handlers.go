@@ -76,7 +76,7 @@ func handleGrantRolePermission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.RoleGrantPermission(r.Context(), rolename, bundlename, permissionname)
+	err = dataAccessLayer.RolePermissionAdd(r.Context(), rolename, bundlename, permissionname)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -100,7 +100,7 @@ func handleRevokeRolePermission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.RoleRevokePermission(r.Context(), rolename, bundlename, permissionname)
+	err = dataAccessLayer.RolePermissionDelete(r.Context(), rolename, bundlename, permissionname)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return

@@ -126,8 +126,8 @@ func (da *InMemoryDataAccess) GroupGet(ctx context.Context, groupname string) (r
 	return *group, nil
 }
 
-// GroupGrantRole grants one or more roles to a group.
-func (da *InMemoryDataAccess) GroupGrantRole(ctx context.Context, groupname, rolename string) error {
+// GroupRoleAdd grants one or more roles to a group.
+func (da *InMemoryDataAccess) GroupRoleAdd(ctx context.Context, groupname, rolename string) error {
 	b, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return err
@@ -211,8 +211,8 @@ func (da *InMemoryDataAccess) GroupRemoveUser(ctx context.Context, groupname str
 	return errs.ErrNoSuchUser
 }
 
-// GroupRevokeRole revokes one or more roles from a group.
-func (da *InMemoryDataAccess) GroupRevokeRole(ctx context.Context, groupname, rolename string) error {
+// GroupRoleDelete revokes one or more roles from a group.
+func (da *InMemoryDataAccess) GroupRoleDelete(ctx context.Context, groupname, rolename string) error {
 	b, err := da.GroupExists(ctx, groupname)
 	if err != nil {
 		return err
