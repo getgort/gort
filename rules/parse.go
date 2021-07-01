@@ -29,10 +29,28 @@ func Parse(rt RuleTokens) (Rule, error) {
 	r := Rule{
 		Command:     rt.Command,
 		Conditions:  []Expression{},
-		Permissions: rt.Permissions,
+		Permissions: []Permission{},
 	}
 
 	lastCondition := Undefined
+
+	for _, p := range rt.Permissions {
+		if p == "and" {
+			lastCondition = And
+			continue
+		}
+
+		if p == "or" {
+			lastCondition = Or
+			continue
+		}
+
+		r.Permissions = append(r.Permissions, Permission{
+			Name:      p,
+			Condition: lastCondition})
+	}
+
+	lastCondition = Undefined
 
 	for _, c := range rt.Conditions {
 		if c == "and" {

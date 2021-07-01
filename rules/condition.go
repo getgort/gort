@@ -127,3 +127,8 @@ func define(v types.Value, env EvaluationEnvironment) types.Value {
 
 	return v
 }
+
+type Permission struct {
+	Name      string
+	Condition LogicalOperator
+}

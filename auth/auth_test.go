@@ -25,10 +25,11 @@ import (
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/rules"
 	"github.com/getgort/gort/types"
+
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEvaluateCommandEntry(t *testing.T) {
+func TestEvaluateCommandEntry1(t *testing.T) {
 	b, err := bundles.LoadBundle("../testing/test-bundle-foo.yml")
 	if err != nil {
 		t.Error(err.Error())
@@ -37,18 +38,34 @@ func TestEvaluateCommandEntry(t *testing.T) {
 	envFooTrue := rules.EvaluationEnvironment{"option": map[string]types.Value{"foo": types.BoolValue{V: true}}}
 	envFooFalse := rules.EvaluationEnvironment{"option": map[string]types.Value{}}
 
+	// Command:   "test:foo"
+	// Perms:     None
+	// Condition: with option["foo"] == false allow
+	// Expected:  TRUE
 	result, err := EvaluateCommandEntry([]string{}, cmd, envFooFalse)
 	assert.NoError(t, err)
 	assert.True(t, result)
 
+	// Command:   "test:foo"
+	// Perms:     "test:foo"
+	// Condition: with option["foo"] == false allow
+	// Expected:  TRUE
 	result, err = EvaluateCommandEntry([]string{"test:foo"}, cmd, envFooFalse)
 	assert.NoError(t, err)
 	assert.True(t, result)
 
+	// Command:   "test:foo --foo"
+	// Perms:     NONE
+	// Condition: with option["foo"] == true must have test:foo
+	// Expected:  FALSE
 	result, err = EvaluateCommandEntry([]string{}, cmd, envFooTrue)
 	assert.NoError(t, err)
 	assert.False(t, result)
 
+	// Command:   "test:foo --foo"
+	// Perms:     "test:foo"
+	// Condition: with option["foo"] == true must have test:foo
+	// Expected:  TRUE
 	result, err = EvaluateCommandEntry([]string{"test:foo"}, cmd, envFooTrue)
 	assert.NoError(t, err)
 	assert.True(t, result)
@@ -95,8 +112,15 @@ func TestParseCommandEntry(t *testing.T) {
 	cmd := data.CommandEntry{Bundle: b, Command: *b.Commands["foo"]}
 
 	expected := []rules.Rule{
-		{Command: "test:foo", Conditions: []rules.Expression{{A: types.MapElementValue{V: types.MapValue{Name: "option"}, Key: "foo"}, B: types.BoolValue{V: false}, Operator: rules.Equals}}, Permissions: []string{}},
-		{Command: "test:foo", Conditions: []rules.Expression{{A: types.MapElementValue{V: types.MapValue{Name: "option"}, Key: "foo"}, B: types.BoolValue{V: true}, Operator: rules.Equals}}, Permissions: []string{"test:foo"}},
+		{
+			Command:     "test:foo",
+			Conditions:  []rules.Expression{{A: types.MapElementValue{V: types.MapValue{Name: "option"}, Key: "foo"}, B: types.BoolValue{V: false}, Operator: rules.Equals}},
+			Permissions: []rules.Permission{},
+		}, {
+			Command:     "test:foo",
+			Conditions:  []rules.Expression{{A: types.MapElementValue{V: types.MapValue{Name: "option"}, Key: "foo"}, B: types.BoolValue{V: true}, Operator: rules.Equals}},
+			Permissions: []rules.Permission{{Name: "test:foo"}},
+		},
 	}
 
 	rules, err := ParseCommandEntry(cmd)
