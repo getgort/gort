@@ -202,15 +202,15 @@ func getAllBundles(ctx context.Context) ([]data.Bundle, error) {
 }
 
 func addBundleMethodsToRouter(router *mux.Router) {
-	router.Handle("/v2/bundles", otelhttp.NewHandler(http.HandlerFunc(handleGetBundles), "handleGetBundles")).Methods("GET")
+	router.Handle("/v2/bundles", otelhttp.NewHandler(authCommand(handleGetBundles, "bundle", "info"), "handleGetBundles")).Methods("GET")
 
-	router.Handle("/v2/bundles/{name}", otelhttp.NewHandler(http.HandlerFunc(handleGetBundleVersions), "handleGetBundleVersions")).Methods("GET")
-	router.Handle("/v2/bundles/{name}/versions", otelhttp.NewHandler(http.HandlerFunc(handleGetBundleVersions), "handleGetBundleVersions")).Methods("GET")
+	router.Handle("/v2/bundles/{name}", otelhttp.NewHandler(authCommand(handleGetBundleVersions, "bundle", "info"), "handleGetBundleVersions")).Methods("GET")
+	router.Handle("/v2/bundles/{name}/versions", otelhttp.NewHandler(authCommand(handleGetBundleVersions, "bundle", "list"), "handleGetBundleVersions")).Methods("GET")
 
-	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handleGetBundleVersion), "handleGetBundleVersion")).Methods("GET")
-	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handlePutBundleVersion), "handlePutBundleVersion")).Methods("PUT")
-	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteBundleVersion), "handleDeleteBundleVersion")).Methods("DELETE")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handleGetBundleVersion, "bundle", "info"), "handleGetBundleVersion")).Methods("GET")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handlePutBundleVersion, "bundle", "install"), "handlePutBundleVersion")).Methods("PUT")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handleDeleteBundleVersion, "bundle", "install"), "handleDeleteBundleVersion")).Methods("DELETE")
 
-	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handlePatchBundleVersion), "handlePatchBundleVersion")).Methods("PATCH")
-	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(http.HandlerFunc(handlePatchBundleVersion), "handlePatchBundleVersion")).Methods("PATCH").Queries("enabled", "")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handlePatchBundleVersion, "bundle", "enable"), "handlePatchBundleVersion")).Methods("PATCH")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handlePatchBundleVersion, "bundle", "enable"), "handlePatchBundleVersion")).Methods("PATCH").Queries("enabled", "")
 }

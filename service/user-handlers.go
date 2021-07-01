@@ -139,13 +139,13 @@ func handlePutUserGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func addUserMethodsToRouter(router *mux.Router) {
-	router.Handle("/v2/users", otelhttp.NewHandler(http.HandlerFunc(handleGetUsers), "handleGetUsers")).Methods("GET")
-	router.Handle("/v2/users/{username}", otelhttp.NewHandler(http.HandlerFunc(handleGetUser), "handleGetUser")).Methods("GET")
-	router.Handle("/v2/users/{username}", otelhttp.NewHandler(http.HandlerFunc(handlePutUser), "handlePutUser")).Methods("PUT")
-	router.Handle("/v2/users/{username}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteUser), "handleDeleteUser")).Methods("DELETE")
+	router.Handle("/v2/users", otelhttp.NewHandler(authCommand(handleGetUsers, "user", "info"), "handleGetUsers")).Methods("GET")
+	router.Handle("/v2/users/{username}", otelhttp.NewHandler(authCommand(handleGetUser, "user", "info"), "handleGetUser")).Methods("GET")
+	router.Handle("/v2/users/{username}", otelhttp.NewHandler(authCommand(handlePutUser, "user", "update"), "handlePutUser")).Methods("PUT")
+	router.Handle("/v2/users/{username}", otelhttp.NewHandler(authCommand(handleDeleteUser, "user", "delete"), "handleDeleteUser")).Methods("DELETE")
 
 	// User group membership
-	router.Handle("/v2/users/{username}/groups", otelhttp.NewHandler(http.HandlerFunc(handleGetUserGroups), "handleGetUserGroups")).Methods("GET")
-	router.Handle("/v2/users/{username}/groups/{username}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteUserGroup), "handleDeleteUserGroup")).Methods("DELETE")
-	router.Handle("/v2/users/{username}/groups/{username}", otelhttp.NewHandler(http.HandlerFunc(handlePutUserGroup), "handlePutUserGroup")).Methods("PUT")
+	router.Handle("/v2/users/{username}/groups", otelhttp.NewHandler(authCommand(handleGetUserGroups, "user", "info"), "handleGetUserGroups")).Methods("GET")
+	router.Handle("/v2/users/{username}/groups/{username}", otelhttp.NewHandler(authCommand(handleDeleteUserGroup, "user", "update"), "handleDeleteUserGroup")).Methods("DELETE")
+	router.Handle("/v2/users/{username}/groups/{username}", otelhttp.NewHandler(authCommand(handlePutUserGroup, "user", "update"), "handlePutUserGroup")).Methods("PUT")
 }

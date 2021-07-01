@@ -219,8 +219,9 @@ func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version str
 	return nil
 }
 
-// BundleEnabledVersion TBD
-func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name string) (string, error) {
+// BundleEnabledVersion returns the currently enabled version of the specified bundle.
+// If no version is enabled an empty string will be returned.
+func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, bundlename string) (string, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.BundleEnabledVersion")
 	defer sp.End()
@@ -236,7 +237,7 @@ func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, name stri
 		return "", gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	enabled, err := da.doBundleEnabledVersion(ctx, tx, name)
+	enabled, err := da.doBundleEnabledVersion(ctx, tx, bundlename)
 	if err != nil {
 		tx.Rollback()
 		return "", gerr.Wrap(errs.ErrDataAccess, err)

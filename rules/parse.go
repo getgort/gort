@@ -117,3 +117,19 @@ func ParseExpression(expr string) (a, b string, o Operator, m CollectionOperatio
 
 	return
 }
+
+// TokenizeAndParse is a helper function that wraps the Tokenize and Parse
+// functions. It accepts a raw Gort rule of the form "COMMAND [when CONDITION
+// (and|or)]? [allow|must have PERMISSION (and|or)]", and returns a RuleTokens
+// value. A parsing error will produce a non-nil error. The RuleTokens' Command
+// value should always be non-empty; Conditions and Permissions can both be
+// empty (but non-nil). Empty Conditions always match the command. Empty
+// Permissions indicating the use of the "allow" keyword and always pass.
+func TokenizeAndParse(s string) (Rule, error) {
+	rt, err := Tokenize(s)
+	if err != nil {
+		return Rule{}, err
+	}
+
+	return Parse(rt)
+}

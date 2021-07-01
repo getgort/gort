@@ -121,11 +121,11 @@ func handlePutRole(w http.ResponseWriter, r *http.Request) {
 
 func addRoleMethodsToRouter(router *mux.Router) {
 	// Basic role methods
-	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(http.HandlerFunc(handleGetRole), "handleGetRole")).Methods("GET")
-	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(http.HandlerFunc(handlePutRole), "handlePutRole")).Methods("PUT")
-	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteRole), "handleDeleteRole")).Methods("DELETE")
+	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(authCommand(handleGetRole, "role", "create"), "handleGetRole")).Methods("GET")
+	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(authCommand(handlePutRole, "role", "create"), "handlePutRole")).Methods("PUT")
+	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(authCommand(handleDeleteRole, "role", "delete"), "handleDeleteRole")).Methods("DELETE")
 
 	// Role permissions
-	router.Handle("/v2/roles/{rolename}/bundles/{bundlename}/permissions/{permissionname}", otelhttp.NewHandler(http.HandlerFunc(handleRevokeRolePermission), "handleDeleteRolePermission")).Methods("DELETE")
-	router.Handle("/v2/roles/{rolename}/bundles/{bundlename}/permissions/{permissionname}", otelhttp.NewHandler(http.HandlerFunc(handleGrantRolePermission), "handlePutRolePermission")).Methods("PUT")
+	router.Handle("/v2/roles/{rolename}/bundles/{bundlename}/permissions/{permissionname}", otelhttp.NewHandler(authCommand(handleRevokeRolePermission, "role", "revoke-permission"), "handleDeleteRolePermission")).Methods("DELETE")
+	router.Handle("/v2/roles/{rolename}/bundles/{bundlename}/permissions/{permissionname}", otelhttp.NewHandler(authCommand(handleGrantRolePermission, "role", "grant-permission"), "handlePutRolePermission")).Methods("PUT")
 }

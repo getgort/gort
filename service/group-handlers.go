@@ -296,18 +296,18 @@ func handlePutGroupRole(w http.ResponseWriter, r *http.Request) {
 
 func addGroupMethodsToRouter(router *mux.Router) {
 	// Basic group methods
-	router.Handle("/v2/groups", otelhttp.NewHandler(http.HandlerFunc(handleGetGroups), "handleGetGroups")).Methods("GET")
-	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(http.HandlerFunc(handleGetGroup), "handleGetGroup")).Methods("GET")
-	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(http.HandlerFunc(handlePutGroup), "handlePutGroup")).Methods("PUT")
-	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteGroup), "handleDeleteGroup")).Methods("DELETE")
+	router.Handle("/v2/groups", otelhttp.NewHandler(authCommand(handleGetGroups, "group", "list"), "handleGetGroups")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(authCommand(handleGetGroup, "group", "info"), "handleGetGroup")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(authCommand(handlePutGroup, "group", "create"), "handlePutGroup")).Methods("PUT")
+	router.Handle("/v2/groups/{groupname}", otelhttp.NewHandler(authCommand(handleDeleteGroup, "group", "delete"), "handleDeleteGroup")).Methods("DELETE")
 
 	// Group user membership
-	router.Handle("/v2/groups/{groupname}/members", otelhttp.NewHandler(http.HandlerFunc(handleGetGroupMembers), "handleGetGroupMembers")).Methods("GET")
-	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteGroupMember), "handleDeleteGroupMember")).Methods("DELETE")
-	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(http.HandlerFunc(handlePutGroupMember), "handlePutGroupMember")).Methods("PUT")
+	router.Handle("/v2/groups/{groupname}/members", otelhttp.NewHandler(authCommand(handleGetGroupMembers, "group", ""), "handleGetGroupMembers")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(authCommand(handleDeleteGroupMember, "group", ""), "handleDeleteGroupMember")).Methods("DELETE")
+	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(authCommand(handlePutGroupMember, "group", ""), "handlePutGroupMember")).Methods("PUT")
 
 	// Group roles
-	router.Handle("/v2/groups/{groupname}/roles", otelhttp.NewHandler(http.HandlerFunc(handleGetGroupRoles), "handleGetGroupMembers")).Methods("GET")
-	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(http.HandlerFunc(handleDeleteGroupRole), "handleDeleteGroupMember")).Methods("DELETE")
-	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(http.HandlerFunc(handlePutGroupRole), "handlePutGroupMember")).Methods("PUT")
+	router.Handle("/v2/groups/{groupname}/roles", otelhttp.NewHandler(authCommand(handleGetGroupRoles, "group", "info"), "handleGetGroupMembers")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(authCommand(handleDeleteGroupRole, "group", "add"), "handleDeleteGroupMember")).Methods("DELETE")
+	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(authCommand(handlePutGroupRole, "group", "add"), "handlePutGroupMember")).Methods("PUT")
 }
