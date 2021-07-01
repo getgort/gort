@@ -26,8 +26,8 @@ import (
 
 const (
 	groupCreateUse   = "create"
-	groupCreateShort = "Create an existing group"
-	groupCreateLong  = "Create an existing group."
+	groupCreateShort = "Create a new group"
+	groupCreateLong  = "Create a new group."
 )
 
 // GetGroupCreateCmd is a command

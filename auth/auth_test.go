@@ -17,7 +17,6 @@
 package auth
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -29,9 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEvaluate(t *testing.T) {
-	ctx := context.Background()
-
+func TestEvaluateCommandEntry(t *testing.T) {
 	b, err := bundles.LoadBundle("../testing/test-bundle-foo.yml")
 	if err != nil {
 		t.Error(err.Error())
@@ -40,26 +37,24 @@ func TestEvaluate(t *testing.T) {
 	envFooTrue := rules.EvaluationEnvironment{"option": map[string]types.Value{"foo": types.BoolValue{V: true}}}
 	envFooFalse := rules.EvaluationEnvironment{"option": map[string]types.Value{}}
 
-	result, err := Evaluate(ctx, []string{}, cmd, envFooFalse)
+	result, err := EvaluateCommandEntry([]string{}, cmd, envFooFalse)
 	assert.NoError(t, err)
 	assert.True(t, result)
 
-	result, err = Evaluate(ctx, []string{"test:foo"}, cmd, envFooFalse)
+	result, err = EvaluateCommandEntry([]string{"test:foo"}, cmd, envFooFalse)
 	assert.NoError(t, err)
 	assert.True(t, result)
 
-	result, err = Evaluate(ctx, []string{}, cmd, envFooTrue)
+	result, err = EvaluateCommandEntry([]string{}, cmd, envFooTrue)
 	assert.NoError(t, err)
 	assert.False(t, result)
 
-	result, err = Evaluate(ctx, []string{"test:foo"}, cmd, envFooTrue)
+	result, err = EvaluateCommandEntry([]string{"test:foo"}, cmd, envFooTrue)
 	assert.NoError(t, err)
 	assert.True(t, result)
 }
 
-func TestEvaluate2(t *testing.T) {
-	ctx := context.Background()
-
+func TestEvaluateCommandEntry2(t *testing.T) {
 	b, err := bundles.LoadBundle("../testing/test-default.yml")
 	if err != nil {
 		t.Error(err.Error())
@@ -69,11 +64,11 @@ func TestEvaluate2(t *testing.T) {
 	assert.NoError(t, err)
 	cmdE := data.CommandEntry{Bundle: b, Command: *b.Commands[cmd.Command]}
 
-	result, err := Evaluate(ctx, []string{"test:foo", "gort:manage_users"}, cmdE, env)
+	result, err := EvaluateCommandEntry([]string{"test:foo", "gort:manage_users"}, cmdE, env)
 	assert.NoError(t, err)
 	assert.True(t, result)
 
-	result, err = Evaluate(ctx, []string{"test:foo"}, cmdE, env)
+	result, err = EvaluateCommandEntry([]string{"test:foo"}, cmdE, env)
 	assert.NoError(t, err)
 	assert.False(t, result)
 }

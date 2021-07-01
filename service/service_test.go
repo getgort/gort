@@ -18,16 +18,21 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/memory"
 )
+
+var adminToken rest.Token
 
 // ResponseTester allows a single HTTP test to be sent to a router and the
 // result to be verified.
@@ -84,6 +89,7 @@ func (r ResponseTester) Test(t *testing.T, router *mux.Router) {
 	}
 
 	req := httptest.NewRequest(r.method, r.target, bodyReader)
+	req.Header.Add("X-Session-Token", adminToken.Token)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -106,8 +112,23 @@ func (r ResponseTester) Test(t *testing.T, router *mux.Router) {
 }
 
 func createTestRouter() *mux.Router {
+	ctx := context.Background()
+
 	dataAccessLayer = memory.NewInMemoryDataAccess()
+	dataAccessLayer.Initialize(ctx)
+
+	userAdmin, err := doBootstrap(ctx, rest.User{Username: "admin", Email: "admin@testing.com"})
+	if err != nil {
+		panic(err)
+	}
+
+	adminToken, err = dataAccessLayer.TokenGenerate(ctx, userAdmin.Username, time.Minute)
+	if err != nil {
+		panic(err)
+	}
+
 	router := mux.NewRouter()
 	addAllMethodsToRouter(router)
+
 	return router
 }

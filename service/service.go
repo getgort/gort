@@ -19,6 +19,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -28,17 +29,26 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	"github.com/getgort/gort/auth"
 	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/rules"
 	"github.com/getgort/gort/telemetry"
+	"github.com/getgort/gort/types"
 )
 
 var (
 	dataAccessLayer dataaccess.DataAccess
+
+	ErrUnauthorized = errors.New("unauthorized")
+
+	ErrNoSuchCommand = errors.New("no such command")
+
+	ErrGortBundleDisabled = errors.New("gort bundle disabled")
 )
 
 // RequestEvent represents a request of a service endpoint.
@@ -276,9 +286,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(token)
 }
 
-// handleBootstrap handles "POST /bootstrap"
-func handleBootstrap(w http.ResponseWriter, r *http.Request) {
-	const adminUser = "admin"
+func doBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
 	const adminGroup = "admin"
 	const adminRole = "admin"
 	var adminPermissions = []string{
@@ -288,6 +296,73 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		"manage_users",
 	}
 
+	var err error
+
+	// Set user defaults where necessary.
+	user, err = bootstrapUserWithDefaults(user)
+	if err != nil {
+		return user, err
+	}
+
+	// Persist our shiny new user to the database.
+	err = dataAccessLayer.UserCreate(ctx, user)
+	if err != nil {
+		return user, err
+	}
+
+	// Create admin group.
+	err = dataAccessLayer.GroupCreate(ctx, rest.Group{Name: adminGroup})
+	if err != nil {
+		return user, err
+	}
+
+	// Add the admin user to the admin group.
+	err = dataAccessLayer.GroupAddUser(ctx, adminGroup, user.Username)
+	if err != nil {
+		return user, err
+	}
+
+	// Create an admin role
+	err = dataAccessLayer.RoleCreate(ctx, adminRole)
+	if err != nil {
+		return user, err
+	}
+
+	// Add role to group
+	err = dataAccessLayer.GroupRoleAdd(ctx, adminGroup, adminRole)
+	if err != nil {
+		return user, err
+	}
+
+	// Add the default permissions.
+	for _, p := range adminPermissions {
+		err = dataAccessLayer.RolePermissionAdd(ctx, adminRole, "gort", p)
+		if err != nil {
+			return user, err
+		}
+	}
+
+	// Finally, add and enable the default bundle
+	b, err := bundles.Default()
+	if err != nil {
+		return user, err
+	}
+
+	err = dataAccessLayer.BundleCreate(ctx, b)
+	if err != nil {
+		return user, err
+	}
+
+	err = dataAccessLayer.BundleEnable(ctx, b.Name, b.Version)
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
+}
+
+// handleBootstrap handles "POST /bootstrap"
+func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	users, err := dataAccessLayer.UserList(r.Context())
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -310,71 +385,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set user defaults where necessary.
-	user, err = bootstrapUserWithDefaults(user)
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	// Persist our shiny new user to the database.
-	err = dataAccessLayer.UserCreate(r.Context(), user)
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	// Create admin group.
-	err = dataAccessLayer.GroupCreate(r.Context(), rest.Group{Name: adminGroup})
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	// Add the admin user to the admin group.
-	err = dataAccessLayer.GroupAddUser(r.Context(), adminGroup, user.Username)
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	// Create an admin role
-	err = dataAccessLayer.RoleCreate(r.Context(), adminRole)
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	// Add role to group
-	err = dataAccessLayer.GroupRoleAdd(r.Context(), adminGroup, adminRole)
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	// Add the default permissions.
-	for _, p := range adminPermissions {
-		err = dataAccessLayer.RolePermissionAdd(r.Context(), adminRole, "gort", p)
-		if err != nil {
-			respondAndLogError(r.Context(), w, err)
-			return
-		}
-	}
-
-	// Finally, add and enable the default bundle
-	b, err := bundles.Default()
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	err = dataAccessLayer.BundleCreate(r.Context(), b)
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	err = dataAccessLayer.BundleEnable(r.Context(), b.Name, b.Version)
+	user, err = doBootstrap(r.Context(), user)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -425,6 +436,7 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		fallthrough
 	case gerrs.Is(err, errs.ErrFieldRequired):
 		status = http.StatusExpectationFailed
+		log.WithError(err).WithField("status", status).Info(msg)
 
 	// Requested resource doesn't exist
 	case gerrs.Is(err, errs.ErrNoSuchBundle):
@@ -435,10 +447,12 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		fallthrough
 	case gerrs.Is(err, errs.ErrNoSuchUser):
 		status = http.StatusNotFound
+		log.WithError(err).WithField("status", status).Info(msg)
 
 	// Nope
 	case gerrs.Is(err, errs.ErrAdminUndeletable):
 		status = http.StatusForbidden
+		log.WithError(err).WithField("status", status).Warn(msg)
 
 	// Can't insert over something that already exists
 	case gerrs.Is(err, errs.ErrBundleExists):
@@ -447,10 +461,12 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		fallthrough
 	case gerrs.Is(err, errs.ErrUserExists):
 		status = http.StatusConflict
+		log.WithError(err).WithField("status", status).Info(msg)
 
 	// Not done yet
 	case gerrs.Is(err, errs.ErrNotImplemented):
 		status = http.StatusNotImplemented
+		log.WithError(err).WithField("status", status).Info(msg)
 
 	// Data access errors
 	case gerrs.Is(err, errs.ErrDataAccessNotInitialized):
@@ -461,24 +477,38 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		fallthrough
 	case gerrs.Is(err, errs.ErrDataAccess):
 		status = http.StatusInternalServerError
-		log.WithField("status", status).Error(msg)
+		log.WithError(err).WithField("status", status).Error(msg)
 
 	// Bad context
 	case gerrs.Is(err, gerrs.ErrUnmarshal):
 		msg = "Corrupt JSON payload"
 		status = http.StatusNotAcceptable
+		log.WithError(err).WithField("status", status).Error(msg)
+
+	case gerrs.Is(err, ErrUnauthorized):
+		status = http.StatusUnauthorized
+		log.WithError(err).WithField("status", status).Error(msg)
+
+	case gerrs.Is(err, ErrGortBundleDisabled):
+		status = http.StatusUnauthorized
+		if e, ok := err.(gerrs.NestedError); ok {
+			err = e.Err
+		}
+		telemetry.Errors().WithError(err).Commit(ctx)
+		log.WithError(err).WithField("status", status).Error(msg)
 
 	// Something else?
 	default:
-		log.WithError(err).Warn("Unhandled server error")
 		telemetry.Errors().WithError(err).Commit(ctx)
 		status = http.StatusInternalServerError
-		log.WithError(err).WithField("status", status).Error(msg)
+		log.WithError(err).WithField("status", status).Error("Unhandled server error")
 	}
 
 	http.Error(w, msg, status)
 }
 
+// Provides a middleware function that simply looks for the EXISTENCE of a valid token.
+// More granular role-based auth is also performed at the function level.
 func tokenObservingMiddleware(next http.Handler) http.Handler {
 	exemptEndpoints := map[string]bool{
 		"/v2/authenticate": true,
@@ -512,4 +542,100 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func authCommand(handler func(w http.ResponseWriter, r *http.Request), cmd, subcmd string) http.HandlerFunc {
+	inner := func(w http.ResponseWriter, r *http.Request) {
+		if !authenticateUser(w, r, cmd, subcmd) {
+			return
+		}
+
+		handler(w, r)
+	}
+
+	return http.HandlerFunc(inner)
+}
+
+// authenticateUser is used to authenticate service actions by evaluating them
+// against the default Gort command bundle. For example, `authenticateUser(r, "users")`
+// is evaluated exactly as if the requesting user executed "gort users" on the
+// command line. If the default gort bundle doesn't exist or isn't enabled a
+// ErrGortBundleDisabled error will be returned.
+// The actual work is done by doAuthenticateUser; this function really cares
+// mostly about logging and error handling.
+func authenticateUser(w http.ResponseWriter, r *http.Request, gortCommand string, args ...string) bool {
+	auth, err := doAuthenticateUser(r, gortCommand, args...)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return false
+	}
+
+	if !auth {
+		respondAndLogError(r.Context(), w, ErrUnauthorized)
+	}
+
+	return auth
+}
+
+// doAuthenticateUser does the actual work for authenticateUser.
+func doAuthenticateUser(r *http.Request, gortCommand string, args ...string) (bool, error) {
+	t := r.Header.Get("X-Session-Token")
+	if t == "" || !dataAccessLayer.TokenEvaluate(r.Context(), t) {
+		return false, ErrUnauthorized
+	}
+
+	token, err := dataAccessLayer.TokenRetrieveByToken(r.Context(), t)
+	if err != nil {
+		return false, err
+	}
+
+	perms, err := dataAccessLayer.UserPermissions(r.Context(), token.User)
+	if err != nil {
+		return false, err
+	}
+
+	bundle, command, err := getGortBundleCommand(r.Context())
+	if err != nil {
+		return false, gerrs.Wrap(ErrGortBundleDisabled, err)
+	}
+	ce := data.CommandEntry{Bundle: bundle, Command: command}
+
+	// Convert all args to types.Value values.
+	args = append([]string{gortCommand}, args...)
+	argValues, err := types.Inferrer{}.StrictStrings(false).InferAll(args)
+	if err != nil {
+		return false, err
+	}
+
+	env := rules.EvaluationEnvironment{"arg": argValues}
+
+	return auth.EvaluateCommandEntry(perms, ce, env)
+}
+
+// getGortBundleCommand retrieves the data.BundleCommand value from the default
+// Gort command bundle. If the bundle doesn't exist, isn't enabled, or if the
+// requested command doesn't exist, an error will be returned.
+func getGortBundleCommand(ctx context.Context) (data.Bundle, data.BundleCommand, error) {
+	const bundleName = "gort"
+	const commandName = "gort"
+
+	bundleVersion, err := dataAccessLayer.BundleEnabledVersion(ctx, bundleName)
+	if err != nil {
+		return data.Bundle{}, data.BundleCommand{}, err
+	}
+	if bundleVersion == "" {
+		return data.Bundle{}, data.BundleCommand{}, errs.ErrEmptyBundleVersion
+	}
+
+	bundle, err := dataAccessLayer.BundleGet(ctx, bundleName, bundleVersion)
+	if err != nil {
+		return data.Bundle{}, data.BundleCommand{}, err
+	}
+
+	cmd, exists := bundle.Commands[commandName]
+	if !exists {
+		return data.Bundle{}, data.BundleCommand{}, ErrNoSuchCommand
+	}
+
+	return bundle, *cmd, nil
 }

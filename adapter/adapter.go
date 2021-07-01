@@ -463,7 +463,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		return nil, fmt.Errorf("user permission load error: %w", err)
 	}
 
-	allowed, err := auth.Evaluate(ctx, perms, cmdEntry, env)
+	allowed, err := auth.EvaluateCommandEntry(perms, cmdEntry, env)
 	if err != nil {
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)

@@ -17,7 +17,6 @@
 package auth
 
 import (
-	"context"
 	"fmt"
 
 	// "fmt"
@@ -28,7 +27,8 @@ import (
 )
 
 const (
-	CommandsRequireAtLeastOneRule = true
+	// TODO This is just here to facilitate testing. Remove it when it's no longer useful.
+	commandsRequireAtLeastOneRule = true
 )
 
 var (
@@ -36,33 +36,45 @@ var (
 	ErrNoRulesDefined = fmt.Errorf("command has no rules")
 )
 
-func Evaluate(ctx context.Context, permissions []string, cmdEntry data.CommandEntry, env rules.EvaluationEnvironment) (bool, error) {
-	// Retrieve the command's rules as a []rules.Rule so that we can
-	// evaluate against them.
-	ruleList, err := ParseCommandEntry(cmdEntry)
-	if err != nil {
-		return false, gerrs.Wrap(ErrRuleLoadError, err)
-	}
-
-	if CommandsRequireAtLeastOneRule && len(ruleList) == 0 {
+// EvaluateRules returns true if the provided permissions meet the requirements
+// defined by the given rules and EvaluationEnvironment. It returns an error if
+// there isn't at least one rule in the Rule slice.
+func EvaluateRules(perms []string, r []rules.Rule, env rules.EvaluationEnvironment) (bool, error) {
+	if commandsRequireAtLeastOneRule && len(r) == 0 {
 		return false, ErrNoRulesDefined
 	}
 
 	allowed := false
 
 	// Loop over the rules and evaluate them one-by-one.
-	for _, r := range ruleList {
+	for _, r := range r {
 		// If the rule's conditions don't evaluate to true, ignore it.
 		if !r.Matches(env) {
 			continue
 		}
 
-		if allowed = r.Allowed(permissions); !allowed {
+		if allowed = r.Allowed(perms); !allowed {
 			return false, nil
 		}
 	}
 
 	return allowed, nil
+}
+
+// EvaluateCommandEntry is equivalent to EvaluateRules, except that it accepts
+// a data.Command entry from which it builds its complete rules set, upon which
+// it calls EvaluateRules. It returns true if the provided permissions meet the
+// requirements derived by the CommandEntry and EvaluationEnvironment. It
+// returns an error if there isn't at least one rule in the Rule slice.
+func EvaluateCommandEntry(perms []string, ce data.CommandEntry, env rules.EvaluationEnvironment) (bool, error) {
+	// Retrieve the command's rules as a []rules.Rule so that we can
+	// evaluate against them.
+	r, err := ParseCommandEntry(ce)
+	if err != nil {
+		return false, gerrs.Wrap(ErrRuleLoadError, err)
+	}
+
+	return EvaluateRules(perms, r, env)
 }
 
 // ParseCommandEntry is a helper function that accepts a fully-constructed
@@ -72,12 +84,9 @@ func ParseCommandEntry(ce data.CommandEntry) ([]rules.Rule, error) {
 	rr := []rules.Rule{}
 
 	for i, r := range ce.Command.Rules {
-		tokens, err := rules.Tokenize(fmt.Sprintf("%s:%s %s", ce.Bundle.Name, ce.Command.Name, r))
-		if err != nil {
-			return rr, fmt.Errorf("cannot tokenize %s:%s rule %d (%s): %w", ce.Bundle.Name, ce.Command.Name, i+1, r, err)
-		}
+		s := fmt.Sprintf("%s:%s %s", ce.Bundle.Name, ce.Command.Name, r)
 
-		rule, err := rules.Parse(tokens)
+		rule, err := rules.TokenizeAndParse(s)
 		if err != nil {
 			return rr, fmt.Errorf("cannot parse rule %s:%s rule %d (%s): %w", ce.Bundle.Name, ce.Command.Name, i+1, r, err)
 		}
