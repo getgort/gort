@@ -39,7 +39,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 ## Milestone 8 (API-level authorization)
 
-- Document permissions model and how auth is expected to work; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html).
+- Document permissions model and how auth is expected to work; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html). ✅
 - Command (as entered by a user into chat) interpretation ✅
   - Command text tokenizer and parser ✅
   - Ability to specify command option behavior in bundles (equivalent to `rules/ParseOption`) ✅
@@ -49,7 +49,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
   - Database schema ✅
   - `role create|destroy` command ✅
   - `group grant|revoke` command ✅
-- Bundle/command permission assignment
+- Bundle/command permission assignment ✅
 - Runtime command authorization ✅
 
 **_(Publicly release v0.8.0-alpha.0 at this point)_**
