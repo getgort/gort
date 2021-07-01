@@ -76,7 +76,7 @@ func (da *InMemoryDataAccess) RoleGet(ctx context.Context, name string) (rest.Ro
 	return *role, nil
 }
 
-func (da *InMemoryDataAccess) RoleGrantPermission(ctx context.Context, rolename, bundlename, permission string) error {
+func (da *InMemoryDataAccess) RolePermissionAdd(ctx context.Context, rolename, bundlename, permission string) error {
 	role, ok := da.roles[rolename]
 
 	if !ok {
@@ -87,7 +87,7 @@ func (da *InMemoryDataAccess) RoleGrantPermission(ctx context.Context, rolename,
 	return nil
 }
 
-func (da *InMemoryDataAccess) RoleRevokePermission(ctx context.Context, rolename, bundlename, permission string) error {
+func (da *InMemoryDataAccess) RolePermissionDelete(ctx context.Context, rolename, bundlename, permission string) error {
 	role, ok := da.roles[rolename]
 
 	if !ok {

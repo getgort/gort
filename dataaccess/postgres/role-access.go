@@ -165,9 +165,9 @@ func (da PostgresDataAccess) RoleGet(ctx context.Context, name string) (rest.Rol
 	return role, nil
 }
 
-func (da PostgresDataAccess) RoleGrantPermission(ctx context.Context, rolename, bundle, permission string) error {
+func (da PostgresDataAccess) RolePermissionAdd(ctx context.Context, rolename, bundle, permission string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.RoleGrantPermission")
+	ctx, sp := tr.Start(ctx, "postgres.RolePermissionAdd")
 	defer sp.End()
 
 	if rolename == "" {
@@ -206,9 +206,9 @@ func (da PostgresDataAccess) RoleGrantPermission(ctx context.Context, rolename, 
 	return err
 }
 
-func (da PostgresDataAccess) RoleRevokePermission(ctx context.Context, rolename, bundle, permission string) error {
+func (da PostgresDataAccess) RolePermissionDelete(ctx context.Context, rolename, bundle, permission string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.RoleRevokePermission")
+	ctx, sp := tr.Start(ctx, "postgres.RolePermissionDelete")
 	defer sp.End()
 
 	if rolename == "" {

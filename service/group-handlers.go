@@ -102,7 +102,7 @@ func handleDeleteGroupRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.GroupRevokeRole(r.Context(), groupname, rolename)
+	err = dataAccessLayer.GroupRoleDelete(r.Context(), groupname, rolename)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 	}
@@ -288,7 +288,7 @@ func handlePutGroupRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.GroupGrantRole(r.Context(), groupname, rolename)
+	err = dataAccessLayer.GroupRoleAdd(r.Context(), groupname, rolename)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 	}

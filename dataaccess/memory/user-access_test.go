@@ -262,20 +262,20 @@ func testUserPermissions(t *testing.T) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	err = da.GroupGrantRole(ctx, "test-perms", "test-perms")
+	err = da.GroupRoleAdd(ctx, "test-perms", "test-perms")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
 
-	err = da.RoleGrantPermission(ctx, "test-perms", "test", "test-perms-1")
+	err = da.RolePermissionAdd(ctx, "test-perms", "test", "test-perms-1")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	err = da.RoleGrantPermission(ctx, "test-perms", "test", "test-perms-2")
+	err = da.RolePermissionAdd(ctx, "test-perms", "test", "test-perms-2")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	err = da.RoleGrantPermission(ctx, "test-perms", "test", "test-perms-0")
+	err = da.RolePermissionAdd(ctx, "test-perms", "test", "test-perms-0")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}

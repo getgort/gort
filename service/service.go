@@ -346,7 +346,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add role to group
-	err = dataAccessLayer.GroupGrantRole(r.Context(), adminGroup, adminRole)
+	err = dataAccessLayer.GroupRoleAdd(r.Context(), adminGroup, adminRole)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -354,7 +354,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 
 	// Add the default permissions.
 	for _, p := range adminPermissions {
-		err = dataAccessLayer.RoleGrantPermission(r.Context(), adminRole, "gort", p)
+		err = dataAccessLayer.RolePermissionAdd(r.Context(), adminRole, "gort", p)
 		if err != nil {
 			respondAndLogError(r.Context(), w, err)
 			return
