@@ -27,22 +27,22 @@ import (
 
 func TestParse(t *testing.T) {
 	inputs := map[string]Rule{
-		`foo:bar allow`: {Command: "foo:bar", Conditions: []Expression{}, Permissions: []string{}},
+		`foo:bar allow`: {Command: "foo:bar", Conditions: []Expression{}, Permissions: []Permission{}},
 		`foo:bar with option['delete'] == /^.*$/ must have foo:destroy`: {
 			Command:     "foo:bar",
 			Conditions:  []Expression{{A: types.MapElementValue{V: types.MapValue{Name: "option"}, Key: "delete"}, B: types.RegexValue{V: `^.*$`}, Operator: Equals, Condition: Undefined}},
-			Permissions: []string{"foo:destroy"}},
+			Permissions: []Permission{{Name: "foo:destroy"}}},
 		`foo:bar with option['delete'] == true must have foo:destroy`: {
 			Command:     "foo:bar",
 			Conditions:  []Expression{{A: types.MapElementValue{V: types.MapValue{Name: "option"}, Key: "delete"}, B: types.BoolValue{V: true}, Operator: Equals, Condition: Undefined}},
-			Permissions: []string{"foo:destroy"}},
+			Permissions: []Permission{{Name: "foo:destroy"}}},
 		`foo:bar with option['delete'] == true and arg[0] == false must have foo:destroy`: {
 			Command: "foo:bar",
 			Conditions: []Expression{
 				{A: types.MapElementValue{V: types.MapValue{Name: "option"}, Key: "delete"}, B: types.BoolValue{V: true}, Operator: Equals, Condition: Undefined},
 				{A: types.ListElementValue{V: types.ListValue{Name: "arg"}, Index: 0}, B: types.BoolValue{V: false}, Operator: Equals, Condition: And},
 			},
-			Permissions: []string{"foo:destroy"}},
+			Permissions: []Permission{{Name: "foo:destroy"}}},
 		`foo:bar with any arg in ['wubba'] must have foo:read`: {
 			Command: "foo:bar",
 			Conditions: []Expression{{
@@ -51,7 +51,27 @@ func TestParse(t *testing.T) {
 				Operator: In,
 				Modifier: CollAny,
 			}},
-			Permissions: []string{"foo:read"},
+			Permissions: []Permission{{Name: "foo:read"}},
+		},
+		`foo:bar with any arg in ['wubba'] must have foo:read and foo:write`: {
+			Command: "foo:bar",
+			Conditions: []Expression{{
+				A:        types.UnknownValue{V: "arg"},
+				B:        types.ListValue{V: []types.Value{types.StringValue{V: "wubba", Quote: '\''}}},
+				Operator: In,
+				Modifier: CollAny,
+			}},
+			Permissions: []Permission{{Name: "foo:read"}, {"foo:write", And}},
+		},
+		`foo:bar with any arg in ['wubba'] must have foo:read and foo:write or foo:destroy`: {
+			Command: "foo:bar",
+			Conditions: []Expression{{
+				A:        types.UnknownValue{V: "arg"},
+				B:        types.ListValue{V: []types.Value{types.StringValue{V: "wubba", Quote: '\''}}},
+				Operator: In,
+				Modifier: CollAny,
+			}},
+			Permissions: []Permission{{Name: "foo:read"}, {"foo:write", And}, {"foo:destroy", Or}},
 		},
 	}
 

@@ -19,25 +19,43 @@ package rules
 type Rule struct {
 	Command     string
 	Conditions  []Expression
-	Permissions []string
+	Permissions []Permission
 }
 
 // Allowed returns true iff the user has all required permissions (or the rule
 // is an "allow" rule).
 func (r Rule) Allowed(permissions []string) bool {
-	for _, required := range r.Permissions {
-		found := false
+	if len(r.Permissions) == 0 {
+		return true
+	}
 
-		for i := 0; i < len(permissions) && !found; i++ {
-			found = permissions[i] == required
+	result := hasPermission(r.Permissions[0], permissions)
+
+	for i := 1; i < len(r.Permissions); i++ {
+		p := r.Permissions[i]
+
+		if p.Condition == And {
+			result = (result && hasPermission(p, permissions))
+			continue
 		}
 
-		if !found {
-			return false
+		if p.Condition == Or {
+			result = (result || hasPermission(p, permissions))
+			continue
 		}
 	}
 
-	return true
+	return result
+}
+
+func hasPermission(required Permission, permissions []string) bool {
+	for _, p := range permissions {
+		if p == required.Name {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Matches returns true iff the Rule's stated conditions evaluate to true.
