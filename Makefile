@@ -33,6 +33,7 @@ help:
 
 clean:
 	if [ -d "bin" ]; then rm -R bin; fi
+	rm coverage.out coverage.html
 
 test:
 	@DOCKER_BUILDKIT=1 docker build --target test -t foo_$(PROJECT)_foo --network host .

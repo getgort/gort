@@ -5,4 +5,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: make test
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16.5' # The Go version to download (if necessary) and use.
+      - run: make test-local
+      - name: Publish code coverage
+        uses: paambaati/codeclimate-action@v2.7.5s
+        env:
+          CC_TEST_REPORTER_ID: a68c8869252435bf3b669c1af6ee481345052ce6f19f3b4e15ff86c4df6a81ca
+        with:
+          coverageLocations: |
+            ${{github.workspace}}/*.out:gocov
+          prefix: github.com/getgort/gort
