@@ -107,7 +107,7 @@ Gort is in a state of active heavy development. The date that various [milestone
 - Milestone 5: 7 June 2021
 - Milestone 6: 10 June 2021
 - Milestone 7: 15 June 2021
-- Milestone 8: _TBD_
+- Milestone 8: 2 July 2021 (alpha)
 - Milestone 9: _TBD_
 - Release candidate 1: _TBD_
 - Release!: _TBD_
