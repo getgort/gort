@@ -49,6 +49,8 @@ RUN ssh-keygen -b 2048 -f /root/.ssh/id_rsa -P ''
 
 COPY --from=builder /gort/gort /bin
 
+ENTRYPOINT [ "/bin/gort" ]
+
 EXPOSE 4000
 
-CMD [ "gort", "start", "-v" ]
+CMD [ "start", "-v" ]
