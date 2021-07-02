@@ -14,7 +14,7 @@ Gort brings the power of the command line to the place you collaborate with your
 
 Gort was initially conceived of as a Go re-implementation of Operable's [Cog Slack Bot](https://github.com/operable/cog), and while it remains heavily inspired by Cog, Gort has largely gone its own way.
 
-Cog was originally designed as a distributed computation engine that was later re-branded as a chatops tool, and much of this original intent was reflected in its design, implementation, and feature set. As a result, many of Cog’s features, however innovative, went largely unused, and the codebase had become difficult to extend and maintain. These difficulties were compounded by its implementation language -- Elixir -- which has relatively few proficient developers.
+Cog was originally designed as a distributed computation engine that was later re-branded as a chatops tool, and much of this original intent was reflected in its design, implementation, and feature set. As a result, many of Cog’s features, however innovative, went largely unused, and the codebase had become difficult to extend and maintain.
 
 The solution, which was discussed for many months on the [Cog Slack workspace](https://cogbot.slack.com), was to rewrite Cog from scratch in a more accessible language, such as [Go](http://golang.org), removing some of less-used functionality and reducing complexity in the process.
 
@@ -37,21 +37,23 @@ This includes all of the [high-level features listed in the Cog documentation](h
 
 While some effort will be made to support existing functionality (such as Cog bundles), perfect compatibility is explicitly not guaranteed (however, a migration guide should be written eventually). -->
 
-## Gort design
+## Gort Design
 
 A WIP design doc, including rough milestones (but not dates) [can be seen here](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit?usp=sharing). Feel free to add questions or comments.
 
-## How to run the Gort controller
+## How to Run the Gort Controller
 
 With Go installed, you can run (for testing) with: `go run . start`.
 
-Note that you'll need [a proper API key in the config first](https://getgort.github.io/gort-guide/quickstart.html)!
+Note that you'll need a proper API key in the config first!
+
+For more informaton, take a look at the [Quick Start Guide](https://guide.getgort.io/quickstart.html) in [The Gort Guide](https://guide.getgort.io).
 
 ## The Gort Client
 
 The `gort` binary also serves as the controller administration CLI.
 
-### Configuring client profiles
+### Configuring Client Profiles
 
 The `gort` client uses an INI-formatted configuration file, conventionally
 located in the `profile` file in a `.gort` directory in your home directory.
@@ -87,15 +89,15 @@ as the default (in the `defaults` section) will be used by
 While you can add profiles to this file manually, you can also use the
 `gort profile create` command to help.
 
-### Getting help
+### Getting Help
 
 The `gort` executable contains a number of commands and sub-commands.
 Help is available for all of them by passing the `--help` option.
 Start with `gort --help`, and go from there.
 
-## Status of this project
+## Status of This Project
 
-Active heavy development. The date that various [milestones](TODO.md) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
+Gort is in a state of active heavy development. The date that various [milestones](TODO.md) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
 
 - Project created: 27 December 2018
 - Milestone 1: 7 January 2019
