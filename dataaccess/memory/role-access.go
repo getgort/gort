@@ -38,6 +38,17 @@ func (da *InMemoryDataAccess) RoleCreate(ctx context.Context, name string) error
 	return nil
 }
 
+// RoleList
+func (da *InMemoryDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) {
+	list := make([]rest.Role, 0)
+
+	for _, r := range da.roles {
+		list = append(list, *r)
+	}
+
+	return list, nil
+}
+
 // RoleDelete
 func (da *InMemoryDataAccess) RoleDelete(ctx context.Context, name string) error {
 	if name == "" {

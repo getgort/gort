@@ -50,6 +50,27 @@ func testRoleCreate(t *testing.T) {
 	assert.Error(t, err, errs.ErrRoleExists)
 }
 
+func testRoleList(t *testing.T) {
+	var err error
+
+	// Expect no roles
+	roles, err := da.RoleList(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(roles))
+
+	// Expect no error
+	err = da.RoleCreate(ctx, "test-create")
+	defer da.RoleDelete(ctx, "test-create")
+	assert.NoError(t, err)
+
+	// Expect 1 role
+	roles, err = da.RoleList(ctx)
+	assert.NoError(t, err)
+	if assert.Equal(t, 1, len(roles)) {
+		assert.Equal(t, "test-create", roles[0].Name)
+	}
+}
+
 func testRoleDelete(t *testing.T) {
 	// Delete blank group
 	err := da.RoleDelete(ctx, "")

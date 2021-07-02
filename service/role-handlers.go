@@ -35,6 +35,19 @@ func handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleGetRoles handles "GET /v2/roles"
+func handleGetRoles(w http.ResponseWriter, r *http.Request) {
+
+	roles, err := dataAccessLayer.RoleList(r.Context())
+
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(roles)
+}
+
 // handleGetRole handles "GET /v2/roles/{rolename}"
 func handleGetRole(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -121,7 +134,8 @@ func handlePutRole(w http.ResponseWriter, r *http.Request) {
 
 func addRoleMethodsToRouter(router *mux.Router) {
 	// Basic role methods
-	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(authCommand(handleGetRole, "role", "create"), "handleGetRole")).Methods("GET")
+	router.Handle("/v2/roles", otelhttp.NewHandler(authCommand(handleGetRoles, "role", "list"), "handleGetRoles")).Methods("GET")
+	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(authCommand(handleGetRole, "role", "infp"), "handleGetRole")).Methods("GET")
 	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(authCommand(handlePutRole, "role", "create"), "handlePutRole")).Methods("PUT")
 	router.Handle("/v2/roles/{rolename}", otelhttp.NewHandler(authCommand(handleDeleteRole, "role", "delete"), "handleDeleteRole")).Methods("DELETE")
 

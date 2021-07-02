@@ -18,6 +18,7 @@ package postgres
 
 import (
 	"context"
+	"log"
 	"sort"
 
 	"go.opentelemetry.io/otel"
@@ -59,6 +60,44 @@ func (da PostgresDataAccess) RoleCreate(ctx context.Context, name string) error 
 	}
 
 	return err
+}
+
+// RoleList gets all roles.
+func (da PostgresDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.RoleList")
+	defer sp.End()
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	// There will be more fields here eventually
+	query := `SELECT role_name
+		FROM roles`
+
+	var roles []rest.Role
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return roles, gerr.Wrap(errs.ErrNoSuchRole, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			// Check for a scan error.
+			// Query rows will be closed with defer.
+			log.Fatal(err)
+		}
+		roles = append(roles, rest.Role{Name: name})
+	}
+
+	// TODO: Get permissions
+
+	return roles, nil
 }
 
 // RoleDelete

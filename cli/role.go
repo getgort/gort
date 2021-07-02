@@ -48,6 +48,7 @@ func GetRoleCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(GetRoleCreateCmd())
+	cmd.AddCommand(GetRoleListCmd())
 	cmd.AddCommand(GetRoleDeleteCmd())
 	cmd.AddCommand(GetRoleGrantPermissionCmd())
 	cmd.AddCommand(GetRoleRevokePermissionCmd())

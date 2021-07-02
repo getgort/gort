@@ -58,6 +58,33 @@ func (c *GortClient) RoleCreate(rolename string) error {
 	return nil
 }
 
+// RoleList comments to be written...
+func (c *GortClient) RoleList() ([]rest.Group, error) {
+	url := fmt.Sprintf("%s/v2/roles", c.profile.URL.String())
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return []rest.Group{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return []rest.Group{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []rest.Group{}, err
+	}
+
+	roles := []rest.Group{}
+	err = json.Unmarshal(body, &roles)
+	if err != nil {
+		return []rest.Group{}, err
+	}
+
+	return roles, nil
+}
+
 // RoleExists simply returns true if a role exists with the specified
 // rolename; false otherwise.
 func (c *GortClient) RoleExists(rolename string) (bool, error) {
