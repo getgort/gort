@@ -74,28 +74,49 @@ func (da PostgresDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) 
 	}
 	defer db.Close()
 
-	// There will be more fields here eventually
+	var rolesByName = make(map[string]*rest.Role)
+	// Load all role names and add to the roles map
 	query := `SELECT role_name
 		FROM roles`
 
-	var roles []rest.Role
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
-		return roles, gerr.Wrap(errs.ErrNoSuchRole, err)
+		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			// Check for a scan error.
-			// Query rows will be closed with defer.
 			log.Fatal(err)
 		}
-		roles = append(roles, rest.Role{Name: name})
+		rolesByName[name] = &rest.Role{Name: name}
 	}
 
-	// TODO: Get permissions
+	// Load all permissions and add to role objects
+	query = `SELECT role_name, bundle_name, permission 
+		FROM role_permissions`
+	rows, err = db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			rolename   string
+			permission rest.RolePermission
+		)
+		if err := rows.Scan(&rolename, &permission.BundleName, &permission.Permission); err != nil {
+			log.Fatal(err)
+		}
+		rolesByName[rolename].Permissions = append(rolesByName[rolename].Permissions, permission)
+	}
+
+	var roles []rest.Role
+	for _, role := range rolesByName {
+		roles = append(roles, *role)
+	}
 
 	return roles, nil
 }

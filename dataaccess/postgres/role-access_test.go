@@ -26,6 +26,7 @@ import (
 
 func testRoleAccess(t *testing.T) {
 	t.Run("testRoleCreate", testRoleCreate)
+	t.Run("testRoleList", testRoleList)
 	t.Run("testRoleExists", testRoleExists)
 	t.Run("testRoleDelete", testRoleDelete)
 	t.Run("testRoleGet", testRoleGet)
@@ -53,21 +54,29 @@ func testRoleCreate(t *testing.T) {
 func testRoleList(t *testing.T) {
 	var err error
 
-	// Expect no roles
+	// Get initial set of roles
 	roles, err := da.RoleList(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, 0, len(roles))
+	startingRoles := len(roles)
 
-	// Expect no error
-	err = da.RoleCreate(ctx, "test-create")
-	defer da.RoleDelete(ctx, "test-create")
+	// Create and populate role
+	rolename := "test-role-list"
+	bundle := "test-bundle-list"
+	permission := "test-permission-list"
+	err = da.RoleCreate(ctx, rolename)
+	defer da.RoleDelete(ctx, rolename)
 	assert.NoError(t, err)
 
-	// Expect 1 role
+	err = da.RolePermissionAdd(ctx, rolename, bundle, permission)
+	assert.NoError(t, err)
+
+	// Expect 1 new role
 	roles, err = da.RoleList(ctx)
 	assert.NoError(t, err)
-	if assert.Equal(t, 1, len(roles)) {
-		assert.Equal(t, "test-create", roles[0].Name)
+	if assert.Equal(t, startingRoles+1, len(roles)) {
+		assert.Equal(t, rolename, roles[startingRoles].Name)
+		assert.Equal(t, bundle, roles[startingRoles].Permissions[0].BundleName)
+		assert.Equal(t, permission, roles[startingRoles].Permissions[0].Permission)
 	}
 }
 
