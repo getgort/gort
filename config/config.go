@@ -261,7 +261,7 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 	return &config, nil
 }
 
-//  reloadConfiguration is called by both BeginChangeCheck() and Initialize()
+// reloadConfiguration is called by both BeginChangeCheck() and Initialize()
 // to determine whether the config file has changed (or is new) and reload if
 // it has.
 func reloadConfiguration() error {

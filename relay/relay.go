@@ -23,7 +23,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 
-	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
@@ -192,9 +191,9 @@ func runWorker(ctx context.Context, worker *worker.Worker, response data.Command
 	defer sp.End()
 
 	// Get configured timeout. Zero (or less) is no timeout.
-	timeout := config.GetGlobalConfigs().CommandTimeout()
+	timeout := worker.ExecutionTimeout
 	if timeout <= 0 {
-		timeout = time.Hour * 24 * 365 // No timeout? Just use one year.
+		timeout = time.Hour * 24 * 365 // No timeout? No problem.
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

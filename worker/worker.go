@@ -67,7 +67,7 @@ func NewWorker(image string, tag string, entryPoint string, commandParams ...str
 		DockerClient:      dcli,
 		DockerHost:        config.GetDockerConfigs().DockerHost,
 		EntryPoint:        entryPoint,
-		ExecutionTimeout:  config.GetGlobalConfigs().CommandTimeout(),
+		ExecutionTimeout:  config.GetGlobalConfigs().CommandTimeout,
 		ImageName:         image + ":" + tag,
 		ExitStatus:        make(chan int64),
 	}, nil
