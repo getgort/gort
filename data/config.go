@@ -16,6 +16,8 @@
 
 package data
 
+import "time"
+
 // GortConfig is the top-level configuration object
 type GortConfig struct {
 	GortServerConfigs GortServerConfigs `yaml:"gort,omitempty"`
@@ -41,6 +43,10 @@ type GortServerConfigs struct {
 // GlobalConfigs is the data wrapper for the "global" section
 type GlobalConfigs struct {
 	CommandTimeoutSeconds int `yaml:"command_timeout_seconds,omitempty"`
+}
+
+func (c GlobalConfigs) CommandTimeout() time.Duration {
+	return time.Duration(c.CommandTimeoutSeconds) * time.Second
 }
 
 // DatabaseConfigs is the data wrapper for the "database" section.
