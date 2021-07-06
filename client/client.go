@@ -27,6 +27,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 
@@ -97,6 +98,32 @@ func (c Error) Status() uint {
 // specified host. An empty string will use the default profile. If the
 // requested profile doesn't exist, an empty ProfileEntry is returned.
 func Connect(profileName string) (*GortClient, error) {
+	// If the GORT_SERVICE_TOKEN envvar is set, use that first.
+	if te, exists := os.LookupEnv("GORT_SERVICE_TOKEN"); exists {
+		entry := ProfileEntry{URLString: os.Getenv("GORT_SERVICES_ROOT")}
+
+		url, err := parseHostURL(entry.URLString)
+		if err != nil {
+			return nil, err
+		}
+
+		entry.AllowInsecure = url.Scheme == "http"
+		entry.URL = url
+
+		client, err := NewClient(entry)
+		if err != nil {
+			return nil, err
+		}
+
+		client.token = &rest.Token{
+			Token:      te,
+			ValidFrom:  time.Now(),
+			ValidUntil: time.Now().Add(10 * time.Second),
+		}
+
+		return client, nil
+	}
+
 	var entry ProfileEntry
 
 	// Load the profiles file
@@ -104,6 +131,8 @@ func Connect(profileName string) (*GortClient, error) {
 	if err != nil {
 		return nil, gerrs.Wrap(ErrBadProfile, err)
 	}
+
+	fmt.Println("CONNECT")
 
 	// Find the desired profile entry
 	if profileName == "" {
