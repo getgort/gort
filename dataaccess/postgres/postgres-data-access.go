@@ -106,6 +106,11 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 	}
 	defer db.Close()
 
+	db.SetMaxIdleConns(da.configs.MaxIdleConnections)
+	db.SetMaxOpenConns(da.configs.MaxOpenConnections)
+	db.SetConnMaxIdleTime(da.configs.ConnectionMaxIdleTime)
+	db.SetConnMaxLifetime(da.configs.ConnectionMaxLifetime)
+
 	// Check whether the users table exists
 	exists, err := da.tableExists(ctx, "users", db)
 	if err != nil {

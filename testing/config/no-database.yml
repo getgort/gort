@@ -1,7 +1,9 @@
 global:
-  # How long before a command times out, in seconds.
+  # How long before a command times out. Accepts a duration string: a sequence
+  # of decimal numbers, each with optional fraction and a unit suffix: 1d,
+  # 1h30m, 5m, 10s. Valid units are "ms", "s", "m", "h".
   # TODO Allow overriding at the command level
-  command_timeout_seconds: 60
+  command_timeout: 60s
 
 gort:
   # Gort will automatically create accounts for new users when set.
@@ -28,12 +30,12 @@ gort:
 
   # If set along with tls_key_file, TLS will be used for API connections.
   # This parameter specifies the path to a certificate file.
-  # tls_cert_file: host.crt
+  tls_cert_file: host.crt
 
   # If set along with tls_cert_file, TLS will be used for API connections.
   # This parameter specifies the path to a key file.
   # The key must not be encrypted with a password.
-  # tls_key_file: host.key
+  tls_key_file: host.key
 
 # Move this to the relay config later.
 docker:

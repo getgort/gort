@@ -19,6 +19,7 @@ package config
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/getgort/gort/data"
 	"github.com/stretchr/testify/assert"
@@ -33,7 +34,7 @@ func TestLoadConfiguration(t *testing.T) {
 
 	cglobal := config.GlobalConfigs
 	assert.NotNil(t, cglobal)
-	assert.Equal(t, 60, cglobal.CommandTimeoutSeconds)
+	assert.Equal(t, time.Minute, cglobal.CommandTimeout)
 
 	cgort := config.GortServerConfigs
 	assert.NotNil(t, cgort)
@@ -50,9 +51,11 @@ func TestLoadConfiguration(t *testing.T) {
 	assert.Equal(t, "gort", cdb.User)
 	assert.Equal(t, "veryKleverPassw0rd!", cdb.Password)
 	assert.Equal(t, true, cdb.SSLEnabled)
-	assert.Equal(t, 10, cdb.PoolSize)
-	assert.Equal(t, 15000, cdb.PoolTimeout)
-	assert.Equal(t, 15000, cdb.QueryTimeout)
+
+	assert.Equal(t, 30*time.Second, cdb.ConnectionMaxIdleTime)
+	assert.Equal(t, 5*time.Minute, cdb.ConnectionMaxLifetime)
+	assert.Equal(t, 2, cdb.MaxIdleConnections)
+	assert.Equal(t, 4, cdb.MaxOpenConnections)
 
 	cd := config.DockerConfigs
 	assert.NotNil(t, cd)

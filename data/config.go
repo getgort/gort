@@ -42,23 +42,21 @@ type GortServerConfigs struct {
 
 // GlobalConfigs is the data wrapper for the "global" section
 type GlobalConfigs struct {
-	CommandTimeoutSeconds int `yaml:"command_timeout_seconds,omitempty"`
-}
-
-func (c GlobalConfigs) CommandTimeout() time.Duration {
-	return time.Duration(c.CommandTimeoutSeconds) * time.Second
+	CommandTimeout time.Duration `yaml:"command_timeout,omitempty"`
 }
 
 // DatabaseConfigs is the data wrapper for the "database" section.
 type DatabaseConfigs struct {
-	Host         string `yaml:"host,omitempty"`
-	Port         int    `yaml:"port,omitempty"`
-	User         string `yaml:"user,omitempty"`
-	Password     string `yaml:"password,omitempty"`
-	SSLEnabled   bool   `yaml:"ssl_enabled,omitempty"`
-	PoolSize     int    `yaml:"pool_size,omitempty"`
-	PoolTimeout  int    `yaml:"pool_timeout,omitempty"`
-	QueryTimeout int    `yaml:"query_timeout,omitempty"`
+	Host                  string        `yaml:"host,omitempty"`
+	Port                  int           `yaml:"port,omitempty"`
+	User                  string        `yaml:"user,omitempty"`
+	Password              string        `yaml:"password,omitempty"`
+	SSLEnabled            bool          `yaml:"ssl_enabled,omitempty"`
+	ConnectionMaxIdleTime time.Duration `yaml:"connection_max_idle_time,omitempty"`
+	ConnectionMaxLifetime time.Duration `yaml:"connection_max_life_time,omitempty"`
+	MaxIdleConnections    int           `yaml:"max_idle_connections,omitempty"`
+	MaxOpenConnections    int           `yaml:"max_open_connections,omitempty"`
+	QueryTimeout          time.Duration `yaml:"query_timeout,omitempty"`
 }
 
 // DockerConfigs is the data wrapper for the "docker" section.

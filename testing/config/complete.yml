@@ -1,7 +1,9 @@
 global:
-  # How long before a command times out, in seconds.
+  # How long before a command times out. Accepts a duration string: a sequence
+  # of decimal numbers, each with optional fraction and a unit suffix: 1d,
+  # 1h30m, 5m, 10s. Valid units are "ms", "s", "m", "h".
   # TODO Allow overriding at the command level
-  command_timeout_seconds: 60
+  command_timeout: 60s
 
 gort:
   # Gort will automatically create accounts for new users when set.
@@ -28,12 +30,12 @@ gort:
 
   # If set along with tls_key_file, TLS will be used for API connections.
   # This parameter specifies the path to a certificate file.
-  # tls_cert_file: host.crt
+  tls_cert_file: host.crt
 
   # If set along with tls_cert_file, TLS will be used for API connections.
   # This parameter specifies the path to a key file.
   # The key must not be encrypted with a password.
-  # tls_key_file: host.key
+  tls_key_file: host.key
 
 database:
   # The host where Gort's PostgreSQL database lives. Defaults to localhost.
@@ -53,16 +55,32 @@ database:
   # Defaults to false.
   ssl_enabled: true
 
-  # Database connection pool size. Defaults to 10.
-  pool_size: 10
+  # The maximum amount of time a connection may be idle. Expired connections
+  # may be closed lazily before reuse. If <= 0, connections are not closed due
+  # to a connection's idle time. Defaults to 1m.
+  connection_max_idle_time: 30s
 
-  # Number of milliseconds to wait to checkout a database connection from the pool.
-  # Defaults to 15000 ms.
-  pool_timeout: 15000
+  # The maximum amount of time a connection may be reused. Expired connections
+  # may be closed lazily before reuse. If <= 0, connections are not closed due
+  # to a connection's age. Defaults to 10m
+  connection_max_life_time: 5m
 
-  # Amount of time to wait for execution of a database query to complete.
-  # Defaults to 15000 ms.
-  query_timeout: 15000
+  # Sets the maximum number of connections in the idle connection pool. If
+  # max_open_connections is > 0 but < max_idle_connections, then this value
+  # will be reduced to match max_open_connections.
+  # If n <= 0, no idle connections are retained. Defaults to 2
+  max_idle_connections: 2
+
+  # The maximum number of open connections to the database. If
+  # max_idle_connections is > 0 and the new this is less than
+  # max_idle_connections, then max_idle_connections will be reduced to match
+  # this value. If n <= 0, then there is no limit on the number of open
+  # connections. The default is 0 (unlimited).
+  max_open_connections: 4
+
+  # How long to wait for execution of a database query to complete.
+  # Defaults to 15s.
+  query_timeout: 15s
 
 # Move this to the relay config later.
 docker:
