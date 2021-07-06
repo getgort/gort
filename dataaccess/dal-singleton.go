@@ -57,6 +57,8 @@ var (
 	currentState State
 	stateMutex   = sync.Mutex{}
 
+	initializationMutex = sync.Mutex{}
+
 	stateChangeListeners      []chan State
 	stateChangeListenersMutex = sync.RWMutex{}
 
@@ -133,10 +135,14 @@ func getCorrectDataAccess() DataAccess {
 // initializeDataAccess is called by monitorConfig to initialize the data
 // access layer whenever the configuration is updated.
 func initializeDataAccess(ctx context.Context) {
+	initializationMutex.Lock()
+
 	// Ignore current status
 	<-configUpdates
 
 	go func() {
+		defer initializationMutex.Unlock()
+
 		delay := time.Second
 
 		updateDALState(StateInitializing)
