@@ -3,7 +3,7 @@ version: '3'
 services:
   gort:
     image: getgort/gort:latest
-    command: "gort start -v"
+    command: "start -v"
     ports:
       - "4000:4000"
     volumes:

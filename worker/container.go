@@ -21,10 +21,12 @@ import (
 	"context"
 	"io"
 
+	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/getgort/gort/telemetry"
-	"go.opentelemetry.io/otel"
 )
 
 // BuildContainerLogChannel accepts a pointer to a Docker client.Client and a
@@ -55,20 +57,20 @@ func BuildContainerLogChannels(ctx context.Context, client *client.Client, conta
 	ctx, sp := tr.Start(ctx, "container.BuildContainerLogChannels")
 	defer sp.End()
 
-	var outr, errr io.ReadCloser
+	var outRc, errRc io.ReadCloser
 
-	outr, err = client.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{Follow: true, ShowStdout: true})
+	outRc, err = client.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{Follow: true, ShowStdout: true})
 	if err != nil {
 		return
 	}
 
-	errr, err = client.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{Follow: true, ShowStdout: true})
+	errRc, err = client.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{Follow: true, ShowStdout: true})
 	if err != nil {
 		return
 	}
 
-	stdout = wrapReaderInChannel(outr)
-	stderr = wrapReaderInChannel(errr)
+	stdout = wrapReaderInChannel(outRc)
+	stderr = wrapReaderInChannel(errRc)
 
 	return
 }
@@ -80,6 +82,11 @@ func wrapReaderInChannel(rc io.Reader) <-chan string {
 		scanner := bufio.NewScanner(rc)
 		for scanner.Scan() {
 			ch <- scanner.Text()
+		}
+
+		err := scanner.Err()
+		if err != nil && err != io.EOF {
+			log.WithError(err).Error("Error scanning reader")
 		}
 
 		close(ch)

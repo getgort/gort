@@ -20,6 +20,10 @@ import (
 	"context"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+
+	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
@@ -27,11 +31,10 @@ import (
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/worker"
-	"go.opentelemetry.io/otel"
 )
 
 const (
-	// Exit codes borrowed from sysexits.h
+	// Most exit codes borrowed from sysexits.h
 
 	ExitOK              = 0   // successful termination
 	ExitGeneral         = 1   // catchall for errors
@@ -40,6 +43,7 @@ const (
 	ExitUnavailable     = 69  // relay unavailable
 	ExitInternalError   = 70  // internal software error
 	ExitSystemErr       = 71  // system error (e.g., can't spawn worker)
+	ExitTimeout         = 72  // timeout exceeded
 	ExitIoErr           = 74  // input/output error
 	ExitTempFail        = 75  // temp failure; user can retry
 	ExitProtocol        = 76  // remote error in protocol
@@ -48,6 +52,45 @@ const (
 	ExitCommandNotFound = 127 // "command not found"
 )
 
+// AuthorizeUser is not yet implemented, and will not be until remote relays
+// become a thing. For now, all authentication is done by the command execution
+// framework (which, in turn, invokes a/the relay).
+func AuthorizeUser(commandRequest data.CommandRequest, user rest.User) (bool, error) {
+	// TODO
+	return true, nil
+}
+
+// StartListening instructs the relay to begin listening for incoming command requests.
+func StartListening() (chan<- data.CommandRequest, <-chan data.CommandResponse) {
+	commandRequests := make(chan data.CommandRequest)
+	commandResponses := make(chan data.CommandResponse)
+
+	go func() {
+		for commandRequest := range commandRequests {
+			go func(request data.CommandRequest) {
+				commandResponses <- handleRequest(request.Context, request)
+			}(commandRequest)
+		}
+	}()
+
+	return commandRequests, commandResponses
+}
+
+// SpawnWorker receives a CommandEntry and a slice of command parameters
+// strings, and constructs a new worker.Worker.
+func SpawnWorker(ctx context.Context, command data.CommandRequest) (*worker.Worker, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	_, sp := tr.Start(ctx, "relay.SpawnWorker")
+	defer sp.End()
+
+	image := command.Bundle.Docker.Image
+	tag := command.Bundle.Docker.Tag
+	entrypoint := command.Command.Executable
+
+	return worker.NewWorker(image, tag, entrypoint, command.Parameters...)
+}
+
+// getUser is just a convenience function for interacting with the DAL.
 func getUser(ctx context.Context, username string) (rest.User, error) {
 	da, err := dataaccess.Get()
 	if err != nil {
@@ -63,6 +106,10 @@ func getUser(ctx context.Context, username string) (rest.User, error) {
 	return da.UserGet(ctx, username)
 }
 
+// handleRequest does the work of spawning, starting, stopping, and cleaning
+// up after worker processes. It receives incoming command requests from the
+// StartListening() CommandRequest channel, returning a CommandResponse which
+// in turn gets forwarded to that function's CommandRequest channel.
 func handleRequest(ctx context.Context, commandRequest data.CommandRequest) data.CommandResponse {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "relay.handleRequest")
@@ -120,8 +167,8 @@ func handleRequest(ctx context.Context, commandRequest data.CommandRequest) data
 		return response
 	}
 
+	response = runWorker(ctx, worker, response)
 	response.Duration = time.Since(response.Command.Timestamp)
-	response = start(ctx, worker, response)
 
 	da, err := dataaccess.Get()
 	if err != nil {
@@ -137,10 +184,20 @@ func handleRequest(ctx context.Context, commandRequest data.CommandRequest) data
 	return response
 }
 
-func start(ctx context.Context, worker *worker.Worker, response data.CommandResponse) data.CommandResponse {
+// runWorker is called by handleRequest to do the work of starting an
+// individual worker, capturing its output, and cleaning up after it.
+func runWorker(ctx context.Context, worker *worker.Worker, response data.CommandResponse) data.CommandResponse {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	_, sp := tr.Start(ctx, "relay.start")
+	_, sp := tr.Start(ctx, "relay.runWorker")
 	defer sp.End()
+
+	// Get configured timeout. Zero (or less) is no timeout.
+	timeout := config.GetGlobalConfigs().CommandTimeout()
+	if timeout <= 0 {
+		timeout = time.Hour * 24 * 365 // No timeout? Just use one year.
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
 	stdoutChan, err := worker.Start(ctx)
 	if err != nil {
@@ -156,51 +213,36 @@ func start(ctx context.Context, worker *worker.Worker, response data.CommandResp
 		response.Output = append(response.Output, line)
 	}
 
-	// Wait for the exit status, if necessary
-	response.Status = <-worker.Stopped()
+	select {
+	case response.Status = <-worker.Stopped():
+		if response.Status != ExitOK {
+			response.Title = "Command Error"
 
-	if response.Status != ExitOK {
-		response.Title = "Command Error"
-
-		if len(response.Output) == 0 {
-			response.Output = []string{"Unknown command error"}
+			if len(response.Output) == 0 {
+				response.Output = []string{"Unknown command error"}
+			}
 		}
+
+		log.
+			WithField("request.id", response.Command.RequestID).
+			WithField("status", response.Status).
+			Info("Command exited")
+
+	case <-ctx.Done():
+		err := ctx.Err()
+		response.Status = ExitTimeout
+		response.Error = err
+		response.Title = err.Error()
+
+		log.
+			WithError(err).
+			WithField("request.id", response.Command.RequestID).
+			WithField("status", response.Status).
+			Info("Command exited with error")
 	}
 
+	forceTerm := time.Second * 10
+	worker.Stop(ctx, &forceTerm)
+
 	return response
-}
-
-func AuthorizeUser(commandRequest data.CommandRequest, user rest.User) (bool, error) {
-	// TODO
-	return true, nil
-}
-
-// StartListening instructs the relays to begin listening for incoming command requests.
-func StartListening() (chan<- data.CommandRequest, <-chan data.CommandResponse) {
-	commandRequests := make(chan data.CommandRequest)
-	commandResponses := make(chan data.CommandResponse)
-
-	go func() {
-		for commandRequest := range commandRequests {
-			go func(request data.CommandRequest) {
-				commandResponses <- handleRequest(request.Context, request)
-			}(commandRequest)
-		}
-	}()
-
-	return commandRequests, commandResponses
-}
-
-// SpawnWorker receives a CommandEntry and a slice of command parameters
-// strings, and constructs a new worker.Worker.
-func SpawnWorker(ctx context.Context, command data.CommandRequest) (*worker.Worker, error) {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	_, sp := tr.Start(ctx, "relay.SpawnWorker")
-	defer sp.End()
-
-	image := command.Bundle.Docker.Image
-	tag := command.Bundle.Docker.Tag
-	entrypoint := command.Command.Executable
-
-	return worker.NewWorker(image, tag, entrypoint, command.Parameters...)
 }

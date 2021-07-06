@@ -42,6 +42,7 @@ type Worker struct {
 	ExitStatus        chan int64
 	ExecutionTimeout  time.Duration
 	ImageName         string
+	containerID       string
 }
 
 // NewWorker will build and returns a new Worker for a single command execution.
@@ -66,7 +67,7 @@ func NewWorker(image string, tag string, entryPoint string, commandParams ...str
 		DockerClient:      dcli,
 		DockerHost:        config.GetDockerConfigs().DockerHost,
 		EntryPoint:        entryPoint,
-		ExecutionTimeout:  1 * time.Minute,
+		ExecutionTimeout:  config.GetGlobalConfigs().CommandTimeout(),
 		ImageName:         image + ":" + tag,
 		ExitStatus:        make(chan int64),
 	}, nil
@@ -100,8 +101,9 @@ func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
 		attribute.String("params", strings.Join(w.CommandParameters, " ")),
 	)
 
-	ctx, cancel := context.WithTimeout(ctx, w.ExecutionTimeout)
-	defer cancel()
+	if w.ExecutionTimeout <= 0 {
+		w.ExecutionTimeout = time.Hour * 24 * 365
+	}
 
 	// Start the image pull. This blocks until the pull is complete.
 	err := w.pullImage(ctx, false)
@@ -129,33 +131,22 @@ func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
 		return nil, err
 	}
 
+	w.containerID = resp.ID
+	event = event.WithField("containerID", w.containerID)
+
 	// Start the container
 	err = func() error {
 		ctx, sp := tr.Start(ctx, "docker.ContainerStart")
 		defer sp.End()
-		return cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+		return cli.ContainerStart(ctx, w.containerID, types.ContainerStartOptions{})
 	}()
 	if err != nil {
 		return nil, err
 	}
 
-	// Make sure the container is cleaned up when we're done
-	defer func() {
-		ctx, sp := tr.Start(ctx, "docker.ContainerCleanup")
-		defer sp.End()
-
-		ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-		defer cancel()
-
-		duration := 10 * time.Second
-		w.DockerClient.ContainerStop(ctx, resp.ID, &duration)
-		w.DockerClient.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{})
-		event.Trace("container stopped and removed")
-	}()
-
 	// Watch for the container to enter "not running" state. This supports the Stopped() method.
 	go func() {
-		chwait, errs := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+		chwait, errs := cli.ContainerWait(ctx, w.containerID, container.WaitConditionNotRunning)
 		event = event.WithField("duration", time.Since(startTime))
 
 		var status int64
@@ -186,12 +177,37 @@ func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
 
 	// Build the channel that will stream back the container logs.
 	// Blocks until the container stops.
-	logs, err := BuildContainerLogChannel(ctx, cli, resp.ID)
+	logs, err := BuildContainerLogChannel(ctx, cli, w.containerID)
 	if err != nil {
 		return nil, err
 	}
 
 	return logs, nil
+}
+
+// Cleanup will stop (if it's not already stopped) a worker process and cleanup
+// any resources it's using. If the worker fails to stop gracefully within a
+// timeframe specified by the timeout argument, it is forcefully terminated
+// (killed). If the timeout is nil, the engine's default is used. A negative
+// timeout indicates no timeout: no forceful termination is performed.
+func (w *Worker) Stop(ctx context.Context, timeout *time.Duration) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "worker.Start")
+	defer sp.End()
+
+	func() error {
+		ctx, sp := tr.Start(ctx, "docker.ContainerStop")
+		defer sp.End()
+		return w.DockerClient.ContainerStop(ctx, w.containerID, timeout)
+	}()
+
+	func() error {
+		ctx, sp := tr.Start(ctx, "docker.ContainerRemove")
+		defer sp.End()
+		return w.DockerClient.ContainerRemove(ctx, w.containerID, types.ContainerRemoveOptions{})
+	}()
+
+	log.WithField("containerID", w.containerID).Trace("container stopped and removed")
 }
 
 // Stopped returns a channel that blocks until this worker's container has stopped.
