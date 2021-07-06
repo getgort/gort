@@ -82,11 +82,18 @@ func SpawnWorker(ctx context.Context, command data.CommandRequest) (*worker.Work
 	_, sp := tr.Start(ctx, "relay.SpawnWorker")
 	defer sp.End()
 
-	image := command.Bundle.Docker.Image
-	tag := command.Bundle.Docker.Tag
-	entrypoint := command.Command.Executable
+	// Generate a token good for 10 seconds.
+	dal, err := dataaccess.Get()
+	if err != nil {
+		return nil, err
+	}
 
-	return worker.NewWorker(image, tag, entrypoint, command.Parameters...)
+	token, err := dal.TokenGenerate(ctx, command.UserName, 10*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	return worker.NewWorker(command, token)
 }
 
 // getUser is just a convenience function for interacting with the DAL.

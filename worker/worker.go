@@ -30,11 +30,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/getgort/gort/config"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/telemetry"
 )
 
 // Worker represents a container executor. It has a lifetime of a single command execution.
 type Worker struct {
+	Command           data.CommandRequest
 	CommandParameters []string
 	DockerClient      *client.Client
 	DockerHost        string
@@ -42,11 +45,17 @@ type Worker struct {
 	ExitStatus        chan int64
 	ExecutionTimeout  time.Duration
 	ImageName         string
+	Token             rest.Token
 	containerID       string
 }
 
 // NewWorker will build and returns a new Worker for a single command execution.
-func NewWorker(image string, tag string, entryPoint string, commandParams ...string) (*Worker, error) {
+func NewWorker(command data.CommandRequest, token rest.Token) (*Worker, error) {
+	image := command.Bundle.Docker.Image
+	tag := command.Bundle.Docker.Tag
+	entrypoint := command.Command.Executable
+	params := command.Parameters
+
 	dcli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
@@ -63,13 +72,15 @@ func NewWorker(image string, tag string, entryPoint string, commandParams ...str
 	}
 
 	return &Worker{
-		CommandParameters: commandParams,
+		Command:           command,
+		CommandParameters: params,
 		DockerClient:      dcli,
 		DockerHost:        config.GetDockerConfigs().DockerHost,
-		EntryPoint:        entryPoint,
+		EntryPoint:        entrypoint,
 		ExecutionTimeout:  config.GetGlobalConfigs().CommandTimeout,
-		ImageName:         image + ":" + tag,
 		ExitStatus:        make(chan int64),
+		ImageName:         image + ":" + tag,
+		Token:             token,
 	}, nil
 }
 
@@ -115,6 +126,7 @@ func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
 		Image: imageName,
 		Cmd:   w.CommandParameters,
 		Tty:   true,
+		Env:   w.envVars(),
 	}
 
 	if entryPoint != "" {
@@ -214,6 +226,26 @@ func (w *Worker) Stop(ctx context.Context, timeout *time.Duration) {
 // The value emitted is the exit status code of the underlying process.
 func (w *Worker) Stopped() <-chan int64 {
 	return w.ExitStatus
+}
+
+func (w *Worker) envVars() []string {
+	env := []string{}
+
+	vars := map[string]string{
+		`GORT_BUNDLE`:        w.Command.Bundle.Name,
+		`GORT_COMMAND`:       w.Command.Command.Name,
+		`GORT_CHAT_HANDLE`:   w.Command.UserID,
+		`GORT_INVOCATION_ID`: fmt.Sprintf("%d", w.Command.RequestID),
+		`GORT_ROOM`:          w.Command.ChannelID,
+		`GORT_SERVICE_TOKEN`: w.Token.Token,
+		`GORT_SERVICES_ROOT`: config.GetGortServerConfigs().APIURLBase,
+	}
+
+	for k, v := range vars {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	return env
 }
 
 // imageExistsLocally returns true if the specified image is present and

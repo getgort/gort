@@ -553,6 +553,9 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 			e = e.WithField("provider.user.email", o.Email).
 				WithField("provider.user.id", o.ID)
 
+		case *rest.User:
+			e = adapterLogEntry(ctx, e, *o)
+
 		case rest.User:
 			e = e.WithField("gort.user.name", o.Username)
 
@@ -666,6 +669,9 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 				attribute.String("command.params", strings.Join(o.Parameters, " ")),
 				attribute.Int64("request.id", o.RequestID),
 			)
+
+		case *rest.User:
+			addSpanAttributes(ctx, sp, *o)
 
 		case rest.User:
 			attr = append(attr,
