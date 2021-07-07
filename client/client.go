@@ -132,8 +132,6 @@ func Connect(profileName string) (*GortClient, error) {
 		return nil, gerrs.Wrap(ErrBadProfile, err)
 	}
 
-	fmt.Println("CONNECT")
-
 	// Find the desired profile entry
 	if profileName == "" {
 		entry = profile.Default()
