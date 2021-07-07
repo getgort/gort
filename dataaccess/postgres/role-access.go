@@ -18,6 +18,7 @@ package postgres
 
 import (
 	"context"
+	"log"
 	"sort"
 
 	"go.opentelemetry.io/otel"
@@ -59,6 +60,65 @@ func (da PostgresDataAccess) RoleCreate(ctx context.Context, name string) error 
 	}
 
 	return err
+}
+
+// RoleList gets all roles.
+func (da PostgresDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.RoleList")
+	defer sp.End()
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	var rolesByName = make(map[string]*rest.Role)
+	// Load all role names and add to the roles map
+	query := `SELECT role_name
+		FROM roles`
+
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			log.Fatal(err)
+		}
+		rolesByName[name] = &rest.Role{Name: name}
+	}
+
+	// Load all permissions and add to role objects
+	query = `SELECT role_name, bundle_name, permission 
+		FROM role_permissions`
+	rows, err = db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			rolename   string
+			permission rest.RolePermission
+		)
+		if err := rows.Scan(&rolename, &permission.BundleName, &permission.Permission); err != nil {
+			log.Fatal(err)
+		}
+		rolesByName[rolename].Permissions = append(rolesByName[rolename].Permissions, permission)
+	}
+
+	var roles []rest.Role
+	for _, role := range rolesByName {
+		roles = append(roles, *role)
+	}
+
+	return roles, nil
 }
 
 // RoleDelete
