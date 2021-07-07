@@ -113,7 +113,7 @@ slack:
   name: MyWorkspace
 
   # Bot User OAuth Access Token (https://api.slack.com/docs/token-types#bot)
-  # used to connect to Slack. You want the one that starts with "xoxb"
+  # used to connect to Slack. You want the one that starts with "xoxb".
   api_token: xoxb-210987654321-123456789012-nyWJ3U4JoWuUtaUkRPKn0dJR
 
   # The chat icon for the bot. If not defined defaults to the configured bot default.
