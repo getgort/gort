@@ -83,9 +83,17 @@ database:
   # Defaults to 15s.
   query_timeout: 15s
 
-# Move this to the relay config later.
+# Configures Gort's Docker host data. At the moment it only includes two
+# values (which are likely to move into a relay configuration, when
+# that becomes a thing).
 docker:
+  # Defines the location of the Docker port. Required.
   host: unix:///var/run/docker.sock
+
+  # The name of a Docker network. If set, any worker containers will be
+  # attached to this network. This can be used to allow workers to communicate
+  # with a containerized Gort controller.
+  # network: gort_gort
 
 jaeger:
   # The URL for the Jaeger collector that spans are sent to. If not set then
