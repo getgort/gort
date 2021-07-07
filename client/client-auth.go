@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/getgort/gort/data/rest"
 	gerrs "github.com/getgort/gort/errors"
@@ -32,6 +33,17 @@ import (
 // If a valid token already exists it will be automatically invalidated if
 // this call is successful.
 func (c *GortClient) Authenticate() (rest.Token, error) {
+	// If the GORT_SERVICE_TOKEN envvar is set, use that first.
+	if te, exists := os.LookupEnv("GORT_SERVICE_TOKEN"); exists {
+		token := rest.Token{
+			Token:      te,
+			ValidFrom:  time.Now(),
+			ValidUntil: time.Now().Add(10 * time.Second),
+		}
+
+		return token, nil
+	}
+
 	endpointURL := fmt.Sprintf("%s/v2/authenticate", c.profile.URL)
 
 	postBytes, err := json.Marshal(c.profile.User())

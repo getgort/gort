@@ -137,7 +137,14 @@ func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
 	resp, err := func() (container.ContainerCreateCreatedBody, error) {
 		ctx, sp := tr.Start(ctx, "docker.ContainerCreate")
 		defer sp.End()
-		return cli.ContainerCreate(ctx, &cfg, nil, nil, nil, "")
+
+		// If a host network is defined, set it here.
+		var hc *container.HostConfig
+		if network := config.GetDockerConfigs().Network; network != "" {
+			hc = &container.HostConfig{NetworkMode: container.NetworkMode(network)}
+		}
+
+		return cli.ContainerCreate(ctx, &cfg, hc, nil, nil, "")
 	}()
 	if err != nil {
 		return nil, err

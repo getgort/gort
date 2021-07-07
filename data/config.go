@@ -63,6 +63,7 @@ type DatabaseConfigs struct {
 // This will move into the relay config(s) eventually.
 type DockerConfigs struct {
 	DockerHost string `yaml:"host,omitempty"`
+	Network    string `yaml:"network,omitempty"`
 }
 
 // JaegerConfigs is the data wrapper for the "jaeger" section.
