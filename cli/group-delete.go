@@ -23,10 +23,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// $ cogctl group delete --help
+// Usage: cogctl group delete [OPTIONS] GROUP
+//
+//   Delete a group.
+//
+// Options:
+//   --help  Show this message and exit.
+
 const (
 	groupDeleteUse   = "delete"
 	groupDeleteShort = "Delete an existing group"
 	groupDeleteLong  = "Delete an existing group."
+	groupDeleteUsage = `Usage:
+  gort group delete [flags] group_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetGroupDeleteCmd is a command
@@ -38,6 +55,8 @@ func GetGroupDeleteCmd() *cobra.Command {
 		RunE:  groupDeleteCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(groupDeleteUsage)
 
 	return cmd
 }

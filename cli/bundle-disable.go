@@ -25,17 +25,18 @@ import (
 
 const (
 	bundleDisableUse   = "disable"
-	bundleDisableShort = "Disable a bundle"
-	bundleDisableLong  = "Disable a bundle."
+	bundleDisableShort = "Disable a bundle by name"
+	bundleDisableLong  = "Disable a bundle by name."
+	bundleDisableUsage = `Usage:
+  gort bundle disable [flags] bundle_name
+
+Flags:
+  --help  Show this message and exit.
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
-
-// cogctl bundle disable --help
-// Usage: cogctl bundle disable [OPTIONS] NAME
-
-//   Disable a bundle by name.
-
-// Options:
-//   --help  Show this message and exit.
 
 // GetBundleDisableCmd is a command
 func GetBundleDisableCmd() *cobra.Command {
@@ -46,6 +47,8 @@ func GetBundleDisableCmd() *cobra.Command {
 		RunE:  bundleDisableCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(bundleDisableUsage)
 
 	return cmd
 }

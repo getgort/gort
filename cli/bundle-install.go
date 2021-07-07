@@ -24,10 +24,66 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// cogctl bundle install --help
+// Usage: cogctl bundle install [OPTIONS] BUNDLE_OR_PATH [VERSION]
+//
+//   Install a bundle.
+//
+//   Bundles may be installed from either a file (i.e., the `config.yaml` file
+//   of a bundle), or from Operable's Warehouse bundle registry
+//   (https://warehouse.operable.io).
+//
+//   When installing from a file, you may either give the path to the file, as
+//   in:
+//
+//       cogctl bundle install /path/to/my/bundle/config.yaml
+//
+//   or you may give the path as `-`, in which case standard input is used:
+//
+//       cat config.yaml | cogctl bundle install -
+//
+//   When installing from the bundle registry, you should instead provide the
+//   name of the bundle, as well as an optional version to install. No version
+//   means the latest will be installed.
+//
+//       cogctl bundle install cfn
+//
+//       cogctl bundle install cfn 0.5.13
+//
+// Options:
+//   -e, --enable               Automatically enable a bundle after installing?
+//                              [default: False]
+//   -f, --force                Install even if a bundle with the same version is
+//                              already installed. Applies only to bundles
+//                              installed from a file, and not from the Warehouse
+//                              bundle registry. Use this to shorten iteration
+//                              cycles in bundle development.  [default: False]
+//   -r, --relay-group TEXT     Relay group to assign the bundle to. Can be
+//                              specified multiple times.
+//   -t, --templates DIRECTORY  Path to templates directory. Template bodies will
+//                              be inserted into the bundle configuration prior
+//                              to uploading. This makes it easier to manage
+//                              complex templates.
+//   --help                     Show this message and exit.
+
 const (
 	bundleInstallUse   = "install"
 	bundleInstallShort = "Install a bundle"
-	bundleInstallLong  = "Install a bundle."
+	bundleInstallLong  = `Install a bundle from a bundle file.
+
+When using this command, you must provide the path to the file, as follows:
+
+	gort bundle install /path/to/my/bundle/config.yaml
+`
+	bundleInstallUsage = `Usage:
+  gort bundle install [flags] config_path
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetBundleInstallCmd is a command
@@ -39,6 +95,8 @@ func GetBundleInstallCmd() *cobra.Command {
 		RunE:  bundleInstallCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(bundleInstallUsage)
 
 	return cmd
 }

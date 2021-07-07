@@ -23,10 +23,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// $ cogctl group add --help
+// Usage: cogctl group add [OPTIONS] GROUP USERNAMES...
+//
+//   Add one or more users to a group.
+//
+// Options:
+//   --help  Show this message and exit.
+
 const (
 	groupAddUse   = "add"
 	groupAddShort = "Add a user to an existing group"
 	groupAddLong  = "Add a user to an existing group."
+	groupAddUsage = `Usage:
+  gort group add [flags] group_name user_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetGroupAddCmd is a command
@@ -38,6 +55,8 @@ func GetGroupAddCmd() *cobra.Command {
 		RunE:  groupAddCmd,
 		Args:  cobra.ExactArgs(2),
 	}
+
+	cmd.SetUsageTemplate(groupAddUsage)
 
 	return cmd
 }

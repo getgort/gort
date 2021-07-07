@@ -28,8 +28,7 @@ import (
 const (
 	bundleInfoUse   = "info"
 	bundleInfoShort = "Info a bundle"
-	bundleInfoLong  = `
-Display bundle information.
+	bundleInfoLong  = `Display bundle information.
 
 If only a bundle name is provided, information on the bundle as a whole is
 presented. If that bundle is also currently enabled, details about the
@@ -37,6 +36,15 @@ version that is currently live is also displayed.
 
 If a version is also provided, details on that specific version are
 presented, regardless of whether it happens to also be enabled.
+`
+	bundleInfoUsage = `Usage:
+  gort bundle info [flags] bundle_name [version]
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
 `
 )
 
@@ -49,6 +57,8 @@ func GetBundleInfoCmd() *cobra.Command {
 		RunE:  bundleInfoCmd,
 		Args:  cobra.RangeArgs(1, 2),
 	}
+
+	cmd.SetUsageTemplate(bundleInfoUsage)
 
 	return cmd
 }

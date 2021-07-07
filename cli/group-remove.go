@@ -23,10 +23,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// $ cogctl group remove --help
+// Usage: cogctl group remove [OPTIONS] GROUP USERNAMES...
+//
+//   Remove one or more users from a group.
+//
+// Options:
+//   --yes   Confirm the action without prompting.
+//   --help  Show this message and exit.
+
 const (
-	groupRemoveUse   = "add"
+	groupRemoveUse   = "remove"
 	groupRemoveShort = "Remove a user from an existing group"
 	groupRemoveLong  = "Remove a user from an existing group."
+	groupRemoveUsage = `Usage:
+  gort group remove [flags] group_name user_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetGroupRemoveCmd is a command
@@ -38,6 +56,8 @@ func GetGroupRemoveCmd() *cobra.Command {
 		RunE:  groupRemoveCmd,
 		Args:  cobra.ExactArgs(2),
 	}
+
+	cmd.SetUsageTemplate(groupRemoveUsage)
 
 	return cmd
 }

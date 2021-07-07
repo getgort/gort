@@ -27,6 +27,15 @@ const (
 	roleListUse   = "list"
 	roleListShort = "List all existing roles"
 	roleListLong  = "List all existing roles."
+	roleListUsage = `Usage:
+  gort role list [flags]
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetRoleListCmd is a command
@@ -37,6 +46,8 @@ func GetRoleListCmd() *cobra.Command {
 		Long:  roleListLong,
 		RunE:  roleListCmd,
 	}
+
+	cmd.SetUsageTemplate(roleListUsage)
 
 	return cmd
 }

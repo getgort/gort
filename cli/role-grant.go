@@ -25,39 +25,51 @@ import (
 )
 
 const (
-	groupRemoveRoleUse   = "remove-role"
-	groupRemoveRoleShort = "Remove a role from an existing group"
-	groupRemoveRoleLong  = "Remove a role from an existing group."
+	roleGrantUse   = "grant"
+	roleGrantShort = "Grant a permission to an existing role"
+	roleGrantLong  = "Grant a permission to an existing role."
+	roleGrantUsage = `Usage:
+  gort role grant [flags] role_name permission
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
-// GetGroupRemoveRoleCmd is a command
-func GetGroupRemoveRoleCmd() *cobra.Command {
+// GetRoleGrantCmd is a command
+func GetRoleGrantCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   groupRemoveRoleUse,
-		Short: groupRemoveRoleShort,
-		Long:  groupRemoveRoleLong,
-		RunE:  groupRemoveRoleCmd,
-		Args:  cobra.ExactArgs(2),
+		Use:   roleGrantUse,
+		Short: roleGrantShort,
+		Long:  roleGrantLong,
+		RunE:  roleGrantCmd,
+		Args:  cobra.ExactArgs(3),
 	}
+
+	cmd.SetUsageTemplate(roleGrantUsage)
 
 	return cmd
 }
 
-func groupRemoveRoleCmd(cmd *cobra.Command, args []string) error {
-	groupname := args[0]
-	rolename := args[1]
+func roleGrantCmd(cmd *cobra.Command, args []string) error {
+	rolename := args[0]
+	bundlename := args[1]
+	permissionname := args[2]
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = gortClient.GroupRoleDelete(groupname, rolename)
+	err = gortClient.RolePermissionGrant(rolename, bundlename, permissionname)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Role removed from %s: %s\n", groupname, rolename)
+	fmt.Printf("permission granted to %s: %s\n", rolename, permissionname)
 
 	return nil
 }

@@ -23,10 +23,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// $ cogctl bundle uninstall --help
+// Usage: cogctl bundle uninstall [OPTIONS] NAME [VERSION]
+//
+//   Uninstall bundles.
+//
+// Options:
+//   -c, --clean         Uninstall all disabled bundle versions
+//   -x, --incompatible  Uninstall all incompatible versions of the bundle
+//   -a, --all           Uninstall all versions of the bundle
+//   --help              Show this message and exit.
+
 const (
 	bundleUninstallUse   = "uninstall"
-	bundleUninstallShort = "Uninstall a bundle"
-	bundleUninstallLong  = "Uninstall a bundle."
+	bundleUninstallShort = "Uninstall bundles"
+	bundleUninstallLong  = `Uninstall bundles.`
+	bundleUninstallUsage = `Usage:
+  gort bundle uninstall [flags] bundle_name version
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetBundleUninstallCmd is a command
@@ -38,6 +58,8 @@ func GetBundleUninstallCmd() *cobra.Command {
 		RunE:  bundleUninstallCmd,
 		Args:  cobra.ExactArgs(2),
 	}
+
+	cmd.SetUsageTemplate(bundleUninstallUsage)
 
 	return cmd
 }

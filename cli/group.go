@@ -20,16 +20,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	groupUse   = "group"
-	groupShort = "Perform operations on groups"
-	groupLong  = "Allows you to perform group administration."
-)
-
-// # gort group --help
-// Usage: gort group [OPTIONS] COMMAND [ARGS]...
+// $ cogctl group --help
+// Usage: cogctl group [OPTIONS] COMMAND [ARGS]...
 //
-//   Manage Gort user groups.
+//   Manage Cog user groups.
 //
 //   If invoked without a subcommand, lists all user groups.
 //
@@ -46,6 +40,12 @@ const (
 //   rename  Rename a user group.
 //   revoke  Revoke one or more roles from a group.
 
+const (
+	groupUse   = "group"
+	groupShort = "Manage Cog user groups"
+	groupLong  = "Manage Cog user groups."
+)
+
 // GetGroupCmd group
 func GetGroupCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -57,10 +57,11 @@ func GetGroupCmd() *cobra.Command {
 	cmd.AddCommand(GetGroupAddCmd())
 	cmd.AddCommand(GetGroupCreateCmd())
 	cmd.AddCommand(GetGroupDeleteCmd())
+	cmd.AddCommand(GetGroupGrantCmd())
 	cmd.AddCommand(GetGroupInfoCmd())
 	cmd.AddCommand(GetGroupListCmd())
-	cmd.AddCommand(GetGroupAddRoleCmd())
-	cmd.AddCommand(GetGroupRemoveRoleCmd())
+	cmd.AddCommand(GetGroupRemoveCmd())
+	cmd.AddCommand(GetGroupRevokeCmd())
 
 	return cmd
 }

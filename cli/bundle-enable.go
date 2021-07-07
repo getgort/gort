@@ -25,8 +25,23 @@ import (
 
 const (
 	bundleEnableUse   = "enable"
-	bundleEnableShort = "Enable a bundle"
-	bundleEnableLong  = "Enable a bundle."
+	bundleEnableShort = "Enable the specified version of the bundle"
+	bundleEnableLong  = `Enable the specified version of the bundle.
+
+If no version is given, the latest installed version (by standard semantic
+version ordering) will be enabled.
+
+If any version of this bundle is currently enabled, it will be disabled in
+the process.`
+	bundleEnableUsage = `Usage:
+  gort bundle enable [flags] bundle_name [version]
+
+Flags:
+  --help  Show this message and exit.
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetBundleEnableCmd is a command
@@ -38,6 +53,8 @@ func GetBundleEnableCmd() *cobra.Command {
 		RunE:  bundleEnableCmd,
 		Args:  cobra.ExactArgs(2),
 	}
+
+	cmd.SetUsageTemplate(bundleEnableUsage)
 
 	return cmd
 }

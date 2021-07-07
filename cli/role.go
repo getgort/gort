@@ -20,24 +20,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	roleUse   = "role"
-	roleShort = "Perform operations on roles"
-	roleLong  = "Allows you to perform role administration."
-)
-
-// # gort role --help
-// Usage: gort role [OPTIONS] COMMAND [ARGS]...
+// Usage: cogctl role [OPTIONS] COMMAND [ARGS]...
 //
-//   Manage Gort roles.
+//   Manage roles and role grants.
 //
-//   If invoked without a subcommand, lists all the roles on the server.
+//   Lists roles when called without a subcommand.
 //
 // Options:
 //   --help  Show this message and exit.
 //
 // Commands:
-//   create                  Create a new role.
+//   create  Create a role
+//   delete  Delete a role
+//   grant   Grant a permission to a role
+//   info    Show role details
+//   rename  Rename a role
+//   revoke  Revoke a permission from a role
+
+const (
+	roleUse   = "role"
+	roleShort = "Perform operations on roles"
+	roleLong  = "Allows you to perform role administration."
+)
 
 // GetRoleCmd role
 func GetRoleCmd() *cobra.Command {
@@ -48,10 +52,10 @@ func GetRoleCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(GetRoleCreateCmd())
-	cmd.AddCommand(GetRoleListCmd())
 	cmd.AddCommand(GetRoleDeleteCmd())
-	cmd.AddCommand(GetRoleGrantPermissionCmd())
-	cmd.AddCommand(GetRoleRevokePermissionCmd())
+	cmd.AddCommand(GetRoleGrantCmd())
+	cmd.AddCommand(GetRoleListCmd())
+	cmd.AddCommand(GetRoleRevokeCmd())
 
 	return cmd
 }

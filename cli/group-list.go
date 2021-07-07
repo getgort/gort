@@ -23,10 +23,39 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// $ cogctl group --help
+// Usage: cogctl group [OPTIONS] COMMAND [ARGS]...
+//
+//   Manage Cog user groups.
+//
+//   If invoked without a subcommand, lists all user groups.
+//
+// Options:
+//   --help  Show this message and exit.
+//
+// Commands:
+//   add     Add one or more users to a group.
+//   create  Create a new user group.
+//   delete  Delete a group.
+//   grant   Grant one or more roles to a group.
+//   info    Show info on a specific group.
+//   remove  Remove one or more users from a group.
+//   rename  Rename a user group.
+//   revoke  Revoke one or more roles from a group.
+
 const (
 	groupListUse   = "list"
 	groupListShort = "List all existing groups"
 	groupListLong  = "List all existing groups."
+	groupListUsage = `Usage:
+  gort group list [flags]
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetGroupListCmd is a command
@@ -37,6 +66,8 @@ func GetGroupListCmd() *cobra.Command {
 		Long:  groupListLong,
 		RunE:  groupListCmd,
 	}
+
+	cmd.SetUsageTemplate(groupListUsage)
 
 	return cmd
 }

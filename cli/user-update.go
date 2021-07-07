@@ -24,17 +24,41 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// $ cogctl user update --help
+// Usage: cogctl user update [OPTIONS] USER
+//
+//   Updates an existing user.
+//
+// Options:
+//   --first-name TEXT  First name
+//   --last-name TEXT   Last name
+//   --email TEXT       Email address
+//   --username TEXT    Username
+//   --password TEXT    Password
+//   --help             Show this message and exit.
+
 const (
 	userUpdateUse   = "update"
 	userUpdateShort = "Update an existing user"
 	userUpdateLong  = "Update an existing user."
+	userUpdateUsage = `Usage:
+  gort user update [flags] user_name
+
+Flags:
+  -e, --email string      Email for the user
+  -h, --help              Show this message and exit
+  -n, --name string       Full name of the user
+  -p, --password string   Password for user
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 var (
 	flagUserUpdateEmail    string
 	flagUserUpdateName     string
 	flagUserUpdatePassword string
-	flagUserUpdateProfile  string
 )
 
 // GetUserUpdateCmd is a command
@@ -50,6 +74,8 @@ func GetUserUpdateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagUserUpdateEmail, "email", "e", "", "Email for the user")
 	cmd.Flags().StringVarP(&flagUserUpdateName, "name", "n", "", "Full name of the user")
 	cmd.Flags().StringVarP(&flagUserUpdatePassword, "password", "p", "", "Password for user")
+
+	cmd.SetUsageTemplate(userUpdateUsage)
 
 	return cmd
 }

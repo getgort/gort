@@ -25,10 +25,27 @@ import (
 	"github.com/getgort/gort/client"
 )
 
+// $ cogctl group info --help
+// Usage: cogctl group info [OPTIONS] GROUP
+//
+//   Show info on a specific group.
+//
+// Options:
+//   --help  Show this message and exit.
+
 const (
 	groupInfoUse   = "info"
-	groupInfoShort = "Retrieve information about an existing group"
-	groupInfoLong  = "Retrieve information about an existing group."
+	groupInfoShort = "Show info on a specific group"
+	groupInfoLong  = "Show info on a specific group."
+	groupInfoUsage = `Usage:
+  gort group info [flags] group_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetGroupInfoCmd is a command
@@ -40,6 +57,8 @@ func GetGroupInfoCmd() *cobra.Command {
 		RunE:  groupInfoCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(groupInfoUsage)
 
 	return cmd
 }

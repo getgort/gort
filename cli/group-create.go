@@ -24,10 +24,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// $ cogctl group create --help
+// Usage: cogctl group create [OPTIONS] NAME
+//
+//   Create a new user group.
+//
+// Options:
+//   --help  Show this message and exit.
+
 const (
 	groupCreateUse   = "create"
 	groupCreateShort = "Create a new group"
 	groupCreateLong  = "Create a new group."
+	groupCreateUsage = `Usage:
+  gort group create [flags] group_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetGroupCreateCmd is a command
@@ -39,6 +56,8 @@ func GetGroupCreateCmd() *cobra.Command {
 		RunE:  groupCreateCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(groupCreateUsage)
 
 	return cmd
 }

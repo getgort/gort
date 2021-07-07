@@ -79,10 +79,10 @@ func (c *GortClient) Authenticate() (rest.Token, error) {
 	}
 
 	f, err := os.Create(file)
-	defer f.Close()
 	if err != nil {
 		return token, gerrs.Wrap(gerrs.ErrIO, err)
 	}
+	defer f.Close()
 
 	_, err = f.Write(body)
 	if err != nil {

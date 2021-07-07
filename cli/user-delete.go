@@ -25,8 +25,17 @@ import (
 
 const (
 	userDeleteUse   = "delete"
-	userDeleteShort = "Delete an existing user"
-	userDeleteLong  = "Delete an existing user."
+	userDeleteShort = "Deletes an existing user"
+	userDeleteLong  = "Deletes an existing user."
+	userDeleteUsage = `Usage:
+  gort user delete [flags] user_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetUserDeleteCmd is a command
@@ -38,6 +47,8 @@ func GetUserDeleteCmd() *cobra.Command {
 		RunE:  userDeleteCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(userDeleteUsage)
 
 	return cmd
 }

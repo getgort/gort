@@ -24,26 +24,45 @@ import (
 	"github.com/getgort/gort/client"
 )
 
+// $ cogctl group grant --help
+// Usage: cogctl group grant [OPTIONS] GROUP ROLES...
+//
+//   Grant one or more roles to an existing group.
+//
+// Options:
+//   --help  Show this message and exit.
+
 const (
-	groupAddRoleUse   = "add-role"
-	groupAddRoleShort = "AddRole a role to an existing group"
-	groupAddRoleLong  = "AddRole a role to an existing group."
+	groupGrantUse   = "grant"
+	groupGrantShort = "Grant a role to an existing group"
+	groupGrantLong  = "Grant a role to an existing group."
+	groupGrantUsage = `Usage:
+  gort group grant [flags] group_name role_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
-// GetGroupAddRoleCmd is a command
-func GetGroupAddRoleCmd() *cobra.Command {
+// GetGroupGrantCmd is a command
+func GetGroupGrantCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   groupAddRoleUse,
-		Short: groupAddRoleShort,
-		Long:  groupAddRoleLong,
-		RunE:  groupAddRoleCmd,
+		Use:   groupGrantUse,
+		Short: groupGrantShort,
+		Long:  groupGrantLong,
+		RunE:  groupGrantCmd,
 		Args:  cobra.ExactArgs(2),
 	}
+
+	cmd.SetUsageTemplate(groupGrantUsage)
 
 	return cmd
 }
 
-func groupAddRoleCmd(cmd *cobra.Command, args []string) error {
+func groupGrantCmd(cmd *cobra.Command, args []string) error {
 	groupname := args[0]
 	rolename := args[1]
 

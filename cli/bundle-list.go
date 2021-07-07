@@ -23,25 +23,34 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// $ cogctl bundle --help
+// Usage: cogctl bundle [OPTIONS] COMMAND [ARGS]...
+//
+// Manage command bundles and their config.
+//
+// If no subcommand is given, lists all bundles installed, and their
+// currently enabled version, if any.
+//
+// Options:
+// -e, --enabled   List only enabled bundles
+// -d, --disabled  List only disabled bundles
+// -v, --verbose   Display additional bundle details
+// --help          Show this message and exit.
+
 const (
 	bundleListUse   = "list"
-	bundleListShort = "List all existing bundles"
-	bundleListLong  = "List all existing bundles."
+	bundleListShort = "List all bundles installed"
+	bundleListLong  = "Lists all bundles installed, and their currently enabled version, if any."
+	bundleListUsage = `Usage:
+  gort bundle list [flags]
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
-
-// $ gort bundle --help
-// Usage: gort bundle [OPTIONS] COMMAND [ARGS]...
-
-//   Manage command bundles and their config.
-
-//   If no subcommand is given, lists all bundles installed, and their
-//   currently enabled version, if any.
-
-// Options:
-//   -e, --enabled   List only enabled bundles
-//   -d, --disabled  List only disabled bundles
-//   -v, --verbose   Display additional bundle details
-//   --help          Show this message and exit.
 
 // GetBundleListCmd is a command
 func GetBundleListCmd() *cobra.Command {
@@ -51,6 +60,8 @@ func GetBundleListCmd() *cobra.Command {
 		Long:  bundleListLong,
 		RunE:  bundleListCmd,
 	}
+
+	cmd.SetUsageTemplate(bundleListUsage)
 
 	return cmd
 }

@@ -20,12 +20,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	userUse   = "user"
-	userShort = "Perform operations on users"
-	userLong  = "Allows you to perform user administration."
-)
-
 // # gort user --help
 // Usage: gort user [OPTIONS] COMMAND [ARGS]...
 //
@@ -43,6 +37,12 @@ const (
 //   password-reset          Reset user password with a token.
 //   password-reset-request  Request a password reset.
 //   update                  Updates an existing user.
+
+const (
+	userUse   = "user"
+	userShort = "Perform operations on users"
+	userLong  = "Allows you to perform user administration."
+)
 
 // GetUserCmd user
 func GetUserCmd() *cobra.Command {
