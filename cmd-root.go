@@ -31,9 +31,10 @@ const (
 // GetRootCmd root
 func GetRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   rootUse,
-		Short: rootShort,
-		Long:  rootLong,
+		Use:          rootUse,
+		Short:        rootShort,
+		Long:         rootLong,
+		SilenceUsage: true,
 	}
 
 	root.AddCommand(GetStartCmd())
@@ -44,7 +45,7 @@ func GetRootCmd() *cobra.Command {
 	root.AddCommand(cli.GetUserCmd())
 	root.AddCommand(cli.GetVersionCmd())
 
-	root.PersistentFlags().StringVarP(&cli.FlagGortProfile, "profile", "P", "", "Gort profile to use")
+	root.PersistentFlags().StringVarP(&cli.FlagGortProfile, "profile", "P", "", "The Gort profile within the config file to use")
 
 	return root
 }

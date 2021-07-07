@@ -27,7 +27,16 @@ import (
 const (
 	bundleYamlUse   = "yaml"
 	bundleYamlShort = "Retrieve the raw YAML for a bundle."
-	bundleYamlLong  = "Retrieve the raw YAML for a bundle."
+	bundleYamlLong  = `Retrieve the raw YAML for a bundle.`
+	bundleYamlUsage = `Usage:
+  gort bundle yaml [flags] bundle_name version
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetBundleYamlCmd is a command
@@ -39,6 +48,8 @@ func GetBundleYamlCmd() *cobra.Command {
 		RunE:  bundleYamlCmd,
 		Args:  cobra.ExactArgs(2),
 	}
+
+	cmd.SetUsageTemplate(bundleYamlUsage)
 
 	return cmd
 }

@@ -24,10 +24,27 @@ import (
 	"github.com/getgort/gort/client"
 )
 
+// $ cogctl role create --help
+// Usage: cogctl role create [OPTIONS] NAME
+//
+//   Create a role
+//
+// Options:
+//   --help  Show this message and exit.
+
 const (
 	roleCreateUse   = "create"
-	roleCreateShort = "Create a new role"
-	roleCreateLong  = "Create a new role."
+	roleCreateShort = "Create a role"
+	roleCreateLong  = "Create a role."
+	roleCreateUsage = `Usage:
+  gort role create [flags] role_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetRoleCreateCmd is a command
@@ -39,6 +56,8 @@ func GetRoleCreateCmd() *cobra.Command {
 		RunE:  roleCreateCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(roleCreateUsage)
 
 	return cmd
 }

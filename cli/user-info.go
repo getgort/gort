@@ -28,6 +28,15 @@ const (
 	userInfoUse   = "info"
 	userInfoShort = "Retrieve information about an existing user"
 	userInfoLong  = "Retrieve information about an existing user."
+	userInfoUsage = `Usage:
+  gort user info [flags] user_name [version]
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetUserInfoCmd is a command
@@ -39,6 +48,8 @@ func GetUserInfoCmd() *cobra.Command {
 		RunE:  userInfoCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(userInfoUsage)
 
 	return cmd
 }

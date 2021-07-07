@@ -25,25 +25,36 @@ import (
 )
 
 const (
-	roleGrantUse   = "grant-permission role bundle permission"
-	roleGrantShort = "grant a permission to an existing role"
-	roleGrantLong  = "grant a permission to an existing role."
+	roleRevokeUse   = "revoke-permission role bundle permission"
+	roleRevokeShort = "Revoke a permission from a role"
+	roleRevokeLong  = "Revoke a permission from a role."
+	roleRevokeUsage = `Usage:
+  gort role revoke [flags] role_name permission
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
-// GetRoleGrantPermissionCmd is a command
-func GetRoleGrantPermissionCmd() *cobra.Command {
+// GetRoleRevokeCmd is a command
+func GetRoleRevokeCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   roleGrantUse,
-		Short: roleGrantShort,
-		Long:  roleGrantLong,
-		RunE:  roleGrantCmd,
+		Use:   roleRevokeUse,
+		Short: roleRevokeShort,
+		Long:  roleRevokeLong,
+		RunE:  roleRevokeCmd,
 		Args:  cobra.ExactArgs(3),
 	}
+
+	cmd.SetUsageTemplate(roleRevokeUsage)
 
 	return cmd
 }
 
-func roleGrantCmd(cmd *cobra.Command, args []string) error {
+func roleRevokeCmd(cmd *cobra.Command, args []string) error {
 	rolename := args[0]
 	bundlename := args[1]
 	permissionname := args[2]
@@ -53,12 +64,12 @@ func roleGrantCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = gortClient.RolePermissionGrant(rolename, bundlename, permissionname)
+	err = gortClient.RolePermissionRevoke(rolename, bundlename, permissionname)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("permission granted to %s: %s\n", rolename, permissionname)
+	fmt.Printf("Permission Revoked from %s: %s\n", rolename, permissionname)
 
 	return nil
 }

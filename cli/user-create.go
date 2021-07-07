@@ -28,13 +28,21 @@ const (
 	userCreateUse   = "create"
 	userCreateShort = "Create a new user"
 	userCreateLong  = "Create a new user."
+	userCreateUsage = `Usage:
+  gort user create [flags] user_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 var (
 	flagUserCreateEmail    string
 	flagUserCreateName     string
 	flagUserCreatePassword string
-	flagUserCreateProfile  string
 )
 
 // GetUserCreateCmd is a command
@@ -54,6 +62,8 @@ func GetUserCreateCmd() *cobra.Command {
 	cmd.MarkFlagRequired("email")
 	cmd.MarkFlagRequired("name")
 	cmd.MarkFlagRequired("password")
+
+	cmd.SetUsageTemplate(userCreateUsage)
 
 	return cmd
 }

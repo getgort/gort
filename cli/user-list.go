@@ -27,6 +27,15 @@ const (
 	userListUse   = "list"
 	userListShort = "List all existing users"
 	userListLong  = "List all existing users."
+	userListUsage = `Usage:
+  gort user list [flags]
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetUserListCmd is a command
@@ -37,6 +46,8 @@ func GetUserListCmd() *cobra.Command {
 		Long:  userListLong,
 		RunE:  userListCmd,
 	}
+
+	cmd.SetUsageTemplate(userListUsage)
 
 	return cmd
 }

@@ -20,12 +20,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	bundleUse   = "bundle"
-	bundleShort = "Perform operations on bundles"
-	bundleLong  = "Allows you to perform bundle administration."
-)
-
 // $ gort bundle --help
 // Usage: gort bundle [OPTIONS] COMMAND [ARGS]...
 
@@ -48,6 +42,12 @@ const (
 //   install    Install a bundle.
 //   uninstall  Uninstall bundles.
 //   versions   List installed bundle versions.
+
+const (
+	bundleUse   = "bundle"
+	bundleShort = "Perform operations on bundles"
+	bundleLong  = "Allows you to perform bundle administration."
+)
 
 // GetBundleCmd bundle
 func GetBundleCmd() *cobra.Command {

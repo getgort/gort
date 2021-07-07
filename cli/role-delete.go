@@ -28,6 +28,15 @@ const (
 	roleDeleteUse   = "delete"
 	roleDeleteShort = "Delete an existing role"
 	roleDeleteLong  = "Delete an existing role."
+	roleDeleteUsage = `Usage:
+  gort role delete [flags] role_name
+
+Flags:
+  -h, --help   Show this message and exit
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 // GetroleDeleteCmd is a command
@@ -39,6 +48,8 @@ func GetRoleDeleteCmd() *cobra.Command {
 		RunE:  roleDeleteCmd,
 		Args:  cobra.ExactArgs(1),
 	}
+
+	cmd.SetUsageTemplate(roleDeleteUsage)
 
 	return cmd
 }
