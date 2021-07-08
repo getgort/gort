@@ -465,6 +465,12 @@ func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundl
 		return err
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
 	return nil
 }
 
