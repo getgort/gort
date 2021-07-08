@@ -87,11 +87,11 @@ func TestLoadConfiguration(t *testing.T) {
 	assert.Len(t, cb[0].Commands, 2)
 	assert.Equal(t, "echo", cb[0].Commands["echo"].Name)
 	assert.Equal(t, "Echos back anything sent to it, all at once.", cb[0].Commands["echo"].Description)
-	assert.Equal(t, "/bin/echo", cb[0].Commands["echo"].Executable)
+	assert.Equal(t, []string{"/bin/echo"}, cb[0].Commands["echo"].Executable)
 
 	assert.Equal(t, "splitecho", cb[0].Commands["splitecho"].Name)
 	assert.Equal(t, "Echos back anything sent to it, one parameter at a time.", cb[0].Commands["splitecho"].Description)
-	assert.Equal(t, "/opt/app/splitecho.sh", cb[0].Commands["splitecho"].Executable)
+	assert.Equal(t, []string{"/opt/app/splitecho.sh"}, cb[0].Commands["splitecho"].Executable)
 }
 
 func TestIsUndefinedNil(t *testing.T) {

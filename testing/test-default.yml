@@ -22,12 +22,38 @@ docker:
   tag: latest
 
 commands:
-  gort:
+  bundle:
     description: "Bringing the power of the command line to chat."
-    executable: "/bin/gort"
+    executable: [ "/bin/gort", "bundle" ]
+    rules:
+      - must have gort:manage_commands
+
+  group:
+    description: "Bringing the power of the command line to chat."
+    executable: [ "/bin/gort", "group" ]
+    rules:
+      - must have gort:manage_groups
+
+  role:
+    description: "Bringing the power of the command line to chat."
+    executable: [ "/bin/gort", "role" ]
+    rules:
+      - must have gort:manage_roles
+
+  user:
+    description: "Bringing the power of the command line to chat."
+    executable: [ "/bin/gort", "user" ]
+    rules:
+      - must have gort:manage_users
+
+  version:
+    description: "Bringing the power of the command line to chat."
+    executable: [ "/bin/gort", "version" ]
     rules:
       - allow
-      - with arg[0] == "bundle" must have gort:manage_commands
-      - with arg[0] == "group" must have gort:manage_groups
-      - with arg[0] == "role" must have gort:manage_roles
-      - with arg[0] == "user" must have gort:manage_users
+
+  help:
+    description: "Bringing the power of the command line to chat."
+    executable: [ "/bin/gort", "hidden", "commands" ]
+    rules:
+      - allow

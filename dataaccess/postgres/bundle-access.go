@@ -20,6 +20,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"go.opentelemetry.io/otel"
@@ -662,13 +663,15 @@ func (da PostgresDataAccess) doBundleCommandsDataGet(ctx context.Context, tx *sq
 	commands := make([]bundleCommandData, 0)
 
 	for rows.Next() {
+		var enc string
 		cd := bundleCommandData{}
 
-		err = rows.Scan(&cd.BundleName, &cd.BundleVersion, &cd.Name, &cd.Description, &cd.Executable)
+		err = rows.Scan(&cd.BundleName, &cd.BundleVersion, &cd.Name, &cd.Description, &enc)
 		if err != nil {
 			return nil, gerr.Wrap(errs.ErrDataAccess, err)
 		}
 
+		cd.Executable = decodeStringSlice(enc)
 		commands = append(commands, cd)
 	}
 
@@ -690,7 +693,8 @@ func (da PostgresDataAccess) doBundleCommandsGet(ctx context.Context, tx *sql.Tx
 			return nil, gerr.Wrap(fmt.Errorf("failed to get bundle command rules"), err)
 		}
 
-		commands = append(commands, &bc.BundleCommand)
+		command := bc.BundleCommand
+		commands = append(commands, &command)
 	}
 
 	return commands, nil
@@ -842,8 +846,10 @@ func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql
 	for name, cmd := range bundle.Commands {
 		cmd.Name = name
 
+		enc := encodeStringSlice(cmd.Executable)
+
 		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
-			cmd.Name, cmd.Description, cmd.Executable)
+			cmd.Name, cmd.Description, enc)
 
 		if err != nil {
 			if strings.Contains(err.Error(), "violates") {
@@ -883,4 +889,32 @@ func (da PostgresDataAccess) doBundleInsertPermissions(ctx context.Context, tx *
 	}
 
 	return nil
+}
+
+func decodeStringSlice(str string) []string {
+	if str == "" {
+		return []string{}
+	}
+
+	enc := strings.Split(str, ",")
+
+	for i, s := range enc {
+		enc[i], _ = url.QueryUnescape(s)
+	}
+
+	return enc
+}
+
+func encodeStringSlice(strs []string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+
+	enc := make([]string, len(strs))
+
+	for i, s := range strs {
+		enc[i] = url.QueryEscape(s)
+	}
+
+	return strings.Join(enc, ",")
 }

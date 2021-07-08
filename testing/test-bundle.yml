@@ -20,6 +20,6 @@ docker:
 commands:
   echox:
     description: "Echos back anything sent to it, all at once."
-    executable: "/bin/echo"
+    executable: [ "/bin/echo" ]
     rules:
       - must have test:echox

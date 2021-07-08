@@ -284,7 +284,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		bundle_version		TEXT NOT NULL,
 		name				TEXT NOT NULL CHECK(name <> ''),
 		description			TEXT NOT NULL CHECK(description <> ''),
-		executable			TEXT NOT NULL CHECK(executable <> ''),
+		executable			TEXT NOT NULL,
 		CONSTRAINT			unq_bundle_command UNIQUE(bundle_name, bundle_version, name),
 		PRIMARY KEY			(bundle_name, bundle_version, name),
 		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)

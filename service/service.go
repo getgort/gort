@@ -594,7 +594,7 @@ func doAuthenticateUser(r *http.Request, gortCommand string, args ...string) (bo
 		return false, err
 	}
 
-	bundle, command, err := getGortBundleCommand(r.Context())
+	bundle, command, err := getGortBundleCommand(r.Context(), gortCommand)
 	if err != nil {
 		return false, gerrs.Wrap(ErrGortBundleDisabled, err)
 	}
@@ -615,9 +615,8 @@ func doAuthenticateUser(r *http.Request, gortCommand string, args ...string) (bo
 // getGortBundleCommand retrieves the data.BundleCommand value from the default
 // Gort command bundle. If the bundle doesn't exist, isn't enabled, or if the
 // requested command doesn't exist, an error will be returned.
-func getGortBundleCommand(ctx context.Context) (data.Bundle, data.BundleCommand, error) {
+func getGortBundleCommand(ctx context.Context, commandName string) (data.Bundle, data.BundleCommand, error) {
 	const bundleName = "gort"
-	const commandName = "gort"
 
 	bundleVersion, err := dataAccessLayer.BundleEnabledVersion(ctx, bundleName)
 	if err != nil {

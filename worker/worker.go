@@ -41,7 +41,7 @@ type Worker struct {
 	CommandParameters []string
 	DockerClient      *client.Client
 	DockerHost        string
-	EntryPoint        string
+	EntryPoint        []string
 	ExitStatus        chan int64
 	ExecutionTimeout  time.Duration
 	ImageName         string
@@ -108,7 +108,7 @@ func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
 
 	sp.SetAttributes(
 		attribute.String("image", w.ImageName),
-		attribute.String("entry", entryPoint),
+		attribute.String("entry", strings.Join(entryPoint, " ")),
 		attribute.String("params", strings.Join(w.CommandParameters, " ")),
 	)
 
@@ -129,8 +129,8 @@ func (w *Worker) Start(ctx context.Context) (<-chan string, error) {
 		Env:   w.envVars(),
 	}
 
-	if entryPoint != "" {
-		cfg.Entrypoint = []string{entryPoint}
+	if len(entryPoint) > 0 {
+		cfg.Entrypoint = entryPoint
 	}
 
 	// Create the container
