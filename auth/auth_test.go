@@ -77,7 +77,7 @@ func TestEvaluateCommandEntry2(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	cmd, env, err := parse("gort:gort user --help")
+	cmd, env, err := parse("gort:user --help")
 	assert.NoError(t, err)
 	cmdE := data.CommandEntry{Bundle: b, Command: *b.Commands[cmd.Command]}
 

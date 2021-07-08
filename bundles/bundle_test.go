@@ -40,7 +40,7 @@ func TestLoadBundle(t *testing.T) {
 	assert.Len(t, b.Commands, 1)
 	assert.Equal(t, "echox", b.Commands["echox"].Name)
 	assert.Equal(t, "Echos back anything sent to it, all at once.", b.Commands["echox"].Description)
-	assert.Equal(t, "/bin/echo", b.Commands["echox"].Executable)
+	assert.Equal(t, []string{"/bin/echo"}, b.Commands["echox"].Executable)
 	assert.Len(t, b.Commands["echox"].Rules, 1)
 	assert.Equal(t, "must have test:echox", b.Commands["echox"].Rules[0])
 }

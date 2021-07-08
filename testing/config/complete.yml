@@ -128,10 +128,10 @@ bundles:
   commands:
     echo:
       description: "Echos back anything sent to it, all at once."
-      executable: "/bin/echo"
+      executable: ["/bin/echo"]
     splitecho:
       description: "Echos back anything sent to it, one parameter at a time."
-      executable: "/opt/app/splitecho.sh"
+      executable: ["/opt/app/splitecho.sh"]
 
 - name: curl
   description: A default bundle that provides curl.
@@ -146,4 +146,4 @@ bundles:
   commands:
     curl:
       description: "The official curl command."
-      executable: "/usr/bin/curl"
+      executable: ["/usr/bin/curl"]

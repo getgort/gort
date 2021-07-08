@@ -60,7 +60,7 @@ type BundleDocker struct {
 // section of the config.
 type BundleCommand struct {
 	Description string   `yaml:",omitempty" json:"description,omitempty"`
-	Executable  string   `yaml:",omitempty" json:"executable,omitempty"`
+	Executable  []string `yaml:",omitempty" json:"executable,omitempty"`
 	Name        string   `yaml:"-" json:"-"`
 	Rules       []string `yaml:",omitempty" json:"rules,omitempty"`
 }

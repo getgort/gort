@@ -656,7 +656,7 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 
 		case data.BundleCommand:
 			attr = append(attr,
-				attribute.String("command.executable", o.Executable),
+				attribute.String("command.executable", strings.Join(o.Executable, " ")),
 				attribute.String("command.name", o.Name),
 			)
 
