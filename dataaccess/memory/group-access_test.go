@@ -171,6 +171,7 @@ func testGroupRoleAdd(t *testing.T) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
+	defer da.RoleDelete(ctx, roleName)
 
 	err = da.RolePermissionAdd(ctx, roleName, bundleName, permissionName)
 	if !assert.NoError(t, err) {

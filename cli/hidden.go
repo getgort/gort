@@ -35,7 +35,7 @@ func GetHiddenCmd() *cobra.Command {
 		Hidden: true,
 	}
 
-	cmd.AddCommand(GetHiddenCommandsCmd())
+	cmd.AddCommand(GetHiddenCommandCmd())
 
 	return cmd
 }

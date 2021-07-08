@@ -31,7 +31,7 @@ func TestLoadBundle(t *testing.T) {
 	assert.Equal(t, "test", b.Name)
 	assert.Equal(t, "0.0.1", b.Version)
 	assert.Equal(t, "Matt Titmus <matthew.titmus@gmail.com>", b.Author)
-	assert.Equal(t, "https://getgort.github.io/gort-guide/", b.Homepage)
+	assert.Equal(t, "https://guide.getgort.io", b.Homepage)
 	assert.Equal(t, "A test bundle.", b.Description)
 	assert.Equal(t, "This is test bundle.\nThere are many like it, but this one is mine.", b.LongDescription)
 	assert.Len(t, b.Permissions, 1)

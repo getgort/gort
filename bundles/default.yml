@@ -4,7 +4,7 @@ gort_bundle_version: 1
 name: gort
 version: 0.0.1
 author: Matt Titmus <matthew.titmus@gmail.com>
-homepage: https://getgort.github.io/gort-guide/
+homepage: https://guide.getgort.io
 description: The default command bundle.
 long_description: |-
   The default command bundle, which contains the administrative commands and
@@ -23,37 +23,118 @@ docker:
 
 commands:
   bundle:
-    description: "Bringing the power of the command line to chat."
+    description: "Perform operations on bundles"
+    long_description: |-
+      Allows you to perform bundle administration.
+
+      Usage:
+        gort:bundle [command]
+
+      Available Commands:
+        disable     Disable a bundle by name
+        enable      Enable the specified version of the bundle
+        info        Info a bundle
+        install     Install a bundle
+        list        List all bundles installed
+        uninstall   Uninstall bundles
+        yaml        Retrieve the raw YAML for a bundle.
+
+      Flags:
+        -h, --help   help for bundle
     executable: [ "/bin/gort", "bundle" ]
     rules:
       - must have gort:manage_commands
 
   group:
-    description: "Bringing the power of the command line to chat."
+    description: "Manage Cog user groups"
+    long_description: |-
+      Manage Cog user groups.
+
+      Usage:
+        gort:group [command]
+
+      Available Commands:
+        add         Add a user to an existing group
+        create      Create a new group
+        delete      Delete an existing group
+        grant       Grant a role to an existing group
+        info        Show info on a specific group
+        list        List all existing groups
+        remove      Remove a user from an existing group
+        revoke      Remove a role from an existing group
+
+      Flags:
+        -h, --help   help for group
     executable: [ "/bin/gort", "group" ]
     rules:
       - must have gort:manage_groups
 
   role:
-    description: "Bringing the power of the command line to chat."
+    description: "Allows you to perform role administration"
+    long_description: |-
+      Allows you to perform role administration.
+
+      Usage:
+        gort:role [command]
+
+      Available Commands:
+        create            Create a role
+        delete            Delete an existing role
+        grant             Grant a permission to an existing role
+        list              List all existing roles
+        revoke-permission Revoke a permission from a role
+
+      Flags:
+        -h, --help   help for role
     executable: [ "/bin/gort", "role" ]
     rules:
       - must have gort:manage_roles
 
   user:
-    description: "Bringing the power of the command line to chat."
+    description: "Allows you to perform user administration"
+    long_description: |-
+      Allows you to perform user administration.
+
+      Usage:
+        gort:user [command]
+
+      Available Commands:
+        create      Create a new user
+        delete      Deletes an existing user
+        info        Retrieve information about an existing user
+        list        List all existing users
+        update      Update an existing user
+
+      Flags:
+        -h, --help   help for user
     executable: [ "/bin/gort", "user" ]
     rules:
       - must have gort:manage_users
 
   version:
-    description: "Bringing the power of the command line to chat."
+    description: "Displays version and build information"
+    long_description: |-
+      Displays version and build information.
+
+      Usage:
+        gort:version [flags]
+
+      Flags:
+        -h, --help    help for version
+        -s, --short   Print only the version number
     executable: [ "/bin/gort", "version" ]
     rules:
       - allow
 
   help:
-    description: "Bringing the power of the command line to chat."
+    description: "Provides information about a command"
+    long_description: |-
+      Provides information about a command.
+
+      If no command is specified, this will list all commands installed in Gort.
+
+      Usage:
+        gort:help [flags] [command]
     executable: [ "/bin/gort", "hidden", "commands" ]
     rules:
       - allow

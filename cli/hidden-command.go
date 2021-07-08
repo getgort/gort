@@ -25,24 +25,35 @@ import (
 )
 
 const (
-	hiddenCommandsUse   = "commands"
-	hiddenCommandsShort = "List all available commands"
-	hiddenCommandsLong  = "Lists all available commands."
+	hiddenCommandUse   = "command"
+	hiddenCommandShort = "Provides information about a command"
+	hiddenCommandLong  = `Provides information about a command.
+
+If no command is specified, this will list all commands installed in Gort.
+`
+	hiddenCommandUsage = `Usage:
+  !gort:help [flags] [command]
+
+Flags:
+  -h, --help   Show this message and exit
+`
 )
 
-// GetHiddenCommandsCmd is a command
-func GetHiddenCommandsCmd() *cobra.Command {
+// GetHiddenCommandCmd is a command
+func GetHiddenCommandCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   hiddenCommandsUse,
-		Short: hiddenCommandsShort,
-		Long:  hiddenCommandsLong,
-		RunE:  hiddenCommandsCmd,
+		Use:   hiddenCommandUse,
+		Short: hiddenCommandShort,
+		Long:  hiddenCommandLong,
+		RunE:  hiddenCommandCmd,
 	}
+
+	cmd.SetUsageTemplate(hiddenCommandUsage)
 
 	return cmd
 }
 
-func hiddenCommandsCmd(cmd *cobra.Command, args []string) error {
+func hiddenCommandCmd(cmd *cobra.Command, args []string) error {
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
@@ -59,7 +70,7 @@ func hiddenCommandsCmd(cmd *cobra.Command, args []string) error {
 
 	for _, b := range bundles {
 		for k, _ := range b.Commands {
-			cmds = append(cmds, fmt.Sprintf("%s:%s", b.Name, k))
+			cmds = append(cmds, fmt.Sprintf("- %s:%s", b.Name, k))
 		}
 	}
 

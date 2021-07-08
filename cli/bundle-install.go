@@ -73,7 +73,7 @@ const (
 
 When using this command, you must provide the path to the file, as follows:
 
-	gort bundle install /path/to/my/bundle/config.yaml
+  gort bundle install /path/to/my/bundle/config.yaml
 `
 	bundleInstallUsage = `Usage:
   gort bundle install [flags] config_path
