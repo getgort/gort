@@ -8,7 +8,7 @@
 
 Gort is a chatbot framework designed from the ground up for chatops.
 
-Gort brings the power of the command line to the place you collaborate with your team all the time -- your chat window. Its open-ended command bundle support allows developers to implement functionality in the language of their choice, while powerful access control means you can collaborate around even the most sensitive tasks with confidence. A focus on extensibility and adaptability means that you can respond quickly to the unexpected, without your team losing visibility.
+Gort brings the power of the command line to the place you collaborate with your team: your chat window. Its open-ended command bundle support allows developers to implement functionality in the language of their choice, while powerful access control means you can collaborate around even the most sensitive tasks with confidence. A focus on extensibility and adaptability means that you can respond quickly to the unexpected, without your team losing visibility.
 
 ## Documentation
 
@@ -16,16 +16,17 @@ You may wish to skip this page and go directly to the documentation: [The Gort G
 
 ## Features
 
-The primary goal of this project is to re-implement the core features of Cog that made it stand out among other chatops tools. Specifically, to:
+Gort's design philosophy emphasizes flexibility and security by allowing you to:
 
-- define arbitrary command functionality in any programming language,
-- package those commands into bundles that can be installed in Gort,
-- allow users to trigger commands through Slack or another chat provider and be presented with the output,
-- execute triggered commands anywhere a relay is installed using a tag-based targeting system,
-- regulate the use of commands with a built-in authentication/authorization system,
-- and record activity in an audit log.
+- Define arbitrary command functionality in any programming language,
+- Package those commands into bundles that can be installed in Gort,
+- Allow users to trigger commands through Slack or another chat provider and be presented with the output,
+- Decide who can use commands (or flags, or parameters) with a built-in authentication/authorization system, and
+- Record all activity in an audit log.
 
-This includes all of the [high-level features listed in the Cog documentation](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/introducing_cog.html#current-featuress).
+Gort lets you build commands in any language you want, using tooling you're already comfortable with, and can tightly control who can use them and how.
+
+<!-- - execute triggered commands anywhere a relay is installed using a tag-based targeting system, -->
 
 <!-- ## Gort Design
 
@@ -33,11 +34,7 @@ A WIP design doc, including rough milestones (but not dates) [can be seen here](
 
 ## How to Run the Gort Controller
 
-With Go installed, you can run (for testing) with: `go run . start`.
-
-Note that you'll need a proper API key in the config first!
-
-For more informaton, take a look at the [Quick Start Guide](https://guide.getgort.io/quickstart.html) in [The Gort Guide](https://guide.getgort.io).
+For more information, take a look at the [Quick Start Guide](https://guide.getgort.io/quickstart.html) in [The Gort Guide](https://guide.getgort.io).
 
 ## The Gort Client
 
@@ -45,26 +42,26 @@ The `gort` binary also serves as the controller administration CLI.
 
 ### Configuring Client Profiles
 
-The `gort` client uses an INI-formatted configuration file, conventionally
+The `gort` client uses a YAML-formatted configuration file, conventionally
 located in the `profile` file in a `.gort` directory in your home directory.
 This is where you can store connection credentials to allow `gort` to interact
 with the Gort's Controller's REST API.
 
 An example `.gort/profile` file might look like this:
 
-```ini
-[defaults]
-profile = gort
+```yaml
+defaults:
+    profile: gort
 
-[gort]
-password = "seekrit#password"
-url = https://gort.mycompany.com:4000
-user = me
+gort:
+    url: https://gort.mycompany.com:4000
+    password: "seekrit#password"
+    user: me
 
-[preprod]
-password = "anotherseekrit#password"
-url = https://gort.preprod.mycompany.com:4000
-user = me
+preprod:
+    url: https://gort.preprod.mycompany.com:4000
+    password: "anotherseekrit#password"
+    user: me
 ```
 
 Comments begin with a `#` character; if your password contains a `#`,
