@@ -26,21 +26,19 @@ import (
 // InMemoryDataAccess is an entirely in-memory representation of a data access layer.
 // Great for testing and development. Terrible for production.
 type InMemoryDataAccess struct {
-	bundles    map[string]*data.Bundle
-	groups     map[string]*rest.Group
-	users      map[string]*rest.User
-	roles      map[string]*rest.Role
-	grouproles map[string]map[string]*rest.Role
+	bundles map[string]*data.Bundle
+	groups  map[string]*rest.Group
+	users   map[string]*rest.User
+	roles   map[string]*rest.Role
 }
 
 // NewInMemoryDataAccess returns a new InMemoryDataAccess instance.
 func NewInMemoryDataAccess() *InMemoryDataAccess {
 	da := InMemoryDataAccess{
-		bundles:    make(map[string]*data.Bundle),
-		groups:     make(map[string]*rest.Group),
-		users:      make(map[string]*rest.User),
-		roles:      make(map[string]*rest.Role),
-		grouproles: make(map[string]map[string]*rest.Role),
+		bundles: make(map[string]*data.Bundle),
+		groups:  make(map[string]*rest.Group),
+		users:   make(map[string]*rest.User),
+		roles:   make(map[string]*rest.Role),
 	}
 
 	return &da

@@ -33,7 +33,7 @@ func testUserAccess(t *testing.T) {
 	t.Run("testUserGroupList", testUserGroupList)
 	t.Run("testUserList", testUserList)
 	t.Run("testUserNotExists", testUserNotExists)
-	t.Run("testUserPermissions", testUserPermissions)
+	t.Run("testUserPermissionList", testUserPermissionList)
 	t.Run("testUserUpdate", testUserUpdate)
 }
 
@@ -179,7 +179,7 @@ func testUserGroupList(t *testing.T) {
 	da.UserCreate(ctx, rest.User{Username: "user-test-user-group-list"})
 	defer da.UserDelete(ctx, "user-test-user-group-list")
 
-	da.GroupAddUser(ctx, "group-test-user-group-list-0", "user-test-user-group-list")
+	da.GroupUserAdd(ctx, "group-test-user-group-list-0", "user-test-user-group-list")
 
 	expected := []rest.Group{{Name: "group-test-user-group-list-0", Users: nil}}
 
@@ -238,7 +238,8 @@ func testUserNotExists(t *testing.T) {
 		t.FailNow()
 	}
 }
-func testUserPermissions(t *testing.T) {
+
+func testUserPermissionList(t *testing.T) {
 	var err error
 
 	err = da.GroupCreate(ctx, rest.Group{Name: "test-perms"})
@@ -252,7 +253,7 @@ func testUserPermissions(t *testing.T) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	err = da.GroupAddUser(ctx, "test-perms", "test-perms")
+	err = da.GroupUserAdd(ctx, "test-perms", "test-perms")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -283,12 +284,12 @@ func testUserPermissions(t *testing.T) {
 	// Expected: a sorted list of strings
 	expected := []string{"test:test-perms-0", "test:test-perms-1", "test:test-perms-2"}
 
-	actual, err := da.UserPermissions(ctx, "test-perms")
+	actual, err := da.UserPermissionList(ctx, "test-perms")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
 
-	assert.Equal(t, expected, actual)
+	assert.Equal(t, expected, actual.Strings())
 }
 
 func testUserUpdate(t *testing.T) {
@@ -307,7 +308,7 @@ func testUserUpdate(t *testing.T) {
 	// Get the user we just added. Emails should match.
 	user1, _ := da.UserGet(ctx, "test-update")
 	if userA.Email != user1.Email {
-		t.Errorf("Email mistatch: %q vs %q", userA.Email, user1.Email)
+		t.Errorf("Email mismatch: %q vs %q", userA.Email, user1.Email)
 		t.FailNow()
 	}
 
@@ -319,7 +320,7 @@ func testUserUpdate(t *testing.T) {
 	// Get the user we just updated. Emails should match.
 	user2, _ := da.UserGet(ctx, "test-update")
 	if userB.Email != user2.Email {
-		t.Errorf("Email mistatch: %q vs %q", userB.Email, user2.Email)
+		t.Errorf("Email mismatch: %q vs %q", userB.Email, user2.Email)
 		t.FailNow()
 	}
 }

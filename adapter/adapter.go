@@ -453,7 +453,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		"arg":    cmdInput.Parameters,
 	}
 
-	perms, err := da.UserPermissions(ctx, id.GortUser.Username)
+	perms, err := da.UserPermissionList(ctx, id.GortUser.Username)
 	if err != nil {
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
@@ -463,7 +463,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		return nil, fmt.Errorf("user permission load error: %w", err)
 	}
 
-	allowed, err := auth.EvaluateCommandEntry(perms, cmdEntry, env)
+	allowed, err := auth.EvaluateCommandEntry(perms.Strings(), cmdEntry, env)
 	if err != nil {
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
