@@ -21,7 +21,7 @@ Gort's design philosophy emphasizes flexibility and security by allowing you to:
 - Define arbitrary command functionality in any programming language,
 - Package those commands into bundles that can be installed in Gort,
 - Allow users to trigger commands through Slack or another chat provider and be presented with the output,
-- Decide who can use commands (or flags, or parameters) with a built-in authentication/authorization system, and
+- Decide who can use commands (or flags, or parameters) with a built-in RBAC system, and
 - Record all activity in an audit log.
 
 Gort lets you build commands in any language you want, using tooling you're already comfortable with, and can tightly control who can use them and how.
