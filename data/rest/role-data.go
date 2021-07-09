@@ -20,7 +20,7 @@ import "fmt"
 
 type Role struct {
 	Name        string
-	Permissions []RolePermission
+	Permissions RolePermissionList
 	Groups      []Group
 }
 

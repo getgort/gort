@@ -443,6 +443,8 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		fallthrough
 	case gerrs.Is(err, errs.ErrNoSuchGroup):
 		fallthrough
+	case gerrs.Is(err, errs.ErrNoSuchRole):
+		fallthrough
 	case gerrs.Is(err, errs.ErrNoSuchToken):
 		fallthrough
 	case gerrs.Is(err, errs.ErrNoSuchUser):

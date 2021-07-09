@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 
 	"github.com/getgort/gort/data/rest"
 )
@@ -34,7 +35,7 @@ func (c *GortClient) RoleDelete(rolename string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -51,7 +52,7 @@ func (c *GortClient) RoleCreate(rolename string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -67,7 +68,7 @@ func (c *GortClient) RoleList() ([]rest.Group, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return []rest.Group{}, getResponseError(resp)
 	}
 
@@ -96,9 +97,9 @@ func (c *GortClient) RoleExists(rolename string) (bool, error) {
 	defer resp.Body.Close()
 
 	switch resp.StatusCode {
-	case 200:
+	case http.StatusOK:
 		return true, nil
-	case 404:
+	case http.StatusNotFound:
 		return false, nil
 	default:
 		return false, getResponseError(resp)
@@ -106,30 +107,57 @@ func (c *GortClient) RoleExists(rolename string) (bool, error) {
 }
 
 // RoleGet gets an existing role.
-func (c *GortClient) RoleGet(rolename string) (rest.Group, error) {
+func (c *GortClient) RoleGet(rolename string) (rest.Role, error) {
 	url := fmt.Sprintf("%s/v2/roles/%s", c.profile.URL.String(), rolename)
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
-		return rest.Group{}, err
+		return rest.Role{}, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return rest.Group{}, getResponseError(resp)
+	if resp.StatusCode != http.StatusOK {
+		return rest.Role{}, getResponseError(resp)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return rest.Group{}, err
+		return rest.Role{}, err
 	}
 
-	group := rest.Group{}
-	err = json.Unmarshal(body, &group)
+	role := rest.Role{}
+	err = json.Unmarshal(body, &role)
 	if err != nil {
-		return rest.Group{}, err
+		return rest.Role{}, err
 	}
 
-	return group, nil
+	return role, nil
+}
+
+// RolePermissionList comments to be written...
+func (c *GortClient) RolePermissionList(username string) (rest.RolePermissionList, error) {
+	url := fmt.Sprintf("%s/v2/roles/%s/permissions", c.profile.URL.String(), username)
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return rest.RolePermissionList{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return rest.RolePermissionList{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return rest.RolePermissionList{}, err
+	}
+
+	rpl := rest.RolePermissionList{}
+	err = json.Unmarshal(body, &rpl)
+	if err != nil {
+		return rest.RolePermissionList{}, err
+	}
+
+	return rpl, nil
 }
 
 // RolePermissionRevoke revokes an existing permission from a role
@@ -142,7 +170,7 @@ func (c *GortClient) RolePermissionRevoke(rolename string, bundlename string, pe
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -159,7 +187,7 @@ func (c *GortClient) RolePermissionGrant(rolename string, bundlename string, per
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 

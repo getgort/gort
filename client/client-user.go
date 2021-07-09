@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 
 	"github.com/getgort/gort/data/rest"
 )
@@ -34,7 +35,7 @@ func (c *GortClient) UserDelete(username string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -70,7 +71,7 @@ func (c *GortClient) UserGet(username string) (rest.User, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return rest.User{}, getResponseError(resp)
 	}
 
@@ -97,7 +98,7 @@ func (c *GortClient) UserGroupList(username string) ([]rest.Group, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return []rest.Group{}, getResponseError(resp)
 	}
 
@@ -124,7 +125,7 @@ func (c *GortClient) UserList() ([]rest.User, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return []rest.User{}, getResponseError(resp)
 	}
 
@@ -140,6 +141,33 @@ func (c *GortClient) UserList() ([]rest.User, error) {
 	}
 
 	return users, nil
+}
+
+// UserPermissionList comments to be written...
+func (c *GortClient) UserPermissionList(username string) (rest.RolePermissionList, error) {
+	url := fmt.Sprintf("%s/v2/users/%s/permissions", c.profile.URL.String(), username)
+	resp, err := c.doRequest("GET", url, []byte{})
+	if err != nil {
+		return rest.RolePermissionList{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return rest.RolePermissionList{}, getResponseError(resp)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return rest.RolePermissionList{}, err
+	}
+
+	rpl := rest.RolePermissionList{}
+	err = json.Unmarshal(body, &rpl)
+	if err != nil {
+		return rest.RolePermissionList{}, err
+	}
+
+	return rpl, nil
 }
 
 // UserSave will create or update a user. Note the the key is the username: if
@@ -159,7 +187,7 @@ func (c *GortClient) UserSave(user rest.User) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 

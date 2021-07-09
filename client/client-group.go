@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 
 	"github.com/getgort/gort/data/rest"
 )
@@ -34,7 +35,7 @@ func (c *GortClient) GroupDelete(groupname string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -52,9 +53,9 @@ func (c *GortClient) GroupExists(groupname string) (bool, error) {
 	defer resp.Body.Close()
 
 	switch resp.StatusCode {
-	case 200:
+	case http.StatusOK:
 		return true, nil
-	case 404:
+	case http.StatusNotFound:
 		return false, nil
 	default:
 		return false, getResponseError(resp)
@@ -70,7 +71,7 @@ func (c *GortClient) GroupGet(groupname string) (rest.Group, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return rest.Group{}, getResponseError(resp)
 	}
 
@@ -97,7 +98,7 @@ func (c *GortClient) GroupList() ([]rest.Group, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return []rest.Group{}, getResponseError(resp)
 	}
 
@@ -124,7 +125,7 @@ func (c *GortClient) GroupMemberAdd(groupname string, username string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -140,7 +141,7 @@ func (c *GortClient) GroupMemberDelete(groupname string, username string) error 
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -156,7 +157,7 @@ func (c *GortClient) GroupMemberList(groupname string) ([]rest.User, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return []rest.User{}, getResponseError(resp)
 	}
 
@@ -189,7 +190,7 @@ func (c *GortClient) GroupSave(group rest.Group) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -205,7 +206,7 @@ func (c *GortClient) GroupRoleAdd(groupname string, rolename string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -221,7 +222,7 @@ func (c *GortClient) GroupRoleDelete(groupname string, rolename string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return getResponseError(resp)
 	}
 
@@ -237,7 +238,7 @@ func (c *GortClient) GroupRoleList(groupname string) ([]rest.Role, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return []rest.Role{}, getResponseError(resp)
 	}
 
