@@ -20,5 +20,6 @@ package rest
 // Gort controller's REST service.
 type Group struct {
 	Name  string `json:"name,omitempty"`
+	Roles []Role `json:"roles,omitempty"`
 	Users []User `json:"users,omitempty"`
 }

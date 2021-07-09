@@ -18,6 +18,8 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"sort"
 
 	"go.opentelemetry.io/otel"
 
@@ -26,51 +28,6 @@ import (
 	gerr "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/telemetry"
 )
-
-// GroupAddUser adds a user to a group
-func (da PostgresDataAccess) GroupAddUser(ctx context.Context, groupname string, username string) error {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.GroupAddUser")
-	defer sp.End()
-
-	if groupname == "" {
-		return errs.ErrEmptyGroupName
-	}
-
-	exists, err := da.GroupExists(ctx, groupname)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return errs.ErrNoSuchGroup
-	}
-
-	if username == "" {
-		return errs.ErrEmptyUserName
-	}
-
-	exists, err = da.UserExists(ctx, username)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return errs.ErrNoSuchUser
-	}
-
-	db, err := da.connect(ctx, DatabaseGort)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	query := `INSERT INTO groupusers (groupname, username) VALUES ($1, $2);`
-	_, err = db.ExecContext(ctx, query, groupname, username)
-	if err != nil {
-		err = gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	return err
-}
 
 // GroupCreate creates a new user group.
 func (da PostgresDataAccess) GroupCreate(ctx context.Context, group rest.Group) error {
@@ -195,11 +152,13 @@ func (da PostgresDataAccess) GroupGet(ctx context.Context, groupname string) (re
 
 	group := rest.Group{}
 	err = db.QueryRowContext(ctx, query, groupname).Scan(&group.Name)
-	if err != nil {
-		return group, gerr.Wrap(errs.ErrNoSuchGroup, err)
+	if err == sql.ErrNoRows {
+		return group, errs.ErrNoSuchGroup
+	} else if err != nil {
+		return group, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	users, err := da.GroupListUsers(ctx, groupname)
+	users, err := da.GroupUserList(ctx, groupname)
 	if err != nil {
 		return group, err
 	}
@@ -207,6 +166,75 @@ func (da PostgresDataAccess) GroupGet(ctx context.Context, groupname string) (re
 	group.Users = users
 
 	return group, nil
+}
+
+// GroupList returns a list of all known groups in the datastore.
+// Passwords are not included. Nice try.
+func (da PostgresDataAccess) GroupList(ctx context.Context) ([]rest.Group, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.GroupList")
+	defer sp.End()
+
+	groups := make([]rest.Group, 0)
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return groups, err
+	}
+	defer db.Close()
+
+	query := `SELECT groupname FROM groups`
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return groups, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	for rows.Next() {
+		group := rest.Group{}
+
+		err = rows.Scan(&group.Name)
+		if err != nil {
+			return groups, gerr.Wrap(errs.ErrNoSuchGroup, err)
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups, nil
+}
+
+func (da PostgresDataAccess) GroupPermissionList(ctx context.Context, groupname string) (rest.RolePermissionList, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.GroupPermissionList")
+	defer sp.End()
+
+	roles, err := da.GroupRoleList(ctx, groupname)
+	if err != nil {
+		return rest.RolePermissionList{}, err
+	}
+
+	mp := map[string]rest.RolePermission{}
+
+	for _, r := range roles {
+		rpl, err := da.RolePermissionList(ctx, r.Name)
+		if err != nil {
+			return rest.RolePermissionList{}, err
+		}
+
+		for _, rp := range rpl {
+			mp[rp.String()] = rp
+		}
+	}
+
+	pp := []rest.RolePermission{}
+
+	for _, p := range mp {
+		pp = append(pp, p)
+	}
+
+	sort.Slice(pp, func(i, j int) bool { return pp[i].String() < pp[j].String() })
+
+	return pp, nil
 }
 
 // GroupRoleAdd grants one or more roles to a group.
@@ -251,44 +279,39 @@ func (da PostgresDataAccess) GroupRoleAdd(ctx context.Context, groupname, rolena
 	return err
 }
 
-// GroupList returns a list of all known groups in the datastore.
-// Passwords are not included. Nice try.
-func (da PostgresDataAccess) GroupList(ctx context.Context) ([]rest.Group, error) {
+// GroupRoleDelete revokes a role from a group.
+func (da PostgresDataAccess) GroupRoleDelete(ctx context.Context, groupname, rolename string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.GroupList")
+	ctx, sp := tr.Start(ctx, "postgres.GroupRoleDelete")
 	defer sp.End()
 
-	groups := make([]rest.Group, 0)
+	if groupname == "" {
+		return errs.ErrEmptyGroupName
+	}
+
+	if rolename == "" {
+		return errs.ErrEmptyRoleName
+	}
 
 	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
-		return groups, err
+		return err
 	}
 	defer db.Close()
 
-	query := `SELECT groupname FROM groups`
-	rows, err := db.QueryContext(ctx, query)
+	query := `DELETE FROM group_roles
+		WHERE group_name=$1 AND role_name=$2;`
+	_, err = db.ExecContext(ctx, query, groupname, rolename)
 	if err != nil {
-		return groups, gerr.Wrap(errs.ErrDataAccess, err)
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	for rows.Next() {
-		group := rest.Group{}
-
-		err = rows.Scan(&group.Name)
-		if err != nil {
-			return groups, gerr.Wrap(errs.ErrNoSuchGroup, err)
-		}
-
-		groups = append(groups, group)
-	}
-
-	return groups, nil
+	return err
 }
 
-func (da PostgresDataAccess) GroupListRoles(ctx context.Context, groupname string) ([]rest.Role, error) {
+func (da PostgresDataAccess) GroupRoleList(ctx context.Context, groupname string) ([]rest.Role, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.GroupListRoles")
+	ctx, sp := tr.Start(ctx, "postgres.GroupRoleList")
 	defer sp.End()
 
 	if groupname == "" {
@@ -326,7 +349,7 @@ func (da PostgresDataAccess) GroupListRoles(ctx context.Context, groupname strin
 
 		err = rows.Scan(&name)
 		if err != nil {
-			return nil, gerr.Wrap(errs.ErrNoSuchUser, err)
+			return nil, gerr.Wrap(errs.ErrDataAccess, err)
 		}
 
 		role, err := da.RoleGet(ctx, name)
@@ -338,110 +361,6 @@ func (da PostgresDataAccess) GroupListRoles(ctx context.Context, groupname strin
 	}
 
 	return roles, nil
-}
-
-// GroupListUsers returns a list of all known users in a group.
-func (da PostgresDataAccess) GroupListUsers(ctx context.Context, groupname string) ([]rest.User, error) {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.GroupListUsers")
-	defer sp.End()
-
-	users := make([]rest.User, 0)
-
-	db, err := da.connect(ctx, DatabaseGort)
-	if err != nil {
-		return users, err
-	}
-	defer db.Close()
-
-	query := `SELECT email, full_name, username
-	FROM users
-	WHERE username IN (
-		SELECT username
-		FROM groupusers
-		WHERE groupname = $1
-	)`
-
-	rows, err := db.QueryContext(ctx, query, groupname)
-	if err != nil {
-		return users, gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	for rows.Next() {
-		user := rest.User{}
-
-		err = rows.Scan(&user.Email, &user.FullName, &user.Username)
-		if err != nil {
-			return users, gerr.Wrap(errs.ErrNoSuchUser, err)
-		}
-
-		users = append(users, user)
-	}
-
-	return users, nil
-}
-
-// GroupRemoveUser removes a user from a group.
-func (da PostgresDataAccess) GroupRemoveUser(ctx context.Context, groupname string, username string) error {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.GroupRemoveUser")
-	defer sp.End()
-
-	if groupname == "" {
-		return errs.ErrEmptyGroupName
-	}
-
-	exists, err := da.GroupExists(ctx, groupname)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return errs.ErrNoSuchGroup
-	}
-
-	db, err := da.connect(ctx, DatabaseGort)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	query := "DELETE FROM groupusers WHERE groupname=$1 AND username=$2;"
-	_, err = db.ExecContext(ctx, query, groupname, username)
-	if err != nil {
-		err = gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	return err
-}
-
-// GroupRoleDelete revokes a role from a group.
-func (da PostgresDataAccess) GroupRoleDelete(ctx context.Context, groupname, rolename string) error {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.GroupRoleDelete")
-	defer sp.End()
-
-	if groupname == "" {
-		return errs.ErrEmptyGroupName
-	}
-
-	if rolename == "" {
-		return errs.ErrEmptyRoleName
-	}
-
-	db, err := da.connect(ctx, DatabaseGort)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	query := `DELETE FROM group_roles
-		WHERE group_name=$1 AND role_name=$2;`
-	_, err = db.ExecContext(ctx, query, groupname, rolename)
-	if err != nil {
-		return gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	return err
 }
 
 // GroupUpdate is used to update an existing group. An error is returned if the
@@ -483,12 +402,133 @@ func (da PostgresDataAccess) GroupUpdate(ctx context.Context, group rest.Group) 
 	return err
 }
 
-// GroupUserAdd comments TBD
-func (da PostgresDataAccess) GroupUserAdd(ctx context.Context, group string, user string) error {
-	return errs.ErrNotImplemented
+// GroupUserAdd adds a user to a group
+func (da PostgresDataAccess) GroupUserAdd(ctx context.Context, groupname string, username string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.GroupUserAdd")
+	defer sp.End()
+
+	if groupname == "" {
+		return errs.ErrEmptyGroupName
+	}
+
+	exists, err := da.GroupExists(ctx, groupname)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errs.ErrNoSuchGroup
+	}
+
+	if username == "" {
+		return errs.ErrEmptyUserName
+	}
+
+	exists, err = da.UserExists(ctx, username)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errs.ErrNoSuchUser
+	}
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query := `INSERT INTO groupusers (groupname, username) VALUES ($1, $2);`
+	_, err = db.ExecContext(ctx, query, groupname, username)
+	if err != nil {
+		err = gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return err
 }
 
-// GroupUserDelete comments TBD
-func (da PostgresDataAccess) GroupUserDelete(ctx context.Context, group string, user string) error {
-	return errs.ErrNotImplemented
+// GroupUserDelete removes a user from a group.
+func (da PostgresDataAccess) GroupUserDelete(ctx context.Context, groupname string, username string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.GroupUserDelete")
+	defer sp.End()
+
+	if groupname == "" {
+		return errs.ErrEmptyGroupName
+	}
+
+	exists, err := da.GroupExists(ctx, groupname)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errs.ErrNoSuchGroup
+	}
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query := "DELETE FROM groupusers WHERE groupname=$1 AND username=$2;"
+	_, err = db.ExecContext(ctx, query, groupname, username)
+	if err != nil {
+		err = gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return err
+}
+
+// GroupUserList returns a list of all known users in a group.
+func (da PostgresDataAccess) GroupUserList(ctx context.Context, groupname string) ([]rest.User, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.GroupUserList")
+	defer sp.End()
+
+	users := make([]rest.User, 0)
+
+	if groupname == "" {
+		return users, errs.ErrEmptyGroupName
+	}
+
+	exists, err := da.GroupExists(ctx, groupname)
+	if err != nil {
+		return users, err
+	}
+	if !exists {
+		return users, errs.ErrNoSuchGroup
+	}
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return users, err
+	}
+	defer db.Close()
+
+	query := `SELECT email, full_name, username
+	FROM users
+	WHERE username IN (
+		SELECT username
+		FROM groupusers
+		WHERE groupname = $1
+	)`
+
+	rows, err := db.QueryContext(ctx, query, groupname)
+	if err != nil {
+		return users, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	for rows.Next() {
+		user := rest.User{}
+
+		err = rows.Scan(&user.Email, &user.FullName, &user.Username)
+		if err != nil {
+			return users, gerr.Wrap(errs.ErrNoSuchUser, err)
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
 }

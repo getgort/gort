@@ -45,33 +45,36 @@ type DataAccess interface {
 	BundleExists(ctx context.Context, name string, version string) (bool, error)
 	BundleGet(ctx context.Context, name string, version string) (data.Bundle, error)
 	BundleList(ctx context.Context) ([]data.Bundle, error)
-	BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error)
+	BundleVersionList(ctx context.Context, name string) ([]data.Bundle, error)
 	BundleUpdate(ctx context.Context, bundle data.Bundle) error
 
-	GroupAddUser(ctx context.Context, groupname string, username string) error
 	GroupCreate(ctx context.Context, group rest.Group) error
 	GroupDelete(ctx context.Context, groupname string) error
 	GroupExists(ctx context.Context, groupname string) (bool, error)
 	GroupGet(ctx context.Context, groupname string) (rest.Group, error)
 	GroupList(ctx context.Context) ([]rest.Group, error)
-	GroupListRoles(ctx context.Context, groupname string) ([]rest.Role, error)
-	GroupListUsers(ctx context.Context, groupname string) ([]rest.User, error)
-	GroupRemoveUser(ctx context.Context, groupname string, username string) error
+	GroupPermissionList(ctx context.Context, groupname string) (rest.RolePermissionList, error)
 	GroupRoleAdd(ctx context.Context, groupname, rolename string) error
 	GroupRoleDelete(ctx context.Context, groupname, rolename string) error
+	GroupRoleList(ctx context.Context, groupname string) ([]rest.Role, error)
 	GroupUpdate(ctx context.Context, group rest.Group) error
 	GroupUserAdd(ctx context.Context, groupname string, username string) error
 	GroupUserDelete(ctx context.Context, groupname string, username string) error
+	GroupUserList(ctx context.Context, groupname string) ([]rest.User, error)
 
 	RoleCreate(ctx context.Context, rolename string) error
 	RoleDelete(ctx context.Context, rolename string) error
 	RoleGet(ctx context.Context, rolename string) (rest.Role, error)
+	RoleGroupAdd(ctx context.Context, rolename, groupname string) error
+	RoleGroupDelete(ctx context.Context, rolename, groupname string) error
+	RoleGroupExists(ctx context.Context, rolename, groupname string) (bool, error)
+	RoleGroupList(ctx context.Context, rolename string) ([]rest.Group, error)
 	RoleList(ctx context.Context) ([]rest.Role, error)
 	RoleExists(ctx context.Context, rolename string) (bool, error)
-	RoleHasPermission(ctx context.Context, rolename, bundlename, permission string) (bool, error)
 	RolePermissionAdd(ctx context.Context, rolename, bundlename, permission string) error
 	RolePermissionDelete(ctx context.Context, rolename, bundlename, permission string) error
-	RolePermissionList(ctx context.Context, rolename string) ([]rest.RolePermission, error)
+	RolePermissionExists(ctx context.Context, rolename, bundlename, permission string) (bool, error)
+	RolePermissionList(ctx context.Context, rolename string) (rest.RolePermissionList, error)
 
 	TokenEvaluate(ctx context.Context, token string) bool
 	TokenGenerate(ctx context.Context, username string, duration time.Duration) (rest.Token, error)
@@ -89,6 +92,7 @@ type DataAccess interface {
 	UserGroupAdd(ctx context.Context, username string, groupname string) error
 	UserGroupDelete(ctx context.Context, username string, groupname string) error
 	UserList(ctx context.Context) ([]rest.User, error)
-	UserPermissions(ctx context.Context, username string) ([]string, error)
+	UserPermissionList(ctx context.Context, username string) (rest.RolePermissionList, error)
+	UserRoleList(ctx context.Context, username string) ([]rest.Role, error)
 	UserUpdate(ctx context.Context, user rest.User) error
 }

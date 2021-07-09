@@ -30,7 +30,12 @@ func testRoleAccess(t *testing.T) {
 	t.Run("testRoleExists", testRoleExists)
 	t.Run("testRoleDelete", testRoleDelete)
 	t.Run("testRoleGet", testRoleGet)
-	t.Run("testRoleHasPermission", testRoleHasPermission)
+	t.Run("testRoleGroupAdd", testRoleGroupAdd)
+	t.Run("testRoleGroupDelete", testRoleGroupDelete)
+	t.Run("testRoleGroupExists", testRoleGroupExists)
+	t.Run("testRoleGroupList", testRoleGroupList)
+	t.Run("testRolePermissionExists", testRolePermissionExists)
+	t.Run("testRolePermissionAdd", testRolePermissionAdd)
 	t.Run("testRolePermissionList", testRolePermissionList)
 }
 
@@ -164,13 +169,193 @@ func testRoleGet(t *testing.T) {
 	assert.Equal(t, expected, role)
 }
 
-func testRoleHasPermission(t *testing.T) {
+func testRoleGroupAdd(t *testing.T) {
+	var err error
+
+	rolename := "role-test-role-group-add"
+	groupnames := []string{
+		"perm-test-role-group-add-0",
+		"perm-test-role-group-add-1",
+	}
+
+	// No such group yet
+	err = da.RoleGroupAdd(ctx, rolename, groupnames[1])
+	assert.ErrorIs(t, err, errs.ErrNoSuchGroup)
+
+	da.GroupCreate(ctx, rest.Group{Name: groupnames[0]})
+	defer da.GroupDelete(ctx, groupnames[0])
+	da.GroupCreate(ctx, rest.Group{Name: groupnames[1]})
+	defer da.GroupDelete(ctx, groupnames[1])
+
+	// Groups exist now, but the role doesn't
+	err = da.RoleGroupAdd(ctx, rolename, groupnames[1])
+	assert.ErrorIs(t, err, errs.ErrNoSuchRole)
+
+	da.RoleCreate(ctx, rolename)
+	defer da.RoleDelete(ctx, rolename)
+
+	for _, groupname := range groupnames {
+		err = da.RoleGroupAdd(ctx, rolename, groupname)
+		assert.NoError(t, err)
+	}
+
+	for _, groupname := range groupnames {
+		exists, _ := da.RoleGroupExists(ctx, rolename, groupname)
+		assert.True(t, exists, groupname)
+	}
+}
+
+func testRoleGroupDelete(t *testing.T) {
+
+}
+
+func testRoleGroupExists(t *testing.T) {
+	var err error
+
+	rolename := "role-test-role-group-exists"
+	groupnames := []string{
+		"group-test-role-group-exists-0",
+		"group-test-role-group-exists-1",
+	}
+	groupnull := "group-test-role-group-exists-null"
+
+	// No such role yet
+	_, err = da.RoleGroupExists(ctx, rolename, groupnames[1])
+	assert.ErrorIs(t, err, errs.ErrNoSuchRole)
+
+	da.RoleCreate(ctx, rolename)
+	defer da.RoleDelete(ctx, rolename)
+
+	// Groups exist now, but the role doesn't
+	_, err = da.RoleGroupExists(ctx, rolename, groupnames[1])
+	assert.ErrorIs(t, err, errs.ErrNoSuchGroup)
+
+	da.GroupCreate(ctx, rest.Group{Name: groupnames[0]})
+	defer da.GroupDelete(ctx, groupnames[0])
+	da.GroupCreate(ctx, rest.Group{Name: groupnames[1]})
+	defer da.GroupDelete(ctx, groupnames[1])
+	da.GroupCreate(ctx, rest.Group{Name: groupnull})
+	defer da.GroupDelete(ctx, groupnull)
+
+	for _, groupname := range groupnames {
+		da.RoleGroupAdd(ctx, rolename, groupname)
+	}
+
+	for _, groupname := range groupnames {
+		exists, err := da.RoleGroupExists(ctx, rolename, groupname)
+		assert.NoError(t, err)
+		assert.True(t, exists)
+	}
+
+	// Null group should NOT exist on the role
+	exists, err := da.RoleGroupExists(ctx, rolename, groupnull)
+	assert.NoError(t, err)
+	assert.False(t, exists)
+}
+
+func testRoleGroupList(t *testing.T) {
+	var err error
+
+	rolename := "role-test-role-group-list"
+	groupnames := []string{
+		"group-test-role-group-list-0",
+		"group-test-role-group-list-1",
+	}
+	groupnull := "group-test-role-group-list-null"
+
+	// No such role yet
+	_, err = da.RoleGroupList(ctx, rolename)
+	assert.ErrorIs(t, err, errs.ErrNoSuchRole)
+
+	da.RoleCreate(ctx, rolename)
+	defer da.RoleDelete(ctx, rolename)
+
+	// Groups exist now, but the role doesn't
+	groups, err := da.RoleGroupList(ctx, rolename)
+	assert.NoError(t, err)
+	assert.Empty(t, groups)
+
+	da.GroupCreate(ctx, rest.Group{Name: groupnames[1]})
+	defer da.GroupDelete(ctx, groupnames[1])
+	da.GroupCreate(ctx, rest.Group{Name: groupnames[0]})
+	defer da.GroupDelete(ctx, groupnames[0])
+	da.GroupCreate(ctx, rest.Group{Name: groupnull})
+	defer da.GroupDelete(ctx, groupnull)
+
+	for _, groupname := range groupnames {
+		da.RoleGroupAdd(ctx, rolename, groupname)
+	}
+
+	// Currently the groups are NOT expected to be fully described (i.e.,
+	// their roles slices don't have to be complete).
+	groups, err = da.RoleGroupList(ctx, rolename)
+	assert.NoError(t, err)
+	assert.Len(t, groups, 2)
+
+	for i, g := range groups {
+		assert.Equal(t, groupnames[i], g.Name)
+	}
+}
+
+func testRolePermissionAdd(t *testing.T) {
+	var exists bool
+	var err error
+
+	const rolename = "role-test-role-permission-add"
+	const bundlename = "test"
+	const permname1 = "perm-test-role-permission-add-0"
+	const permname2 = "perm-test-role-permission-add-1"
+
+	da.RoleCreate(ctx, rolename)
+	defer da.RoleDelete(ctx, rolename)
+
+	role, _ := da.RoleGet(ctx, rolename)
+	if !assert.Len(t, role.Permissions, 0) {
+		t.FailNow()
+	}
+
+	// First permission
+	err = da.RolePermissionAdd(ctx, rolename, bundlename, permname1)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	defer da.RolePermissionDelete(ctx, rolename, bundlename, permname1)
+
+	role, _ = da.RoleGet(ctx, rolename)
+	if !assert.Len(t, role.Permissions, 1) {
+		t.FailNow()
+	}
+
+	exists, _ = da.RolePermissionExists(ctx, rolename, bundlename, permname1)
+	if !assert.True(t, exists) {
+		t.FailNow()
+	}
+
+	// Second permission
+	err = da.RolePermissionAdd(ctx, rolename, bundlename, permname2)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	defer da.RolePermissionDelete(ctx, rolename, bundlename, permname2)
+
+	role, _ = da.RoleGet(ctx, rolename)
+	if !assert.Len(t, role.Permissions, 2) {
+		t.FailNow()
+	}
+
+	exists, _ = da.RolePermissionExists(ctx, rolename, bundlename, permname2)
+	if !assert.True(t, exists) {
+		t.FailNow()
+	}
+}
+
+func testRolePermissionExists(t *testing.T) {
 	var err error
 
 	da.RoleCreate(ctx, "role-test-role-has-permission")
 	defer da.RoleDelete(ctx, "role-test-role-has-permission")
 
-	has, err := da.RoleHasPermission(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
+	has, err := da.RolePermissionExists(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
 	if !assert.NoError(t, err) || !assert.False(t, has) {
 		t.FailNow()
 	}
@@ -181,12 +366,12 @@ func testRoleHasPermission(t *testing.T) {
 	}
 	defer da.RolePermissionDelete(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
 
-	has, err = da.RoleHasPermission(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
+	has, err = da.RolePermissionExists(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
 	if !assert.NoError(t, err) || !assert.True(t, has) {
 		t.FailNow()
 	}
 
-	has, err = da.RoleHasPermission(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-2")
+	has, err = da.RolePermissionExists(ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-2")
 	if !assert.NoError(t, err) || !assert.False(t, has) {
 		t.FailNow()
 	}
@@ -217,7 +402,7 @@ func testRolePermissionList(t *testing.T) {
 	defer da.RolePermissionDelete(ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-2")
 
 	// Expect a sorted list!
-	expect := []rest.RolePermission{
+	expect := rest.RolePermissionList{
 		{BundleName: "test", Permission: "permission-test-role-permission-list-1"},
 		{BundleName: "test", Permission: "permission-test-role-permission-list-2"},
 		{BundleName: "test", Permission: "permission-test-role-permission-list-3"},

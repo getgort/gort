@@ -25,28 +25,17 @@ import (
 )
 
 // RoleCreate creates a new role.
-func (da *InMemoryDataAccess) RoleCreate(ctx context.Context, name string) error {
-	if name == "" {
+func (da *InMemoryDataAccess) RoleCreate(ctx context.Context, rolename string) error {
+	if rolename == "" {
 		return errs.ErrEmptyRoleName
 	}
 
-	if nil != da.roles[name] {
+	if nil != da.roles[rolename] {
 		return errs.ErrRoleExists
 	}
 
-	da.roles[name] = &rest.Role{Name: name, Permissions: []rest.RolePermission{}}
+	da.roles[rolename] = &rest.Role{Name: rolename, Permissions: []rest.RolePermission{}}
 	return nil
-}
-
-// RoleList
-func (da *InMemoryDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) {
-	list := make([]rest.Role, 0)
-
-	for _, r := range da.roles {
-		list = append(list, *r)
-	}
-
-	return list, nil
 }
 
 // RoleDelete
@@ -73,10 +62,10 @@ func (da *InMemoryDataAccess) RoleExists(ctx context.Context, name string) (bool
 }
 
 // RoleGet gets a specific group.
-func (da *InMemoryDataAccess) RoleGet(ctx context.Context, name string) (rest.Role, error) {
-	role, ok := da.roles[name]
+func (da *InMemoryDataAccess) RoleGet(ctx context.Context, rolename string) (rest.Role, error) {
+	role, ok := da.roles[rolename]
 
-	if name == "" {
+	if rolename == "" {
 		return rest.Role{}, errs.ErrEmptyRoleName
 	}
 
@@ -87,14 +76,80 @@ func (da *InMemoryDataAccess) RoleGet(ctx context.Context, name string) (rest.Ro
 	return *role, nil
 }
 
+// RolePermissionExists returns true if the given role has been granted the
+// specified permission. It returns an error if rolename is empty or if no
+// such role exists.
+func (da *InMemoryDataAccess) RolePermissionExists(ctx context.Context, rolename, bundlename, permission string) (bool, error) {
+	perms, err := da.RolePermissionList(ctx, rolename)
+	if err != nil {
+		return false, err
+	}
+
+	for _, p := range perms {
+		if p.BundleName == bundlename && p.Permission == permission {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// RoleList
+func (da *InMemoryDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) {
+	list := make([]rest.Role, 0)
+
+	for _, r := range da.roles {
+		list = append(list, *r)
+	}
+
+	return list, nil
+}
+
+func (da *InMemoryDataAccess) RoleGroupAdd(ctx context.Context, rolename, groupname string) error {
+	return da.GroupRoleAdd(ctx, groupname, rolename)
+}
+
+func (da *InMemoryDataAccess) RoleGroupDelete(ctx context.Context, rolename, groupname string) error {
+	return da.GroupRoleDelete(ctx, groupname, rolename)
+}
+
+func (da *InMemoryDataAccess) RoleGroupExists(ctx context.Context, rolename, groupname string) (bool, error) {
+	groups, err := da.RoleGroupList(ctx, rolename)
+	if err != nil {
+		return false, err
+	}
+
+	if exists, err := da.GroupExists(ctx, groupname); err != nil {
+		return false, err
+	} else if !exists {
+		return false, errs.ErrNoSuchGroup
+	}
+
+	for _, g := range groups {
+		if g.Name == groupname {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (da *InMemoryDataAccess) RoleGroupList(ctx context.Context, rolename string) ([]rest.Group, error) {
+	role, ok := da.roles[rolename]
+	if !ok {
+		return nil, errs.ErrNoSuchRole
+	}
+	return role.Groups, nil
+}
+
 func (da *InMemoryDataAccess) RolePermissionAdd(ctx context.Context, rolename, bundlename, permission string) error {
 	role, ok := da.roles[rolename]
-
 	if !ok {
 		return errs.ErrNoSuchRole
 	}
 
 	role.Permissions = append(role.Permissions, rest.RolePermission{BundleName: bundlename, Permission: permission})
+
 	return nil
 }
 
@@ -119,28 +174,10 @@ func (da *InMemoryDataAccess) RolePermissionDelete(ctx context.Context, rolename
 	return nil
 }
 
-// RoleHasPermission returns true if the given role has been granted the
-// specified permission. It returns an error if rolename is empty or if no
-// such role exists.
-func (da *InMemoryDataAccess) RoleHasPermission(ctx context.Context, rolename, bundlename, permission string) (bool, error) {
-	perms, err := da.RolePermissionList(ctx, rolename)
-	if err != nil {
-		return false, err
-	}
-
-	for _, p := range perms {
-		if p.BundleName == bundlename && p.Permission == permission {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
 // RolePermissionList returns returns an alphabetically-sorted list of
 // fully-qualified (i.e., "bundle:permission") permissions granted to
 // the role.
-func (da *InMemoryDataAccess) RolePermissionList(ctx context.Context, rolename string) ([]rest.RolePermission, error) {
+func (da *InMemoryDataAccess) RolePermissionList(ctx context.Context, rolename string) (rest.RolePermissionList, error) {
 	role, err := da.RoleGet(ctx, rolename)
 	if err != nil {
 		return nil, err

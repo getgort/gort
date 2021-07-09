@@ -25,44 +25,85 @@ import (
 )
 
 func testGroupAccess(t *testing.T) {
-	t.Run("testGroupAddUser", testGroupAddUser)
+	t.Run("testGroupUserAdd", testGroupUserAdd)
+	t.Run("testGroupUserList", testGroupUserList)
 	t.Run("testGroupCreate", testGroupCreate)
 	t.Run("testGroupDelete", testGroupDelete)
 	t.Run("testGroupExists", testGroupExists)
 	t.Run("testGroupGet", testGroupGet)
 	t.Run("testGroupRoleAdd", testGroupRoleAdd)
+	t.Run("testGroupPermissionList", testGroupPermissionList)
 	t.Run("testGroupList", testGroupList)
-	t.Run("testGroupListRoles", testGroupListRoles)
-	t.Run("testGroupRemoveUser", testGroupRemoveUser)
+	t.Run("testGroupRoleList", testGroupRoleList)
+	t.Run("testGroupUserDelete", testGroupUserDelete)
 }
 
-func testGroupAddUser(t *testing.T) {
-	err := da.GroupAddUser(ctx, "foo", "bar")
+func testGroupUserAdd(t *testing.T) {
+	var (
+		groupname = "group-test-group-user-add"
+		username  = "user-test-group-user-add"
+		useremail = "user@foo.bar"
+	)
+
+	err := da.GroupUserAdd(ctx, groupname, username)
 	assert.Error(t, err, errs.ErrNoSuchGroup)
 
-	da.GroupCreate(ctx, rest.Group{Name: "foo"})
-	defer da.GroupDelete(ctx, "foo")
+	da.GroupCreate(ctx, rest.Group{Name: groupname})
+	defer da.GroupDelete(ctx, groupname)
 
-	err = da.GroupAddUser(ctx, "foo", "bar")
+	err = da.GroupUserAdd(ctx, groupname, username)
 	assert.Error(t, err, errs.ErrNoSuchUser)
 
-	da.UserCreate(ctx, rest.User{Username: "bar", Email: "bar"})
-	defer da.UserDelete(ctx, "bar")
+	da.UserCreate(ctx, rest.User{Username: username, Email: useremail})
+	defer da.UserDelete(ctx, username)
 
-	err = da.GroupAddUser(ctx, "foo", "bar")
+	err = da.GroupUserAdd(ctx, groupname, username)
 	assert.NoError(t, err)
 
-	group, _ := da.GroupGet(ctx, "foo")
+	group, _ := da.GroupGet(ctx, groupname)
 
-	if len(group.Users) != 1 {
-		t.Error("Users list empty")
+	if !assert.Len(t, group.Users, 1) {
 		t.FailNow()
 	}
 
-	if len(group.Users) > 0 && group.Users[0].Username != "bar" {
-		t.Error("Wrong user!")
+	assert.Equal(t, group.Users[0].Username, username)
+	assert.Equal(t, group.Users[0].Email, useremail)
+}
+
+func testGroupUserList(t *testing.T) {
+	var (
+		groupname = "group-test-group-user-list"
+		expected  = []rest.User{
+			{Username: "user-test-group-user-list-0", Email: "user-test-group-user-list-0@email.com"},
+			{Username: "user-test-group-user-list-1", Email: "user-test-group-user-list-1@email.com"},
+		}
+	)
+
+	_, err := da.GroupUserList(ctx, groupname)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, errs.ErrNoSuchGroup)
+
+	da.GroupCreate(ctx, rest.Group{Name: groupname})
+	defer da.GroupDelete(ctx, groupname)
+
+	da.UserCreate(ctx, expected[0])
+	defer da.UserDelete(ctx, expected[0].Username)
+	da.UserCreate(ctx, expected[1])
+	defer da.UserDelete(ctx, expected[1].Username)
+
+	da.GroupUserAdd(ctx, groupname, expected[0].Username)
+	da.GroupUserAdd(ctx, groupname, expected[1].Username)
+
+	actual, err := da.GroupUserList(ctx, groupname)
+	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
+
+	if !assert.Len(t, actual, 2) {
+		t.FailNow()
+	}
+
+	assert.Equal(t, expected, actual)
 }
 
 func testGroupCreate(t *testing.T) {
@@ -126,34 +167,74 @@ func testGroupExists(t *testing.T) {
 }
 
 func testGroupGet(t *testing.T) {
+	groupname := "group-test-group-get"
+
 	var err error
 	var group rest.Group
 
 	// Expect an error
 	_, err = da.GroupGet(ctx, "")
-	assert.Error(t, err, errs.ErrEmptyGroupName)
+	assert.ErrorIs(t, err, errs.ErrEmptyGroupName)
 
 	// Expect an error
-	_, err = da.GroupGet(ctx, "test-get")
-	assert.Error(t, err, errs.ErrNoSuchGroup)
+	_, err = da.GroupGet(ctx, groupname)
+	assert.ErrorIs(t, err, errs.ErrNoSuchGroup)
 
-	da.GroupCreate(ctx, rest.Group{Name: "test-get"})
-	defer da.GroupDelete(ctx, "test-get")
+	da.GroupCreate(ctx, rest.Group{Name: groupname})
+	defer da.GroupDelete(ctx, groupname)
 
 	// da.Group ctx, should exist now
-	exists, _ := da.GroupExists(ctx, "test-get")
-	if !exists {
-		t.Error("Group should exist now")
+	exists, _ := da.GroupExists(ctx, groupname)
+	if !assert.True(t, exists) {
 		t.FailNow()
 	}
 
 	// Expect no error
-	group, err = da.GroupGet(ctx, "test-get")
-	assert.NoError(t, err)
-	if group.Name != "test-get" {
-		t.Errorf("Group name mismatch: %q is not \"test-get\"", group.Name)
+	group, err = da.GroupGet(ctx, groupname)
+	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
+	if !assert.Equal(t, groupname, group.Name) {
+		t.FailNow()
+	}
+}
+
+func testGroupPermissionList(t *testing.T) {
+	const (
+		groupname  = "group-test-group-permission-list"
+		rolename   = "role-test-group-permission-list"
+		bundlename = "test"
+	)
+
+	var expected = rest.RolePermissionList{
+		{BundleName: bundlename, Permission: "role-test-group-permission-list-1"},
+		{BundleName: bundlename, Permission: "role-test-group-permission-list-2"},
+		{BundleName: bundlename, Permission: "role-test-group-permission-list-3"},
+	}
+
+	var err error
+
+	da.GroupCreate(ctx, rest.Group{Name: groupname})
+	defer da.GroupDelete(ctx, groupname)
+
+	da.RoleCreate(ctx, rolename)
+	defer da.RoleDelete(ctx, rolename)
+
+	err = da.GroupRoleAdd(ctx, groupname, rolename)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	da.RolePermissionAdd(ctx, rolename, expected[0].BundleName, expected[0].Permission)
+	da.RolePermissionAdd(ctx, rolename, expected[1].BundleName, expected[1].Permission)
+	da.RolePermissionAdd(ctx, rolename, expected[2].BundleName, expected[2].Permission)
+
+	actual, err := da.GroupPermissionList(ctx, groupname)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	assert.Equal(t, expected, actual)
 }
 
 func testGroupRoleAdd(t *testing.T) {
@@ -190,7 +271,7 @@ func testGroupRoleAdd(t *testing.T) {
 		},
 	}
 
-	roles, err := da.GroupListRoles(ctx, groupName)
+	roles, err := da.GroupRoleList(ctx, groupName)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -204,7 +285,7 @@ func testGroupRoleAdd(t *testing.T) {
 
 	expectedRoles = []rest.Role{}
 
-	roles, err = da.GroupListRoles(ctx, groupName)
+	roles, err = da.GroupRoleList(ctx, groupName)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -238,45 +319,53 @@ func testGroupList(t *testing.T) {
 	}
 }
 
-func testGroupListRoles(t *testing.T) {
-	da.GroupCreate(ctx, rest.Group{Name: "group-test-group-list-roles"})
-	defer da.GroupDelete(ctx, "group-test-group-list-roles")
+func testGroupRoleList(t *testing.T) {
+	var (
+		groupname = "group-test-group-list-roles"
+		rolenames = []string{
+			"role-test-group-list-roles-0",
+			"role-test-group-list-roles-1",
+			"role-test-group-list-roles-2",
+		}
+	)
+	da.GroupCreate(ctx, rest.Group{Name: groupname})
+	defer da.GroupDelete(ctx, groupname)
 
-	da.RoleCreate(ctx, "role-test-group-list-roles-1")
-	defer da.RoleDelete(ctx, "role-test-group-list-roles-1")
+	da.RoleCreate(ctx, rolenames[1])
+	defer da.RoleDelete(ctx, rolenames[1])
 
-	da.RoleCreate(ctx, "role-test-group-list-roles-0")
-	defer da.RoleDelete(ctx, "role-test-group-list-roles-0")
+	da.RoleCreate(ctx, rolenames[0])
+	defer da.RoleDelete(ctx, rolenames[0])
 
-	da.RoleCreate(ctx, "role-test-group-list-roles-2")
-	defer da.RoleDelete(ctx, "role-test-group-list-roles-2")
+	da.RoleCreate(ctx, rolenames[2])
+	defer da.RoleDelete(ctx, rolenames[2])
 
-	roles, err := da.GroupListRoles(ctx, "group-test-group-list-roles")
+	roles, err := da.GroupRoleList(ctx, groupname)
 	if !assert.NoError(t, err) && !assert.Empty(t, roles) {
 		t.FailNow()
 	}
 
-	err = da.GroupRoleAdd(ctx, "group-test-group-list-roles", "role-test-group-list-roles-1")
+	err = da.GroupRoleAdd(ctx, groupname, rolenames[1])
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	err = da.GroupRoleAdd(ctx, "group-test-group-list-roles", "role-test-group-list-roles-0")
+	err = da.GroupRoleAdd(ctx, groupname, rolenames[0])
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	err = da.GroupRoleAdd(ctx, "group-test-group-list-roles", "role-test-group-list-roles-2")
+	err = da.GroupRoleAdd(ctx, groupname, rolenames[2])
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
 
 	// Note: alphabetically sorted!
 	expected := []rest.Role{
-		{Name: "role-test-group-list-roles-0", Permissions: []rest.RolePermission{}},
-		{Name: "role-test-group-list-roles-1", Permissions: []rest.RolePermission{}},
-		{Name: "role-test-group-list-roles-2", Permissions: []rest.RolePermission{}},
+		{Name: rolenames[0], Permissions: []rest.RolePermission{}},
+		{Name: rolenames[1], Permissions: []rest.RolePermission{}},
+		{Name: rolenames[2], Permissions: []rest.RolePermission{}},
 	}
 
-	actual, err := da.GroupListRoles(ctx, "group-test-group-list-roles")
+	actual, err := da.GroupRoleList(ctx, groupname)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -284,14 +373,14 @@ func testGroupListRoles(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func testGroupRemoveUser(t *testing.T) {
+func testGroupUserDelete(t *testing.T) {
 	da.GroupCreate(ctx, rest.Group{Name: "foo"})
 	defer da.GroupDelete(ctx, "foo")
 
 	da.UserCreate(ctx, rest.User{Username: "bat"})
 	defer da.UserDelete(ctx, "bat")
 
-	err := da.GroupAddUser(ctx, "foo", "bat")
+	err := da.GroupUserAdd(ctx, "foo", "bat")
 	assert.NoError(t, err)
 
 	group, err := da.GroupGet(ctx, "foo")
@@ -307,7 +396,7 @@ func testGroupRemoveUser(t *testing.T) {
 		t.FailNow()
 	}
 
-	err = da.GroupRemoveUser(ctx, "foo", "bat")
+	err = da.GroupUserDelete(ctx, "foo", "bat")
 	assert.NoError(t, err)
 
 	group, err = da.GroupGet(ctx, "foo")

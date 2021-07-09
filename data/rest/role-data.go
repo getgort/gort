@@ -21,6 +21,7 @@ import "fmt"
 type Role struct {
 	Name        string
 	Permissions []RolePermission
+	Groups      []Group
 }
 
 type RolePermission struct {
@@ -28,6 +29,18 @@ type RolePermission struct {
 	Permission string
 }
 
-func (r RolePermission) String() string {
-	return fmt.Sprintf("%s:%s", r.BundleName, r.Permission)
+func (p RolePermission) String() string {
+	return fmt.Sprintf("%s:%s", p.BundleName, p.Permission)
+}
+
+type RolePermissionList []RolePermission
+
+func (l RolePermissionList) Strings() []string {
+	s := make([]string, len(l))
+
+	for i, p := range l {
+		s[i] = p.String()
+	}
+
+	return s
 }

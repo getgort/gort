@@ -364,63 +364,6 @@ func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, err
 	return bundles, nil
 }
 
-// BundleListVersions TBD
-func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error) {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.BundleListVersions")
-	defer sp.End()
-
-	// This is hacky as fuck. I know.
-	// I'll optimize later.
-
-	db, err := da.connect(ctx, "gort")
-	if err != nil {
-		return []data.Bundle{}, err
-	}
-	defer db.Close()
-
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		tx.Rollback()
-		return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	query := `SELECT name, version FROM bundles WHERE name=$1`
-	rows, err := tx.QueryContext(ctx, query, name)
-	if err != nil {
-		tx.Rollback()
-		return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	bds := make([]bundleData, 0)
-	for rows.Next() {
-		var bd bundleData
-
-		err = rows.Scan(&bd.BundleName, &bd.BundleVersion)
-		if err != nil {
-			rows.Close()
-			tx.Rollback()
-			return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
-		}
-
-		bds = append(bds, bd)
-	}
-	rows.Close()
-
-	bundles := make([]data.Bundle, 0)
-	for _, bd := range bds {
-		bundle, err := da.doBundleGet(ctx, tx, bd.BundleName, bd.BundleVersion)
-		if err != nil {
-			tx.Rollback()
-			return []data.Bundle{}, err
-		}
-
-		bundles = append(bundles, bundle)
-	}
-
-	return bundles, nil
-}
-
 // BundleUpdate TBD
 func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundle) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -472,6 +415,63 @@ func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundl
 	}
 
 	return nil
+}
+
+// BundleVersionList TBD
+func (da PostgresDataAccess) BundleVersionList(ctx context.Context, name string) ([]data.Bundle, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.BundleVersionList")
+	defer sp.End()
+
+	// This is hacky as fuck. I know.
+	// I'll optimize later.
+
+	db, err := da.connect(ctx, "gort")
+	if err != nil {
+		return []data.Bundle{}, err
+	}
+	defer db.Close()
+
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		tx.Rollback()
+		return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	query := `SELECT name, version FROM bundles WHERE name=$1`
+	rows, err := tx.QueryContext(ctx, query, name)
+	if err != nil {
+		tx.Rollback()
+		return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	bds := make([]bundleData, 0)
+	for rows.Next() {
+		var bd bundleData
+
+		err = rows.Scan(&bd.BundleName, &bd.BundleVersion)
+		if err != nil {
+			rows.Close()
+			tx.Rollback()
+			return []data.Bundle{}, gerr.Wrap(errs.ErrDataAccess, err)
+		}
+
+		bds = append(bds, bd)
+	}
+	rows.Close()
+
+	bundles := make([]data.Bundle, 0)
+	for _, bd := range bds {
+		bundle, err := da.doBundleGet(ctx, tx, bd.BundleName, bd.BundleVersion)
+		if err != nil {
+			tx.Rollback()
+			return []data.Bundle{}, err
+		}
+
+		bundles = append(bundles, bundle)
+	}
+
+	return bundles, nil
 }
 
 // FindCommandEntry is used to find the enabled commands with the provided
