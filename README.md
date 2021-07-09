@@ -14,16 +14,6 @@ Gort brings the power of the command line to the place you collaborate with your
 
 You may wish to skip this page and go directly to the documentation: [The Gort Guide](http://guide.getgort.io/).
 
-## Rationale
-
-Gort was initially conceived of as a Go re-implementation of Operable's [Cog Slack Bot](https://github.com/operable/cog), and while it remains heavily inspired by Cog, Gort has largely gone its own way.
-
-Cog was originally designed as a distributed computation engine that was later re-branded as a chatops tool, and much of this original intent was reflected in its design, implementation, and feature set. As a result, many of Cog’s features, however innovative, went largely unused, and the codebase had become difficult to extend and maintain.
-
-The solution, which was discussed for many months on the [Cog Slack workspace](https://cogbot.slack.com), was to rewrite Cog from scratch in a more accessible language, such as [Go](http://golang.org), removing some of less-used functionality and reducing complexity in the process.
-
-This gives us the opportunity to consider and possibly redefine what Cog was meant to be. To choose the features that make sense, and to discard those that don't. In this way, Gort can be described more as a “spiritual successor” to Cog than a faithful re-implementation: many things will change, others will cease to exist entirely.
-
 ## Features
 
 The primary goal of this project is to re-implement the core features of Cog that made it stand out among other chatops tools. Specifically, to:
@@ -37,13 +27,9 @@ The primary goal of this project is to re-implement the core features of Cog tha
 
 This includes all of the [high-level features listed in the Cog documentation](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/introducing_cog.html#current-featuress).
 
-<!-- ## Non-Goals
+<!-- ## Gort Design
 
-While some effort will be made to support existing functionality (such as Cog bundles), perfect compatibility is explicitly not guaranteed (however, a migration guide should be written eventually). -->
-
-## Gort Design
-
-A WIP design doc, including rough milestones (but not dates) [can be seen here](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit?usp=sharing). Feel free to add questions or comments.
+A WIP design doc, including rough milestones (but not dates) [can be seen here](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit?usp=sharing). Feel free to add questions or comments. -->
 
 ## How to Run the Gort Controller
 
