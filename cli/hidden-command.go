@@ -69,7 +69,7 @@ func hiddenCommandCmd(cmd *cobra.Command, args []string) error {
 	cmds := []string{}
 
 	for _, b := range bundles {
-		for k, _ := range b.Commands {
+		for k := range b.Commands {
 			cmds = append(cmds, fmt.Sprintf("- %s:%s", b.Name, k))
 		}
 	}
