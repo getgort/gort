@@ -67,7 +67,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.GroupRemoveUser(r.Context(), groupname, username)
+	err = dataAccessLayer.GroupUserDelete(r.Context(), groupname, username)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 	}
@@ -182,7 +182,7 @@ func handleGetGroupRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roles, err := dataAccessLayer.GroupListRoles(r.Context(), groupname)
+	roles, err := dataAccessLayer.GroupRoleList(r.Context(), groupname)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -253,7 +253,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.GroupAddUser(r.Context(), groupname, username)
+	err = dataAccessLayer.GroupUserAdd(r.Context(), groupname, username)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 	}

@@ -59,7 +59,7 @@ func handleGetBundleVersions(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	name := params["name"]
 
-	bundles, err := dataAccessLayer.BundleListVersions(r.Context(), name)
+	bundles, err := dataAccessLayer.BundleVersionList(r.Context(), name)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
