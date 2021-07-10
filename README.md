@@ -98,3 +98,9 @@ Gort is in a state of active heavy development. The date that various [milestone
 - Milestone 9: _TBD_
 - Release candidate 1: _TBD_
 - Release!: _TBD_
+
+## More Links
+
+* [Gort Slack Community](https://join.slack.com/t/getgort/shared_invite/zt-scgi5f7r-1U9awWMWNITl1MCzrpV3~Q)
+* [GitHub Issues](https://github.com/getgort/gort/issues)
+
