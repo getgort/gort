@@ -64,6 +64,7 @@ func GetBundleCmd() *cobra.Command {
 	cmd.AddCommand(GetBundleListCmd())
 	cmd.AddCommand(GetBundleUninstallCmd())
 	cmd.AddCommand(GetBundleYamlCmd())
+	cmd.AddCommand(GetBundleVersionsCmd())
 
 	return cmd
 }
