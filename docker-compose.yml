@@ -1,7 +1,10 @@
-version: '3'
+version: "3"
 
 services:
   gort:
+    depends_on:
+      - jaeger
+      - postgres
     image: getgort/gort:latest
     command: "start -v"
     ports:
@@ -9,8 +12,6 @@ services:
     volumes:
       - ./development.yml:/config.yml
       - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - GORT_DB_PASSWORD=veryKleverPassw0rd
     networks:
       - gort
 
@@ -24,12 +25,12 @@ services:
 
   postgres:
     image: postgres:13
-    # Uncommenting ports lets the database to be inspected with pgAdmin or similar but breaks `make test-local`
+    # # Uncommenting ports lets the database to be inspected with pgAdmin or similar but breaks `make test-local`
     # ports:
     #   - "5432:5432"
     environment:
       - POSTGRES_USER=gort
-      - POSTGRES_PASSWORD=veryKleverPassw0rd
+      - POSTGRES_PASSWORD=veryKleverPassw0rd!
     networks:
       - gort
 
