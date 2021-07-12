@@ -39,7 +39,7 @@ gort:
 
 database:
   # The host where Gort's PostgreSQL database lives. Defaults to localhost.
-  host: localhost
+  host: postgres
 
   # The port at which Gort may access its PostgreSQL database. Defaults to 5432.
   port: 5432
@@ -98,7 +98,7 @@ docker:
 jaeger:
   # The URL for the Jaeger collector that spans are sent to. If not set then
   # no exporter will be created.
-  endpoint: http://localhost:14268/api/traces
+  endpoint: http://jaeger:14268/api/traces
 
   # The username to be used in the authorization header sent for all requests
   # to the collector. If not set no username will be passed.
