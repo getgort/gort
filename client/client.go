@@ -127,7 +127,7 @@ func Connect(profileName string) (*GortClient, error) {
 	var entry ProfileEntry
 
 	// Load the profiles file
-	profile, err := loadClientProfile()
+	profile, err := LoadClientProfile()
 	if err != nil {
 		return nil, gerrs.Wrap(ErrBadProfile, err)
 	}

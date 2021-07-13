@@ -42,10 +42,11 @@ func GetRootCmd() *cobra.Command {
 	root.AddCommand(cli.GetBundleCmd())
 	root.AddCommand(cli.GetGroupCmd())
 	root.AddCommand(cli.GetHiddenCmd())
+	root.AddCommand(cli.GetPermissionCmd())
+	root.AddCommand(cli.GetProfileCmd())
 	root.AddCommand(cli.GetRoleCmd())
 	root.AddCommand(cli.GetUserCmd())
 	root.AddCommand(cli.GetVersionCmd())
-	root.AddCommand(cli.GetPermissionCmd())
 
 	root.PersistentFlags().StringVarP(&cli.FlagGortProfile, "profile", "P", "", "The Gort profile within the config file to use")
 
