@@ -18,6 +18,8 @@ coverage.html
 test.yml
 development.yml
 
+.vscode
+
 gort
 
 # Binaries for programs and plugins
