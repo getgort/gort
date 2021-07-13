@@ -134,6 +134,12 @@ More information about permissions and rules can be found in the Gort Guide:
 
 All command activities are both emitted as high-cardinality log events (shown below) and recorded in [an audit log](https://guide.getgort.io/audit-log-events.html) that's maintained in Gort's database.
 
+Take, for example, a user executing the `!bundle list` command from Slack:
+
+![bundle list](images/bundle-list.png "bundle list")
+
+This will generate log output similar to the following:
+
 ```
 INFO   [49594] Triggering command   adapter.name=Gort bundle.default=false bundle.name=gort bundle.version=0.0.1
                                     command.executable="[/bin/gort bundle]" command.name=bundle
@@ -141,6 +147,8 @@ INFO   [49594] Triggering command   adapter.name=Gort bundle.default=false bundl
                                     provider.channel.name=gort-dev provider.user.email=matthew.titmus@gmail.com
                                     provider.user.id=U023P43L6PL trace.id=476b3089c8ce0d38a2915a3b58fde032
 ```
+
+The above example uses "human readable" format for readability. In production mode Gort generates JSON-encoded log events.
 
 More information about audit logging can be found in the Gort Guide:
 
