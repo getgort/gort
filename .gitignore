@@ -18,8 +18,6 @@ coverage.html
 test.yml
 development.yml
 
-.vscode
-
 gort
 
 ### VisualStudioCode ###
