@@ -10,9 +10,7 @@ Gort is a chatbot framework designed from the ground up for chatops.
 
 Gort brings the power of the command line to the place you collaborate with your team: your chat window. Its open-ended command bundle support allows developers to implement functionality in the language of their choice, while powerful access control means you can collaborate around even the most sensitive tasks with confidence. A focus on extensibility and adaptability means that you can respond quickly to the unexpected, without your team losing visibility.
 
-## Documentation
-
-You may wish to skip this page and go directly to the documentation: [The Gort Guide](http://guide.getgort.io/).
+The official documentation can be found here: [The Gort Guide](http://guide.getgort.io/).
 
 ## Features
 
