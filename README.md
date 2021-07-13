@@ -148,7 +148,14 @@ INFO   [49594] Triggering command   adapter.name=Gort bundle.default=false bundl
                                     provider.user.id=U023P43L6PL trace.id=476b3089c8ce0d38a2915a3b58fde032
 ```
 
-The above example uses "human readable" format for readability. In production mode Gort generates JSON-encoded log events.
+As you can see, this rich event includes:
+
+* The chat provider ("Gort", as named in the configuration), and channel within it
+* The triggered bundle (and its version) and command (and executable), and the parameters passed to it
+* The name of the user (both the Gort user ID and Slack user ID)
+* A unique trace ID that's used by all log events associated with this invocation.
+
+Note that this example uses "human readable" format for readability. In production mode Gort generates JSON-encoded log events.
 
 More information about audit logging can be found in the Gort Guide:
 
