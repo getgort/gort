@@ -136,6 +136,10 @@ More information about permissions and rules can be found in the Gort Guide:
 
 All command activity is emitted as log events and recorded in [an audit log](https://guide.getgort.io/audit-log-events.html) in the database.
 
+More information about audit logging can be found in the Gort Guide:
+
+* [Gort Guide: Audit Log Events](https://guide.getgort.io/audit-log-events.html)
+
 <!-- - execute triggered commands anywhere a relay is installed using a tag-based targeting system, -->
 
 <!-- ## Gort Design
