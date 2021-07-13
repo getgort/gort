@@ -16,15 +16,125 @@ You may wish to skip this page and go directly to the documentation: [The Gort G
 
 ## Features
 
-Gort's design philosophy emphasizes flexibility and security by allowing you to:
+Gort's design philosophy emphasizes flexibility and security by allowing you to build commands in any language you want, using tooling you're already comfortable with, and can tightly control who can use them and how.
 
-- Define arbitrary command functionality in any programming language,
-- Package those commands into bundles that can be installed in Gort,
-- Allow users to trigger commands through Slack or another chat provider and be presented with the output,
-- Decide who can use commands (or flags, or parameters) with a built-in RBAC system, and
-- Record all activity in an audit log.
+More specifically:
 
-Gort lets you build commands in any language you want, using tooling you're already comfortable with, and can tightly control who can use them and how.
+* Users may trigger commands through Slack (or another chat provider)
+* Commands can be implemented in any programming language
+* Commands are packaged into bundles that can be installed in Gort
+* Organize users into groups, and permissions into roles
+* Use a sophisticated identity and permission system to determine who can use commands
+* Record all activity in an audit log
+
+Each of these is described in more detail below.
+
+### Users may trigger commands through Slack (or another chat provider)
+
+Users primarily interact with Gort through _commands_, which are triggered by a command characters (`!` by default), and are conceptually identical to commands entered on the command line.
+
+For example, using an `echo` command might look like the following:
+
+![Hello, Gort!](images/hello-gort.png "Hello, Gort!")
+
+As shown, the output from successful commands is relayed back by Gort.
+
+More information about commands can be found in the Gort Guide:
+
+* [Gort Guide: Commands and Bundles](https://guide.getgort.io/commands-and-bundles.html)
+
+### Commands can be implemented in any programming language
+
+Gort [commands](https://guide.getgort.io/commands-and-bundles.html) are built as container images, which means you can build them in any language you're comfortable with.
+
+What's more, because your executable receives all chat inputs exactly as if it was being typed on the command line, you can use any command line interpreter you want. Commands can even be implemented as Bash scripts, or using existing commands, like `curl`!
+
+More information about writing commands can be found in the Gort Guide:
+
+* [Gort Guide: Writing a Command Bundle](writing-a-command-bundle.md)
+
+### Commands are packaged into bundles that can be installed in Gort
+
+In Gort, a set of one or more related commands can be installed as a "command bundle".
+
+A bundle is [represented in YAML](https://guide.getgort.io/bundle-configurations.html), specifying which executable to use for each command and who is allowed to execute each commands. 
+
+A very simple bundle file is shown below.
+
+```yaml
+---
+gort_bundle_version: 1
+
+name: echo
+version: 0.0.1
+author: Matt Titmus <matthew.titmus@gmail.com>
+homepage: https://guide.getgort.io
+description: A test bundle.
+long_description: |-
+  This is an example bundle. It lets you echo text using the "echo"
+  command that's built into Ubuntu 20.04.
+
+permissions:
+  - can_echo
+
+docker:
+  image: ubuntu
+  tag: 20.04
+
+commands:
+  foo:
+    description: "Echos back anything sent to it."
+    executable: [ "/bin/echo" ]
+    rules:
+      - must have echo:can_echo
+```
+
+This shows a bundle called `echo`, which defines a command called `echo` and a permission called `can_echo`. Once [installed](https://guide.getgort.io/managing-bundles.html), any user with the `echo:can_echo` permission can execute it in Slack.
+
+More information about bundles can be found in the Gort Guide:
+
+* [Gort Guide: Bundle Configurations](https://guide.getgort.io/bundle-configurations.html)
+* [Gort Guide: Managing Bundles](https://guide.getgort.io/managing-bundles.html)
+
+### Organize users into groups, and permissions into roles
+
+In Gort, _users_ can be uniquely mapped to users in one or more chat providers. Gort users can be members of one or more _groups_, which in turn can have any number of _roles_ that can be thought of as collections of granted permissions. For example, the user `dave` might be in a group called `developers`. This group may have a role attached named `deployers` that contains a number of permissions, including one called `production_deploy`.
+
+More information about permissions and rules can be found in the Gort Guide:
+
+* [Gort Guide: User Management](https://guide.getgort.io/user-management.html)
+
+### Use a sophisticated identity and permission system to determine who can use commands
+
+A sophisticated rule system can be applied for each command defining who can use it. These can be quite granular, and are even capable of making permissions decisions based on the values of specific flags or parameters.
+
+Rules are assigned at the bundle level, and can be quite sophisticated. Below we have a subset of a bundle called `deploy`.
+
+```yaml
+name: deploy
+version: 0.0.1
+
+permissions:
+  - production_deploy
+
+commands:
+  deploy:
+    description: "Deploys to the chosen environment."
+    executable: [ "/bin/deploy" ]
+    rules:
+      - with arg[0] == "production" must have deploy:production_deploy
+```
+
+As you can see, the above example includes one command, also called `deploy`. Its one rule asserts that any user passing "production" as the parameter must have the `production_deploy` permission (from the `deploy` bundle).
+
+More information about permissions and rules can be found in the Gort Guide:
+
+* [Gort Guide: Permissions and Rules](https://guide.getgort.io/permissions-and-rules.html)
+* [Gort Guide: Command Execution Rules](https://guide.getgort.io/command-execution-rules.html)
+
+### Record all activity in an audit log
+
+All command activity is emitted as log events and recorded in [an audit log](https://guide.getgort.io/audit-log-events.html) in the database.
 
 <!-- - execute triggered commands anywhere a relay is installed using a tag-based targeting system, -->
 
