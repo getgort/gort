@@ -87,7 +87,7 @@ commands:
       - must have echo:can_echo
 ```
 
-This shows a bundle called `echo`, which defines a command called `echo` and a permission called `can_echo`. Once [installed](https://guide.getgort.io/managing-bundles.html), any user with the `echo:can_echo` permission can execute it in Slack.
+This shows a bundle called `echo`, which defines a command (also called `echo`) and a permission called `can_echo`. Once [installed](https://guide.getgort.io/managing-bundles.html), any user with the `echo:can_echo` permission can execute it in Slack.
 
 More information about bundles can be found in the Gort Guide:
 
