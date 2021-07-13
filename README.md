@@ -29,7 +29,7 @@ Each of these is described in more detail below.
 
 ### Users may trigger commands through Slack (or another chat provider)
 
-Users primarily interact with Gort through _commands_, which are triggered by a command characters (`!` by default), and are conceptually identical to commands entered on the command line.
+Users primarily interact with Gort through _commands_, which are triggered by a command character (`!` by default) but are otherwise conceptually identical to commands entered on the command line.
 
 For example, using an `echo` command might look like the following:
 
