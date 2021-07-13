@@ -100,6 +100,19 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+// handleGetUserPermissions handles "GET /v2/users/{username}/groups"
+func handleGetUserPermissions(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+
+	perms, err := dataAccessLayer.UserPermissionList(r.Context(), params["username"])
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(perms)
+}
+
 // handlePutUser handles "POST /v2/users/{username}"
 func handlePutUser(w http.ResponseWriter, r *http.Request) {
 	var user rest.User
@@ -148,4 +161,7 @@ func addUserMethodsToRouter(router *mux.Router) {
 	router.Handle("/v2/users/{username}/groups", otelhttp.NewHandler(authCommand(handleGetUserGroups, "user", "info"), "handleGetUserGroups")).Methods("GET")
 	router.Handle("/v2/users/{username}/groups/{username}", otelhttp.NewHandler(authCommand(handleDeleteUserGroup, "user", "update"), "handleDeleteUserGroup")).Methods("DELETE")
 	router.Handle("/v2/users/{username}/groups/{username}", otelhttp.NewHandler(authCommand(handlePutUserGroup, "user", "update"), "handlePutUserGroup")).Methods("PUT")
+
+	// User permissions list
+	router.Handle("/v2/users/{username}/permissions", otelhttp.NewHandler(authCommand(handleGetUserPermissions, "user", "info"), "handleGetUserPermissions")).Methods("GET")
 }

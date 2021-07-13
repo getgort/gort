@@ -240,139 +240,6 @@ func (da PostgresDataAccess) UserGetByEmail(ctx context.Context, email string) (
 	return user, err
 }
 
-// UserList returns a list of all known users in the datastore.
-// Passwords are not included. Nice try.
-func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.UserList")
-	defer sp.End()
-
-	db, err := da.connect(ctx, DatabaseGort)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	query := `SELECT email, full_name, username FROM users`
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	users := make([]rest.User, 0)
-	for rows.Next() {
-		user := rest.User{}
-		err = rows.Scan(&user.Email, &user.FullName, &user.Username)
-		if err != nil {
-			err = gerr.Wrap(errs.ErrNoSuchUser, err)
-		}
-		users = append(users, user)
-	}
-
-	return users, err
-}
-
-// UserPermissions returns an alphabetically-sorted list of fully-qualified
-// (i.e., "bundle:permission") permissions available to the specified user.
-func (da PostgresDataAccess) UserPermissions(ctx context.Context, username string) ([]string, error) {
-	// TODO This is horribly inefficient -- use a real SQL query instead!
-
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.UserPermissions")
-	defer sp.End()
-
-	pp := []string{}
-
-	groups, err := da.UserGroupList(ctx, username)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, group := range groups {
-		roles, err := da.GroupListRoles(ctx, group.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, role := range roles {
-			for _, p := range role.Permissions {
-				pp = append(pp, p.BundleName+":"+p.Permission)
-			}
-		}
-	}
-
-	sort.Strings(pp)
-
-	return pp, nil
-}
-
-// UserUpdate is used to update an existing user. An error is returned if the
-// username is empty or if the user doesn't exist.
-func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) error {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.UserUpdate")
-	defer sp.End()
-
-	if user.Username == "" {
-		return errs.ErrEmptyUserName
-	}
-
-	exists, err := da.UserExists(ctx, user.Username)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return errs.ErrNoSuchUser
-	}
-
-	db, err := da.connect(ctx, DatabaseGort)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	query := `SELECT email, full_name, username, password_hash
-		FROM users
-		WHERE username=$1`
-
-	userOld := rest.User{}
-	err = db.
-		QueryRowContext(ctx, query, user.Username).
-		Scan(&userOld.Email, &userOld.FullName, &userOld.Username, &userOld.Password)
-
-	if err != nil {
-		return gerr.Wrap(errs.ErrNoSuchUser, err)
-	}
-
-	if user.Email != "" {
-		userOld.Email = user.Email
-	}
-
-	if user.FullName != "" {
-		userOld.FullName = user.FullName
-	}
-
-	if user.Password != "" {
-		userOld.Password, err = data.HashPassword(user.Password)
-		if err != nil {
-			return err
-		}
-	}
-
-	query = `UPDATE users
-	SET email=$1, full_name=$2, password_hash=$3
-	WHERE username=$4;`
-
-	_, err = db.ExecContext(ctx, query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username)
-
-	if err != nil {
-		err = gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	return err
-}
-
 // UserGroupList returns a slice of Group values representing the specified user's group memberships.
 // The groups' Users slice is never populated, and is always nil.
 func (da PostgresDataAccess) UserGroupList(ctx context.Context, username string) ([]rest.Group, error) {
@@ -495,6 +362,177 @@ func (da PostgresDataAccess) UserGroupDelete(ctx context.Context, username strin
 	query := `DELETE FROM groupusers WHERE groupname=$1 AND username=$2;`
 
 	_, err = db.ExecContext(ctx, query, groupname, username)
+	if err != nil {
+		err = gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return err
+}
+
+// UserList returns a list of all known users in the datastore.
+// Passwords are not included. Nice try.
+func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.UserList")
+	defer sp.End()
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := `SELECT email, full_name, username FROM users`
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]rest.User, 0)
+	for rows.Next() {
+		user := rest.User{}
+		err = rows.Scan(&user.Email, &user.FullName, &user.Username)
+		if err != nil {
+			err = gerr.Wrap(errs.ErrNoSuchUser, err)
+		}
+		users = append(users, user)
+	}
+
+	return users, err
+}
+
+// UserPermissionList returns an alphabetically-sorted list of permissions
+// available to the specified user.
+func (da PostgresDataAccess) UserPermissionList(ctx context.Context, username string) (rest.RolePermissionList, error) {
+	// TODO This is HORRIBLY inefficient -- use a real SQL query instead!
+
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.UserPermissionList")
+	defer sp.End()
+
+	pp := []rest.RolePermission{}
+
+	groups, err := da.UserGroupList(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, group := range groups {
+		roles, err := da.GroupRoleList(ctx, group.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, role := range roles {
+			rp, err := da.RolePermissionList(ctx, role.Name)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, p := range rp {
+				pp = append(pp, p)
+			}
+		}
+	}
+
+	sort.Slice(pp, func(i, j int) bool { return pp[i].String() < pp[j].String() })
+
+	return pp, nil
+}
+
+// UserRoleList returns a slice of Role values representing the specified
+// user's indirect roles (indirect because users are members of groups,
+// and groups have roles).
+func (da PostgresDataAccess) UserRoleList(ctx context.Context, username string) ([]rest.Role, error) {
+	rm := map[string]rest.Role{}
+
+	groups, err := da.UserGroupList(ctx, username)
+	if err != nil {
+		return []rest.Role{}, err
+	}
+
+	for _, gr := range groups {
+		rl, err := da.GroupRoleList(ctx, gr.Name)
+		if err != nil {
+			return []rest.Role{}, err
+		}
+
+		for _, r := range rl {
+			rm[r.Name] = r
+		}
+	}
+
+	roles := []rest.Role{}
+
+	for _, r := range rm {
+		roles = append(roles, r)
+	}
+
+	sort.Slice(roles, func(i, j int) bool { return roles[i].Name < roles[j].Name })
+
+	return roles, nil
+}
+
+// UserUpdate is used to update an existing user. An error is returned if the
+// username is empty or if the user doesn't exist.
+func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.UserUpdate")
+	defer sp.End()
+
+	if user.Username == "" {
+		return errs.ErrEmptyUserName
+	}
+
+	exists, err := da.UserExists(ctx, user.Username)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errs.ErrNoSuchUser
+	}
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query := `SELECT email, full_name, username, password_hash
+		FROM users
+		WHERE username=$1`
+
+	userOld := rest.User{}
+	err = db.
+		QueryRowContext(ctx, query, user.Username).
+		Scan(&userOld.Email, &userOld.FullName, &userOld.Username, &userOld.Password)
+
+	if err != nil {
+		return gerr.Wrap(errs.ErrNoSuchUser, err)
+	}
+
+	if user.Email != "" {
+		userOld.Email = user.Email
+	}
+
+	if user.FullName != "" {
+		userOld.FullName = user.FullName
+	}
+
+	if user.Password != "" {
+		userOld.Password, err = data.HashPassword(user.Password)
+		if err != nil {
+			return err
+		}
+	}
+
+	query = `UPDATE users
+	SET email=$1, full_name=$2, password_hash=$3
+	WHERE username=$4;`
+
+	_, err = db.ExecContext(ctx, query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username)
+
 	if err != nil {
 		err = gerr.Wrap(errs.ErrDataAccess, err)
 	}

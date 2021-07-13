@@ -30,6 +30,8 @@ const (
 	hiddenCommandLong  = `Provides information about a command.
 
 If no command is specified, this will list all commands installed in Gort.
+
+If a command is specified, this will return information about the specified command.
 `
 	hiddenCommandUsage = `Usage:
   !gort:help [flags] [command]
@@ -46,6 +48,7 @@ func GetHiddenCommandCmd() *cobra.Command {
 		Short: hiddenCommandShort,
 		Long:  hiddenCommandLong,
 		RunE:  hiddenCommandCmd,
+		Args:  cobra.RangeArgs(0, 1),
 	}
 
 	cmd.SetUsageTemplate(hiddenCommandUsage)
@@ -59,6 +62,46 @@ func hiddenCommandCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if len(args) == 0 {
+		return listAllCommands(gortClient)
+	}
+
+	return detailCommand(gortClient, args[0])
+}
+
+func detailCommand(gortClient *client.GortClient, command string) error {
+	bundles, err := gortClient.BundleList()
+	if err != nil {
+		return err
+	}
+
+	var found bool
+	for _, b := range bundles {
+		for k := range b.Commands {
+			cmdName := fmt.Sprintf("%s:%s", b.Name, k)
+			if cmdName == command || k == command {
+				fmt.Println(cmdName)
+				fmt.Println("==")
+				if len(b.LongDescription) > 0 {
+					fmt.Println(b.LongDescription)
+				} else if len(b.Description) > 0 {
+					fmt.Println(b.Description)
+				}
+				fmt.Println()
+				fmt.Printf("Type `%v --help` for more information.\n", k)
+				found = true
+			}
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("command not found: %v", command)
+	}
+
+	return nil
+}
+
+func listAllCommands(gortClient *client.GortClient) error {
 	bundles, err := gortClient.BundleList()
 	if err != nil {
 		return err
@@ -69,7 +112,7 @@ func hiddenCommandCmd(cmd *cobra.Command, args []string) error {
 	cmds := []string{}
 
 	for _, b := range bundles {
-		for k, _ := range b.Commands {
+		for k := range b.Commands {
 			cmds = append(cmds, fmt.Sprintf("- %s:%s", b.Name, k))
 		}
 	}

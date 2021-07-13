@@ -364,10 +364,63 @@ func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, err
 	return bundles, nil
 }
 
-// BundleListVersions TBD
-func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error) {
+// BundleUpdate TBD
+func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundle) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.BundleListVersions")
+	ctx, sp := tr.Start(ctx, "postgres.BundleUpdate")
+	defer sp.End()
+
+	if bundle.Name == "" {
+		return errs.ErrEmptyBundleName
+	}
+
+	if bundle.Version == "" {
+		return errs.ErrEmptyBundleVersion
+	}
+
+	db, err := da.connect(ctx, "gort")
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	exists, err := da.doBundleExists(ctx, tx, bundle.Name, bundle.Version)
+	if err != nil {
+		return err
+	} else if !exists {
+		return errs.ErrNoSuchBundle
+	}
+
+	err = da.doBundleDelete(ctx, tx, bundle.Name, bundle.Version)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = da.doBundleInsert(ctx, tx, bundle)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
+// BundleVersionList TBD
+func (da PostgresDataAccess) BundleVersionList(ctx context.Context, name string) ([]data.Bundle, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.BundleVersionList")
 	defer sp.End()
 
 	// This is hacky as fuck. I know.
@@ -419,53 +472,6 @@ func (da PostgresDataAccess) BundleListVersions(ctx context.Context, name string
 	}
 
 	return bundles, nil
-}
-
-// BundleUpdate TBD
-func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundle) error {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.BundleUpdate")
-	defer sp.End()
-
-	if bundle.Name == "" {
-		return errs.ErrEmptyBundleName
-	}
-
-	if bundle.Version == "" {
-		return errs.ErrEmptyBundleVersion
-	}
-
-	db, err := da.connect(ctx, "gort")
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		return gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	exists, err := da.doBundleExists(ctx, tx, bundle.Name, bundle.Version)
-	if err != nil {
-		return err
-	} else if !exists {
-		return errs.ErrNoSuchBundle
-	}
-
-	err = da.doBundleDelete(ctx, tx, bundle.Name, bundle.Version)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	err = da.doBundleInsert(ctx, tx, bundle)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return nil
 }
 
 // FindCommandEntry is used to find the enabled commands with the provided

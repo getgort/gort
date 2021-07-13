@@ -35,7 +35,7 @@ func testBundleAccess(t *testing.T) {
 	t.Run("testBundleDelete", testBundleDelete)
 	t.Run("testBundleGet", testBundleGet)
 	t.Run("testBundleList", testBundleList)
-	t.Run("testBundleListVersions", testBundleListVersions)
+	t.Run("testBundleVersionList", testBundleVersionList)
 	t.Run("testFindCommandEntry", testFindCommandEntry)
 }
 
@@ -340,7 +340,7 @@ func testBundleList(t *testing.T) {
 	}
 }
 
-func testBundleListVersions(t *testing.T) {
+func testBundleVersionList(t *testing.T) {
 	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete(ctx, "test-list-0", "0.0")
 	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
@@ -350,7 +350,7 @@ func testBundleListVersions(t *testing.T) {
 	da.BundleCreate(ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-1", Version: "0.1", Description: "foo"})
 	defer da.BundleDelete(ctx, "test-list-1", "0.1")
 
-	bundles, err := da.BundleListVersions(ctx, "test-list-0")
+	bundles, err := da.BundleVersionList(ctx, "test-list-0")
 	assert.NoError(t, err)
 
 	if len(bundles) != 2 {

@@ -128,6 +128,33 @@ func (da *InMemoryDataAccess) UserGetByEmail(ctx context.Context, email string) 
 	return rest.User{}, errs.ErrNoSuchUser
 }
 
+// UserGroupList returns a slice of Group values representing the specified user's group memberships.
+// The groups' Users slice is never populated, and is always nil.
+func (da *InMemoryDataAccess) UserGroupList(ctx context.Context, username string) ([]rest.Group, error) {
+	groups := make([]rest.Group, 0)
+
+	for _, group := range da.groups {
+		for _, user := range group.Users {
+			if user.Username == username {
+				groups = append(groups, rest.Group{Name: group.Name})
+				continue
+			}
+		}
+	}
+
+	return groups, nil
+}
+
+// UserGroupAdd comments TBD
+func (da *InMemoryDataAccess) UserGroupAdd(ctx context.Context, username string, groupname string) error {
+	return da.GroupUserAdd(ctx, groupname, username)
+}
+
+// UserGroupDelete comments TBD
+func (da *InMemoryDataAccess) UserGroupDelete(ctx context.Context, username string, groupname string) error {
+	return da.GroupUserDelete(ctx, groupname, username)
+}
+
 // UserList returns a list of all known users in the datastore.
 // Passwords are not included. Nice try.
 func (da *InMemoryDataAccess) UserList(ctx context.Context) ([]rest.User, error) {
@@ -141,32 +168,72 @@ func (da *InMemoryDataAccess) UserList(ctx context.Context) ([]rest.User, error)
 	return list, nil
 }
 
-// UserPermissions returns an alphabetically-sorted list of fully-qualified
-// (i.e., "bundle:permission") permissions available to the specified user.
-func (da *InMemoryDataAccess) UserPermissions(ctx context.Context, username string) ([]string, error) {
-	pp := []string{}
+// UserPermissionList returns an alphabetically-sorted list of permissions
+// available to the specified user.
+func (da *InMemoryDataAccess) UserPermissionList(ctx context.Context, username string) (rest.RolePermissionList, error) {
+	mp := map[string]rest.RolePermission{}
 
+	// Permissions aren't attached to users: they're attached to roles, which
+	// are attached to groups.
 	groups, err := da.UserGroupList(ctx, username)
 	if err != nil {
 		return nil, err
 	}
 
+	// Collect all permissions from all groups to remove any repeats.
 	for _, group := range groups {
-		roles, err := da.GroupListRoles(ctx, group.Name)
+		gpl, err := da.GroupPermissionList(ctx, group.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, role := range roles {
-			for _, p := range role.Permissions {
-				pp = append(pp, p.BundleName+":"+p.Permission)
-			}
+		for _, p := range gpl {
+			mp[p.String()] = p
 		}
 	}
 
-	sort.Strings(pp)
+	pp := []rest.RolePermission{}
+
+	for _, p := range mp {
+		pp = append(pp, p)
+	}
+
+	sort.Slice(pp, func(i, j int) bool { return pp[i].String() < pp[j].String() })
 
 	return pp, nil
+}
+
+// UserRoleList returns a slice of Role values representing the specified
+// user's indirect roles (indirect because users are members of groups,
+// and groups have roles).
+func (da *InMemoryDataAccess) UserRoleList(ctx context.Context, username string) ([]rest.Role, error) {
+	rm := map[string]rest.Role{}
+
+	groups, err := da.UserGroupList(ctx, username)
+	if err != nil {
+		return []rest.Role{}, err
+	}
+
+	for _, gr := range groups {
+		rl, err := da.GroupRoleList(ctx, gr.Name)
+		if err != nil {
+			return []rest.Role{}, err
+		}
+
+		for _, r := range rl {
+			rm[r.Name] = r
+		}
+	}
+
+	roles := []rest.Role{}
+
+	for _, r := range rm {
+		roles = append(roles, r)
+	}
+
+	sort.Slice(roles, func(i, j int) bool { return roles[i].Name < roles[j].Name })
+
+	return roles, nil
 }
 
 // UserUpdate is used to update an existing user. An error is returned if the
@@ -188,31 +255,4 @@ func (da *InMemoryDataAccess) UserUpdate(ctx context.Context, user rest.User) er
 	da.users[user.Username] = &user
 
 	return nil
-}
-
-// UserGroupList returns a slice of Group values representing the specified user's group memberships.
-// The groups' Users slice is never populated, and is always nil.
-func (da *InMemoryDataAccess) UserGroupList(ctx context.Context, username string) ([]rest.Group, error) {
-	groups := make([]rest.Group, 0)
-
-	for _, group := range da.groups {
-		for _, user := range group.Users {
-			if user.Username == username {
-				groups = append(groups, rest.Group{Name: group.Name})
-				continue
-			}
-		}
-	}
-
-	return groups, nil
-}
-
-// UserGroupAdd comments TBD
-func (da *InMemoryDataAccess) UserGroupAdd(ctx context.Context, username string, groupname string) error {
-	return da.GroupAddUser(ctx, groupname, username)
-}
-
-// UserGroupDelete comments TBD
-func (da *InMemoryDataAccess) UserGroupDelete(ctx context.Context, username string, groupname string) error {
-	return da.GroupUserDelete(ctx, groupname, username)
 }

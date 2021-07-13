@@ -14,33 +14,27 @@
  * limitations under the License.
  */
 
-package rest
+package cli
 
-import "fmt"
+import (
+	"github.com/spf13/cobra"
+)
 
-type Role struct {
-	Name        string
-	Permissions RolePermissionList
-	Groups      []Group
-}
+const (
+	permissionUse   = "permission"
+	permissionShort = "Perform operations on permissions"
+	permissionLong  = "Allows you to perform permission administration."
+)
 
-type RolePermission struct {
-	BundleName string
-	Permission string
-}
-
-func (p RolePermission) String() string {
-	return fmt.Sprintf("%s:%s", p.BundleName, p.Permission)
-}
-
-type RolePermissionList []RolePermission
-
-func (l RolePermissionList) Strings() []string {
-	s := make([]string, len(l))
-
-	for i, p := range l {
-		s[i] = p.String()
+// GetPermissionCmd permission
+func GetPermissionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   permissionUse,
+		Short: permissionShort,
+		Long:  permissionLong,
 	}
 
-	return s
+	cmd.AddCommand(GetPermissionListCmd())
+
+	return cmd
 }

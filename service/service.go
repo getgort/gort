@@ -317,7 +317,7 @@ func doBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
 	}
 
 	// Add the admin user to the admin group.
-	err = dataAccessLayer.GroupAddUser(ctx, adminGroup, user.Username)
+	err = dataAccessLayer.GroupUserAdd(ctx, adminGroup, user.Username)
 	if err != nil {
 		return user, err
 	}
@@ -442,6 +442,8 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 	case gerrs.Is(err, errs.ErrNoSuchBundle):
 		fallthrough
 	case gerrs.Is(err, errs.ErrNoSuchGroup):
+		fallthrough
+	case gerrs.Is(err, errs.ErrNoSuchRole):
 		fallthrough
 	case gerrs.Is(err, errs.ErrNoSuchToken):
 		fallthrough
@@ -589,7 +591,7 @@ func doAuthenticateUser(r *http.Request, gortCommand string, args ...string) (bo
 		return false, err
 	}
 
-	perms, err := dataAccessLayer.UserPermissions(r.Context(), token.User)
+	perms, err := dataAccessLayer.UserPermissionList(r.Context(), token.User)
 	if err != nil {
 		return false, err
 	}
@@ -609,7 +611,7 @@ func doAuthenticateUser(r *http.Request, gortCommand string, args ...string) (bo
 
 	env := rules.EvaluationEnvironment{"arg": argValues}
 
-	return auth.EvaluateCommandEntry(perms, ce, env)
+	return auth.EvaluateCommandEntry(perms.Strings(), ce, env)
 }
 
 // getGortBundleCommand retrieves the data.BundleCommand value from the default

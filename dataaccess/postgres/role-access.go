@@ -62,65 +62,6 @@ func (da PostgresDataAccess) RoleCreate(ctx context.Context, name string) error 
 	return err
 }
 
-// RoleList gets all roles.
-func (da PostgresDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) {
-	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "postgres.RoleList")
-	defer sp.End()
-
-	db, err := da.connect(ctx, DatabaseGort)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	var rolesByName = make(map[string]*rest.Role)
-	// Load all role names and add to the roles map
-	query := `SELECT role_name
-		FROM roles`
-
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			log.Fatal(err)
-		}
-		rolesByName[name] = &rest.Role{Name: name}
-	}
-
-	// Load all permissions and add to role objects
-	query = `SELECT role_name, bundle_name, permission 
-		FROM role_permissions`
-	rows, err = db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var (
-			rolename   string
-			permission rest.RolePermission
-		)
-		if err := rows.Scan(&rolename, &permission.BundleName, &permission.Permission); err != nil {
-			log.Fatal(err)
-		}
-		rolesByName[rolename].Permissions = append(rolesByName[rolename].Permissions, permission)
-	}
-
-	var roles []rest.Role
-	for _, role := range rolesByName {
-		roles = append(roles, *role)
-	}
-
-	return roles, nil
-}
-
 // RoleDelete
 func (da PostgresDataAccess) RoleDelete(ctx context.Context, name string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -225,6 +166,160 @@ func (da PostgresDataAccess) RoleGet(ctx context.Context, name string) (rest.Rol
 	return role, nil
 }
 
+func (da PostgresDataAccess) RoleGroupAdd(ctx context.Context, rolename, groupname string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.RoleGroupAdd")
+	defer sp.End()
+
+	return da.GroupRoleAdd(ctx, groupname, rolename)
+}
+
+func (da PostgresDataAccess) RoleGroupDelete(ctx context.Context, rolename, groupname string) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.RoleGroupDelete")
+	defer sp.End()
+
+	return da.GroupRoleDelete(ctx, groupname, rolename)
+}
+
+func (da PostgresDataAccess) RoleGroupExists(ctx context.Context, rolename, groupname string) (bool, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.RoleGroupExists")
+	defer sp.End()
+
+	groups, err := da.RoleGroupList(ctx, rolename)
+	if err != nil {
+		return false, err
+	}
+
+	if exists, err := da.GroupExists(ctx, groupname); err != nil {
+		return false, err
+	} else if !exists {
+		return false, errs.ErrNoSuchGroup
+	}
+
+	for _, g := range groups {
+		if g.Name == groupname {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (da PostgresDataAccess) RoleGroupList(ctx context.Context, rolename string) ([]rest.Group, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.RoleGroupList")
+	defer sp.End()
+
+	if rolename == "" {
+		return nil, errs.ErrEmptyRoleName
+	}
+
+	exists, err := da.RoleExists(ctx, rolename)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errs.ErrNoSuchRole
+	}
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := `SELECT group_name
+		FROM group_roles
+		WHERE role_name = $1
+		ORDER BY role_name`
+
+	rows, err := db.QueryContext(ctx, query, rolename)
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	groups := []rest.Group{}
+
+	for rows.Next() {
+		var name string
+
+		err = rows.Scan(&name)
+		if err != nil {
+			return nil, gerr.Wrap(errs.ErrDataAccess, err)
+		}
+
+		group, err := da.GroupGet(ctx, name)
+		if err != nil {
+			return nil, err
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups, nil
+}
+
+// RoleList gets all roles.
+func (da PostgresDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.RoleList")
+	defer sp.End()
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	var rolesByName = make(map[string]*rest.Role)
+	// Load all role names and add to the roles map
+	query := `SELECT role_name
+		FROM roles`
+
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			log.Fatal(err)
+		}
+		rolesByName[name] = &rest.Role{Name: name}
+	}
+
+	// Load all permissions and add to role objects
+	query = `SELECT role_name, bundle_name, permission
+		FROM role_permissions`
+	rows, err = db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			rolename   string
+			permission rest.RolePermission
+		)
+		if err := rows.Scan(&rolename, &permission.BundleName, &permission.Permission); err != nil {
+			log.Fatal(err)
+		}
+		rolesByName[rolename].Permissions = append(rolesByName[rolename].Permissions, permission)
+	}
+
+	var roles []rest.Role
+	for _, role := range rolesByName {
+		roles = append(roles, *role)
+	}
+
+	return roles, nil
+}
+
 func (da PostgresDataAccess) RolePermissionAdd(ctx context.Context, rolename, bundle, permission string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.RolePermissionAdd")
@@ -299,7 +394,45 @@ func (da PostgresDataAccess) RolePermissionDelete(ctx context.Context, rolename,
 	return err
 }
 
-func (da PostgresDataAccess) doGetRolePermissions(ctx context.Context, name string) ([]rest.RolePermission, error) {
+// RolePermissionExists returns true if the given role has been granted the
+// specified permission. It returns an error if rolename is empty or if no
+// such role exists.
+func (da PostgresDataAccess) RolePermissionExists(ctx context.Context, rolename, bundlename, permission string) (bool, error) {
+	// TODO Make this more efficient.
+
+	perms, err := da.RolePermissionList(ctx, rolename)
+	if err != nil {
+		return false, err
+	}
+
+	for _, p := range perms {
+		if p.BundleName == bundlename && p.Permission == permission {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// RolePermissionList returns returns an alphabetically-sorted list of
+// fully-qualified (i.e., "bundle:permission") permissions granted to
+// the role.
+func (da PostgresDataAccess) RolePermissionList(ctx context.Context, rolename string) (rest.RolePermissionList, error) {
+	// TODO Make this more efficient.
+
+	role, err := da.RoleGet(ctx, rolename)
+	if err != nil {
+		return nil, err
+	}
+
+	perms := role.Permissions
+
+	sort.Slice(perms, func(i, j int) bool { return perms[i].String() < perms[j].String() })
+
+	return perms, nil
+}
+
+func (da PostgresDataAccess) doGetRolePermissions(ctx context.Context, name string) (rest.RolePermissionList, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.doGetRolePermissions")
 	defer sp.End()
@@ -331,44 +464,6 @@ func (da PostgresDataAccess) doGetRolePermissions(ctx context.Context, name stri
 
 		perms = append(perms, perm)
 	}
-
-	return perms, nil
-}
-
-// RoleHasPermission returns true if the given role has been granted the
-// specified permission. It returns an error if rolename is empty or if no
-// such role exists.
-func (da PostgresDataAccess) RoleHasPermission(ctx context.Context, rolename, bundlename, permission string) (bool, error) {
-	// TODO Make this more efficient.
-
-	perms, err := da.RolePermissionList(ctx, rolename)
-	if err != nil {
-		return false, err
-	}
-
-	for _, p := range perms {
-		if p.BundleName == bundlename && p.Permission == permission {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-// RolePermissionList returns returns an alphabetically-sorted list of
-// fully-qualified (i.e., "bundle:permission") permissions granted to
-// the role.
-func (da PostgresDataAccess) RolePermissionList(ctx context.Context, rolename string) ([]rest.RolePermission, error) {
-	// TODO Make this more efficient.
-
-	role, err := da.RoleGet(ctx, rolename)
-	if err != nil {
-		return nil, err
-	}
-
-	perms := role.Permissions
-
-	sort.Slice(perms, func(i, j int) bool { return perms[i].String() < perms[j].String() })
 
 	return perms, nil
 }

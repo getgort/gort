@@ -192,7 +192,7 @@ func (da *InMemoryDataAccess) BundleList(ctx context.Context) ([]data.Bundle, er
 }
 
 // BundleListVersions TBD
-func (da *InMemoryDataAccess) BundleListVersions(ctx context.Context, name string) ([]data.Bundle, error) {
+func (da *InMemoryDataAccess) BundleVersionList(ctx context.Context, name string) ([]data.Bundle, error) {
 	list := make([]data.Bundle, 0)
 
 	for _, g := range da.bundles {
