@@ -22,28 +22,6 @@ development.yml
 
 gort
 
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Test binary, build with `go test -c`
-*.test
-
-# Output of the go coverage tool
-*.out
-
-# Output of `make test-local`, which runs `go tool cover -html=coverage.out -o coverage.html`
-coverage.html
-
-# Test files and typical binary names.
-test.yml
-development.yml
-
-gort
-
 ### VisualStudioCode ###
 .vscode/*
 !.vscode/settings.json
