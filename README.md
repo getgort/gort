@@ -23,7 +23,7 @@ More specifically:
 * Commands are packaged into bundles that can be installed in Gort
 * Organize users into groups, and permissions into roles
 * Use a sophisticated identity and permission system to determine who can use commands
-* Record all activity in an audit log
+* Record all command activities in an audit log
 
 Each of these is described in more detail below.
 
@@ -130,9 +130,17 @@ More information about permissions and rules can be found in the Gort Guide:
 * [Gort Guide: Permissions and Rules](https://guide.getgort.io/permissions-and-rules.html)
 * [Gort Guide: Command Execution Rules](https://guide.getgort.io/command-execution-rules.html)
 
-### Record all activity in an audit log
+### Record all command activities in an audit log
 
-All command activity is emitted as log events and recorded in [an audit log](https://guide.getgort.io/audit-log-events.html) in the database.
+All command activities are both emitted as high-cardinality log events (shown below) and recorded in [an audit log](https://guide.getgort.io/audit-log-events.html) that's maintained in Gort's database.
+
+```
+INFO   [49594] Triggering command   adapter.name=Gort bundle.default=false bundle.name=gort bundle.version=0.0.1
+                                    command.executable="[/bin/gort bundle]" command.name=bundle
+                                    command.params=list gort.user.name=admin provider.channel.id=C0238AZ9QNB
+                                    provider.channel.name=gort-dev provider.user.email=matthew.titmus@gmail.com
+                                    provider.user.id=U023P43L6PL trace.id=476b3089c8ce0d38a2915a3b58fde032
+```
 
 More information about audit logging can be found in the Gort Guide:
 
