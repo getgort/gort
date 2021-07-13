@@ -53,12 +53,12 @@ type ProfileDefaults struct {
 // ProfileEntry represents a single profile entry.
 type ProfileEntry struct {
 	Name          string   `yaml:"-"`
-	URLString     string   `yaml:"url"`
-	Password      string   `yaml:"password"`
+	URLString     string   `yaml:"url,omitempty"`
+	Password      string   `yaml:"password,omitempty"`
 	URL           *url.URL `yaml:"-"`
-	Username      string   `yaml:"user"`
-	AllowInsecure bool     `yaml:"allow_insecure"`
-	TLSCertFile   string   `yaml:"tls_cert_file"`
+	Username      string   `yaml:"user,omitempty"`
+	AllowInsecure bool     `yaml:"allow_insecure,omitempty"`
+	TLSCertFile   string   `yaml:"tls_cert_file,omitempty"`
 }
 
 // User is a convenience method that returns a rest.User pre-set with the
@@ -70,7 +70,7 @@ func (pe ProfileEntry) User() rest.User {
 // loadClientProfile loads and returns the complete client profile. If there's
 // no profile file, an empty Profile is returned. An error is returned if
 // there's an underlying IO error.
-func loadClientProfile() (Profile, error) {
+func LoadClientProfile() (Profile, error) {
 	profile := Profile{Profiles: make(map[string]ProfileEntry)}
 
 	configDir, err := getGortConfigDir()
@@ -118,7 +118,7 @@ func loadClientProfile() (Profile, error) {
 	return profile, err
 }
 
-func saveClientProfile(profile Profile) error {
+func SaveClientProfile(profile Profile) error {
 	configDir, err := getGortConfigDir()
 	if err != nil {
 		return err
