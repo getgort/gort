@@ -59,10 +59,11 @@ type BundleDocker struct {
 // BundleCommand represents a bundle command, as defined in the "bundles/commands"
 // section of the config.
 type BundleCommand struct {
-	Description string   `yaml:",omitempty" json:"description,omitempty"`
-	Executable  []string `yaml:",omitempty,flow" json:"executable,omitempty"`
-	Name        string   `yaml:"-" json:"-"`
-	Rules       []string `yaml:",omitempty" json:"rules,omitempty"`
+	Description     string   `yaml:",omitempty" json:"description,omitempty"`
+	Executable      []string `yaml:",omitempty,flow" json:"executable,omitempty"`
+	LongDescription string   `yaml:"long_description,omitempty" json:"long_description,omitempty"`
+	Name            string   `yaml:"-" json:"-"`
+	Rules           []string `yaml:",omitempty" json:"rules,omitempty"`
 }
 
 // CommandEntry conveniently wraps a bundle and one command within that bundle.

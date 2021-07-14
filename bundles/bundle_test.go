@@ -38,9 +38,15 @@ func TestLoadBundle(t *testing.T) {
 	assert.Equal(t, "ubuntu", b.Docker.Image)
 	assert.Equal(t, "20.04", b.Docker.Tag)
 	assert.Len(t, b.Commands, 1)
-	assert.Equal(t, "echox", b.Commands["echox"].Name)
-	assert.Equal(t, "Echos back anything sent to it, all at once.", b.Commands["echox"].Description)
-	assert.Equal(t, []string{"/bin/echo"}, b.Commands["echox"].Executable)
-	assert.Len(t, b.Commands["echox"].Rules, 1)
-	assert.Equal(t, "must have test:echox", b.Commands["echox"].Rules[0])
+
+	cmd := b.Commands["echox"]
+	assert.Equal(t, "echox", cmd.Name)
+	assert.Equal(t, "Write arguments to the standard output.", cmd.Description)
+	assert.Equal(t, `Write arguments to the standard output.
+
+Usage:
+  test:echox [string ...]`, cmd.LongDescription)
+	assert.Equal(t, []string{"/bin/echo"}, cmd.Executable)
+	assert.Len(t, cmd.Rules, 1)
+	assert.Equal(t, "must have test:echox", cmd.Rules[0])
 }

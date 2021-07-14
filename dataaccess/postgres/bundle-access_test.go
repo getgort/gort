@@ -41,8 +41,15 @@ func testBundleAccess(t *testing.T) {
 
 // Fail-fast: can the test bundle be loaded?
 func testLoadTestData(t *testing.T) {
-	_, err := getTestBundle()
+	b, err := getTestBundle()
 	assert.NoError(t, err)
+
+	assert.NotEmpty(t, b.Commands)
+	assert.NotEmpty(t, b.Commands["echox"].Description)
+	assert.NotEmpty(t, b.Commands["echox"].Executable)
+	assert.NotEmpty(t, b.Commands["echox"].LongDescription)
+	assert.NotEmpty(t, b.Commands["echox"].Name)
+	assert.NotEmpty(t, b.Commands["echox"].Rules)
 }
 
 func testBundleCreate(t *testing.T) {
@@ -407,6 +414,7 @@ func testFindCommandEntry(t *testing.T) {
 	tc := tb.Commands[CommandName]
 	cmd := ce[0].Command
 	assert.Equal(t, tc.Description, cmd.Description)
+	assert.Equal(t, tc.LongDescription, cmd.LongDescription)
 	assert.Equal(t, tc.Executable, cmd.Executable)
 	assert.Equal(t, tc.Name, cmd.Name)
 	assert.Equal(t, tc.Rules, cmd.Rules)
