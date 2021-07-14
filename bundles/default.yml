@@ -135,6 +135,6 @@ commands:
 
       Usage:
         gort:help [flags] [command]
-    executable: [ "/bin/gort", "hidden", "commands" ]
+    executable: [ "/bin/gort", "hidden", "command" ]
     rules:
       - allow
