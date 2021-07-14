@@ -112,7 +112,8 @@ func detailCommand(gortClient *client.GortClient, command string) error {
 				continue
 			}
 
-			fmt.Printf("Command: %s:%s\n", b.Name, k)
+			fmt.Printf("%s:%s\n------------------------------\n", b.Name, k)
+
 			if len(v.LongDescription) > 0 {
 				fmt.Println(v.LongDescription)
 			} else if len(v.Description) > 0 {
