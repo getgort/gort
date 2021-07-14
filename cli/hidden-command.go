@@ -94,8 +94,17 @@ func detailCommand(gortClient *client.GortClient, command string) error {
 	var found bool
 
 	for _, b := range bundles {
+		if !b.Enabled {
+			continue
+		}
+
 		if bundleName != "" && bundleName != b.Name {
 			continue
+		}
+
+		// If multiple commands are found, insert a space between them.
+		if found {
+			fmt.Println()
 		}
 
 		for k, v := range b.Commands {
@@ -103,8 +112,7 @@ func detailCommand(gortClient *client.GortClient, command string) error {
 				continue
 			}
 
-			fmt.Printf("%s:%s\n", b.Name, k)
-			fmt.Println("==")
+			fmt.Printf("Command: %s:%s\n", b.Name, k)
 			if len(v.LongDescription) > 0 {
 				fmt.Println(v.LongDescription)
 			} else if len(v.Description) > 0 {
@@ -117,7 +125,7 @@ func detailCommand(gortClient *client.GortClient, command string) error {
 	}
 
 	if !found {
-		fmt.Printf("command not found: %v\n", command)
+		fmt.Printf("Command not found: %v\n", command)
 		return nil
 	}
 
@@ -135,6 +143,10 @@ func listAllCommands(gortClient *client.GortClient) error {
 	cmds := []string{}
 
 	for _, b := range bundles {
+		if !b.Enabled {
+			continue
+		}
+
 		for k := range b.Commands {
 			cmds = append(cmds, fmt.Sprintf("- %s:%s", b.Name, k))
 		}

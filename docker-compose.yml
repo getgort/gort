@@ -7,8 +7,6 @@ services:
       - postgres
     image: getgort/gort:latest
     command: "start -v"
-    environment:
-      - GORT_DB_PASSWORD=veryKleverPassw0rd!
     ports:
       - "4000:4000"
     volumes:
