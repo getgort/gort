@@ -19,6 +19,7 @@ package cli
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
@@ -75,27 +76,47 @@ func detailCommand(gortClient *client.GortClient, command string) error {
 		return err
 	}
 
+	// If the user enters "bundle:command", match both.
+	// Otherwise, match only "command"
+	var bundleName, cmdName string
+	if ss := strings.Split(command, ":"); len(ss) == 2 {
+		bundleName = ss[0]
+		cmdName = ss[1]
+	} else if len(ss) == 1 {
+		cmdName = ss[0]
+	} else {
+		fmt.Println("Invalid command syntax: expected <bundle:command> or <command>.")
+		return nil
+	}
+
 	var found bool
+
 	for _, b := range bundles {
-		for k := range b.Commands {
-			cmdName := fmt.Sprintf("%s:%s", b.Name, k)
-			if cmdName == command || k == command {
-				fmt.Println(cmdName)
-				fmt.Println("==")
-				if len(b.LongDescription) > 0 {
-					fmt.Println(b.LongDescription)
-				} else if len(b.Description) > 0 {
-					fmt.Println(b.Description)
-				}
-				fmt.Println()
-				fmt.Printf("Type `%v --help` for more information.\n", k)
-				found = true
+		if bundleName != "" && bundleName != b.Name {
+			continue
+		}
+
+		for k, v := range b.Commands {
+			if cmdName != k {
+				continue
 			}
+
+			fmt.Printf("%s:%s\n", b.Name, k)
+			fmt.Println("==")
+			if len(v.LongDescription) > 0 {
+				fmt.Println(v.LongDescription)
+			} else if len(v.Description) > 0 {
+				fmt.Println(v.Description)
+			}
+			fmt.Println()
+			fmt.Printf("Type `%s:%s --help` for more information.\n", b.Name, k)
+			found = true
 		}
 	}
 
 	if !found {
-		return fmt.Errorf("command not found: %v", command)
+		fmt.Printf("command not found: %v\n", command)
+		return nil
 	}
 
 	return nil
