@@ -49,7 +49,7 @@ Flags:
 )
 
 var (
-	flagAllowInsecure bool
+	flagBootstrapAllowInsecure bool
 )
 
 // GetBootstrapCmd bootstrap
@@ -62,7 +62,7 @@ func GetBootstrapCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	cmd.Flags().BoolVarP(&flagAllowInsecure, "allow-insecure", "i", false, "Permit http URLs to be used")
+	cmd.Flags().BoolVarP(&flagBootstrapAllowInsecure, "allow-insecure", "i", false, "Permit http URLs to be used")
 
 	cmd.SetUsageTemplate(bootstrapUsage)
 
@@ -73,7 +73,7 @@ func bootstrapCmd(cmd *cobra.Command, args []string) error {
 	entry := client.ProfileEntry{
 		Name:          FlagGortProfile,
 		URLString:     args[0],
-		AllowInsecure: flagAllowInsecure,
+		AllowInsecure: flagBootstrapAllowInsecure,
 	}
 
 	gortClient, err := client.ConnectWithNewProfile(entry)
