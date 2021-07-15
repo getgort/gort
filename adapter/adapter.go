@@ -694,9 +694,6 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
 	finders := make([]bundles.CommandEntryFinder, 0)
 
-	// Get the configuration CommandEntryFinder
-	finders = append(finders, config.CommandEntryFinder())
-
 	// Get the DAL CommandEntryFinder
 	dal, err := dataaccess.Get()
 	if err != nil {
