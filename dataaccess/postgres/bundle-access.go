@@ -650,12 +650,12 @@ func (da PostgresDataAccess) doBundleCommandsDataGet(ctx context.Context, tx *sq
 	}
 
 	if enabledOnly {
-		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable
+		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description
 			FROM bundle_commands
 			INNER JOIN bundle_enabled ON bundle_commands.bundle_name=bundle_enabled.bundle_name
 			WHERE bundle_commands.bundle_name LIKE $1 AND bundle_commands.bundle_version LIKE $2 AND name LIKE $3`
 	} else {
-		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable
+		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description
 			FROM bundle_commands
 			WHERE bundle_commands.bundle_name LIKE $1 AND bundle_commands.bundle_version LIKE $2 AND name LIKE $3`
 	}
@@ -672,7 +672,7 @@ func (da PostgresDataAccess) doBundleCommandsDataGet(ctx context.Context, tx *sq
 		var enc string
 		cd := bundleCommandData{}
 
-		err = rows.Scan(&cd.BundleName, &cd.BundleVersion, &cd.Name, &cd.Description, &enc)
+		err = rows.Scan(&cd.BundleName, &cd.BundleVersion, &cd.Name, &cd.Description, &enc, &cd.LongDescription)
 		if err != nil {
 			return nil, gerr.Wrap(errs.ErrDataAccess, err)
 		}
@@ -846,8 +846,8 @@ func (da PostgresDataAccess) doBundleInsertCommandRules(ctx context.Context,
 
 func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
 	query := `INSERT INTO bundle_commands
-		(bundle_name, bundle_version, name, description, executable)
-		VALUES ($1, $2, $3, $4, $5);`
+		(bundle_name, bundle_version, name, description, executable, long_description)
+		VALUES ($1, $2, $3, $4, $5, $6);`
 
 	for name, cmd := range bundle.Commands {
 		cmd.Name = name
@@ -855,7 +855,7 @@ func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql
 		enc := encodeStringSlice(cmd.Executable)
 
 		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
-			cmd.Name, cmd.Description, enc)
+			cmd.Name, cmd.Description, enc, cmd.LongDescription)
 
 		if err != nil {
 			if strings.Contains(err.Error(), "violates") {

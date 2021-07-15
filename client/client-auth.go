@@ -120,7 +120,7 @@ func (c *GortClient) Bootstrap(user rest.User) (rest.User, error) {
 	endpointURL := fmt.Sprintf("%s/v2/bootstrap", c.profile.URL)
 
 	// Get profile data so we can update it afterwards
-	profile, err := loadClientProfile()
+	profile, err := LoadClientProfile()
 	if err != nil {
 		return rest.User{}, err
 	}
@@ -170,7 +170,7 @@ func (c *GortClient) Bootstrap(user rest.User) (rest.User, error) {
 	}
 
 	profile.Profiles[entry.Name] = entry
-	err = saveClientProfile(profile)
+	err = SaveClientProfile(profile)
 	if err != nil {
 		return user, err
 	}

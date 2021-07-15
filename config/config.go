@@ -121,14 +121,6 @@ func CurrentState() State {
 	return currentState
 }
 
-// GetBundleConfigs returns the data wrapper for the "bundles" config section.
-func GetBundleConfigs() []data.Bundle {
-	configMutex.RLock()
-	defer configMutex.RUnlock()
-
-	return config.BundleConfigs
-}
-
 // GetDatabaseConfigs returns the data wrapper for the "database" config section.
 func GetDatabaseConfigs() data.DatabaseConfigs {
 	configMutex.RLock()
@@ -249,13 +241,6 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 	err = yaml.Unmarshal(dat, &config)
 	if err != nil {
 		return nil, gerrs.Wrap(gerrs.ErrUnmarshal, err)
-	}
-
-	// Make sure that the command names get set correctly.
-	if config.BundleConfigs != nil {
-		for i, b := range config.BundleConfigs {
-			config.BundleConfigs[i] = standardizeBundleConfig(b)
-		}
 	}
 
 	return &config, nil

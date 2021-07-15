@@ -127,7 +127,7 @@ func Connect(profileName string) (*GortClient, error) {
 	var entry ProfileEntry
 
 	// Load the profiles file
-	profile, err := loadClientProfile()
+	profile, err := LoadClientProfile()
 	if err != nil {
 		return nil, gerrs.Wrap(ErrBadProfile, err)
 	}
@@ -211,7 +211,8 @@ func (c *GortClient) getGortTokenFilename() (string, error) {
 	}
 
 	url := c.profile.URL
-	tokenFileName := fmt.Sprintf("%s/%s_%s", gortDir, url.Hostname(), url.Port())
+	tokenFileName := fmt.Sprintf("%s/%s_%s_%s",
+		gortDir, url.Hostname(), url.Port(), c.profile.Name)
 
 	return tokenFileName, nil
 }

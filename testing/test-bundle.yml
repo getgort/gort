@@ -19,7 +19,12 @@ docker:
 
 commands:
   echox:
-    description: "Echos back anything sent to it, all at once."
+    description: "Write arguments to the standard output."
+    long_description: |-
+      Write arguments to the standard output.
+
+      Usage:
+        test:echox [string ...]
     executable: [ "/bin/echo" ]
     rules:
       - must have test:echox

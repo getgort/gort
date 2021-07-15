@@ -75,23 +75,6 @@ func TestLoadConfiguration(t *testing.T) {
 	assert.Equal(t, cj.Endpoint, "http://localhost:14268/api/traces")
 	assert.Equal(t, cj.Username, "gort")
 	assert.Equal(t, cj.Password, "veryKleverPassw0rd!")
-
-	cb := config.BundleConfigs
-	assert.NotNil(t, cb)
-	assert.Len(t, cb, 2)
-	assert.Equal(t, "echo", cb[0].Name)
-	assert.Equal(t, "A default bundle with echo commands.", cb[0].Description)
-	assert.Equal(t, "getgort/relaytest", cb[0].Docker.Image)
-	assert.Equal(t, "latest", cb[0].Docker.Tag)
-
-	assert.Len(t, cb[0].Commands, 2)
-	assert.Equal(t, "echo", cb[0].Commands["echo"].Name)
-	assert.Equal(t, "Echos back anything sent to it, all at once.", cb[0].Commands["echo"].Description)
-	assert.Equal(t, []string{"/bin/echo"}, cb[0].Commands["echo"].Executable)
-
-	assert.Equal(t, "splitecho", cb[0].Commands["splitecho"].Name)
-	assert.Equal(t, "Echos back anything sent to it, one parameter at a time.", cb[0].Commands["splitecho"].Description)
-	assert.Equal(t, []string{"/opt/app/splitecho.sh"}, cb[0].Commands["splitecho"].Executable)
 }
 
 func TestIsUndefinedNil(t *testing.T) {
