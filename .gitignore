@@ -18,14 +18,12 @@ coverage.html
 test.yml
 development.yml
 
-gort
-
 ### VisualStudioCode ###
 .vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 **/.history
 
+# Mac .DS_Store metadata files
 .DS_Store
+
+# Our own binary, of course
+gort
