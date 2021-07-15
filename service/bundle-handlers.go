@@ -27,7 +27,6 @@ import (
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
@@ -185,16 +184,11 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAllBundles(ctx context.Context) ([]data.Bundle, error) {
-	// Default bundles from config
-	bundles := config.GetBundleConfigs()
-
 	// Explicit bundles from the data layer
-	dataLayerBundles, err := dataAccessLayer.BundleList(ctx)
+	bundles, err := dataAccessLayer.BundleList(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	bundles = append(bundles, dataLayerBundles...)
 
 	sort.Slice(bundles, func(i, j int) bool { return bundles[i].Name < bundles[j].Name })
 
