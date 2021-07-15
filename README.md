@@ -18,12 +18,12 @@ Gort's design philosophy emphasizes flexibility and security by allowing you to 
 
 More specifically:
 
-* Users may trigger commands through Slack (or another chat provider)
-* Commands can be implemented in any programming language
-* Commands are packaged into bundles that can be installed in Gort
-* Organize users into groups, and permissions into roles
-* Use a sophisticated identity and permission system to determine who can use commands
-* Record all command activities in an audit log
+- Commands can be implemented in any programming language
+- Users may trigger commands through Slack (or another chat provider)
+- Commands are packaged into bundles that can be installed in Gort
+- Users can be assigned to groups, roles can be assigned to groups, and permissions can be attached to roles
+- Supports a sophisticated identity and permission system to determine who can use commands
+- All command activities are stored in a dedicated audit log for review
 
 Each of these is described in more detail below.
 
