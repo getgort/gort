@@ -4,7 +4,7 @@
 [![Tests](https://github.com/getgort/gort/actions/workflows/test.yaml/badge.svg)](https://github.com/getgort/gort/actions/workflows/test.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/getgort/gort)](https://goreportcard.com/report/github.com/getgort/gort)
 
-**This project is a work in progress under active heavy development. It is not production (or even alpha) ready! Follow for updates!**
+**Gort is considered "minimally viable", but is still a work in progress under active heavy development. Follow for updates!**
 
 Gort is a chatbot framework designed from the ground up for chatops.
 
