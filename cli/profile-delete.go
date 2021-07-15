@@ -42,7 +42,7 @@ func GetProfileDeleteCmd() *cobra.Command {
 		Short: profileDeleteShort,
 		Long:  profileDeleteLong,
 		RunE:  profileDeleteCmd,
-		Args:  cobra.ExactArgs(4),
+		Args:  cobra.ExactArgs(1),
 	}
 
 	cmd.SetUsageTemplate(profileDeleteUsage)
