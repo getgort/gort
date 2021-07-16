@@ -49,7 +49,7 @@ What's more, because your executable receives all chat inputs exactly as if it w
 
 More information about writing commands can be found in the Gort Guide:
 
-* [Gort Guide: Writing a Command Bundle](writing-a-command-bundle.md)
+* [Gort Guide: Writing a Command Bundle](https://guide.getgort.io/writing-a-command-bundle.html)
 
 ### Commands are packaged into bundles that can be installed in Gort
 
