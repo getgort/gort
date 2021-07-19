@@ -12,6 +12,14 @@ Gort brings the power of the command line to the place you collaborate with your
 
 The official documentation can be found here: [The Gort Guide](http://guide.getgort.io/).
 
+## History
+
+Gort was initially conceived of as a Go re-implementation of Operable's [Cog Slack Bot](https://github.com/operable/cog), and while it remains heavily inspired by Cog, Gort has largely gone its own way.
+
+During our initial design process, we found that many of Cog’s features, however innovative, went largely unused, and the codebase had become difficult to extend and maintain, and its implementation language -- Elixir -- which has relatively few proficient developers. The solution, which was discussed for many months on the Cog Slack workspace, was to rewrite Cog from scratch in such as Go, removing some of less-used functionality and reducing complexity in the process.
+
+This gave us the opportunity to consider and possibly redefine what Cog was meant to be. To choose the features that make sense, and to discard those that don't. In this way, Gort can be described more as a “spiritual successor” to Cog than a faithful re-implementation.
+
 ## Features
 
 Gort's design philosophy emphasizes flexibility and security by allowing you to build commands in any language you want, using tooling you're already comfortable with, and can tightly control who can use them and how.
