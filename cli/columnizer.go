@@ -120,3 +120,10 @@ func (c *Columnizer) Format(o interface{}) []string {
 
 	return lines
 }
+
+// Print is a convenience function that prints the table to stdout.
+func (c *Columnizer) Print(o interface{}) {
+	for _, line := range c.Format(o) {
+		fmt.Println(line)
+	}
+}

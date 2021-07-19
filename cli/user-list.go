@@ -17,7 +17,6 @@
 package cli
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/getgort/gort/client"
@@ -72,10 +71,7 @@ func userListCmd(cmd *cobra.Command, args []string) error {
 	c.StringColumn("USERNAME", func(i int) string { return users[i].Username })
 	c.StringColumn("FULL NAME", func(i int) string { return users[i].FullName })
 	c.StringColumn("EMAIL ADDRESS", func(i int) string { return users[i].Email })
-
-	for _, line := range c.Format(users) {
-		fmt.Println(line)
-	}
+	c.Print(users)
 
 	return nil
 }
