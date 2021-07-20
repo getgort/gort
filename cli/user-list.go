@@ -17,7 +17,6 @@
 package cli
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/getgort/gort/client"
@@ -68,27 +67,11 @@ func userListCmd(cmd *cobra.Command, args []string) error {
 	// Sort by username, for presentation purposes.
 	sort.Slice(users, func(i, j int) bool { return users[i].Username < users[j].Username })
 
-	// We want a dynamic format that looks something like: %-10s%-10s%s
-	const metaFormat = "%%-%ds%%-%ds%%s\n"
-
-	lenUsername, lenFullName := len("USERNAME"), len("FULL NAME")
-
-	for _, u := range users {
-		if len(u.Username) > lenUsername {
-			lenUsername = len(u.Username)
-		}
-
-		if len(u.FullName) > lenFullName {
-			lenFullName = len(u.FullName)
-		}
-	}
-
-	format := fmt.Sprintf(metaFormat, lenUsername+3, lenFullName+3)
-
-	fmt.Printf(format, "USERNAME", "FULL NAME", "EMAIL ADDRESS")
-	for _, u := range users {
-		fmt.Printf(format, u.Username, u.FullName, u.Email)
-	}
+	c := &Columnizer{}
+	c.StringColumn("USERNAME", func(i int) string { return users[i].Username })
+	c.StringColumn("FULL NAME", func(i int) string { return users[i].FullName })
+	c.StringColumn("EMAIL ADDRESS", func(i int) string { return users[i].Email })
+	c.Print(users)
 
 	return nil
 }
