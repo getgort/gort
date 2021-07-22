@@ -69,7 +69,7 @@ func permissionListCmd(cmd *cobra.Command, args []string) error {
 
 	for _, b := range bundles {
 		for _, p := range b.Permissions {
-			fmt.Printf(format, fmt.Sprintf("%v-%v", b.Name, p))
+			fmt.Printf(format, fmt.Sprintf("%v:%v", b.Name, p))
 		}
 	}
 

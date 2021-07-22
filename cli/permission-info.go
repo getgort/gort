@@ -70,7 +70,7 @@ func permissionInfoCmd(cmd *cobra.Command, args []string) error {
 
 	for _, b := range bundles {
 		for _, p := range b.Permissions {
-			combinedName := fmt.Sprintf("%v-%v", b.Name, p)
+			combinedName := fmt.Sprintf("%v:%v", b.Name, p)
 			if p == args[0] || combinedName == args[0] {
 				fmt.Printf(format, b.Name, p, b.Version)
 			}
