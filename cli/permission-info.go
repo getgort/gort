@@ -24,11 +24,11 @@ import (
 )
 
 const (
-	permissionListUse   = "list"
-	permissionListShort = "List all permissions installed"
-	permissionListLong  = "Lists all permissions installed, and their currently enabled version, if any."
-	permissionListUsage = `Usage:
-  gort permission list [flags]
+	permissionInfoUse   = "info"
+	permissionInfoShort = "Show info for a specified permission"
+	permissionInfoLong  = "Shows info for a specified permission."
+	permissionInfoUsage = `Usage:
+  gort permission info [flags] permission-name
 
 Flags:
   -h, --help   Show this message and exit
@@ -38,22 +38,23 @@ Global Flags:
 `
 )
 
-// GetPermissionListCmd is a command
-func GetPermissionListCmd() *cobra.Command {
+// GetPermissionInfoCmd is a command
+func GetPermissionInfoCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   permissionListUse,
-		Short: permissionListShort,
-		Long:  permissionListLong,
-		RunE:  permissionListCmd,
+		Use:   permissionInfoUse,
+		Short: permissionInfoShort,
+		Long:  permissionInfoLong,
+		RunE:  permissionInfoCmd,
+		Args:  cobra.ExactArgs(1),
 	}
 
-	cmd.SetUsageTemplate(permissionListUsage)
+	cmd.SetUsageTemplate(permissionInfoUsage)
 
 	return cmd
 }
 
-func permissionListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%-12s\n"
+func permissionInfoCmd(cmd *cobra.Command, args []string) error {
+	const format = "%-12s %-12s %-12s\n"
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
@@ -65,11 +66,14 @@ func permissionListCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf(format, "NAME")
+	fmt.Printf(format, "BUNDLE", "PERMISSION", "VERSION")
 
 	for _, b := range bundles {
 		for _, p := range b.Permissions {
-			fmt.Printf(format, fmt.Sprintf("%v:%v", b.Name, p))
+			combinedName := fmt.Sprintf("%v:%v", b.Name, p)
+			if p == args[0] || combinedName == args[0] {
+				fmt.Printf(format, b.Name, p, b.Version)
+			}
 		}
 	}
 
