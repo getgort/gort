@@ -17,7 +17,7 @@
 package cli
 
 import (
-	"fmt"
+	"sort"
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
@@ -53,7 +53,6 @@ func GetUserListCmd() *cobra.Command {
 }
 
 func userListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%-10s%-20s%s\n"
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
@@ -65,10 +64,14 @@ func userListCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf(format, "USERNAME", "FULL NAME", "EMAIL ADDRESS")
-	for _, u := range users {
-		fmt.Printf(format, u.Username, u.FullName, u.Email)
-	}
+	// Sort by username, for presentation purposes.
+	sort.Slice(users, func(i, j int) bool { return users[i].Username < users[j].Username })
+
+	c := &Columnizer{}
+	c.StringColumn("USERNAME", func(i int) string { return users[i].Username })
+	c.StringColumn("FULL NAME", func(i int) string { return users[i].FullName })
+	c.StringColumn("EMAIL ADDRESS", func(i int) string { return users[i].Email })
+	c.Print(users)
 
 	return nil
 }

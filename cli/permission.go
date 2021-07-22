@@ -35,6 +35,7 @@ func GetPermissionCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(GetPermissionListCmd())
+	cmd.AddCommand(GetPermissionInfoCmd())
 
 	return cmd
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/getgort/gort/client"
-	"github.com/getgort/gort/data/rest"
 )
 
 const (
@@ -44,19 +43,13 @@ bootstrapped. This can be overridden using the -P or --profile flags.`
   gort bootstrap [flags] [URL]
 
 Flags:
-  -i, --allow-insecure    Permit http URLs to be used
-  -e, --email string      Email for the bootstrapped user (default "admin@gort")
-  -h, --help              Show this message and exit.
-  -n, --name string       Full name of the bootstrapped user (default "Gort Administrator")
-  -p, --password string   Password for bootstrapped user (default generated)
+  -i, --allow-insecure   Permit http URLs to be used
+  -h, --help             help for bootstrap
 `
 )
 
 var (
-	flagBootstrapEmail    string
-	flagBootstrapName     string
-	flagBootstrapPassword string
-	flagAllowInsecure     bool
+	flagBootstrapAllowInsecure bool
 )
 
 // GetBootstrapCmd bootstrap
@@ -69,10 +62,7 @@ func GetBootstrapCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	cmd.Flags().StringVarP(&flagBootstrapEmail, "email", "e", "admin@gort", "Email for the bootstrapped user")
-	cmd.Flags().StringVarP(&flagBootstrapName, "name", "n", "Gort Administrator", "Full name of the bootstrapped user")
-	cmd.Flags().StringVarP(&flagBootstrapPassword, "password", "p", "", "Password for bootstrapped user (default generated)")
-	cmd.Flags().BoolVarP(&flagAllowInsecure, "allow-insecure", "i", false, "Permit http URLs to be used")
+	cmd.Flags().BoolVarP(&flagBootstrapAllowInsecure, "allow-insecure", "i", false, "Permit http URLs to be used")
 
 	cmd.SetUsageTemplate(bootstrapUsage)
 
@@ -83,7 +73,7 @@ func bootstrapCmd(cmd *cobra.Command, args []string) error {
 	entry := client.ProfileEntry{
 		Name:          FlagGortProfile,
 		URLString:     args[0],
-		AllowInsecure: flagAllowInsecure,
+		AllowInsecure: flagBootstrapAllowInsecure,
 	}
 
 	gortClient, err := client.ConnectWithNewProfile(entry)
@@ -91,15 +81,9 @@ func bootstrapCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	user := rest.User{
-		Email:    flagBootstrapEmail,
-		FullName: flagBootstrapName,
-		Password: flagBootstrapPassword,
-	}
-
 	// Client Bootstrap will create the gort config if necessary, and append
 	// the new credentials to it.
-	user, err = gortClient.Bootstrap(user)
+	user, err := gortClient.Bootstrap()
 	if err != nil {
 		return err
 	}

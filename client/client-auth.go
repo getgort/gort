@@ -116,7 +116,7 @@ func (c *GortClient) Authenticated() (bool, error) {
 }
 
 // Bootstrap calls the POST /v2/bootstrap endpoint.
-func (c *GortClient) Bootstrap(user rest.User) (rest.User, error) {
+func (c *GortClient) Bootstrap() (rest.User, error) {
 	endpointURL := fmt.Sprintf("%s/v2/bootstrap", c.profile.URL)
 
 	// Get profile data so we can update it afterwards
@@ -125,7 +125,7 @@ func (c *GortClient) Bootstrap(user rest.User) (rest.User, error) {
 		return rest.User{}, err
 	}
 
-	postBytes, err := json.Marshal(user)
+	postBytes, err := json.Marshal(rest.User{})
 	if err != nil {
 		return rest.User{}, gerrs.Wrap(gerrs.ErrMarshal, err)
 	}
@@ -154,7 +154,7 @@ func (c *GortClient) Bootstrap(user rest.User) (rest.User, error) {
 		return rest.User{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 
-	// Re-using "user" instance. Sorry.
+	user := rest.User{}
 	err = json.Unmarshal(body, &user)
 	if err != nil {
 		return rest.User{}, gerrs.Wrap(gerrs.ErrUnmarshal, err)

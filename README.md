@@ -14,9 +14,15 @@ The official documentation can be found here: [The Gort Guide](http://guide.getg
 
 ## History
 
+<<<<<<< HEAD
 Gort was initially conceived of as a Go re-implementation of Operable's [Cog](https://github.com/operable/cog), and while it remains heavily inspired by Cog, Gort has largely gone its own way.
 
 During our initial [design discussion](https://docs.google.com/document/d/1u7LzEzPjT1L8_xkHL577cKeuQdCiCQAww8M0rx1QXEM/edit), we found that many of Cog’s features, however innovative, went largely unused, and the codebase had become difficult to extend and maintain. Additionally, its implementation language -- Elixir -- had relatively few proficient developers. The solution, which was discussed for many months on the Cog Slack workspace, was to rewrite Cog from scratch in Go, removing some of less-used functionality and reducing complexity in the process.
+=======
+Gort was initially conceived of as a Go re-implementation of Operable's [Cog Slack Bot](https://github.com/operable/cog), and while it remains heavily inspired by Cog, Gort has largely gone its own way.
+
+During our initial design process, we found that many of Cog’s features, however innovative, went largely unused, and the codebase had become difficult to extend and maintain. Additionally, its implementation language -- Elixir -- had relatively few proficient developers. The solution, which was discussed for many months on the Cog Slack workspace, was to rewrite Cog from scratch in such as Go, removing some of less-used functionality and reducing complexity in the process.
+>>>>>>> v0.8.0-beta.1
 
 This gave us the opportunity to consider and possibly redefine what Cog was meant to be. To choose the features that make sense, and to discard those that don't. In this way, Gort can be described more as a “spiritual successor” to Cog than a faithful re-implementation.
 
