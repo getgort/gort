@@ -20,3 +20,17 @@ jobs:
           coverageLocations: |
             ${{github.workspace}}/*.out:gocov
           prefix: github.com/getgort/gort
+  Quickstart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16.5' # The Go version to download (if necessary) and use.
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.4.x'
+      - name: Install
+        run: npm install -g wait-port
+      - name: Test
+        run: ${GITHUB_WORKSPACE}/.github/workflows/quickstart.sh
