@@ -160,13 +160,13 @@ func initializeDataAccess(ctx context.Context) {
 
 				select {
 				case <-time.After(delay):
-				case configStatus := <-configUpdates:
-					// if this happens, then initializeDataAccess() was just called again.
-					// Cancel this attempt.
-					if configStatus == config.StateConfigInitialized {
-						log.Debug("Starting over with new config")
-						return
-					}
+				// case configStatus := <-configUpdates:
+				// 	// if this happens, then initializeDataAccess() was just called again.
+				// 	// Cancel this attempt.
+				// 	if configStatus == config.StateConfigInitialized {
+				// 		log.Debug("Starting over with new config")
+				// 		return
+				// 	}
 				case <-ctx.Done():
 					log.WithError(ctx.Err()).Error("Could not initialize DAL")
 					return

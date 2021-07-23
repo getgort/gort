@@ -180,5 +180,8 @@ func startServer(ctx context.Context, config data.GortServerConfigs) {
 }
 
 func main() {
-	GetRootCmd().Execute()
+	err := GetRootCmd().Execute()
+	if err != nil {
+		os.Exit(1)
+	}
 }
