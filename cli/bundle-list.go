@@ -17,8 +17,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
 )
@@ -67,8 +65,6 @@ func GetBundleListCmd() *cobra.Command {
 }
 
 func bundleListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%-12s%-12s%-12s%s\n"
-
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
@@ -79,25 +75,24 @@ func bundleListCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf(format, "BUNDLE", "VERSION", "TYPE", "STATUS")
-
-	for _, b := range bundles {
-		if b.Version == "" {
-			b.Version = "-"
-		}
-
-		status := "Disabled"
-		if b.Enabled {
-			status = "Enabled"
-		}
-
+	c := &Columnizer{}
+	c.StringColumn("BUNDLE", func(i int) string { return bundles[i].Name })
+	c.StringColumn("VERSION", func(i int) string { return bundles[i].Version })
+	c.StringColumn("TYPE", func(i int) string {
 		kind := "Explicit"
-		if b.Default {
+		if bundles[i].Default {
 			kind = "Default"
 		}
-
-		fmt.Printf(format, b.Name, b.Version, kind, status)
-	}
+		return kind
+	})
+	c.StringColumn("STATUS", func(i int) string {
+		status := "Disabled"
+		if bundles[i].Enabled {
+			status = "Enabled"
+		}
+		return status
+	})
+	c.Print(bundles)
 
 	return nil
 }

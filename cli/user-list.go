@@ -64,13 +64,13 @@ func userListCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Sort by username, for presentation purposes.
+	// Sort by name, for presentation purposes.
 	sort.Slice(users, func(i, j int) bool { return users[i].Username < users[j].Username })
 
 	c := &Columnizer{}
-	c.StringColumn("USERNAME", func(i int) string { return users[i].Username })
+	c.StringColumn("USER NAME", func(i int) string { return users[i].Username })
 	c.StringColumn("FULL NAME", func(i int) string { return users[i].FullName })
-	c.StringColumn("EMAIL ADDRESS", func(i int) string { return users[i].Email })
+	c.StringColumn("EMAIL", func(i int) string { return users[i].Email })
 	c.Print(users)
 
 	return nil
