@@ -103,6 +103,10 @@ func LoadClientProfile() (Profile, error) {
 		return profile, gerrs.Wrap(gerrs.ErrUnmarshal, err)
 	}
 
+	if profile.Profiles == nil {
+		profile.Profiles = make(map[string]ProfileEntry)
+	}
+
 	// Ensure that the URL field gets set.
 	for k, entry := range profile.Profiles {
 		if entry.URLString != "" {
