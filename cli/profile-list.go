@@ -64,38 +64,31 @@ func profileListCmd(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	lens := map[string]int{}
-	names := []string{}
-
+	profiles := []client.ProfileEntry{}
 	for name, p := range profile.Profiles {
-		names = append(names, name)
+		p.Name = name
+		profiles = append(profiles, p)
 
-		if len(name) > lens["name"] {
-			lens["name"] = len(name)
-		}
-
-		if len(p.Username) > lens["username"] {
-			lens["username"] = len(p.Username)
-		}
-
-		if len(p.URL.String()) > lens["url"] {
-			lens["url"] = len(p.URL.String())
-		}
 	}
 
-	sort.Strings(names)
+	// Sort by name, for presentation purposes.
+	sort.Slice(profiles, func(i, j int) bool { return profiles[i].Name < profiles[j].Name })
 
-	f := fmt.Sprintf("%%-%ds %%-%ds %%-%ds %%s\n",
-		lens["name"]+3, lens["username"]+3, lens["url"]+3)
-
-	fmt.Printf(f, "Name", "User", "URL", "Default")
-
-	for name, p := range profile.Profiles {
+	c := &Columnizer{}
+	c.StringColumn("NAME", func(i int) string { return profiles[i].Name })
+	c.StringColumn("USER", func(i int) string { return profiles[i].Username })
+	c.StringColumn("URL", func(i int) string { return profiles[i].URL.String() })
+	c.StringColumn("DEFAULT", func(i int) string {
 		def := ""
-		if name == profile.Defaults.Profile {
+		if profiles[i].Name == profile.Defaults.Profile {
 			def = "   *"
 		}
-		fmt.Printf(f, name, p.Username, p.URL.String(), def)
+		return def
+	})
+	c.Print(profiles)
+
+	if profile.Defaults.Profile == "" {
+		fmt.Println("\nWARNING: No default profile set! Use 'gort profile default' to fix.")
 	}
 
 	return nil

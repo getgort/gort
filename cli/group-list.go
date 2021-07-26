@@ -17,7 +17,7 @@
 package cli
 
 import (
-	"fmt"
+	"sort"
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
@@ -73,8 +73,6 @@ func GetGroupListCmd() *cobra.Command {
 }
 
 func groupListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%s\n"
-
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
@@ -85,10 +83,12 @@ func groupListCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf(format, "GROUP NAME")
-	for _, g := range groups {
-		fmt.Printf(format, g.Name)
-	}
+	// Sort by name, for presentation purposes.
+	sort.Slice(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name })
+
+	c := &Columnizer{}
+	c.StringColumn("GROUP NAME", func(i int) string { return groups[i].Name })
+	c.Print(groups)
 
 	return nil
 }

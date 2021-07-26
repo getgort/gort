@@ -17,7 +17,7 @@
 package cli
 
 import (
-	"fmt"
+	"sort"
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
@@ -53,8 +53,6 @@ func GetRoleListCmd() *cobra.Command {
 }
 
 func roleListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%s\n"
-
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
@@ -65,10 +63,12 @@ func roleListCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf(format, "ROLE NAME")
-	for _, g := range roles {
-		fmt.Printf(format, g.Name)
-	}
+	// Sort by name, for presentation purposes.
+	sort.Slice(roles, func(i, j int) bool { return roles[i].Name < roles[j].Name })
+
+	c := &Columnizer{}
+	c.StringColumn("ROLE NAME", func(i int) string { return roles[i].Name })
+	c.Print(roles)
 
 	return nil
 }
