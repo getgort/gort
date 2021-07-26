@@ -125,6 +125,10 @@ func (c *GortClient) Bootstrap() (rest.User, error) {
 		return rest.User{}, err
 	}
 
+	if _, exists := profile.Profiles[c.profile.Name]; exists {
+		return rest.User{}, fmt.Errorf("profile %s already exists", c.profile.Name)
+	}
+
 	postBytes, err := json.Marshal(rest.User{})
 	if err != nil {
 		return rest.User{}, gerrs.Wrap(gerrs.ErrMarshal, err)

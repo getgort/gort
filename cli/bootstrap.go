@@ -45,6 +45,9 @@ bootstrapped. This can be overridden using the -P or --profile flags.`
 Flags:
   -i, --allow-insecure   Permit http URLs to be used
   -h, --help             help for bootstrap
+
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
 `
 )
 

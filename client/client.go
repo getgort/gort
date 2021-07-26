@@ -163,7 +163,7 @@ func ConnectWithNewProfile(entry ProfileEntry) (*GortClient, error) {
 	entry.URLString = url.String()
 
 	if entry.Name == "" {
-		entry.Name = url.Hostname()
+		entry.Name = fmt.Sprintf("%s_%s", url.Hostname(), url.Port())
 	}
 
 	return NewClient(entry)

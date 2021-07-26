@@ -18,6 +18,7 @@ package cli
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
@@ -53,8 +54,6 @@ func GetPermissionListCmd() *cobra.Command {
 }
 
 func permissionListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%-12s\n"
-
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
@@ -65,13 +64,20 @@ func permissionListCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf(format, "NAME")
+	names := make([]string, 0)
 
 	for _, b := range bundles {
 		for _, p := range b.Permissions {
-			fmt.Printf(format, fmt.Sprintf("%v:%v", b.Name, p))
+			names = append(names, fmt.Sprintf("%v:%v", b.Name, p))
 		}
 	}
+
+	// Sort by name, for presentation purposes.
+	sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
+
+	c := &Columnizer{}
+	c.StringColumn("NAME", func(i int) string { return names[i] })
+	c.Print(names)
 
 	return nil
 }
