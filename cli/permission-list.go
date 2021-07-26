@@ -54,8 +54,6 @@ func GetPermissionListCmd() *cobra.Command {
 }
 
 func permissionListCmd(cmd *cobra.Command, args []string) error {
-	const format = "%-12s\n"
-
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
