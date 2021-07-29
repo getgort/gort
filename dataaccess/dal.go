@@ -45,8 +45,8 @@ func init() {
 	go monitorConfig(context.Background())
 }
 
-// Get provides an interface to the data access layer. If the state is not
-// 'initialized', this will return an error.
+// Get provides an interface to the data access layer. If the last
+// initialization attempt failed this will return an error.
 func Get() (DataAccess, error) {
 	if initializationError != nil {
 		return nil, initializationError
@@ -112,8 +112,8 @@ func initializeDataAccess(ctx context.Context, cancel chan interface{}) {
 	}()
 }
 
-// monitorConfig monitors config.Updates(), and updates the data access
-// singleton whenever a change is observed.
+// monitorConfig monitors config.Updates(), and initializes the new DAL
+// whenever a change is observed.
 func monitorConfig(ctx context.Context) {
 	configListener := config.Updates()
 	cancel := make(chan interface{})
