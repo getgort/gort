@@ -23,6 +23,13 @@ import (
 	"github.com/getgort/gort/data/rest"
 )
 
+var dataAccess = &InMemoryDataAccess{
+	bundles: make(map[string]*data.Bundle),
+	groups:  make(map[string]*rest.Group),
+	users:   make(map[string]*rest.User),
+	roles:   make(map[string]*rest.Role),
+}
+
 // InMemoryDataAccess is an entirely in-memory representation of a data access layer.
 // Great for testing and development. Terrible for production.
 type InMemoryDataAccess struct {
@@ -34,14 +41,7 @@ type InMemoryDataAccess struct {
 
 // NewInMemoryDataAccess returns a new InMemoryDataAccess instance.
 func NewInMemoryDataAccess() *InMemoryDataAccess {
-	da := InMemoryDataAccess{
-		bundles: make(map[string]*data.Bundle),
-		groups:  make(map[string]*rest.Group),
-		users:   make(map[string]*rest.User),
-		roles:   make(map[string]*rest.Role),
-	}
-
-	return &da
+	return dataAccess
 }
 
 // Initialize initializes an InMemoryDataAccess instance.

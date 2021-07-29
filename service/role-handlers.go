@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -30,7 +31,12 @@ import (
 func handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	err := dataAccessLayer.RoleDelete(r.Context(), params["rolename"])
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
+	err = dataAccessLayer.RoleDelete(r.Context(), params["rolename"])
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -39,6 +45,11 @@ func handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 
 // handleGetRoles handles "GET /v2/roles"
 func handleGetRoles(w http.ResponseWriter, r *http.Request) {
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
 	roles, err := dataAccessLayer.RoleList(r.Context())
 
 	if err != nil {
@@ -53,6 +64,11 @@ func handleGetRoles(w http.ResponseWriter, r *http.Request) {
 func handleGetRole(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	rolename := params["rolename"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
 
 	exists, err := dataAccessLayer.RoleExists(r.Context(), rolename)
 	if err != nil {
@@ -121,6 +137,11 @@ func handleGetRolePermissions(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	rolename := params["rolename"]
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
 	exists, err := dataAccessLayer.RoleExists(r.Context(), rolename)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -147,6 +168,11 @@ func handleGrantRolePermission(w http.ResponseWriter, r *http.Request) {
 	bundlename := params["bundlename"]
 	permissionname := params["permissionname"]
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
 	exists, err := dataAccessLayer.RoleExists(r.Context(), rolename)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -171,6 +197,11 @@ func handleRevokeRolePermission(w http.ResponseWriter, r *http.Request) {
 	bundlename := params["bundlename"]
 	permissionname := params["permissionname"]
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
 	exists, err := dataAccessLayer.RoleExists(r.Context(), rolename)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -193,6 +224,11 @@ func handlePutRole(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	params := mux.Vars(r)
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
 
 	err = dataAccessLayer.RoleCreate(r.Context(), params["rolename"])
 	if err != nil {

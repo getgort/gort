@@ -54,7 +54,7 @@ const (
 )
 
 var (
-	config      *data.GortConfig
+	config      = &data.GortConfig{}
 	configFile  string
 	configMutex = sync.RWMutex{}
 

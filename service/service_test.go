@@ -29,10 +29,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/getgort/gort/data/rest"
-	"github.com/getgort/gort/dataaccess/memory"
+	"github.com/getgort/gort/dataaccess"
 )
 
 var adminToken rest.Token
+
+var router *mux.Router
 
 // ResponseTester allows a single HTTP test to be sent to a router and the
 // result to be verified.
@@ -112,12 +114,18 @@ func (r ResponseTester) Test(t *testing.T, router *mux.Router) {
 }
 
 func createTestRouter() *mux.Router {
+	if router != nil {
+		return router
+	}
+
 	ctx := context.Background()
 
-	dataAccessLayer = memory.NewInMemoryDataAccess()
-	dataAccessLayer.Initialize(ctx)
+	userAdmin, err := doBootstrap(ctx, rest.User{})
+	if err != nil {
+		panic(err)
+	}
 
-	userAdmin, err := doBootstrap(ctx, rest.User{Username: "admin", Email: "admin@testing.com"})
+	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		panic(err)
 	}
@@ -127,7 +135,7 @@ func createTestRouter() *mux.Router {
 		panic(err)
 	}
 
-	router := mux.NewRouter()
+	router = mux.NewRouter()
 	addAllMethodsToRouter(router)
 
 	return router

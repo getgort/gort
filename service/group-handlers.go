@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess"
 	gerrs "github.com/getgort/gort/errors"
 )
 
@@ -31,7 +32,12 @@ import (
 func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	err := dataAccessLayer.GroupDelete(r.Context(), params["groupname"])
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
+	err = dataAccessLayer.GroupDelete(r.Context(), params["groupname"])
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -46,6 +52,11 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	groupname := params["groupname"]
 	username := params["username"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
 
 	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {
@@ -82,6 +93,11 @@ func handleDeleteGroupRole(w http.ResponseWriter, r *http.Request) {
 	groupname := params["groupname"]
 	rolename := params["rolename"]
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
 	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -112,6 +128,11 @@ func handleDeleteGroupRole(w http.ResponseWriter, r *http.Request) {
 func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
 	exists, err := dataAccessLayer.GroupExists(r.Context(), params["groupname"])
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -133,6 +154,11 @@ func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 
 // handleGetGroups handles "GET /v2/groups"
 func handleGetGroups(w http.ResponseWriter, r *http.Request) {
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
 	groups, err := dataAccessLayer.GroupList(r.Context())
 
 	if err != nil {
@@ -147,6 +173,11 @@ func handleGetGroups(w http.ResponseWriter, r *http.Request) {
 func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	groupname := params["groupname"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
 
 	exists, err := dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {
@@ -171,6 +202,11 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 func handleGetGroupRoles(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	groupname := params["groupname"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
 
 	exists, err := dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {
@@ -206,6 +242,11 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 
 	group.Name = params["groupname"]
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
+
 	exists, err := dataAccessLayer.GroupExists(r.Context(), group.Name)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -232,6 +273,11 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	groupname := params["groupname"]
 	username := params["username"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
 
 	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {
@@ -267,6 +313,11 @@ func handlePutGroupRole(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	groupname := params["groupname"]
 	rolename := params["rolename"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+	}
 
 	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
 	if err != nil {

@@ -42,8 +42,6 @@ import (
 )
 
 var (
-	dataAccessLayer dataaccess.DataAccess
-
 	ErrUnauthorized = errors.New("unauthorized")
 
 	ErrNoSuchCommand = errors.New("no such command")
@@ -110,16 +108,7 @@ type RESTServer struct {
 
 // BuildRESTServer builds a RESTServer.
 func BuildRESTServer(ctx context.Context, addr string) *RESTServer {
-	dalUpdate := dataaccess.Updates()
-
-	for dalState := range dalUpdate {
-		if dalState == dataaccess.StateInitialized {
-			break
-		}
-	}
-
-	var err error
-	dataAccessLayer, err = dataaccess.Get()
+	_, err := dataaccess.Get()
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to data access layer")
 		telemetry.Errors().WithError(err).Commit(ctx)
@@ -213,6 +202,7 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 			userID := "-"
 			tokenString := r.Header.Get("X-Session-Token")
 			if tokenString != "" {
+				dataAccessLayer, _ := dataaccess.Get()
 				token, _ := dataAccessLayer.TokenRetrieveByToken(r.Context(), tokenString)
 				userID = token.User
 			}
@@ -251,6 +241,13 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	password := user.Password
 
 	le := log.WithField("user", user)
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		le.WithError(err).Error(err.Error())
+		telemetry.Errors().WithError(err).Commit(r.Context())
+		return
+	}
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), username)
 	if err != nil {
@@ -296,7 +293,10 @@ func doBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
 		"manage_users",
 	}
 
-	var err error
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		return user, err
+	}
 
 	// Set user defaults where necessary.
 	user, err = bootstrapUserWithDefaults(user)
@@ -363,6 +363,12 @@ func doBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
 
 // handleBootstrap handles "POST /bootstrap"
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
 	users, err := dataAccessLayer.UserList(r.Context())
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -405,7 +411,13 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 		Password: testPassword,
 	}
 
-	err := dataAccessLayer.UserCreate(r.Context(), testUser)
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	err = dataAccessLayer.UserCreate(r.Context(), testUser)
 	if err != nil {
 		log.WithError(err).Warning("health check failure")
 		http.Error(w, `{"healthy":false}`, http.StatusServiceUnavailable)
@@ -532,6 +544,12 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 			WithAttribute("request.remote-addr", strings.Split(r.RemoteAddr, ":")[0]).
 			Commit(r.Context())
 
+		dataAccessLayer, err := dataaccess.Get()
+		if err != nil {
+			telemetry.Errors().WithError(err).Commit(r.Context())
+			return
+		}
+
 		token := r.Header.Get("X-Session-Token")
 		if token == "" || !dataAccessLayer.TokenEvaluate(r.Context(), token) {
 			telemetry.UnauthorizedRequests().
@@ -581,6 +599,11 @@ func authenticateUser(w http.ResponseWriter, r *http.Request, gortCommand string
 
 // doAuthenticateUser does the actual work for authenticateUser.
 func doAuthenticateUser(r *http.Request, gortCommand string, args ...string) (bool, error) {
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		return false, err
+	}
+
 	t := r.Header.Get("X-Session-Token")
 	if t == "" || !dataAccessLayer.TokenEvaluate(r.Context(), t) {
 		return false, ErrUnauthorized
@@ -619,6 +642,11 @@ func doAuthenticateUser(r *http.Request, gortCommand string, args ...string) (bo
 // requested command doesn't exist, an error will be returned.
 func getGortBundleCommand(ctx context.Context, commandName string) (data.Bundle, data.BundleCommand, error) {
 	const bundleName = "gort"
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		return data.Bundle{}, data.BundleCommand{}, err
+	}
 
 	bundleVersion, err := dataAccessLayer.BundleEnabledVersion(ctx, bundleName)
 	if err != nil {
