@@ -25,8 +25,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLoadConfiguration(t *testing.T) {
-	config, err := loadConfiguration("../testing/config/complete.yml")
+func TestLoad(t *testing.T) {
+	config, err := load("../testing/config/complete.yml")
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
@@ -83,7 +83,7 @@ func TestIsUndefinedNil(t *testing.T) {
 }
 
 func TestIsUndefinedFalse(t *testing.T) {
-	c, err := loadConfiguration("../testing/config/complete.yml")
+	c, err := load("../testing/config/complete.yml")
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
@@ -100,7 +100,7 @@ func TestIsUndefinedTrue(t *testing.T) {
 }
 
 func TestIsUndefinedTrue2(t *testing.T) {
-	c, err := loadConfiguration("../testing/config/no-database.yml")
+	c, err := load("../testing/config/no-database.yml")
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
@@ -111,7 +111,7 @@ func TestIsUndefinedTrue2(t *testing.T) {
 }
 
 func TestStandardizeDatabaseConfigNone(t *testing.T) {
-	config, err := loadConfiguration("../testing/config/no-database-password.yml")
+	config, err := load("../testing/config/no-database-password.yml")
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
@@ -133,7 +133,7 @@ func TestStandardizeDatabaseConfigDefined(t *testing.T) {
 		t.FailNow()
 	}
 
-	config, err := loadConfiguration("../testing/config/no-database-password.yml")
+	config, err := load("../testing/config/no-database-password.yml")
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()

@@ -57,9 +57,7 @@ var (
 	config      *data.GortConfig
 	configFile  string
 	configMutex = sync.RWMutex{}
-
-	lastReloadWorked = true // Used to keep prevent log spam
-	md5sum           = []byte{}
+	md5sum      = []byte{}
 
 	stateChangeListeners      = make([]chan State, 0)
 	stateChangeListenersMutex = sync.Mutex{}
@@ -96,21 +94,6 @@ func (s State) String() string {
 	default:
 		return "UNKNOWN STATE"
 	}
-}
-
-// BeginChangeCheck starts a routine that checks the underlying config for
-// changes and reloads if one is found.
-func BeginChangeCheck(frequency time.Duration) {
-	ticker := time.NewTicker(frequency)
-
-	go func() {
-		for range ticker.C {
-			if err := reloadConfiguration(); err != nil && lastReloadWorked {
-				lastReloadWorked = false
-				log.WithError(err).Error("Config reload failed")
-			}
-		}
-	}()
 }
 
 // CurrentState returns the current state of the config.
@@ -180,7 +163,7 @@ func Initialize(file string) error {
 		return gerrs.Wrap(ErrConfigFileNotFound, err)
 	}
 
-	return reloadConfiguration()
+	return Reload()
 }
 
 // IsUndefined is a helper method that is used to determine whether config
@@ -226,10 +209,10 @@ func getMd5Sum(file string) ([]byte, error) {
 	return hashBytes, nil
 }
 
-// loadConfiguration creates a new GortConfig from a file. It's usually called
-// by reloadConfiguration() to execute the actual steps of loading the
-//configuration.
-func loadConfiguration(file string) (*data.GortConfig, error) {
+// load creates a new GortConfig from a file. It's usually called
+// by Reload() to execute the actual steps of loading the
+// configuration.
+func load(file string) (*data.GortConfig, error) {
 	// Read file as a byte slice
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -246,20 +229,20 @@ func loadConfiguration(file string) (*data.GortConfig, error) {
 	return &config, nil
 }
 
-// reloadConfiguration is called by both BeginChangeCheck() and Initialize()
-// to determine whether the config file has changed (or is new) and reload if
-// it has.
-func reloadConfiguration() error {
+// Reload is called by Initialize() to determine whether the config file has changed (or is new) and reload if it has.
+func Reload() error {
 	configMutex.Lock()
 	defer configMutex.Unlock()
 
 	sum, err := getMd5Sum(configFile)
 	if err != nil {
+		log.WithField("file", configFile).WithError(err).Error(ErrHashFailure.Error())
+
 		return gerrs.Wrap(ErrHashFailure, err)
 	}
 
 	if !slicesAreEqual(sum, md5sum) {
-		cp, err := loadConfiguration(configFile)
+		cp, err := load(configFile)
 		if err != nil {
 			// If we're already initialized, keep the original config.
 			// If not, set the state to 'error'.
@@ -267,12 +250,13 @@ func reloadConfiguration() error {
 				updateConfigState(StateConfigError)
 			}
 
+			log.WithField("file", configFile).WithError(err).Error(ErrConfigUnloadable.Error())
+
 			return gerrs.Wrap(ErrConfigUnloadable, err)
 		}
 
 		md5sum = sum
 		config = cp
-		lastReloadWorked = true
 
 		setLogFormatter()
 
@@ -318,21 +302,6 @@ func slicesAreEqual(a, b []byte) bool {
 	}
 
 	return true
-}
-
-func standardizeBundleConfig(b data.Bundle) data.Bundle {
-	b.Default = true
-	b.Enabled = true
-
-	if b.Commands == nil {
-		return b
-	}
-
-	for name, command := range b.Commands {
-		command.Name = name
-	}
-
-	return b
 }
 
 func standardizeDatabaseConfig(dbc *data.DatabaseConfigs) {

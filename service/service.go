@@ -31,6 +31,7 @@ import (
 
 	"github.com/getgort/gort/auth"
 	"github.com/getgort/gort/bundles"
+	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
@@ -149,6 +150,7 @@ func addAllMethodsToRouter(router *mux.Router) {
 	addGroupMethodsToRouter(router)
 	addRoleMethodsToRouter(router)
 	addUserMethodsToRouter(router)
+	addManagementMethodsToRouter(router)
 }
 
 // Requests retrieves the channel to which user request events are sent.
@@ -161,6 +163,10 @@ func (s *RESTServer) ListenAndServe() error {
 	log.WithField("address", s.Addr).Info("Gort controller is starting")
 
 	return s.Server.ListenAndServe()
+}
+
+func addManagementMethodsToRouter(router *mux.Router) {
+	router.Handle("/v2/reload", otelhttp.NewHandler(http.HandlerFunc(handleReload), "reload")).Methods("GET")
 }
 
 func addHealthzMethodToRouter(router *mux.Router) {
@@ -418,6 +424,15 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(m)
 }
 
+// handleReload handles "GET /v2/reload"
+func handleReload(w http.ResponseWriter, r *http.Request) {
+	err := config.Reload()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+}
+
 func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 	status := http.StatusInternalServerError
 	msg := err.Error()
@@ -517,6 +532,7 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 		"/v2/bootstrap":    true,
 		"/v2/healthz":      true,
 		"/v2/metrics":      true,
+		"/v2/reload":       true,
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

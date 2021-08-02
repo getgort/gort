@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"time"
+	"syscall"
 
 	log "github.com/sirupsen/logrus"
 
@@ -40,8 +40,6 @@ func initializeConfig(configFile string) error {
 	if err != nil {
 		return err
 	}
-
-	config.BeginChangeCheck(3 * time.Second)
 
 	return nil
 }
@@ -76,6 +74,8 @@ func installAdapters() error {
 func startGort(ctx context.Context, configFile string, verboseCount int) error {
 	setLoggerVerbosity(verboseCount)
 
+	go catchSignals()
+
 	// Load the Gort configuration.
 	err := initializeConfig(configFile)
 	if err != nil {
@@ -96,9 +96,6 @@ func startGort(ctx context.Context, configFile string, verboseCount int) error {
 
 	// Start the Gort REST web service
 	startServer(ctx, config.GetGortServerConfigs())
-
-	// Listen for signals for graceful shutdown
-	go catchSignals()
 
 	// Tells the chat provider adapters (as defined in the config) to connect.
 	// Returns channels to get user command requests and adapter errors out.
@@ -134,15 +131,20 @@ func catchSignals() {
 
 	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C).
 	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT)
 
-	// Block until we receive our signal.
-	sig := <-c
-
-	log.WithField("signal", sig.String()).
-		Info("Gracefully shutting down Gort")
-
-	os.Exit(0)
+	for sig := range c {
+		switch sig {
+		case syscall.SIGINT:
+			log.WithField("signal", sig.String()).
+				Info("SIGINT: Gracefully shutting down Gort")
+			os.Exit(0)
+		case syscall.SIGHUP:
+			log.WithField("signal", sig.String()).
+				Info("SIGHUP: Reloading configuration")
+			config.Reload()
+		}
+	}
 }
 
 func startServer(ctx context.Context, config data.GortServerConfigs) {
