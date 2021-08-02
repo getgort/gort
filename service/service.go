@@ -202,7 +202,7 @@ func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.H
 			userID := "-"
 			tokenString := r.Header.Get("X-Session-Token")
 			if tokenString != "" {
-				if dataAccessLayer, err := dataaccess.Get(); err == nil {
+				if dataAccessLayer, err := dataaccess.Get(); err != nil {
 					log.WithError(err).Error(errs.ErrDataAccess)
 					telemetry.Errors().WithError(err).Commit(r.Context())
 					respondAndLogError(r.Context(), w, errs.ErrDataAccess)
