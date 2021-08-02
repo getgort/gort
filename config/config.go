@@ -236,9 +236,7 @@ func Reload() error {
 
 	sum, err := getMd5Sum(configFile)
 	if err != nil {
-		log.
-			WithField("file", configFile).
-			WithError(err).Error("Configuration reload failed")
+		log.WithField("file", configFile).WithError(err).Error(ErrHashFailure.Error())
 
 		return gerrs.Wrap(ErrHashFailure, err)
 	}
@@ -252,9 +250,7 @@ func Reload() error {
 				updateConfigState(StateConfigError)
 			}
 
-			log.
-				WithField("file", configFile).
-				WithError(err).Error("Configuration reload failed")
+			log.WithField("file", configFile).WithError(err).Error(ErrConfigUnloadable.Error())
 
 			return gerrs.Wrap(ErrConfigUnloadable, err)
 		}
@@ -269,8 +265,7 @@ func Reload() error {
 
 		updateConfigState(StateConfigInitialized)
 
-		log.WithField("file", configFile).
-			Info("Loaded configuration file")
+		log.WithField("file", configFile).Info("Loaded configuration file")
 	}
 
 	return nil
