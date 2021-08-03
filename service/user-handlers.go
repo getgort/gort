@@ -24,12 +24,20 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/dataaccess"
 )
 
 // handleDeleteUser handles "DELETE /v2/users/{username}"
 func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	err := dataAccessLayer.UserDelete(r.Context(), params["username"])
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	err = dataAccessLayer.UserDelete(r.Context(), params["username"])
 
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -45,6 +53,12 @@ func handleDeleteUserGroup(w http.ResponseWriter, r *http.Request) {
 // handleGetUser handles "GET /v2/users/{username}"
 func handleGetUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), params["username"])
 	if err != nil {
@@ -69,6 +83,12 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
 	exists, err := dataAccessLayer.UserExists(r.Context(), params["username"])
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -90,8 +110,13 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 
 // handleGetUsers handles "GET /v2/users"
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := dataAccessLayer.UserList(r.Context())
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
 
+	users, err := dataAccessLayer.UserList(r.Context())
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -103,6 +128,12 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 // handleGetUserPermissions handles "GET /v2/users/{username}/groups"
 func handleGetUserPermissions(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
 
 	perms, err := dataAccessLayer.UserPermissionList(r.Context(), params["username"])
 	if err != nil {
@@ -127,6 +158,12 @@ func handlePutUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.Username = params["username"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), user.Username)
 	if err != nil {
