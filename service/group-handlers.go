@@ -35,6 +35,7 @@ func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	err = dataAccessLayer.GroupDelete(r.Context(), params["groupname"])
@@ -56,6 +57,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
@@ -81,6 +83,7 @@ func handleDeleteGroupMember(w http.ResponseWriter, r *http.Request) {
 	err = dataAccessLayer.GroupUserDelete(r.Context(), groupname, username)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 }
 
@@ -96,6 +99,7 @@ func handleDeleteGroupRole(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
@@ -121,6 +125,7 @@ func handleDeleteGroupRole(w http.ResponseWriter, r *http.Request) {
 	err = dataAccessLayer.GroupRoleDelete(r.Context(), groupname, rolename)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 }
 
@@ -131,6 +136,7 @@ func handleGetGroup(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.GroupExists(r.Context(), params["groupname"])
@@ -157,6 +163,7 @@ func handleGetGroups(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	groups, err := dataAccessLayer.GroupList(r.Context())
@@ -177,6 +184,7 @@ func handleGetGroupMembers(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.GroupExists(r.Context(), groupname)
@@ -206,6 +214,7 @@ func handleGetGroupRoles(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.GroupExists(r.Context(), groupname)
@@ -245,6 +254,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.GroupExists(r.Context(), group.Name)
@@ -262,6 +272,7 @@ func handlePutGroup(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 }
 
@@ -277,6 +288,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
@@ -302,6 +314,7 @@ func handlePutGroupMember(w http.ResponseWriter, r *http.Request) {
 	err = dataAccessLayer.GroupUserAdd(r.Context(), groupname, username)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 }
 
@@ -317,6 +330,7 @@ func handlePutGroupRole(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err = dataAccessLayer.GroupExists(r.Context(), groupname)
@@ -342,6 +356,7 @@ func handlePutGroupRole(w http.ResponseWriter, r *http.Request) {
 	err = dataAccessLayer.GroupRoleAdd(r.Context(), groupname, rolename)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 }
 

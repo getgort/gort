@@ -34,6 +34,7 @@ func handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	err = dataAccessLayer.RoleDelete(r.Context(), params["rolename"])
@@ -48,6 +49,7 @@ func handleGetRoles(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	roles, err := dataAccessLayer.RoleList(r.Context())
@@ -68,6 +70,7 @@ func handleGetRole(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.RoleExists(r.Context(), rolename)
@@ -124,6 +127,7 @@ func handleGetRole(w http.ResponseWriter, r *http.Request) {
 
 	if err := <-errs; err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	role.Permissions = perms
@@ -140,6 +144,7 @@ func handleGetRolePermissions(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.RoleExists(r.Context(), rolename)
@@ -171,6 +176,7 @@ func handleGrantRolePermission(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.RoleExists(r.Context(), rolename)
@@ -200,6 +206,7 @@ func handleRevokeRolePermission(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.RoleExists(r.Context(), rolename)
@@ -228,11 +235,13 @@ func handlePutRole(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	err = dataAccessLayer.RoleCreate(r.Context(), params["rolename"])
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 }
 

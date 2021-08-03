@@ -62,6 +62,7 @@ func handleGetBundleVersions(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	bundles, err := dataAccessLayer.BundleVersionList(r.Context(), name)
@@ -85,6 +86,7 @@ func handleDeleteBundleVersion(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	err = dataAccessLayer.BundleDelete(r.Context(), name, version)
@@ -103,6 +105,7 @@ func handleGetBundleVersion(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	bundle, err := dataAccessLayer.BundleGet(r.Context(), name, version)
@@ -130,6 +133,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	// If enabled=false we ignore the value of version and replace it with the
@@ -200,6 +204,7 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	err = dataAccessLayer.BundleCreate(r.Context(), bundle)

@@ -34,6 +34,7 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	err = dataAccessLayer.UserDelete(r.Context(), params["username"])
@@ -56,6 +57,7 @@ func handleGetUser(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), params["username"])
@@ -84,6 +86,7 @@ func handleGetUserGroups(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), params["username"])
@@ -110,6 +113,7 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	users, err := dataAccessLayer.UserList(r.Context())
@@ -128,6 +132,7 @@ func handleGetUserPermissions(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	perms, err := dataAccessLayer.UserPermissionList(r.Context(), params["username"])
@@ -157,6 +162,7 @@ func handlePutUser(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	exists, err := dataAccessLayer.UserExists(r.Context(), user.Username)
