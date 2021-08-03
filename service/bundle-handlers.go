@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
 )
@@ -58,6 +59,12 @@ func handleGetBundleVersions(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	name := params["name"]
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
 	bundles, err := dataAccessLayer.BundleVersionList(r.Context(), name)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -76,7 +83,13 @@ func handleDeleteBundleVersion(w http.ResponseWriter, r *http.Request) {
 	name := params["name"]
 	version := params["version"]
 
-	err := dataAccessLayer.BundleDelete(r.Context(), name, version)
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	err = dataAccessLayer.BundleDelete(r.Context(), name, version)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -88,6 +101,12 @@ func handleGetBundleVersion(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	name := params["name"]
 	version := params["version"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
 
 	bundle, err := dataAccessLayer.BundleGet(r.Context(), name, version)
 	if err != nil {
@@ -109,6 +128,12 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 	enabledValue := strings.ToUpper(r.FormValue("enabled"))
 	if enabledValue == "" {
 		enabledValue = "-"
+	}
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
 	}
 
 	// If enabled=false we ignore the value of version and replace it with the
@@ -176,6 +201,12 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 	bundle.Name = params["name"]
 	bundle.Version = params["version"]
 
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
 	err = dataAccessLayer.BundleCreate(r.Context(), bundle)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -184,6 +215,11 @@ func handlePutBundleVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAllBundles(ctx context.Context) ([]data.Bundle, error) {
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		return nil, err
+	}
+
 	// Explicit bundles from the data layer
 	bundles, err := dataAccessLayer.BundleList(ctx)
 	if err != nil {

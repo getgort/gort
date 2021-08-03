@@ -13,21 +13,21 @@ func TestGrantGroupRole(t *testing.T) {
 	router := createTestRouter()
 
 	// Create group
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup").WithBody(rest.Group{Name: "testgroup"}).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestGrantGroupRole").WithBody(rest.Group{Name: "groupTestGrantGroupRole"}).WithStatus(http.StatusOK).Test(t, router)
 
 	// Create role
-	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/roles/roleTestGrantGroupRole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Check no roles
 	roles := []rest.Role{}
-	NewResponseTester("GET", "http://example.com/v2/groups/testgroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("GET", "http://example.com/v2/groups/groupTestGrantGroupRole/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
 	assert.Equal(t, len(roles), 0)
 
 	// Grant role
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestGrantGroupRole/roles/roleTestGrantGroupRole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Check new role added
-	NewResponseTester("GET", "http://example.com/v2/groups/testgroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("GET", "http://example.com/v2/groups/groupTestGrantGroupRole/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
 	assert.Equal(t, len(roles), 1)
 }
 
@@ -35,17 +35,17 @@ func TestGrantGroupRoleInvalidGroup(t *testing.T) {
 	router := createTestRouter()
 
 	// Create group
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup").WithBody(rest.Group{Name: "testgroup"}).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestGrantGroupRoleInvalidGroup").WithBody(rest.Group{Name: "groupTestGrantGroupRoleInvalidGroup"}).WithStatus(http.StatusOK).Test(t, router)
 
 	// Create role
-	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/roles/roleTestGrantGroupRoleInvalidGroup").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant role
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup2/roles/testrole").WithStatus(http.StatusNotFound).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestGrantGroupRoleInvalidGroup2/roles/testrole").WithStatus(http.StatusNotFound).Test(t, router)
 
 	// Check 0 roles
 	roles := []rest.Role{}
-	NewResponseTester("GET", "http://example.com/v2/groups/testgroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("GET", "http://example.com/v2/groups/groupTestGrantGroupRoleInvalidGroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
 	assert.Equal(t, len(roles), 0)
 }
 
@@ -53,17 +53,17 @@ func TestGrantGroupRoleInvalidRole(t *testing.T) {
 	router := createTestRouter()
 
 	// Create group
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup").WithBody(rest.Group{Name: "testgroup"}).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestGrantGroupRoleInvalidRole").WithBody(rest.Group{Name: "groupTestGrantGroupRoleInvalidRole"}).WithStatus(http.StatusOK).Test(t, router)
 
 	// Create role
-	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/roles/roleTestGrantGroupRoleInvalidRole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant role
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup2/roles/testrole2").WithStatus(http.StatusNotFound).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestGrantGroupRoleInvalidRole2/roles/roleTestGrantGroupRoleInvalidRole2").WithStatus(http.StatusNotFound).Test(t, router)
 
 	// Check 0 roles
 	roles := []rest.Role{}
-	NewResponseTester("GET", "http://example.com/v2/groups/testgroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("GET", "http://example.com/v2/groups/groupTestGrantGroupRoleInvalidRole/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
 	assert.Equal(t, len(roles), 0)
 }
 
@@ -71,20 +71,20 @@ func TestRevokeGroupRole(t *testing.T) {
 	router := createTestRouter()
 
 	// Create group
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup").WithBody(rest.Group{Name: "testgroup"}).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestRevokeGroupRole").WithBody(rest.Group{Name: "groupTestRevokeGroupRole"}).WithStatus(http.StatusOK).Test(t, router)
 
 	// Create role
-	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/roles/roleTestRevokeGroupRole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant role
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestRevokeGroupRole/roles/roleTestRevokeGroupRole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Revoke role
-	NewResponseTester("DELETE", "http://example.com/v2/groups/testgroup/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("DELETE", "http://example.com/v2/groups/groupTestRevokeGroupRole/roles/roleTestRevokeGroupRole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Check 0 roles
 	roles := []rest.Role{}
-	NewResponseTester("GET", "http://example.com/v2/groups/testgroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("GET", "http://example.com/v2/groups/groupTestRevokeGroupRole/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
 	assert.Equal(t, len(roles), 0)
 }
 
@@ -92,20 +92,20 @@ func TestRevokeGroupRoleInvalidGroup(t *testing.T) {
 	router := createTestRouter()
 
 	// Create group
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup").WithBody(rest.Group{Name: "testgroup"}).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestRevokeGroupRoleInvalidGroup").WithBody(rest.Group{Name: "groupTestRevokeGroupRoleInvalidGroup"}).WithStatus(http.StatusOK).Test(t, router)
 
 	// Create role
-	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/roles/roleTestRevokeGroupRoleInvalidGroup").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant role
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestRevokeGroupRoleInvalidGroup/roles/roleTestRevokeGroupRoleInvalidGroup").WithStatus(http.StatusOK).Test(t, router)
 
 	// Delete role for wrong group
-	NewResponseTester("DELETE", "http://example.com/v2/groups/testgroup2/roles/testrole").WithStatus(http.StatusNotFound).Test(t, router)
+	NewResponseTester("DELETE", "http://example.com/v2/groups/groupTestRevokeGroupRoleInvalidGroup2/roles/roleTestRevokeGroupRoleInvalidGroup").WithStatus(http.StatusNotFound).Test(t, router)
 
 	// Check 1 role
 	roles := []rest.Role{}
-	NewResponseTester("GET", "http://example.com/v2/groups/testgroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("GET", "http://example.com/v2/groups/groupTestRevokeGroupRoleInvalidGroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
 	assert.Equal(t, len(roles), 1)
 }
 
@@ -113,19 +113,19 @@ func TestRevokeGroupRoleInvalidRole(t *testing.T) {
 	router := createTestRouter()
 
 	// Create group
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup").WithBody(rest.Group{Name: "testgroup"}).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestRevokeGroupRoleInvalidRole").WithBody(rest.Group{Name: "groupTestRevokeGroupRoleInvalidRole"}).WithStatus(http.StatusOK).Test(t, router)
 
 	// Create role
-	NewResponseTester("PUT", "http://example.com/v2/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/roles/roleTestRevokeGroupRoleInvalidRole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Grant role
-	NewResponseTester("PUT", "http://example.com/v2/groups/testgroup/roles/testrole").WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("PUT", "http://example.com/v2/groups/groupTestRevokeGroupRoleInvalidRole/roles/roleTestRevokeGroupRoleInvalidRole").WithStatus(http.StatusOK).Test(t, router)
 
 	// Delete wrong role
-	NewResponseTester("DELETE", "http://example.com/v2/groups/testgroup/roles/testrole2").WithStatus(http.StatusNotFound).Test(t, router)
+	NewResponseTester("DELETE", "http://example.com/v2/groups/groupTestRevokeGroupRoleInvalidRole/roles/roleTestRevokeGroupRoleInvalidRole2").WithStatus(http.StatusNotFound).Test(t, router)
 
 	// Check 1 role
 	roles := []rest.Role{}
-	NewResponseTester("GET", "http://example.com/v2/groups/testgroup/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
+	NewResponseTester("GET", "http://example.com/v2/groups/groupTestRevokeGroupRoleInvalidRole/roles").WithOutput(&roles).WithStatus(http.StatusOK).Test(t, router)
 	assert.Equal(t, len(roles), 1)
 }
