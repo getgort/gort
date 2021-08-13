@@ -79,11 +79,23 @@ When using this command, you must provide the path to the file, as follows:
   gort bundle install [flags] config_path
 
 Flags:
-  -h, --help   Show this message and exit
+  -h, --help			Show this message and exit
+  -e, --enable			Automatically enable a bundle after installing?
+						[default: False]
+  -f, --force			Install even if a bundle with the same version is
+						already installed. Applies only to bundles
+						installed from a file, and not from the Warehouse
+						bundle registry. Use this to shorten iteration
+						cycles in bundle development.  [default: False]
 
 Global Flags:
   -P, --profile string   The Gort profile within the config file to use
 `
+)
+
+var (
+	flagBundleInstallEnable bool
+	flagBundleInstallForce  bool
 )
 
 // GetBundleInstallCmd is a command
@@ -97,6 +109,8 @@ func GetBundleInstallCmd() *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(bundleInstallUsage)
+	cmd.Flags().BoolVarP(&flagBundleInstallEnable, "enable", "e", false, "Automatically enable a bundle after installing")
+	cmd.Flags().BoolVarP(&flagBundleInstallForce, "force", "f", false, "Install even if a bundle with the same version is already installed.")
 
 	return cmd
 }
@@ -114,9 +128,31 @@ func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Check for existing instances of this bundle, allowing forced replacement.
+	exists, err := c.BundleExists(bundle.Name, bundle.Version)
+	if err != nil {
+		return err
+	}
+	if exists {
+		if !flagBundleInstallForce {
+			return fmt.Errorf("bundle %q already exists at this version. Use --force to force install from your file", bundle.Name)
+		}
+		err = c.BundleUninstall(bundle.Name, bundle.Version)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = c.BundleInstall(bundle)
 	if err != nil {
 		return err
+	}
+
+	if flagBundleInstallEnable {
+		err = c.BundleEnable(bundle.Name, bundle.Version)
+		if err != nil {
+			return err
+		}
 	}
 
 	fmt.Printf("Bundle %q installed.\n", bundle.Name)

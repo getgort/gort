@@ -38,7 +38,7 @@ func (c *GortClient) BundleEnable(bundlename string, version string) error {
 // BundleExists simply returns true if a bundle exists with the specified
 // bundlename; false otherwise.
 func (c *GortClient) BundleExists(bundlename string, version string) (bool, error) {
-	url := fmt.Sprintf("%s/v2/bundles/%s/version/%s",
+	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s",
 		c.profile.URL.String(), bundlename, version)
 
 	resp, err := c.doRequest("GET", url, []byte{})
