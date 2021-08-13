@@ -94,8 +94,8 @@ Global Flags:
 )
 
 var (
-	flagEnable bool
-	flagForce  bool
+	flagBundleInstallEnable bool
+	flagBundleInstallForce  bool
 )
 
 // GetBundleInstallCmd is a command
@@ -109,8 +109,8 @@ func GetBundleInstallCmd() *cobra.Command {
 	}
 
 	cmd.SetUsageTemplate(bundleInstallUsage)
-	cmd.Flags().BoolVarP(&flagEnable, "enable", "e", false, "Automatically enable a bundle after installing")
-	cmd.Flags().BoolVarP(&flagForce, "force", "f", false, "Install even if a bundle with the same version is already installed.")
+	cmd.Flags().BoolVarP(&flagBundleInstallEnable, "enable", "e", false, "Automatically enable a bundle after installing")
+	cmd.Flags().BoolVarP(&flagBundleInstallForce, "force", "f", false, "Install even if a bundle with the same version is already installed.")
 
 	return cmd
 }
@@ -134,7 +134,7 @@ func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if exists {
-		if !flagForce {
+		if !flagBundleInstallForce {
 			return fmt.Errorf("bundle %q already exists at this version. Use --force to force install from your file", bundle.Name)
 		}
 		err = c.BundleUninstall(bundle.Name, bundle.Version)
@@ -148,7 +148,7 @@ func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if flagEnable {
+	if flagBundleInstallEnable {
 		err = c.BundleEnable(bundle.Name, bundle.Version)
 		if err != nil {
 			return err
