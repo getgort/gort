@@ -421,5 +421,5 @@ func testFindCommandEntry(t *testing.T) {
 }
 
 func getTestBundle() (data.Bundle, error) {
-	return bundles.LoadBundle("../../testing/test-bundle.yml")
+	return bundles.LoadBundleFromFile("../../testing/test-bundle.yml")
 }
