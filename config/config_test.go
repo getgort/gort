@@ -111,6 +111,13 @@ func TestIsUndefinedTrue2(t *testing.T) {
 }
 
 func TestStandardizeDatabaseConfigNone(t *testing.T) {
+	// Clear the password environment variable for repeated runs
+	err := os.Setenv(EnvDatabasePassword, "")
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+
 	config, err := load("../testing/config/no-database-password.yml")
 	if err != nil {
 		t.Error(err.Error())
