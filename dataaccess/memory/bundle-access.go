@@ -71,15 +71,15 @@ func (da *InMemoryDataAccess) BundleDelete(ctx context.Context, name, version st
 }
 
 // BundleDisable TBD
-func (da *InMemoryDataAccess) BundleDisable(ctx context.Context, name string) error {
+func (da *InMemoryDataAccess) BundleDisable(ctx context.Context, name, version string) error {
 	if name == "" {
 		return errs.ErrEmptyBundleName
 	}
 
 	foundMatch := false
 
-	for n, b := range da.bundles {
-		if n != name {
+	for _, b := range da.bundles {
+		if b.Name != name || b.Version != version {
 			continue
 		}
 

@@ -135,7 +135,7 @@ func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version str
 		return errs.ErrNoSuchBundle
 	}
 
-	err = da.doBundleDisable(ctx, tx, name)
+	err = da.doBundleDisable(ctx, tx, name, version)
 	if err != nil {
 		tx.Rollback()
 		return gerr.Wrap(errs.ErrDataAccess, err)
@@ -157,7 +157,7 @@ func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version str
 }
 
 // BundleDisable TBD
-func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) error {
+func (da PostgresDataAccess) BundleDisable(ctx context.Context, name, version string) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.BundleDisable")
 	defer sp.End()
@@ -173,7 +173,7 @@ func (da PostgresDataAccess) BundleDisable(ctx context.Context, name string) err
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	err = da.doBundleDisable(ctx, tx, name)
+	err = da.doBundleDisable(ctx, tx, name, version)
 	if err != nil {
 		tx.Rollback()
 		return gerr.Wrap(errs.ErrDataAccess, err)
@@ -521,10 +521,10 @@ func (da PostgresDataAccess) doBundleDelete(ctx context.Context, tx *sql.Tx, nam
 }
 
 // doBundleDisable TBD
-func (da PostgresDataAccess) doBundleDisable(ctx context.Context, tx *sql.Tx, name string) error {
-	query := `DELETE FROM bundle_enabled WHERE bundle_name=$1`
+func (da PostgresDataAccess) doBundleDisable(ctx context.Context, tx *sql.Tx, name string, version string) error {
+	query := `DELETE FROM bundle_enabled WHERE bundle_name=$1 AND bundle_version=$2`
 
-	_, err := tx.ExecContext(ctx, query, name)
+	_, err := tx.ExecContext(ctx, query, name, version)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}

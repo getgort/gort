@@ -23,6 +23,7 @@ import (
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testBundleAccess(t *testing.T) {
@@ -33,6 +34,7 @@ func testBundleAccess(t *testing.T) {
 	t.Run("testBundleEnableTwo", testBundleEnableTwo)
 	t.Run("testBundleExists", testBundleExists)
 	t.Run("testBundleDelete", testBundleDelete)
+	t.Run("testBundleDeleteDoesntDisable", testBundleDeleteDoesntDisable)
 	t.Run("testBundleGet", testBundleGet)
 	t.Run("testBundleList", testBundleList)
 	t.Run("testBundleVersionList", testBundleVersionList)
@@ -266,6 +268,34 @@ func testBundleDelete(t *testing.T) {
 		t.Error("Shouldn't exist anymore!")
 		t.FailNow()
 	}
+}
+
+func testBundleDeleteDoesntDisable(t *testing.T) {
+	var err error
+
+	bundle, _ := getTestBundle()
+	bundle.Name = "test-delete2"
+	bundle.Version = "0.0.1"
+	err = da.BundleCreate(ctx, bundle)
+	require.NoError(t, err)
+	defer da.BundleDelete(ctx, bundle.Name, bundle.Version)
+
+	bundle2, _ := getTestBundle()
+	bundle2.Name = "test-delete2"
+	bundle2.Version = "0.0.2"
+	err = da.BundleCreate(ctx, bundle2)
+	require.NoError(t, err)
+	defer da.BundleDelete(ctx, bundle2.Name, bundle2.Version)
+
+	err = da.BundleEnable(ctx, bundle2.Name, bundle2.Version)
+	require.NoError(t, err)
+
+	err = da.BundleDelete(ctx, bundle.Name, bundle.Version)
+	require.NoError(t, err)
+
+	bundle2, err = da.BundleGet(ctx, bundle2.Name, bundle2.Version)
+	require.NoError(t, err)
+	assert.True(t, bundle2.Enabled)
 }
 
 func testBundleGet(t *testing.T) {
