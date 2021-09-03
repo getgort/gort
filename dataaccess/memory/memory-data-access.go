@@ -48,3 +48,10 @@ func NewInMemoryDataAccess() *InMemoryDataAccess {
 func (da *InMemoryDataAccess) Initialize(ctx context.Context) error {
 	return nil
 }
+
+func Reset() {
+	dataAccess.bundles = make(map[string]*data.Bundle)
+	dataAccess.groups = make(map[string]*rest.Group)
+	dataAccess.users = make(map[string]*rest.User)
+	dataAccess.roles = make(map[string]*rest.Role)
+}

@@ -30,11 +30,10 @@ import (
 
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/dataaccess/memory"
 )
 
 var adminToken rest.Token
-
-var router *mux.Router
 
 // ResponseTester allows a single HTTP test to be sent to a router and the
 // result to be verified.
@@ -114,18 +113,17 @@ func (r ResponseTester) Test(t *testing.T, router *mux.Router) {
 }
 
 func createTestRouter() *mux.Router {
-	if router != nil {
-		return router
-	}
-
 	ctx := context.Background()
 
-	userAdmin, err := doBootstrap(ctx, rest.User{})
+	// Clear in-memory data for re-running tests
+	memory.Reset()
+
+	dataAccessLayer, err := dataaccess.Get()
 	if err != nil {
 		panic(err)
 	}
 
-	dataAccessLayer, err := dataaccess.Get()
+	userAdmin, err := doBootstrap(ctx, rest.User{})
 	if err != nil {
 		panic(err)
 	}
@@ -135,7 +133,7 @@ func createTestRouter() *mux.Router {
 		panic(err)
 	}
 
-	router = mux.NewRouter()
+	router := mux.NewRouter()
 	addAllMethodsToRouter(router)
 
 	return router

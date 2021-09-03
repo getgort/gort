@@ -31,6 +31,9 @@ var (
 )
 
 func testInitialize(t *testing.T) {
+	// Reset for repeated runs
+	Reset()
+
 	ctx, cancel = context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
