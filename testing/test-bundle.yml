@@ -2,7 +2,7 @@
 gort_bundle_version: 1
 
 name: test
-version: 0.0.1
+version: 0.0.2
 author: Matt Titmus <matthew.titmus@gmail.com>
 homepage: https://guide.getgort.io
 description: A test bundle.
