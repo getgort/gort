@@ -17,7 +17,10 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data"
 	"github.com/spf13/cobra"
 )
 
@@ -50,6 +53,12 @@ Global Flags:
 `
 )
 
+var (
+	flagBundleListEnabled  bool
+	flagBundleListDisabled bool
+	flagBundleListVerbose  bool
+)
+
 // GetBundleListCmd is a command
 func GetBundleListCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -59,12 +68,20 @@ func GetBundleListCmd() *cobra.Command {
 		RunE:  bundleListCmd,
 	}
 
+	cmd.Flags().BoolVarP(&flagBundleListEnabled, "enabled", "e", false, "List only enabled bundles")
+	cmd.Flags().BoolVarP(&flagBundleListDisabled, "disabled", "d", false, "List only disabled bundles")
+	cmd.Flags().BoolVarP(&flagBundleListVerbose, "verbose", "v", false, "Display additional bundle details")
+
 	cmd.SetUsageTemplate(bundleListUsage)
 
 	return cmd
 }
 
 func bundleListCmd(cmd *cobra.Command, args []string) error {
+	if flagBundleListEnabled && flagBundleListDisabled {
+		return fmt.Errorf("--enabled and --disabled flags are mutually exclusive")
+	}
+
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
@@ -73,6 +90,17 @@ func bundleListCmd(cmd *cobra.Command, args []string) error {
 	bundles, err := gortClient.BundleList()
 	if err != nil {
 		return err
+	}
+
+	switch {
+	case flagBundleListEnabled:
+		bundles = filterBundles(bundles, func(b data.Bundle) bool {
+			return !b.Enabled
+		})
+	case flagBundleListDisabled:
+		bundles = filterBundles(bundles, func(b data.Bundle) bool {
+			return b.Enabled
+		})
 	}
 
 	c := &Columnizer{}
@@ -95,4 +123,17 @@ func bundleListCmd(cmd *cobra.Command, args []string) error {
 	c.Print(bundles)
 
 	return nil
+}
+
+// if filter(ss[i]) returns true, that element is filtered out
+func filterBundles(in []data.Bundle, filter func(data.Bundle) bool) []data.Bundle {
+	var out []data.Bundle
+
+	for _, b := range in {
+		if !filter(b) {
+			out = append(out, b)
+		}
+	}
+
+	return out
 }
