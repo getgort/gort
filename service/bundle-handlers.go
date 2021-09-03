@@ -178,7 +178,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 	if enabledValue[0] == 'T' {
 		err = dataAccessLayer.BundleEnable(r.Context(), name, version)
 	} else if enabledValue[0] == 'F' {
-		err = dataAccessLayer.BundleDisable(r.Context(), name)
+		err = dataAccessLayer.BundleDisable(r.Context(), name, version)
 	}
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
