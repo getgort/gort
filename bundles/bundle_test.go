@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLoadBundle(t *testing.T) {
-	b, err := LoadBundle("../testing/test-bundle.yml")
+func TestLoadBundleFromFile(t *testing.T) {
+	b, err := LoadBundleFromFile("../testing/test-bundle.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}

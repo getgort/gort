@@ -18,6 +18,8 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/client"
@@ -74,6 +76,10 @@ const (
 When using this command, you must provide the path to the file, as follows:
 
   gort bundle install /path/to/my/bundle/config.yaml
+
+  you may also give the path as ` + "`-`" + `, in which case standard input is used:
+
+  cat config.yaml | gort bundle install -
 `
 	bundleInstallUsage = `Usage:
   gort bundle install [flags] config_path
@@ -123,7 +129,20 @@ func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	bundle, err := bundles.LoadBundle(bundlefile)
+	// Get appropriate reader from input
+	var r io.Reader
+	if bundlefile == "-" {
+		r = os.Stdin
+	} else {
+		rc, err := os.Open(bundlefile)
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+		r = rc
+	}
+
+	bundle, err := bundles.LoadBundle(r)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,9 @@ package bundles
 
 import (
 	"errors"
+	"io"
 	"io/ioutil"
+	"os"
 
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
@@ -31,9 +33,18 @@ var (
 	ErrInvalidBundleCommandPair = errors.New("invalid bundle:comand pair")
 )
 
+func LoadBundleFromFile(file string) (data.Bundle, error) {
+	f, err := os.Open(file)
+	defer f.Close()
+	if err != nil {
+		return data.Bundle{}, err
+	}
+	return LoadBundle(f)
+}
+
 // LoadBundle is called by ...
-func LoadBundle(file string) (data.Bundle, error) {
-	dat, err := ioutil.ReadFile(file)
+func LoadBundle(r io.Reader) (data.Bundle, error) {
+	dat, err := ioutil.ReadAll(r)
 	if err != nil {
 		return data.Bundle{}, gerrs.Wrap(gerrs.ErrIO, err)
 	}
