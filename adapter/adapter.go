@@ -615,7 +615,7 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 
 		case *ProviderEvent:
 			attr = append(attr,
-				attribute.String("event", o.EventType),
+				attribute.String("event", string(o.EventType)),
 				attribute.String("adapter.name", o.Info.Provider.Name),
 				attribute.String("adapter.type", o.Info.Provider.Type),
 			)
@@ -894,7 +894,7 @@ func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.Comma
 	ctx, sp := tr.Start(context.Background(), "adapter.handleIncomingEvent")
 	defer sp.End()
 
-	sp.SetAttributes(attribute.String("event.type", event.EventType))
+	sp.SetAttributes(attribute.String("event.type", string(event.EventType)))
 
 	switch ev := event.Data.(type) {
 	case *ConnectedEvent:

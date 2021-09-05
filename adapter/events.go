@@ -26,11 +26,23 @@ type Info struct {
 	Provider *ProviderInfo
 }
 
+type EventType string
+
+const (
+	EventChannelMessage      = EventType("channel_message")
+	EventConnected           = EventType("connected")
+	EventConnectionError     = EventType("connection_error")
+	EventDirectMessage       = EventType("direct_message")
+	EventDisconnected        = EventType("disconnected")
+	EventAuthenticationError = EventType("authentication_error")
+	EventError               = EventType("error")
+)
+
 // ProviderEvent is the main wrapper. You will find all the other messages
 // attached as Data
 type ProviderEvent struct {
 	// The type of event
-	EventType string
+	EventType EventType
 
 	// The event instance
 	Data interface{}
