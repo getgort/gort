@@ -25,16 +25,10 @@ func NewAdapter(provider data.SlackProvider) adapter.Adapter {
 
 	client := slack.New(
 		provider.BotToken,
-		// slack.OptionDebug(true),
-		// slack.OptionLog(log.New(os.Stdout, "api: ", log.Lshortfile|log.LstdFlags)),
 		slack.OptionAppLevelToken(provider.AppToken),
 	)
 
-	socketClient := socketmode.New(
-		client,
-		// socketmode.OptionDebug(true),
-		// socketmode.OptionLog(log.New(os.Stdout, "socketmode: ", log.Lshortfile|log.LstdFlags)),
-	)
+	socketClient := socketmode.New(client)
 
 	return &SocketModeAdapter{
 		provider:     provider,
