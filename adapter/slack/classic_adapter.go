@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
 
 	"github.com/getgort/gort/adapter"
@@ -28,11 +27,6 @@ import (
 	"github.com/getgort/gort/telemetry"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
-)
-
-var (
-	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*:[^|]*)\>`)
-	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*:[^|]*\|([^|]*)\>`)
 )
 
 var _ adapter.Adapter = &ClassicAdapter{}

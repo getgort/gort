@@ -1,11 +1,18 @@
 package slack
 
 import (
+	"regexp"
+
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
+)
+
+var (
+	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*:[^|]*)\>`)
+	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*:[^|]*\|([^|]*)\>`)
 )
 
 // NewAdapter will construct a SlackAdapter instance for a given provider configuration.
