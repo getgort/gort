@@ -22,7 +22,6 @@ import (
 
 // Info is used by events to wrap user and provider info.
 type Info struct {
-	User     *UserInfo
 	Provider *ProviderInfo
 }
 

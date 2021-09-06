@@ -40,24 +40,17 @@ func (s *SocketModeAdapter) GetName() string {
 }
 
 // GetPresentChannels returns a slice of channels that a user is present in.
-func (s *SocketModeAdapter) GetPresentChannels(userID string) ([]*adapter.ChannelInfo, error) {
+func (s *SocketModeAdapter) GetPresentChannels() ([]*adapter.ChannelInfo, error) {
 	allChannels, _, err := s.client.GetConversations(&slack.GetConversationsParameters{})
 	if err != nil {
 		return nil, err
 	}
 
 	channels := make([]*adapter.ChannelInfo, 0)
-
-	// A nested loop. It's terrible. It's hacky. I know.
 	for _, ch := range allChannels {
-		members := ch.Members
-
-	inner:
-		for _, memberID := range members {
-			if userID == memberID {
-				channels = append(channels, newChannelInfoFromSlackChannel(&ch))
-				break inner
-			}
+		// Is this user in this channel?
+		if ch.IsMember {
+			channels = append(channels, newChannelInfoFromSlackChannel(&ch))
 		}
 	}
 
@@ -82,7 +75,6 @@ func (s *SocketModeAdapter) Listen(ctx context.Context) <-chan *adapter.Provider
 
 	info := &adapter.Info{
 		Provider: adapter.NewProviderInfoFromConfig(s.provider),
-		User:     &adapter.UserInfo{},
 	}
 
 	go func() {
@@ -113,7 +105,7 @@ func (s *SocketModeAdapter) Listen(ctx context.Context) <-chan *adapter.Provider
 				e.WithField("attempt", ev.ConnectionCount).
 					Trace("Slack event: connected")
 
-				// Note: the connected event is sent after we identify the user
+				events <- s.onConnected(info)
 			case socketmode.EventTypeDisconnect:
 				e.Debug("Slack event: disconnected")
 				telemetry.Errors().Commit(ctx)
@@ -146,6 +138,13 @@ func (s *SocketModeAdapter) Listen(ctx context.Context) <-chan *adapter.Provider
 						if ev.Text == "" {
 							continue
 						}
+						// Ignore messages from bots
+						if ev.BotID != "" {
+							e.WithField("message.data", fmt.Sprintf("%+v", evt.Data)).
+								WithField("bot_id", ev.BotID).
+								Debug("Slack event: ignoring message from bot")
+							continue
+						}
 						switch ev.ChannelType {
 						case "channel": // Public Channel
 							events <- s.onChannelMessage(ev, info)
@@ -165,22 +164,7 @@ func (s *SocketModeAdapter) Listen(ctx context.Context) <-chan *adapter.Provider
 					}
 				}
 			case socketmode.EventTypeHello:
-				// Identify user
-				users, err := s.client.GetUsers()
-				if err != nil {
-					e.WithError(err).
-						Error("Error finding user on connect")
-					telemetry.Errors().WithError(err).Commit(ctx)
-
-					continue
-				}
-
-				for _, user := range users {
-					if user.IsBot && user.Profile.ApiAppID == evt.Request.ConnectionInfo.AppID {
-						info.User = newUserInfoFromSlackUser(&user)
-					}
-				}
-				events <- s.onConnected(info)
+				// Do nothing for now
 			default:
 				// Report and ignore other events..
 				e.WithField("message.data", evt.Data).

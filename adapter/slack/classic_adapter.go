@@ -63,24 +63,16 @@ func (s ClassicAdapter) GetName() string {
 
 // GetPresentChannels returns a slice of channel ID strings that the Adapter
 // is present in. This is expensive. Don't use it often.
-func (s ClassicAdapter) GetPresentChannels(userID string) ([]*adapter.ChannelInfo, error) {
+func (s ClassicAdapter) GetPresentChannels() ([]*adapter.ChannelInfo, error) {
 	allChannels, _, err := s.rtm.GetConversations(&slack.GetConversationsParameters{})
 	if err != nil {
 		return nil, err
 	}
 
 	channels := make([]*adapter.ChannelInfo, 0)
-
-	// A nested loop. It's terrible. It's hacky. I know.
 	for _, ch := range allChannels {
-		members := ch.Members
-
-	inner:
-		for _, memberID := range members {
-			if userID == memberID {
-				channels = append(channels, newChannelInfoFromSlackChannel(&ch))
-				break inner
-			}
+		if ch.IsMember {
+			channels = append(channels, newChannelInfoFromSlackChannel(&ch))
 		}
 	}
 
@@ -162,7 +154,6 @@ func (s ClassicAdapter) Listen(ctx context.Context) <-chan *adapter.ProviderEven
 	go func() {
 		info := &adapter.Info{
 			Provider: adapter.NewProviderInfoFromConfig(s.provider),
-			User:     &adapter.UserInfo{},
 		}
 
 	eventLoop:
@@ -181,18 +172,6 @@ func (s ClassicAdapter) Listen(ctx context.Context) <-chan *adapter.ProviderEven
 
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
-				suser, err := s.rtm.GetUserInfo(ev.Info.User.ID)
-				if err != nil {
-					e.WithError(err).
-						WithField("user.id", ev.Info.User.ID).
-						Error("Error finding user on connect")
-					telemetry.Errors().WithError(err).Commit(ctx)
-
-					continue eventLoop
-				}
-
-				info.User = newUserInfoFromSlackUser(suser)
-
 				e.WithField("attempt", ev.ConnectionCount).
 					WithField("info.team.id", ev.Info.Team.ID).
 					WithField("info.team.domain", ev.Info.Team.Domain).
