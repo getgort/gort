@@ -30,9 +30,15 @@ type AbstractProvider struct {
 	Name    string `yaml:"name,omitempty"`
 }
 
-// SlackProvider is the data wrapper for a Slack provider.
+// SlackProvider is the data wrapper for a Slack App provider.
 type SlackProvider struct {
 	AbstractProvider `yaml:",inline"`
-	APIToken         string `yaml:"api_token,omitempty"`
 	IconURL          string `yaml:"icon_url,omitempty"`
+
+	// App and Bot tokens, used for Socket mode.
+	AppToken string `yaml:"app_token,omitempty"`
+	BotToken string `yaml:"bot_token,omitempty"`
+
+	// Deprecated, used for Classic Slack apps
+	APIToken string `yaml:"api_token,omitempty"`
 }

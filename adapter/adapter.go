@@ -98,8 +98,8 @@ type Adapter interface {
 	// GetName provides the name of this adapter as per the configuration.
 	GetName() string
 
-	// GetPresentChannels returns a slice of channels that a user is present in.
-	GetPresentChannels(userID string) ([]*ChannelInfo, error)
+	// GetPresentChannels returns a slice of channels that the adapter is present in.
+	GetPresentChannels() ([]*ChannelInfo, error)
 
 	// GetUserInfo provides info on a specific provider user accessible
 	// to the adapter.
@@ -197,7 +197,7 @@ func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent
 
 	le.Info("Connection established to provider")
 
-	channels, err := event.Adapter.GetPresentChannels(event.Info.User.ID)
+	channels, err := event.Adapter.GetPresentChannels()
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
 		addSpanAttributes(ctx, sp, err)
@@ -615,7 +615,7 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 
 		case *ProviderEvent:
 			attr = append(attr,
-				attribute.String("event", o.EventType),
+				attribute.String("event", string(o.EventType)),
 				attribute.String("adapter.name", o.Info.Provider.Name),
 				attribute.String("adapter.type", o.Info.Provider.Type),
 			)
@@ -894,7 +894,7 @@ func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.Comma
 	ctx, sp := tr.Start(context.Background(), "adapter.handleIncomingEvent")
 	defer sp.End()
 
-	sp.SetAttributes(attribute.String("event.type", event.EventType))
+	sp.SetAttributes(attribute.String("event.type", string(event.EventType)))
 
 	switch ev := event.Data.(type) {
 	case *ConnectedEvent:

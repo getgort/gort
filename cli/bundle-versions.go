@@ -30,10 +30,10 @@ const (
 	bundleVersionsUsage = `Usage: gort bundle versions [OPTIONS] NAME
 
 	Lists installed versions of a bundle.
-  
+
 	All versions of the specified bundle are listed, along
 	with their status ("Enabled", "Disabled", "Incompatible")
-  
+
   Options:
 	--help              Show this message and exit.
 `
