@@ -225,7 +225,7 @@ func runWorker(ctx context.Context, worker *worker.Worker, response data.Command
 			response.Title = "Command Error"
 
 			if len(response.Output) == 0 {
-				response.Output = []string{"Unknown command error"}
+				response.Output = []string{"Unknown error executing command"}
 			}
 		}
 

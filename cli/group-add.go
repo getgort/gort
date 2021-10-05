@@ -36,7 +36,7 @@ const (
 	groupAddShort = "Add a user to an existing group"
 	groupAddLong  = "Add a user to an existing group."
 	groupAddUsage = `Usage:
-  gort group add [flags] group_name user_name
+  gort group add [flags] group_name user_name...
 
 Flags:
   -h, --help   Show this message and exit
@@ -53,7 +53,7 @@ func GetGroupAddCmd() *cobra.Command {
 		Short: groupAddShort,
 		Long:  groupAddLong,
 		RunE:  groupAddCmd,
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.MinimumNArgs(2),
 	}
 
 	cmd.SetUsageTemplate(groupAddUsage)
@@ -63,19 +63,28 @@ func GetGroupAddCmd() *cobra.Command {
 
 func groupAddCmd(cmd *cobra.Command, args []string) error {
 	groupname := args[0]
-	username := args[1]
+	usernames := args[1:]
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = gortClient.GroupMemberAdd(groupname, username)
-	if err != nil {
-		return err
+	var errs int
+
+	for _, name := range usernames {
+		output := fmt.Sprintf("User added to %s: %s", groupname, name)
+
+		err = gortClient.GroupMemberAdd(groupname, name)
+		if err != nil {
+			output = fmt.Sprintf("User NOT added to %s: %s (%s)", groupname, name, err.Error())
+			errs++
+		}
+
+		fmt.Println(output)
 	}
 
-	fmt.Printf("User added to %s: %s\n", groupname, username)
+	fmt.Printf("%d user(s) added; %d not added.\n", len(usernames)-errs, errs)
 
 	return nil
 }

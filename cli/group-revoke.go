@@ -29,7 +29,7 @@ const (
 	groupRevokeShort = "Remove a role from an existing group"
 	groupRevokeLong  = "Remove a role from an existing group."
 	groupRevokeUsage = `Usage:
-  gort group revoke [flags] group_name role_name
+  gort group revoke [flags] group_name role_name...
 
 Flags:
   -h, --help   Show this message and exit
@@ -46,7 +46,7 @@ func GetGroupRevokeCmd() *cobra.Command {
 		Short: groupRevokeShort,
 		Long:  groupRevokeLong,
 		RunE:  groupRevokeCmd,
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.MinimumNArgs(2),
 	}
 
 	cmd.SetUsageTemplate(groupRevokeUsage)
@@ -56,19 +56,28 @@ func GetGroupRevokeCmd() *cobra.Command {
 
 func groupRevokeCmd(cmd *cobra.Command, args []string) error {
 	groupname := args[0]
-	rolename := args[1]
+	rolenames := args[1:]
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = gortClient.GroupRoleDelete(groupname, rolename)
-	if err != nil {
-		return err
+	var errs int
+
+	for _, name := range rolenames {
+		output := fmt.Sprintf("Role removed from %s: %s", groupname, name)
+
+		err = gortClient.GroupRoleDelete(groupname, name)
+		if err != nil {
+			output = fmt.Sprintf("Role NOT removed from %s: %s (%s)", groupname, name, err.Error())
+			errs++
+		}
+
+		fmt.Println(output)
 	}
 
-	fmt.Printf("Role removed from %s: %s\n", groupname, rolename)
+	fmt.Printf("%d role(s) removed; %d not removed.\n", len(rolenames)-errs, errs)
 
 	return nil
 }

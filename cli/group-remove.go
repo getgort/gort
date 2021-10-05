@@ -37,7 +37,7 @@ const (
 	groupRemoveShort = "Remove a user from an existing group"
 	groupRemoveLong  = "Remove a user from an existing group."
 	groupRemoveUsage = `Usage:
-  gort group remove [flags] group_name user_name
+  gort group remove [flags] group_name user_name...
 
 Flags:
   -h, --help   Show this message and exit
@@ -54,7 +54,7 @@ func GetGroupRemoveCmd() *cobra.Command {
 		Short: groupRemoveShort,
 		Long:  groupRemoveLong,
 		RunE:  groupRemoveCmd,
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.MinimumNArgs(2),
 	}
 
 	cmd.SetUsageTemplate(groupRemoveUsage)
@@ -64,19 +64,28 @@ func GetGroupRemoveCmd() *cobra.Command {
 
 func groupRemoveCmd(cmd *cobra.Command, args []string) error {
 	groupname := args[0]
-	username := args[1]
+	usernames := args[1:]
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = gortClient.GroupMemberDelete(groupname, username)
-	if err != nil {
-		return err
+	var errs int
+
+	for _, name := range usernames {
+		output := fmt.Sprintf("User removed from %s: %s", groupname, name)
+
+		err = gortClient.GroupMemberDelete(groupname, name)
+		if err != nil {
+			output = fmt.Sprintf("User NOT removed from %s: %s (%s)", groupname, name, err.Error())
+			errs++
+		}
+
+		fmt.Println(output)
 	}
 
-	fmt.Printf("User removed from %s: %s\n", groupname, username)
+	fmt.Printf("%d user(s) removed; %d not removed.\n", len(usernames)-errs, errs)
 
 	return nil
 }
