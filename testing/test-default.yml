@@ -137,4 +137,4 @@ commands:
         gort:help [flags] [command]
     executable: [ "/bin/gort", "hidden", "commands" ]
     rules:
-      - must have gort:list_commands or gort:manage_commands
+      - allow

@@ -12,7 +12,6 @@ long_description: |-
   Don't change or override this unless you know what you're doing.
 
 permissions:
-  - list_commands
   - manage_commands
   - manage_groups
   - manage_roles
@@ -138,4 +137,4 @@ commands:
         gort:help [flags] [command]
     executable: [ "/bin/gort", "hidden", "command" ]
     rules:
-      - must have gort:list_commands or gort:manage_commands
+      - allow
