@@ -17,7 +17,12 @@
 package cli
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data"
 	"github.com/spf13/cobra"
 )
 
@@ -43,11 +48,20 @@ const (
   gort bundle list [flags]
 
 Flags:
-  -h, --help   Show this message and exit
+  -d, --disabled   List only disabled bundles
+  -e, --enabled    List only enabled bundles
+  -h, --help       help for list
+  -v, --verbose    Display additional bundle details
 
 Global Flags:
   -P, --profile string   The Gort profile within the config file to use
 `
+)
+
+var (
+	flagBundleListEnabled  bool
+	flagBundleListDisabled bool
+	flagBundleListVerbose  bool
 )
 
 // GetBundleListCmd is a command
@@ -59,12 +73,27 @@ func GetBundleListCmd() *cobra.Command {
 		RunE:  bundleListCmd,
 	}
 
+	cmd.Flags().BoolVarP(&flagBundleListEnabled, "enabled", "e", false, "List only enabled bundles")
+	cmd.Flags().BoolVarP(&flagBundleListDisabled, "disabled", "d", false, "List only disabled bundles")
+	cmd.Flags().BoolVarP(&flagBundleListVerbose, "verbose", "v", false, "Display additional bundle details")
+
 	cmd.SetUsageTemplate(bundleListUsage)
 
 	return cmd
 }
 
+type bundleData struct {
+	name           string
+	enabled        bool
+	enabledVersion string
+	versions       []string
+}
+
 func bundleListCmd(cmd *cobra.Command, args []string) error {
+	if flagBundleListEnabled && flagBundleListDisabled {
+		return fmt.Errorf("--enabled and --disabled flags are mutually exclusive")
+	}
+
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
@@ -75,24 +104,72 @@ func bundleListCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	metadata := getBundleData(bundles)
+
+	switch {
+	case flagBundleListEnabled:
+		metadata = filterBundleData(metadata, func(b bundleData) bool {
+			return b.enabled
+		})
+	case flagBundleListDisabled:
+		metadata = filterBundleData(metadata, func(b bundleData) bool {
+			return !b.enabled
+		})
+	}
+
 	c := &Columnizer{}
-	c.StringColumn("BUNDLE", func(i int) string { return bundles[i].Name })
-	c.StringColumn("VERSION", func(i int) string { return bundles[i].Version })
-	c.StringColumn("TYPE", func(i int) string {
-		kind := "Explicit"
-		if bundles[i].Default {
-			kind = "Default"
+	c.StringColumn("BUNDLE", func(i int) string { return metadata[i].name })
+	c.StringColumn("ENABLED", func(i int) string {
+		version := metadata[i].enabledVersion
+		if version == "" {
+			version = "-"
 		}
-		return kind
+		return version
 	})
-	c.StringColumn("STATUS", func(i int) string {
-		status := "Disabled"
-		if bundles[i].Enabled {
-			status = "Enabled"
-		}
-		return status
-	})
-	c.Print(bundles)
+
+	if flagBundleListVerbose {
+		c.StringColumn("INSTALLED VERSIONS", func(i int) string {
+			return strings.Join(metadata[i].versions, ", ")
+		})
+	}
+
+	c.Print(metadata)
 
 	return nil
+}
+
+func getBundleData(bundles []data.Bundle) []bundleData {
+	m := map[string]bundleData{}
+	for _, b := range bundles {
+		d := m[b.Name]
+		d.name = b.Name
+		if b.Enabled {
+			d.enabled = true
+			d.enabledVersion = b.Version
+		}
+		d.versions = append(d.versions, b.Version)
+		m[b.Name] = d
+	}
+
+	var bd []bundleData
+	for _, b := range m {
+		bd = append(bd, b)
+	}
+
+	sort.Slice(bd, func(i, j int) bool { return bd[i].name < bd[j].name })
+
+	return bd
+}
+
+// If filter(ss[i]) returns false for an element, that element is filtered out.
+func filterBundleData(in []bundleData, filter func(bundleData) bool) []bundleData {
+	var out []bundleData
+
+	for _, b := range in {
+		if filter(b) {
+			out = append(out, b)
+		}
+	}
+
+	return out
 }

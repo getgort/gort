@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data"
 	"github.com/spf13/cobra"
 )
 
@@ -39,14 +40,21 @@ const (
 	bundleUninstallShort = "Uninstall bundles"
 	bundleUninstallLong  = `Uninstall bundles.`
 	bundleUninstallUsage = `Usage:
-  gort bundle uninstall [flags] bundle_name version
+   gort bundle uninstall [flags] bundle_name [version]
 
-Flags:
-  -h, --help   Show this message and exit
+ Flags:
+   -a, --all     Uninstall all versions of the bundle
+   -c, --clean   Uninstall all disabled bundle versions
+   -h, --help    help for uninstall
 
-Global Flags:
-  -P, --profile string   The Gort profile within the config file to use
-`
+ Global Flags:
+   -P, --profile string   The Gort profile within the config file to use
+ `
+)
+
+var (
+	flagBundleUninstallAll   bool
+	flagBundleUninstallClean bool
 )
 
 // GetBundleUninstallCmd is a command
@@ -56,8 +64,11 @@ func GetBundleUninstallCmd() *cobra.Command {
 		Short: bundleUninstallShort,
 		Long:  bundleUninstallLong,
 		RunE:  bundleUninstallCmd,
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.MinimumNArgs(1),
 	}
+
+	cmd.Flags().BoolVarP(&flagBundleUninstallAll, "all", "a", false, "Uninstall all versions of the bundle")
+	cmd.Flags().BoolVarP(&flagBundleUninstallClean, "clean", "c", false, "Uninstall all disabled bundle versions")
 
 	cmd.SetUsageTemplate(bundleUninstallUsage)
 
@@ -65,20 +76,55 @@ func GetBundleUninstallCmd() *cobra.Command {
 }
 
 func bundleUninstallCmd(cmd *cobra.Command, args []string) error {
-	bundleName := args[0]
-	bundleVersion := args[1]
+	bundleName, bundleVersion := args[0], ""
+	if len(args) > 1 {
+		bundleVersion = args[1]
+	}
 
 	c, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = c.BundleUninstall(bundleName, bundleVersion)
-	if err != nil {
-		return err
+	var uninstall []data.Bundle
+
+	switch {
+	case flagBundleUninstallAll:
+		uninstall, err = c.BundleListVersions(bundleName)
+		if err != nil {
+			return err
+		}
+	case flagBundleUninstallClean:
+		bundles, err := c.BundleListVersions(bundleName)
+		if err != nil {
+			return err
+		}
+
+		for _, b := range bundles {
+			if !b.Enabled {
+				uninstall = append(uninstall, b)
+			}
+		}
+	default:
+		if bundleVersion == "" {
+			return fmt.Errorf("missing required argument: bundle version")
+		}
+
+		uninstall = []data.Bundle{{Name: bundleName, Version: bundleVersion}}
 	}
 
-	fmt.Printf("Bundle %q uninstalled.\n", bundleName)
+	if len(uninstall) == 0 {
+		fmt.Println("No bundles deleted.")
+		return nil
+	}
+
+	for _, b := range uninstall {
+		if err = c.BundleUninstall(b.Name, b.Version); err != nil {
+			return err
+		}
+
+		fmt.Printf("Bundle %s %s uninstalled.\n", b.Name, b.Version)
+	}
 
 	return nil
 }

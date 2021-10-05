@@ -39,7 +39,7 @@ type DataAccess interface {
 
 	BundleCreate(ctx context.Context, bundle data.Bundle) error
 	BundleDelete(ctx context.Context, name string, version string) error
-	BundleDisable(ctx context.Context, name string) error
+	BundleDisable(ctx context.Context, name string, version string) error
 	BundleEnable(ctx context.Context, name string, version string) error
 	BundleEnabledVersion(ctx context.Context, name string) (string, error)
 	BundleExists(ctx context.Context, name string, version string) (bool, error)

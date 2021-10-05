@@ -30,7 +30,7 @@ import (
 )
 
 func TestEvaluateCommandEntry1(t *testing.T) {
-	b, err := bundles.LoadBundle("../testing/test-bundle-foo.yml")
+	b, err := bundles.LoadBundleFromFile("../testing/test-bundle-foo.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -72,7 +72,7 @@ func TestEvaluateCommandEntry1(t *testing.T) {
 }
 
 func TestEvaluateCommandEntry2(t *testing.T) {
-	b, err := bundles.LoadBundle("../testing/test-default.yml")
+	b, err := bundles.LoadBundleFromFile("../testing/test-default.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -104,7 +104,7 @@ func parse(s string) (command.Command, rules.EvaluationEnvironment, error) {
 }
 
 func TestParseCommandEntry(t *testing.T) {
-	b, err := bundles.LoadBundle("../testing/test-bundle-foo.yml")
+	b, err := bundles.LoadBundleFromFile("../testing/test-bundle-foo.yml")
 	if err != nil {
 		t.Error(err.Error())
 	}
