@@ -74,12 +74,13 @@ func groupGrantCmd(cmd *cobra.Command, args []string) error {
 	var errs int
 
 	for _, name := range rolenames {
-		output := fmt.Sprintf("Role added to %s: %s", groupname, name)
+		var output string
 
-		err = gortClient.GroupRoleAdd(groupname, name)
-		if err != nil {
+		if err := gortClient.GroupRoleAdd(groupname, name); err != nil {
 			output = fmt.Sprintf("Role NOT added to %s: %s (%s)", groupname, name, err.Error())
 			errs++
+		} else {
+			output = fmt.Sprintf("Role added to %s: %s", groupname, name)
 		}
 
 		fmt.Println(output)

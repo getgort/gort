@@ -66,12 +66,13 @@ func groupRevokeCmd(cmd *cobra.Command, args []string) error {
 	var errs int
 
 	for _, name := range rolenames {
-		output := fmt.Sprintf("Role removed from %s: %s", groupname, name)
+		var output string
 
-		err = gortClient.GroupRoleDelete(groupname, name)
-		if err != nil {
+		if err := gortClient.GroupRoleDelete(groupname, name); err != nil {
 			output = fmt.Sprintf("Role NOT removed from %s: %s (%s)", groupname, name, err.Error())
 			errs++
+		} else {
+			output = fmt.Sprintf("Role removed from %s: %s", groupname, name)
 		}
 
 		fmt.Println(output)

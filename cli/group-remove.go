@@ -74,12 +74,13 @@ func groupRemoveCmd(cmd *cobra.Command, args []string) error {
 	var errs int
 
 	for _, name := range usernames {
-		output := fmt.Sprintf("User removed from %s: %s", groupname, name)
+		var output string
 
-		err = gortClient.GroupMemberDelete(groupname, name)
-		if err != nil {
+		if err := gortClient.GroupMemberDelete(groupname, name); err != nil {
 			output = fmt.Sprintf("User NOT removed from %s: %s (%s)", groupname, name, err.Error())
 			errs++
+		} else {
+			output = fmt.Sprintf("User removed from %s: %s", groupname, name)
 		}
 
 		fmt.Println(output)
