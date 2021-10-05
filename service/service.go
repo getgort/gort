@@ -587,9 +587,9 @@ func tokenObservingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func authCommand(handler func(w http.ResponseWriter, r *http.Request), cmd, subcmd string) http.HandlerFunc {
+func authCommand(handler func(w http.ResponseWriter, r *http.Request), cmd string, subcmd ...string) http.HandlerFunc {
 	inner := func(w http.ResponseWriter, r *http.Request) {
-		if !authenticateUser(w, r, cmd, subcmd) {
+		if !authenticateUser(w, r, cmd, subcmd...) {
 			return
 		}
 
