@@ -232,7 +232,7 @@ func getAllBundles(ctx context.Context) ([]data.Bundle, error) {
 }
 
 func addBundleMethodsToRouter(router *mux.Router) {
-	router.Handle("/v2/bundles", otelhttp.NewHandler(authCommand(handleGetBundles, "bundle", "info"), "handleGetBundles")).Methods("GET")
+	router.Handle("/v2/bundles", otelhttp.NewHandler(authCommand(handleGetBundles, "help"), "handleGetBundles")).Methods("GET")
 
 	router.Handle("/v2/bundles/{name}", otelhttp.NewHandler(authCommand(handleGetBundleVersions, "bundle", "info"), "handleGetBundleVersions")).Methods("GET")
 	router.Handle("/v2/bundles/{name}/versions", otelhttp.NewHandler(authCommand(handleGetBundleVersions, "bundle", "list"), "handleGetBundleVersions")).Methods("GET")

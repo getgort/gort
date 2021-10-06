@@ -29,7 +29,7 @@ const (
 	roleGrantShort = "Grant a permission to an existing role"
 	roleGrantLong  = "Grant a permission to an existing role."
 	roleGrantUsage = `Usage:
-  gort role grant [flags] role_name permission
+  gort role grant [flags] role_name bundle_name permission
 
 Flags:
   -h, --help   Show this message and exit
