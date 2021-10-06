@@ -54,10 +54,6 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 **_(Publicly release v0.8.0-alpha.0 at this point)_**
 
-## Milestone 9 (Remote relays)
+## Milestone 9 (TBD)
 
-- Document relay architecture
-  - Requirement: Allow a quick-start-friendly "simple mode" with a local relay
-  - Requirement: Support relay tagging and selection at the bundle/command level
-- Break the `relay` package into a standalone service
-- Include support for Kafka (and others? NATS?)
+- TBD
