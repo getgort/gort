@@ -45,13 +45,12 @@ Flags:
 // GetHiddenCommandCmd is a command
 func GetHiddenCommandCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:           hiddenCommandUse,
-		Short:         hiddenCommandShort,
-		Long:          hiddenCommandLong,
-		RunE:          hiddenCommandCmd,
-		Args:          cobra.RangeArgs(0, 1),
-		SilenceErrors: true,
-		SilenceUsage:  true,
+		Use:          hiddenCommandUse,
+		Short:        hiddenCommandShort,
+		Long:         hiddenCommandLong,
+		RunE:         hiddenCommandCmd,
+		Args:         cobra.RangeArgs(0, 1),
+		SilenceUsage: true,
 	}
 
 	cmd.SetUsageTemplate(hiddenCommandUsage)

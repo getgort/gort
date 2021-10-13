@@ -37,7 +37,7 @@ const (
 	groupGrantShort = "Grant a role to an existing group"
 	groupGrantLong  = "Grant a role to an existing group."
 	groupGrantUsage = `Usage:
-  gort group grant [flags] group_name role_name
+  gort group grant [flags] group_name role_name...
 
 Flags:
   -h, --help   Show this message and exit
@@ -54,7 +54,7 @@ func GetGroupGrantCmd() *cobra.Command {
 		Short: groupGrantShort,
 		Long:  groupGrantLong,
 		RunE:  groupGrantCmd,
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.MinimumNArgs(2),
 	}
 
 	cmd.SetUsageTemplate(groupGrantUsage)
@@ -64,19 +64,29 @@ func GetGroupGrantCmd() *cobra.Command {
 
 func groupGrantCmd(cmd *cobra.Command, args []string) error {
 	groupname := args[0]
-	rolename := args[1]
+	rolenames := args[1:]
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
 	}
 
-	err = gortClient.GroupRoleAdd(groupname, rolename)
-	if err != nil {
-		return err
+	var errs int
+
+	for _, name := range rolenames {
+		var output string
+
+		if err := gortClient.GroupRoleAdd(groupname, name); err != nil {
+			output = fmt.Sprintf("Role NOT added to %s: %s (%s)", groupname, name, err.Error())
+			errs++
+		} else {
+			output = fmt.Sprintf("Role added to %s: %s", groupname, name)
+		}
+
+		fmt.Println(output)
 	}
 
-	fmt.Printf("role added to %s: %s\n", groupname, rolename)
+	fmt.Printf("%d role(s) added; %d not added.\n", len(rolenames)-errs, errs)
 
 	return nil
 }

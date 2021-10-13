@@ -6,7 +6,7 @@
 
 # Part 1: Create a layer for Go module dependencies
 #
-FROM golang:1.16 as gomodules
+FROM golang:1.17 as gomodules
 
 WORKDIR /gort
 COPY go.mod go.sum /gort/
