@@ -200,6 +200,10 @@ func (da PostgresDataAccess) GroupList(ctx context.Context) ([]rest.Group, error
 		groups = append(groups, group)
 	}
 
+	if rows.Err(); err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
 	return groups, nil
 }
 
@@ -527,7 +531,16 @@ func (da PostgresDataAccess) GroupUserList(ctx context.Context, groupname string
 			return users, gerr.Wrap(errs.ErrNoSuchUser, err)
 		}
 
+		user.Mappings, err = da.doUserGetAdapterIDs(ctx, user.Username)
+		if err != nil {
+			return users, err
+		}
+
 		users = append(users, user)
+	}
+
+	if rows.Err(); err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return users, nil

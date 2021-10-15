@@ -23,4 +23,9 @@ type User struct {
 	FullName string `json:"fullname,omitempty"`
 	Password string `json:"password,omitempty"`
 	Username string `json:"username,omitempty"`
+
+	// Mappings stores this user's identity mappings for each chat service.
+	// The key is the adapter name as defined in the config; the value is the
+	// associated ID in the service the adapter connects to.
+	Mappings map[string]string `json:"mappings,omitempty"`
 }

@@ -116,10 +116,18 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// If not, assume none of them do. Create them all.
 	if !exists {
 		err = da.createUsersTable(ctx, db)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check whether the user adapter ids table exists
+	if exists, err = da.tableExists(ctx, "user_adapter_ids", db); err != nil {
+		return err
+	} else if !exists {
+		err = da.createUsersAdapterIDsTable(ctx, db)
 		if err != nil {
 			return err
 		}
@@ -130,8 +138,6 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// If not, assume none of them do. Create them all.
 	if !exists {
 		err = da.createGroupsTable(ctx, db)
 		if err != nil {
@@ -144,8 +150,6 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// If not, assume none of them do. Create them all.
 	if !exists {
 		err = da.createGroupUsersTable(ctx, db)
 		if err != nil {
@@ -158,8 +162,6 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// If not, assume none of them do. Create them all.
 	if !exists {
 		err = da.createTokensTable(ctx, db)
 		if err != nil {
@@ -172,8 +174,6 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// If not, assume none of them do. Create them all.
 	if !exists {
 		err = da.createBundlesTables(ctx, db)
 		if err != nil {
@@ -181,6 +181,11 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 		}
 	}
 
+	// Check whether the roles table exists
+	exists, err = da.tableExists(ctx, "roles", db)
+	if err != nil {
+		return err
+	}
 	if !exists {
 		err = da.createRolesTables(ctx, db)
 		if err != nil {
@@ -406,13 +411,35 @@ func (da PostgresDataAccess) createUsersTable(ctx context.Context, db *sql.DB) e
 	var err error
 
 	createUserQuery := `CREATE TABLE users (
-		email         TEXT UNIQUE NOT NULL,
-		full_name     TEXT,
-		password_hash TEXT,
-		username TEXT PRIMARY KEY
+		email         	TEXT UNIQUE NOT NULL,
+		full_name     	TEXT,
+		password_hash 	TEXT,
+		username 		TEXT PRIMARY KEY
 	  );`
 
 	_, err = db.ExecContext(ctx, createUserQuery)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) createUsersAdapterIDsTable(ctx context.Context, db *sql.DB) error {
+	var err error
+
+	createTableQuery := `CREATE TABLE user_adapter_ids (
+		username			TEXT NOT NULL,
+		adapter				TEXT NOT NULL,
+		id					TEXT NOT NULL,
+		CONSTRAINT			unq_adapter_id UNIQUE(username, adapter),
+		PRIMARY KEY			(adapter, id),
+		FOREIGN KEY 		(username) REFERENCES users(username)
+		ON DELETE CASCADE
+	);
+	`
+
+	_, err = db.ExecContext(ctx, createTableQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
