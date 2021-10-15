@@ -57,6 +57,10 @@ func (da *InMemoryDataAccess) UserCreate(ctx context.Context, user rest.User) er
 		return errs.ErrUserExists
 	}
 
+	if user.Mappings == nil {
+		user.Mappings = map[string]string{}
+	}
+
 	da.users[user.Username] = &user
 
 	return nil
@@ -119,8 +123,36 @@ func (da *InMemoryDataAccess) UserGet(ctx context.Context, username string) (res
 // UserGetByEmail returns a user from the data store. An error is returned if
 // the email parameter is empty or if the user doesn't exist.
 func (da *InMemoryDataAccess) UserGetByEmail(ctx context.Context, email string) (rest.User, error) {
+	if email == "" {
+		return rest.User{}, errs.ErrEmptyUserEmail
+	}
+
 	for _, v := range da.users {
 		if v.Email == email {
+			return *v, nil
+		}
+	}
+
+	return rest.User{}, errs.ErrNoSuchUser
+}
+
+// UserGetByID returns a user from the data store. An error is returned if
+// either parameter is empty or if the user doesn't exist.
+func (da *InMemoryDataAccess) UserGetByID(ctx context.Context, adapter, id string) (rest.User, error) {
+	if adapter == "" {
+		return rest.User{}, errs.ErrEmptyUserAdapter
+	}
+
+	if id == "" {
+		return rest.User{}, errs.ErrEmptyUserID
+	}
+
+	for _, v := range da.users {
+		if v.Mappings == nil {
+			continue
+		}
+
+		if v.Mappings[adapter] == id {
 			return *v, nil
 		}
 	}
@@ -250,6 +282,10 @@ func (da *InMemoryDataAccess) UserUpdate(ctx context.Context, user rest.User) er
 	}
 	if !exists {
 		return errs.ErrNoSuchUser
+	}
+
+	if user.Mappings == nil {
+		user.Mappings = map[string]string{}
 	}
 
 	da.users[user.Username] = &user

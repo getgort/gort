@@ -88,6 +88,7 @@ type DataAccess interface {
 	UserExists(ctx context.Context, username string) (bool, error)
 	UserGet(ctx context.Context, username string) (rest.User, error)
 	UserGetByEmail(ctx context.Context, email string) (rest.User, error)
+	UserGetByID(ctx context.Context, adapter, id string) (rest.User, error)
 	UserGroupList(ctx context.Context, username string) ([]rest.Group, error)
 	UserGroupAdd(ctx context.Context, username string, groupname string) error
 	UserGroupDelete(ctx context.Context, username string, groupname string) error
