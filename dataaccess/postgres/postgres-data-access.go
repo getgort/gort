@@ -429,12 +429,12 @@ func (da PostgresDataAccess) createUsersAdapterIDsTable(ctx context.Context, db 
 	var err error
 
 	createTableQuery := `CREATE TABLE user_adapter_ids (
-		username			TEXT NOT NULL,
-		adapter				TEXT NOT NULL,
-		id					TEXT NOT NULL,
-		CONSTRAINT			unq_adapter_id UNIQUE(username, adapter),
-		PRIMARY KEY			(adapter, id),
-		FOREIGN KEY 		(username) REFERENCES users(username)
+		username            TEXT NOT NULL,
+		adapter             TEXT NOT NULL,
+		id                  TEXT NOT NULL,
+		CONSTRAINT          unq_adapter_id UNIQUE(username, adapter),
+		PRIMARY KEY         (adapter, id),
+		FOREIGN KEY         (username) REFERENCES users(username)
 		ON DELETE CASCADE
 	);
 	`
