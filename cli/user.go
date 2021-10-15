@@ -56,6 +56,7 @@ func GetUserCmd() *cobra.Command {
 	cmd.AddCommand(GetUserDeleteCmd())
 	cmd.AddCommand(GetUserInfoCmd())
 	cmd.AddCommand(GetUserListCmd())
+	cmd.AddCommand(GetUserMapCmd())
 	cmd.AddCommand(GetUserUpdateCmd())
 
 	return cmd
