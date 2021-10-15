@@ -326,7 +326,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 	if id.GortUser == nil {
 		var autocreated bool
 
-		if id.GortUser, autocreated, err = findOrMakeGortUser(ctx, id.ChatUser); err != nil {
+		if id.GortUser, autocreated, err = findOrMakeGortUser(ctx, id.Adapter, id.ChatUser); err != nil {
 			switch {
 			case gerrs.Is(err, ErrSelfRegistrationOff):
 				msg := "I'm terribly sorry, but either I don't " +
@@ -745,7 +745,7 @@ func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, use
 			return id, err
 		}
 
-		user, err := dal.UserGetByEmail(ctx, id.ChatUser.Email)
+		user, err := dal.UserGetByID(ctx, id.Adapter.GetName(), id.ChatUser.ID)
 		switch {
 		case err == nil:
 			id.GortUser = &user
@@ -797,7 +797,7 @@ func findAllEntries(ctx context.Context, bundleName, commandName string, finder 
 }
 
 // findOrMakeGortUser ...
-func findOrMakeGortUser(ctx context.Context, info *UserInfo) (*rest.User, bool, error) {
+func findOrMakeGortUser(ctx context.Context, adapter Adapter, info *UserInfo) (*rest.User, bool, error) {
 	// Get the data access interface.
 	da, err := dataaccess.Get()
 	if err != nil {
@@ -806,7 +806,7 @@ func findOrMakeGortUser(ctx context.Context, info *UserInfo) (*rest.User, bool, 
 
 	// Try to figure out what user we're working with here.
 	exists := true
-	user, err := da.UserGetByEmail(ctx, info.Email)
+	user, err := da.UserGetByID(ctx, adapter.GetName(), info.ID)
 	if gerrs.Is(err, errs.ErrNoSuchUser) {
 		exists = false
 	} else if err != nil {
@@ -845,6 +845,7 @@ func findOrMakeGortUser(ctx context.Context, info *UserInfo) (*rest.User, bool, 
 		FullName: info.RealNameNormalized,
 		Password: randomPassword,
 		Username: info.Name,
+		Mappings: map[string]string{adapter.GetName(): info.ID},
 	}
 
 	log.WithField("user.username", user.Username).
