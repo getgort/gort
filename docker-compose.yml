@@ -24,10 +24,9 @@ services:
       - gort
 
   postgres:
-    image: postgres:13
-    # # Uncommenting ports lets the database to be inspected with pgAdmin or similar but breaks `make test-local`
-    # ports:
-    #   - "5432:5432"
+    image: postgres:14
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_USER=gort
       - POSTGRES_PASSWORD=veryKleverPassw0rd!
