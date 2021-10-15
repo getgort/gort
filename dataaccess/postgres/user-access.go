@@ -19,7 +19,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"sort"
 
 	"github.com/getgort/gort/data"
@@ -660,8 +659,6 @@ func (da PostgresDataAccess) doUserUpdateAdapterIDs(ctx context.Context, user re
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 	defer db.Close()
-
-	fmt.Println("MAPPINGS:", user.Mappings)
 
 	deleteQuery := `DELETE FROM user_adapter_ids WHERE username=$1;`
 	_, err = db.ExecContext(ctx, deleteQuery, user.Username)
