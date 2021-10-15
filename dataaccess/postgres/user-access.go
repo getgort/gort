@@ -19,6 +19,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sort"
 
 	"github.com/getgort/gort/data"
@@ -100,11 +101,8 @@ func (da PostgresDataAccess) UserCreate(ctx context.Context, user rest.User) err
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	adapterIDQuery := `INSERT INTO user_adapter_ids (username, adapter, id) VALUES ($1, $2, $3);`
-	for adapter, id := range user.Mappings {
-		if _, err := db.ExecContext(ctx, adapterIDQuery, user.Username, adapter, id); err != nil {
-			return gerr.Wrap(errs.ErrDataAccess, err)
-		}
+	if err := da.doUserUpdateAdapterIDs(ctx, user); err != nil {
+		return err
 	}
 
 	return nil
@@ -598,13 +596,15 @@ func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) err
 	SET email=$1, full_name=$2, password_hash=$3
 	WHERE username=$4;`
 
-	_, err = db.ExecContext(ctx, query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username)
-
-	if err != nil {
-		err = gerr.Wrap(errs.ErrDataAccess, err)
+	if _, err = db.ExecContext(ctx, query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username); err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return err
+	if err := da.doUserUpdateAdapterIDs(ctx, user); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // doUserGetAdapterIDs retrieves any adapter ID mappings associated with the
@@ -647,4 +647,34 @@ func (da PostgresDataAccess) doUserGetAdapterIDs(ctx context.Context, username s
 	}
 
 	return m, nil
+}
+
+// doUserUpdateAdapterIDs
+func (da PostgresDataAccess) doUserUpdateAdapterIDs(ctx context.Context, user rest.User) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.doUserUpdateAdapterIDs")
+	defer sp.End()
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+	defer db.Close()
+
+	fmt.Println("MAPPINGS:", user.Mappings)
+
+	deleteQuery := `DELETE FROM user_adapter_ids WHERE username=$1;`
+	_, err = db.ExecContext(ctx, deleteQuery, user.Username)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	adapterIDQuery := `INSERT INTO user_adapter_ids (username, adapter, id) VALUES ($1, $2, $3);`
+	for adapter, id := range user.Mappings {
+		if _, err := db.ExecContext(ctx, adapterIDQuery, user.Username, adapter, id); err != nil {
+			return gerr.Wrap(errs.ErrDataAccess, err)
+		}
+	}
+
+	return nil
 }
