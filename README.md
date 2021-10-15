@@ -63,7 +63,7 @@ More information about writing commands can be found in the Gort Guide:
 
 In Gort, a set of one or more related commands can be installed as a "command bundle".
 
-A bundle is [represented in YAML](https://guide.getgort.io/bundle-configurations.html), specifying which executable to use for each command and who is allowed to execute each commands. 
+A bundle is [represented in YAML](https://guide.getgort.io/bundle-configurations.html), specifying which executable to use for each command and who is allowed to execute each commands.
 
 A very simple bundle file is shown below.
 
@@ -246,4 +246,3 @@ Gort is in a state of active heavy development. The date that various [milestone
 
 * [Gort Slack Community](https://join.slack.com/t/getgort/shared_invite/zt-scgi5f7r-1U9awWMWNITl1MCzrpV3~Q)
 * [GitHub Issues](https://github.com/getgort/gort/issues)
-

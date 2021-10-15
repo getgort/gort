@@ -40,11 +40,11 @@ can only be mapped to one Gort user.`
 
 	userMapUsage = `Usage:
    gort user map [flags] username adapter_name [chat_user_id]
- 
+
  Flags:
    -D, --delete   Delete a mapping instead of creating
    -h, --help     Show this message and exit
- 
+
  Global Flags:
    -P, --profile string   The Gort profile within the config file to use
 `
