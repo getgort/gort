@@ -25,8 +25,8 @@ services:
 
   postgres:
     image: postgres:14
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
     environment:
       - POSTGRES_USER=gort
       - POSTGRES_PASSWORD=veryKleverPassw0rd!
