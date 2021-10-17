@@ -108,17 +108,30 @@ jaeger:
   # to the collector.
   password: veryKleverPassw0rd!
 
+# List of Discord adapters. Delete this section if not using Discord.
+discord:
+- # An arbitrary name for human labelling purposes.
+  name: MyWorkspace
+
+  # Bot User OAuth Access Token
+  bot_token: INSERT BOT TOKEN HERE
+
+  # The name of the bot, as it appears in Discord. Defaults to the name used
+  # when the bot was added to the account.
+  bot_name: Gort
+
+# List of Slack adapters. Delete this section if not using Slack.
 slack:
 - # An arbitrary name for human labelling purposes.
   name: MyWorkspace
 
   # App Level Token (https://api.slack.com/authentication/token-types#app)
   # used to connect to Slack. You want the one that starts with "xapp".
-  app_token: xapp-1-A02DNBAUK0U-2451432592182-0a18a90d53f1837482b59838486a6e78ebd190070bde14c2c2d66ca20dea54f2
+  app_token: INSERT APP TOKEN HERE
 
   # Bot User OAuth Access Token (https://api.slack.com/docs/token-types#bot)
   # used to connect to Slack. You want the one that starts with "xoxb".
-  bot_token: xoxb-210987654321-123456789012-nyWJ3U4JoWuUtaUkRPKn0dJR
+  bot_token: INSERT BOT TOKEN HERE
 
   # The chat icon for the bot. If not defined defaults to the configured bot default.
   icon_url: https://emoji.slack-edge.com/T023V8ZFQEQ/gort/78a0c1607eeb1f29.png

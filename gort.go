@@ -26,6 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/getgort/gort/adapter"
+	"github.com/getgort/gort/adapter/discord"
 	"github.com/getgort/gort/adapter/slack"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
@@ -56,16 +57,20 @@ func setLoggerVerbosity(verbose int) {
 }
 
 func installAdapters() error {
-	// TODO Add support for (and implementations of) other chat types.
-	adapters := config.GetSlackProviders()
+	slackAdapters := config.GetSlackProviders()
+	discordAdapters := config.GetDiscordProviders()
 
-	if len(adapters) == 0 {
+	if len(slackAdapters)+len(discordAdapters) == 0 {
 		return fmt.Errorf("no adapters configured")
 	}
 
-	for _, sp := range adapters {
-		log.WithField("adapter.name", sp.Name).Info("Installing adapter")
+	for _, sp := range slackAdapters {
+		log.WithField("adapter.name", sp.Name).Info("Installing Slack adapter")
 		adapter.AddAdapter(slack.NewAdapter(sp))
+	}
+	for _, sp := range discordAdapters {
+		log.WithField("adapter.name", sp.Name).Info("Installing Discord adapter")
+		adapter.AddAdapter(discord.NewAdapter(sp))
 	}
 
 	return nil

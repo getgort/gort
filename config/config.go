@@ -152,6 +152,14 @@ func GetSlackProviders() []data.SlackProvider {
 	return config.SlackProviders
 }
 
+// GetDiscordProviders returns the data wrapper for the "discord" config section.
+func GetDiscordProviders() []data.DiscordProvider {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	return config.DiscordProviders
+}
+
 // Initialize is called by main() to trigger creation of the config singleton.
 // It can be called multiple times, if you're into that kind of thing. If
 // successful, this will emit a StateConfigInitialized to any update listeners.

@@ -26,6 +26,7 @@ type GortConfig struct {
 	DockerConfigs     DockerConfigs     `yaml:"docker,omitempty"`
 	JaegerConfigs     JaegerConfigs     `yaml:"jaeger,omitempty"`
 	SlackProviders    []SlackProvider   `yaml:"slack,omitempty"`
+	DiscordProviders  []DiscordProvider `yaml:"discord,omitempty"`
 }
 
 // GortServerConfigs is the data wrapper for the "gort" section.

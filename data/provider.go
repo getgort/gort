@@ -42,3 +42,10 @@ type SlackProvider struct {
 	// Deprecated, used for Classic Slack apps
 	APIToken string `yaml:"api_token,omitempty"`
 }
+
+// DiscordProvider is the data wrapper for a Discord App provider.
+type DiscordProvider struct {
+	AbstractProvider `yaml:",inline"`
+
+	BotToken string `yaml:"bot_token,omitempty"`
+}
