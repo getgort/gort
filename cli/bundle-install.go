@@ -86,16 +86,16 @@ You may also give the path as ` + "`-`" + `, in which case standard input is use
 Finally, if the bundle lives in git, the latest version of the bundle can be
 installed as follows:
 
-  gort bundle install git::https://example.com/repo.git
+  gort bundle install git@example.com/repo.git
 
 A specific tagged version can be installed as follows:
 
-  gort bundle install git::https://example.com/repo.git@v1.2.3
+  gort bundle install git@example.com/repo.git@v1.2.3
 
 For bundles in sub-directories, a double-slash syntax can be used to indicate
 the subdirectory where the bundle can be found:
 
-  gort bundle install git::https://example.com/repo.git//bundles/example
+  gort bundle install git@example.com/repo.git//bundles/example
 
 If a bundle file is not specified, it will default to "bundle.yml".
 `
