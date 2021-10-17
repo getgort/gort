@@ -18,11 +18,13 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"os"
+	"strings"
 
 	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data"
+	"github.com/go-git/go-git/v5"
 	"github.com/spf13/cobra"
 )
 
@@ -77,9 +79,25 @@ When using this command, you must provide the path to the file, as follows:
 
   gort bundle install /path/to/my/bundle/config.yaml
 
-  you may also give the path as ` + "`-`" + `, in which case standard input is used:
+You may also give the path as ` + "`-`" + `, in which case standard input is used:
 
   cat config.yaml | gort bundle install -
+
+Finally, if the bundle lives in git, the latest version of the bundle can be
+installed as follows:
+
+  gort bundle install git::https://example.com/repo.git
+
+A specific tagged version can be installed as follows:
+
+  gort bundle install git::https://example.com/repo.git@v1.2.3
+
+For bundles in sub-directories, a double-slash syntax can be used to indicate
+the subdirectory where the bundle can be found:
+
+  gort bundle install git::https://example.com/repo.git//bundles/example
+
+If a bundle file is not specified, it will default to "bundle.yml".
 `
 	bundleInstallUsage = `Usage:
   gort bundle install [flags] config_path
@@ -129,20 +147,37 @@ func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get appropriate reader from input
-	var r io.Reader
-	if bundlefile == "-" {
-		r = os.Stdin
-	} else {
-		rc, err := os.Open(bundlefile)
-		if err != nil {
-			return err
+	var bundle data.Bundle
+
+	switch {
+	case bundlefile == "-":
+		bundle, err = bundles.LoadBundle(os.Stdin)
+
+	case strings.HasSuffix(bundlefile, ".git"):
+		bundle, err = loadBundleRepo(bundlefile, "", "")
+
+	case strings.Contains(bundlefile, ".git//"):
+		ss := strings.Split(bundlefile, ".git//")
+		bundle, err = loadBundleRepo(ss[0]+".git", "", ss[1])
+
+	case strings.Contains(bundlefile, ".git@"):
+		ss := strings.Split(bundlefile, ".git@")
+		repo := ss[0] + ".git"
+
+		ss = strings.Split(ss[1], "//")
+		tag := ss[0]
+
+		var path string
+		if len(ss) == 2 {
+			path = ss[1]
 		}
-		defer rc.Close()
-		r = rc
+
+		bundle, err = loadBundleRepo(repo, tag, path)
+
+	default:
+		bundle, err = loadBundleFile(bundlefile)
 	}
 
-	bundle, err := bundles.LoadBundle(r)
 	if err != nil {
 		return err
 	}
@@ -154,7 +189,7 @@ func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 	}
 	if exists {
 		if !flagBundleInstallForce {
-			return fmt.Errorf("bundle %q already exists at this version. Use --force to force install from your file", bundle.Name)
+			return fmt.Errorf("bundle %q already exists at version %s. Use --force to force install", bundle.Name, bundle.Version)
 		}
 		err = c.BundleUninstall(bundle.Name, bundle.Version)
 		if err != nil {
@@ -177,4 +212,64 @@ func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Bundle %q installed.\n", bundle.Name)
 
 	return nil
+}
+
+func loadBundleFile(bundlefile string) (data.Bundle, error) {
+	file, err := os.Open(bundlefile)
+	if err != nil {
+		return data.Bundle{}, err
+	}
+	defer file.Close()
+
+	return bundles.LoadBundle(file)
+}
+
+func loadBundleRepo(repo, tag, path string) (data.Bundle, error) {
+	dir, err := os.MkdirTemp(os.TempDir(), "bundle")
+	if err != nil {
+		return data.Bundle{}, err
+	}
+	defer os.RemoveAll(dir)
+
+	if tag == "" {
+		tag = "latest"
+	}
+
+	fmt.Printf("Cloning remote repository: %s@%s//%s\n", repo, tag, path)
+
+	if !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".yaml") {
+		path += "/bundle.yml"
+	}
+
+	fmt.Println("Installing bundle:", path)
+
+	path = fmt.Sprintf("%s/%s", dir, path)
+
+	co := &git.CloneOptions{URL: repo}
+
+	r, err := git.PlainClone(dir, false, co)
+	if err != nil {
+		return data.Bundle{}, err
+	}
+
+	if tag != "latest" {
+		ref, err := r.Tag(tag)
+		if err != nil {
+			return data.Bundle{}, fmt.Errorf("could not install tag %s@%s: %w", repo, tag, err)
+		}
+
+		w, err := r.Worktree()
+		if err != nil {
+			return data.Bundle{}, err
+		}
+
+		err = w.Checkout(&git.CheckoutOptions{
+			Hash: ref.Hash(),
+		})
+		if err != nil {
+			return data.Bundle{}, err
+		}
+	}
+
+	return loadBundleFile(path)
 }
