@@ -27,18 +27,17 @@ import (
 )
 
 // NewAdapter will construct a DiscordAdapter instance for a given provider configuration.
-func NewAdapter(provider data.DiscordProvider) adapter.Adapter {
+func NewAdapter(provider data.DiscordProvider) (adapter.Adapter, error) {
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + provider.BotToken)
 	if err != nil {
-		// TODO: Handle this
-		panic(err)
+		return nil, err
 	}
 
 	return &Adapter{
 		provider: provider,
 		session:  dg,
-	}
+	}, nil
 }
 
 var _ adapter.Adapter = &Adapter{}

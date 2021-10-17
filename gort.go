@@ -70,7 +70,11 @@ func installAdapters() error {
 	}
 	for _, sp := range discordAdapters {
 		log.WithField("adapter.name", sp.Name).Info("Installing Discord adapter")
-		adapter.AddAdapter(discord.NewAdapter(sp))
+		ad, err := discord.NewAdapter(sp)
+		if err != nil {
+			return err
+		}
+		adapter.AddAdapter(ad)
 	}
 
 	return nil
