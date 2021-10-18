@@ -22,6 +22,7 @@ import (
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testUserAccess(t *testing.T) {
@@ -30,6 +31,9 @@ func testUserAccess(t *testing.T) {
 	t.Run("testUserDelete", testUserDelete)
 	t.Run("testUserExists", testUserExists)
 	t.Run("testUserGet", testUserGet)
+	t.Run("testUserGetByEmail", testUserGetByEmail)
+	t.Run("testUserGetByID", testUserGetByID)
+	t.Run("testUserGetNoMappings", testUserGetNoMappings)
 	t.Run("testUserGroupList", testUserGroupList)
 	t.Run("testUserList", testUserList)
 	t.Run("testUserNotExists", testUserNotExists)
@@ -138,35 +142,145 @@ func testUserExists(t *testing.T) {
 }
 
 func testUserGet(t *testing.T) {
+	const userName = "test-get"
+	const userEmail = "test-get@foo.com"
+	const userAdapter = "slack-get"
+	const userAdapterID = "U12345-get"
+
 	var err error
 	var user rest.User
 
 	// Expect an error
 	_, err = da.UserGet(ctx, "")
-	assert.Error(t, err, errs.ErrEmptyUserName)
+	assert.EqualError(t, err, errs.ErrEmptyUserName.Error())
 
 	// Expect an error
-	_, err = da.UserGet(ctx, "test-get")
-	assert.Error(t, err, errs.ErrNoSuchUser)
+	_, err = da.UserGet(ctx, userName)
+	assert.EqualError(t, err, errs.ErrNoSuchUser.Error())
 
-	err = da.UserCreate(ctx, rest.User{Username: "test-get", Email: "test-get@foo.com"})
-	defer da.UserDelete(ctx, "test-get")
-	assert.NoError(t, err)
+	// Create the test user
+	err = da.UserCreate(ctx, rest.User{
+		Username: userName,
+		Email:    userEmail,
+		Mappings: map[string]string{userAdapter: userAdapterID},
+	})
+	defer da.UserDelete(ctx, userName)
+	require.NoError(t, err)
 
-	// da.User ctx, should exist now
-	exists, _ := da.UserExists(ctx, "test-get")
-	if !exists {
-		t.Error("User should exist now")
-		t.FailNow()
-	}
+	// User should exist now
+	exists, err := da.UserExists(ctx, userName)
+	require.NoError(t, err)
+	require.True(t, exists)
 
 	// Expect no error
-	user, err = da.UserGet(ctx, "test-get")
-	assert.NoError(t, err)
-	if user.Username != "test-get" {
-		t.Errorf("User name mismatch: %q is not \"test-get\"", user.Username)
-		t.FailNow()
-	}
+	user, err = da.UserGet(ctx, userName)
+	require.NoError(t, err)
+	require.Equal(t, user.Username, userName)
+	require.Equal(t, user.Email, userEmail)
+	require.NotNil(t, user.Mappings)
+	require.Equal(t, userAdapterID, user.Mappings[userAdapter])
+}
+
+func testUserGetNoMappings(t *testing.T) {
+	const userName = "test-get-no-mappings"
+	const userEmail = "test-get-no-mappings@foo.com"
+
+	var err error
+	var user rest.User
+
+	// Create the test user
+	err = da.UserCreate(ctx, rest.User{Username: userName, Email: userEmail})
+	defer da.UserDelete(ctx, userName)
+	require.NoError(t, err)
+
+	// Expect no error
+	user, err = da.UserGet(ctx, userName)
+	require.NoError(t, err)
+	require.Equal(t, user.Username, userName)
+	require.Equal(t, user.Email, userEmail)
+	require.NotNil(t, user.Mappings)
+}
+
+func testUserGetByEmail(t *testing.T) {
+	const userName = "test-get-by-email"
+	const userEmail = "test-get-by-email@foo.com"
+	const userAdapter = "slack-get-by-email"
+	const userAdapterID = "U12345-get-by-email"
+
+	var err error
+	var user rest.User
+
+	// Expect an error
+	_, err = da.UserGetByEmail(ctx, "")
+	assert.EqualError(t, err, errs.ErrEmptyUserEmail.Error())
+
+	// Expect an error
+	_, err = da.UserGetByEmail(ctx, userEmail)
+	assert.EqualError(t, err, errs.ErrNoSuchUser.Error())
+
+	// Create the test user
+	err = da.UserCreate(ctx, rest.User{
+		Username: userName,
+		Email:    userEmail,
+		Mappings: map[string]string{userAdapter: userAdapterID},
+	})
+	defer da.UserDelete(ctx, userName)
+	require.NoError(t, err)
+
+	// User should exist now
+	exists, err := da.UserExists(ctx, userName)
+	require.NoError(t, err)
+	require.True(t, exists)
+
+	// Expect no error
+	user, err = da.UserGetByEmail(ctx, userEmail)
+	require.NoError(t, err)
+	require.Equal(t, user.Username, userName)
+	require.Equal(t, user.Email, userEmail)
+	require.NotNil(t, user.Mappings)
+	require.Equal(t, userAdapterID, user.Mappings[userAdapter])
+}
+
+func testUserGetByID(t *testing.T) {
+	const userName = "test-get-by-id"
+	const userEmail = "test-get-by-id@foo.com"
+	const userAdapter = "slack-get-by-id"
+	const userAdapterID = "U12345-get-by-id"
+
+	var err error
+	var user rest.User
+
+	// Expect errors
+	_, err = da.UserGetByID(ctx, "", userAdapterID)
+	assert.EqualError(t, err, errs.ErrEmptyUserAdapter.Error())
+
+	_, err = da.UserGetByID(ctx, userAdapter, "")
+	assert.EqualError(t, err, errs.ErrEmptyUserID.Error())
+
+	_, err = da.UserGetByID(ctx, userAdapter, userAdapterID)
+	assert.EqualError(t, err, errs.ErrNoSuchUser.Error())
+
+	// Create the test user
+	err = da.UserCreate(ctx, rest.User{
+		Username: userName,
+		Email:    userEmail,
+		Mappings: map[string]string{userAdapter: userAdapterID},
+	})
+	defer da.UserDelete(ctx, userName)
+	require.NoError(t, err)
+
+	// User should exist now
+	exists, err := da.UserExists(ctx, userName)
+	require.NoError(t, err)
+	require.True(t, exists)
+
+	// Expect no error
+	user, err = da.UserGetByID(ctx, userAdapter, userAdapterID)
+	require.NoError(t, err)
+	require.Equal(t, user.Username, userName)
+	require.Equal(t, user.Email, userEmail)
+	require.NotNil(t, user.Mappings)
+	require.Equal(t, userAdapterID, user.Mappings[userAdapter])
 }
 
 func testUserGroupList(t *testing.T) {

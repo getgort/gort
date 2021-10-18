@@ -25,6 +25,15 @@ import (
 var ErrNoSuchUser = errors.New("no such user")
 
 // ErrEmptyUserName indicates...
+var ErrEmptyUserAdapter = errors.New("user adapter is empty")
+
+// ErrEmptyUserName indicates...
+var ErrEmptyUserEmail = errors.New("user email is empty")
+
+// ErrEmptyUserName indicates...
+var ErrEmptyUserID = errors.New("user id is empty")
+
+// ErrEmptyUserName indicates...
 var ErrEmptyUserName = errors.New("user name is empty")
 
 // ErrUserExists TBD

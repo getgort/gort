@@ -74,8 +74,8 @@ func testGroupUserList(t *testing.T) {
 	var (
 		groupname = "group-test-group-user-list"
 		expected  = []rest.User{
-			{Username: "user-test-group-user-list-0", Email: "user-test-group-user-list-0@email.com"},
-			{Username: "user-test-group-user-list-1", Email: "user-test-group-user-list-1@email.com"},
+			{Username: "user-test-group-user-list-0", Email: "user-test-group-user-list-0@email.com", Mappings: map[string]string{}},
+			{Username: "user-test-group-user-list-1", Email: "user-test-group-user-list-1@email.com", Mappings: map[string]string{}},
 		}
 	)
 

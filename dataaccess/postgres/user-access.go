@@ -18,6 +18,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"sort"
 
 	"github.com/getgort/gort/data"
@@ -86,7 +87,7 @@ func (da PostgresDataAccess) UserCreate(ctx context.Context, user rest.User) err
 	}
 	defer db.Close()
 
-	hash := ""
+	var hash string
 	if user.Password != "" {
 		hash, err = data.HashPassword(user.Password)
 		if err != nil {
@@ -94,14 +95,16 @@ func (da PostgresDataAccess) UserCreate(ctx context.Context, user rest.User) err
 		}
 	}
 
-	query := `INSERT INTO users (email, full_name, password_hash, username)
-		 VALUES ($1, $2, $3, $4);`
-	_, err = db.ExecContext(ctx, query, user.Email, user.FullName, hash, user.Username)
-	if err != nil {
-		err = gerr.Wrap(errs.ErrDataAccess, err)
+	userQuery := `INSERT INTO users (email, full_name, password_hash, username) VALUES ($1, $2, $3, $4);`
+	if _, err := db.ExecContext(ctx, userQuery, user.Email, user.FullName, hash, user.Username); err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return err
+	if err := da.doUserUpdateAdapterIDs(ctx, user); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // UserDelete deletes an existing user from the data store. An error is
@@ -201,15 +204,21 @@ func (da PostgresDataAccess) UserGet(ctx context.Context, username string) (rest
 		FROM users
 		WHERE username=$1`
 
-	user := rest.User{}
-	err = db.
-		QueryRowContext(ctx, query, username).
-		Scan(&user.Email, &user.FullName, &user.Username)
-	if err != nil {
-		err = gerr.Wrap(errs.ErrNoSuchUser, err)
+	var user rest.User
+
+	err = db.QueryRowContext(ctx, query, username).Scan(&user.Email, &user.FullName, &user.Username)
+	switch {
+	case err == sql.ErrNoRows:
+		return rest.User{}, errs.ErrNoSuchUser
+	case err != nil:
+		return rest.User{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return user, err
+	if user.Mappings, err = da.doUserGetAdapterIDs(ctx, user.Username); err != nil {
+		return rest.User{}, err
+	}
+
+	return user, nil
 }
 
 // UserGetByEmail returns a user from the data store. An error is returned if
@@ -218,6 +227,10 @@ func (da PostgresDataAccess) UserGetByEmail(ctx context.Context, email string) (
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.UserGetByEmail")
 	defer sp.End()
+
+	if email == "" {
+		return rest.User{}, errs.ErrEmptyUserEmail
+	}
 
 	db, err := da.connect(ctx, DatabaseGort)
 	if err != nil {
@@ -229,15 +242,57 @@ func (da PostgresDataAccess) UserGetByEmail(ctx context.Context, email string) (
 		FROM users
 		WHERE email=$1`
 
-	user := rest.User{}
-	err = db.
-		QueryRowContext(ctx, query, email).
-		Scan(&user.Email, &user.FullName, &user.Username)
-	if err != nil {
-		err = gerr.Wrap(errs.ErrNoSuchUser, err)
+	var user rest.User
+	err = db.QueryRowContext(ctx, query, email).Scan(&user.Email, &user.FullName, &user.Username)
+	switch {
+	case err == sql.ErrNoRows:
+		return rest.User{}, errs.ErrNoSuchUser
+	case err != nil:
+		return rest.User{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return user, err
+	if user.Mappings, err = da.doUserGetAdapterIDs(ctx, user.Username); err != nil {
+		return rest.User{}, err
+	}
+
+	return user, nil
+}
+
+// UserGetByID returns a user from the data store. An error is returned if
+// eitherparameter is empty or if the user doesn't exist.
+func (da PostgresDataAccess) UserGetByID(ctx context.Context, adapter, id string) (rest.User, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.UserGetByID")
+	defer sp.End()
+
+	if adapter == "" {
+		return rest.User{}, errs.ErrEmptyUserAdapter
+	}
+
+	if id == "" {
+		return rest.User{}, errs.ErrEmptyUserID
+	}
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return rest.User{}, err
+	}
+	defer db.Close()
+
+	query := `SELECT username
+		FROM user_adapter_ids
+		WHERE adapter=$1 AND id=$2`
+
+	var username string
+	err = db.QueryRowContext(ctx, query, adapter, id).Scan(&username)
+	switch {
+	case err == nil:
+		return da.UserGet(ctx, username)
+	case err == sql.ErrNoRows:
+		return rest.User{}, errs.ErrNoSuchUser
+	default:
+		return rest.User{}, gerr.Wrap(errs.ErrDataAccess, err)
+	}
 }
 
 // UserGroupList returns a slice of Group values representing the specified user's group memberships.
@@ -270,6 +325,10 @@ func (da PostgresDataAccess) UserGroupList(ctx context.Context, username string)
 		}
 
 		groups = append(groups, group)
+	}
+
+	if rows.Err(); err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return groups, err
@@ -390,6 +449,7 @@ func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) 
 	defer rows.Close()
 
 	users := make([]rest.User, 0)
+
 	for rows.Next() {
 		user := rest.User{}
 		err = rows.Scan(&user.Email, &user.FullName, &user.Username)
@@ -397,6 +457,10 @@ func (da PostgresDataAccess) UserList(ctx context.Context) ([]rest.User, error) 
 			err = gerr.Wrap(errs.ErrNoSuchUser, err)
 		}
 		users = append(users, user)
+	}
+
+	if rows.Err(); err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return users, err
@@ -531,11 +595,83 @@ func (da PostgresDataAccess) UserUpdate(ctx context.Context, user rest.User) err
 	SET email=$1, full_name=$2, password_hash=$3
 	WHERE username=$4;`
 
-	_, err = db.ExecContext(ctx, query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username)
-
-	if err != nil {
-		err = gerr.Wrap(errs.ErrDataAccess, err)
+	if _, err = db.ExecContext(ctx, query, userOld.Email, userOld.FullName, userOld.Password, userOld.Username); err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return err
+	if err := da.doUserUpdateAdapterIDs(ctx, user); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// doUserGetAdapterIDs retrieves any adapter ID mappings associated with the
+// user. If none are found, an emptry map is returned.
+func (da PostgresDataAccess) doUserGetAdapterIDs(ctx context.Context, username string) (map[string]string, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.doUserGetAdapterIDs")
+	defer sp.End()
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+	defer db.Close()
+
+	query := `SELECT adapter, id
+		FROM user_adapter_ids
+		WHERE username=$1`
+
+	rows, err := db.QueryContext(ctx, query, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var m = map[string]string{}
+
+	for rows.Next() {
+		var adapter, id string
+
+		if err := rows.Scan(&adapter, &id); err != nil {
+			return m, gerr.Wrap(errs.ErrDataAccess, err)
+		}
+
+		m[adapter] = id
+	}
+
+	if rows.Err(); err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return m, nil
+}
+
+// doUserUpdateAdapterIDs
+func (da PostgresDataAccess) doUserUpdateAdapterIDs(ctx context.Context, user rest.User) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.doUserUpdateAdapterIDs")
+	defer sp.End()
+
+	db, err := da.connect(ctx, DatabaseGort)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+	defer db.Close()
+
+	deleteQuery := `DELETE FROM user_adapter_ids WHERE username=$1;`
+	_, err = db.ExecContext(ctx, deleteQuery, user.Username)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	adapterIDQuery := `INSERT INTO user_adapter_ids (username, adapter, id) VALUES ($1, $2, $3);`
+	for adapter, id := range user.Mappings {
+		if _, err := db.ExecContext(ctx, adapterIDQuery, user.Username, adapter, id); err != nil {
+			return gerr.Wrap(errs.ErrDataAccess, err)
+		}
+	}
+
+	return nil
 }

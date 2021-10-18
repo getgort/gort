@@ -4,9 +4,11 @@ go 1.16
 
 require (
 	github.com/Microsoft/go-winio v0.5.0 // indirect
+	github.com/bwmarrin/discordgo v0.23.2
 	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/docker/docker v20.10.9+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/go-git/go-git/v5 v5.4.2
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.10.3
 	github.com/mitchellh/go-homedir v1.1.0

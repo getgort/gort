@@ -18,7 +18,9 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -29,13 +31,14 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/getgort/gort/data"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
 	configs = data.DatabaseConfigs{
 		Host:       "localhost",
 		Password:   "password",
-		Port:       5432,
+		Port:       10864,
 		SSLEnabled: false,
 		User:       "gort",
 	}
@@ -58,13 +61,13 @@ func TestPostgresDataAccessMain(t *testing.T) {
 	}
 
 	cleanup, err := startDatabaseContainer(ctx, t)
-	assert.NoError(t, err, "failed to start database container")
 	defer func() {
 		if DoNotCleanUpDatabase {
 			return
 		}
 		cleanup()
 	}()
+	require.NoError(t, err, "failed to start database container")
 
 	t.Run("testInitialize", testInitialize)
 	t.Run("testUserAccess", testUserAccess)
@@ -81,16 +84,19 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 		return func() {}, err
 	}
 
-	reader, err := cli.ImagePull(ctx, "docker.io/library/postgres:13", types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx, "docker.io/library/postgres:14", types.ImagePullOptions{})
 	if err != nil {
 		return func() {}, err
 	}
 	io.Copy(os.Stdout, reader)
 
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	containerName := fmt.Sprintf("gort-test-%x", r.Int())
+
 	resp, err := cli.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image:        "postgres:13",
+			Image:        "postgres:14",
 			ExposedPorts: nat.PortSet{"5432/tcp": {}},
 			Env: []string{
 				"POSTGRES_USER=gort",
@@ -99,9 +105,9 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 			Cmd: []string{"postgres"},
 		},
 		&container.HostConfig{
-			PortBindings: map[nat.Port][]nat.PortBinding{"5432/tcp": {nat.PortBinding{HostPort: "5432/tcp"}}},
+			PortBindings: map[nat.Port][]nat.PortBinding{"5432/tcp": {nat.PortBinding{HostPort: "10864/tcp"}}},
 		},
-		nil, nil, "gort-test")
+		nil, nil, containerName)
 	if err != nil {
 		return func() {}, err
 	}

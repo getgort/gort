@@ -34,6 +34,9 @@ func NewProviderInfoFromConfig(provider data.Provider) *ProviderInfo {
 	p := &ProviderInfo{}
 
 	switch ap := provider.(type) {
+	case data.DiscordProvider:
+		p.Type = "discord"
+		p.Name = ap.Name
 	case data.SlackProvider:
 		p.Type = "slack"
 		p.Name = ap.Name
