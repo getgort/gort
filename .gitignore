@@ -26,4 +26,4 @@ development.yml
 .DS_Store
 
 # Our own binary, of course
-gort
+./gort

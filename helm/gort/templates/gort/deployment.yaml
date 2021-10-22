@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gort
+  labels:
+    app: gort
+spec:
+  selector:
+    matchLabels:
+      app: gort
+  template:
+    metadata:
+      labels:
+        app: gort
+    spec:
+      containers:
+        - name: gort
+          image: getgort/gort:latest
+          command: [ "gort", "start", "-v", "-c", "/etc/config/config.yml" ]
+          ports:
+            - containerPort: 4000
+          volumeMounts:
+          - name: config-volume
+            mountPath: /etc/config
+      volumes:
+      - name: config-volume
+        configMap:
+          name: gort-config

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gort
+spec:
+  selector:
+    app: gort
+  ports:
+    - protocol: TCP
+      port: 4000
+      targetPort: 4000
