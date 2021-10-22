@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gort-config
+  namespace: default
+data:
+  config.yml: |
+{{ .Values.config | toYaml | indent 4 }}

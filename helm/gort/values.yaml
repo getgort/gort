@@ -1,0 +1,52 @@
+config:
+  global:
+    # How long before a command times out. Accepts a duration string: a sequence
+    # of decimal numbers, each with optional fraction and a unit suffix: 1d,
+    # 1h30m, 5m, 10s. Valid units are "ms", "s", "m", "h". Defaults to 60s.
+    # TODO Allow overriding at the command level
+    command_timeout: 60s
+
+  gort:
+    # Gort will automatically create accounts for new users when set.
+    # User accounts created this way will still need to be placed into groups
+    # by an administrator in order to be granted any permissions.
+    allow_self_registration: true
+
+    # The address to listen on for Gort's REST API. Defaults to ":4000".
+    api_address: ":4000"
+
+    # Controls the prefix of URLs generated for the core API. URLs may contain a
+    # scheme (either http or https), a host, an optional port (defaulting to 80
+    # for http and 443 for https), and an optional path.
+    # Defaults to localhost
+    api_url_base: localhost
+
+    # Enables development mode. Currently this only affects log output format.
+    # Defaults to false
+    development_mode: true
+
+    # If true, allows Gort to respond to commands prefixed with ! instead of only
+    # via direct mentions. Defaults to true.
+    enable_spoken_commands: true
+
+    # If set along with tls_key_file, TLS will be used for API connections.
+    # This parameter specifies the path to a certificate file.
+    # tls_cert_file: host.crt
+
+    # If set along with tls_cert_file, TLS will be used for API connections.
+    # This parameter specifies the path to a key file.
+    # The key must not be encrypted with a password.
+    # tls_key_file: host.key
+
+  # Configures Gort's Docker host data. At the moment it only includes two
+  # values (which are likely to move into a relay configuration, when
+  # that becomes a thing).
+  docker:
+    # Defines the location of the Docker port. Required.
+    host: unix:///var/run/docker.sock
+
+    # The name of a Docker network. If set, any worker containers will be
+    # attached to this network. This can be used to allow workers to communicate
+    # with a containerized Gort controller.
+    # network: gort_gort
+
