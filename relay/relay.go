@@ -23,6 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 
+	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
@@ -34,7 +35,6 @@ import (
 
 const (
 	// Most exit codes borrowed from sysexits.h
-
 	ExitOK              = 0   // successful termination
 	ExitGeneral         = 1   // catchall for errors
 	ExitNoUser          = 67  // user unknown
@@ -77,7 +77,7 @@ func StartListening() (chan<- data.CommandRequest, <-chan data.CommandResponse) 
 
 // SpawnWorker receives a CommandEntry and a slice of command parameters
 // strings, and constructs a new worker.Worker.
-func SpawnWorker(ctx context.Context, command data.CommandRequest) (*worker.Worker, error) {
+func SpawnWorker(ctx context.Context, command data.CommandRequest) (worker.Worker, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	_, sp := tr.Start(ctx, "relay.SpawnWorker")
 	defer sp.End()
@@ -93,7 +93,7 @@ func SpawnWorker(ctx context.Context, command data.CommandRequest) (*worker.Work
 		return nil, err
 	}
 
-	return worker.NewWorker(command, token)
+	return worker.New(command, token)
 }
 
 // getUser is just a convenience function for interacting with the DAL.
@@ -192,17 +192,18 @@ func handleRequest(ctx context.Context, commandRequest data.CommandRequest) data
 
 // runWorker is called by handleRequest to do the work of starting an
 // individual worker, capturing its output, and cleaning up after it.
-func runWorker(ctx context.Context, worker *worker.Worker, response data.CommandResponse) data.CommandResponse {
+func runWorker(ctx context.Context, worker worker.Worker, response data.CommandResponse) data.CommandResponse {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	_, sp := tr.Start(ctx, "relay.runWorker")
 	defer sp.End()
 
 	// Get configured timeout. Zero (or less) is no timeout.
-	timeout := worker.ExecutionTimeout
-	if timeout <= 0 {
-		timeout = time.Hour * 24 * 365 // No timeout? No problem.
+	var cancel context.CancelFunc
+	if timeout := config.GetGlobalConfigs().CommandTimeout; timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	stdoutChan, err := worker.Start(ctx)
