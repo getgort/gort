@@ -205,7 +205,7 @@ func (w *ContainerWorker) Start(ctx context.Context) (<-chan string, error) {
 // timeout indicates no timeout: no forceful termination is performed.
 func (w *ContainerWorker) Stop(ctx context.Context, timeout *time.Duration) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "worker.Start")
+	ctx, sp := tr.Start(ctx, "worker.Stop")
 	defer sp.End()
 
 	func() error {

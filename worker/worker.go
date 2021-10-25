@@ -20,10 +20,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
-	"github.com/getgort/gort/worker/docker"
+	"github.com/getgort/gort/worker/kubernetes"
 )
 
 // Worker represents a container executor. It has a lifetime of a single command execution.
@@ -35,17 +34,25 @@ type Worker interface {
 
 // New will build and returns a new Worker for a single command execution.
 func New(command data.CommandRequest, token rest.Token) (Worker, error) {
-	dockerDefined := !config.IsUndefined(config.GetDockerConfigs())
+	// dockerDefined := !config.IsUndefined(config.GetDockerConfigs())
+	kubernetesDefined := true
 
 	var worker Worker
 	var err error
 
-	if dockerDefined {
-		worker, err = docker.New(command, token)
+	if kubernetesDefined {
+		worker, err = kubernetes.New(command, token)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 	}
+
+	// if dockerDefined {
+	// 	worker, err = docker.New(command, token)
+	// 	if err != nil {
+	// 		return nil, nil
+	// 	}
+	// }
 
 	return worker, nil
 }
