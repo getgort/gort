@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/getgort/gort/data"
@@ -35,8 +34,6 @@ import (
 	k8srest "k8s.io/client-go/rest"
 )
 
-const namespace = "default"
-
 // KubernetesWorker represents a container executor. It has a lifetime of a single command execution.
 type KubernetesWorker struct {
 	clientset         *kubernetes.Clientset
@@ -46,6 +43,7 @@ type KubernetesWorker struct {
 	exitStatus        chan int64
 	imageName         string
 	jobName           string
+	namespace         string
 	token             rest.Token
 }
 
@@ -72,6 +70,12 @@ func New(command data.CommandRequest, token rest.Token) (*KubernetesWorker, erro
 		return nil, err
 	}
 
+	// TODO(mtitmus) Set this from config
+	namespace := ""
+	if namespace == "" {
+		namespace = corev1.NamespaceDefault
+	}
+
 	return &KubernetesWorker{
 		clientset:         clientset,
 		command:           command,
@@ -79,6 +83,7 @@ func New(command data.CommandRequest, token rest.Token) (*KubernetesWorker, erro
 		entryPoint:        entrypoint,
 		exitStatus:        make(chan int64, 1),
 		imageName:         image + ":" + tag,
+		namespace:         namespace,
 		token:             token,
 	}, nil
 }
@@ -126,7 +131,7 @@ func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
 		job.Spec.Template.Spec.Containers[0].Command = w.entryPoint
 	}
 
-	jobInterface := w.clientset.BatchV1().Jobs(namespace)
+	jobInterface := w.clientset.BatchV1().Jobs(w.namespace)
 	job, err = jobInterface.Create(ctx, job, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start kubernetes job: %w", err)
@@ -135,35 +140,40 @@ func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
 	w.jobName = job.Name
 
 	// Watch the job status
-	listOptions := metav1.ListOptions{FieldSelector: "metadata.name=" + job.Name}
-	watchInterface, err := jobInterface.Watch(ctx, listOptions)
+
+	listOptions := metav1.ListOptions{LabelSelector: "job-name=" + w.jobName}
+	podInterface := w.clientset.CoreV1().Pods(w.namespace)
+	watchInterface, err := podInterface.Watch(ctx, listOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	go func() {
 		events := watchInterface.ResultChan()
-		complete := false
+
+		var terminated *corev1.ContainerStateTerminated
+		var complete bool
 
 		for !complete {
 			select {
 			case e := <-events:
-				if j, ok := e.Object.(*batchv1.Job); ok {
-					for _, c := range j.Status.Conditions {
-						switch c.Type {
-						case batchv1.JobComplete:
-							fallthrough
-						case batchv1.JobFailed:
-							complete = true
-						}
+				if pod, ok := e.Object.(*corev1.Pod); ok {
+					if len(pod.Status.ContainerStatuses) == 0 {
+						continue
 					}
+
+					if terminated = pod.Status.ContainerStatuses[0].State.Terminated; terminated == nil {
+						continue
+					}
+
+					complete = true
 				}
 			case <-ctx.Done():
 				complete = true
 			}
 		}
 
-		w.exitStatus <- int64(job.Status.Failed)
+		w.exitStatus <- int64(terminated.ExitCode)
 	}()
 
 	// Build the channel that will stream back the job logs.
@@ -183,7 +193,7 @@ func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
 // timeout indicates no timeout: no forceful termination is performed.
 func (w *KubernetesWorker) Stop(ctx context.Context, timeout *time.Duration) {
 	// Clean up the job
-	jobInterface := w.clientset.BatchV1().Jobs(namespace)
+	jobInterface := w.clientset.BatchV1().Jobs(w.namespace)
 	deleteOptions := metav1.DeleteOptions{}
 	if timeout != nil && timeout.Seconds() > 0 {
 		seconds := int64(timeout.Seconds())
@@ -196,7 +206,7 @@ func (w *KubernetesWorker) Stop(ctx context.Context, timeout *time.Duration) {
 	}
 
 	// Clean up generated pods
-	podInterface := w.clientset.CoreV1().Pods(namespace)
+	podInterface := w.clientset.CoreV1().Pods(w.namespace)
 	listOptions := metav1.ListOptions{LabelSelector: "job-name=" + w.jobName}
 	pl, err := podInterface.List(ctx, listOptions)
 	if err != nil {
@@ -243,7 +253,7 @@ func (w *KubernetesWorker) envVars(ctx context.Context) ([]corev1.EnvVar, error)
 }
 
 func (w *KubernetesWorker) findGortEndpoint(ctx context.Context) (string, int32, error) {
-	epInterface := w.clientset.CoreV1().Endpoints(namespace)
+	epInterface := w.clientset.CoreV1().Endpoints(w.namespace)
 
 	ep, err := epInterface.Get(ctx, "gort", metav1.GetOptions{})
 	if err != nil {
@@ -256,7 +266,7 @@ func (w *KubernetesWorker) findGortEndpoint(ctx context.Context) (string, int32,
 func (w *KubernetesWorker) getJobLogs(ctx context.Context) (<-chan string, error) {
 	var pod *corev1.Pod
 
-	podInterface := w.clientset.CoreV1().Pods(namespace)
+	podInterface := w.clientset.CoreV1().Pods(w.namespace)
 
 	listOptions := metav1.ListOptions{LabelSelector: "job-name=" + w.jobName}
 	wi, err := podInterface.Watch(ctx, listOptions)
@@ -269,7 +279,7 @@ func (w *KubernetesWorker) getJobLogs(ctx context.Context) (<-chan string, error
 	for pod == nil {
 		select {
 		case e := <-resultChan:
-			if p, ok := e.Object.(*corev1.Pod); ok && strings.HasPrefix(p.Name, w.jobName) {
+			if p, ok := e.Object.(*corev1.Pod); ok {
 				if p.Status.Phase != "Pending" {
 					pod = p
 				}
@@ -279,7 +289,7 @@ func (w *KubernetesWorker) getJobLogs(ctx context.Context) (<-chan string, error
 		}
 	}
 
-	podLogOpts := &corev1.PodLogOptions{}
+	podLogOpts := &corev1.PodLogOptions{Container: "command", Follow: true}
 	req := podInterface.GetLogs(pod.Name, podLogOpts)
 
 	podLogs, err := req.Stream(ctx)
