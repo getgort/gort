@@ -177,7 +177,7 @@ func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
 	return logs, nil
 }
 
-// Stop will stop (if it's not already stopped) a worker process and cleanup
+// Stop will stop (if it's not already stopped) a worker process and clean up
 // any resources it's using. If the worker fails to stop gracefully within a
 // timeframe specified by the timeout argument, it is forcefully terminated
 // (killed). If the timeout is nil, the engine's default is used. A negative
@@ -241,11 +241,6 @@ func (w *KubernetesWorker) findGortEndpoint(ctx context.Context) (string, int32,
 	return ep.Subsets[0].Addresses[0].IP, ep.Subsets[0].Ports[0].Port, nil
 }
 
-// Cleanup will stop (if it's not already stopped) a worker process and cleanup
-// any resources it's using. If the worker fails to stop gracefully within a
-// timeframe specified by the timeout argument, it is forcefully terminated
-// (killed). If the timeout is nil, the engine's default is used. A negative
-// timeout indicates no timeout: no forceful termination is performed.
 func (w *KubernetesWorker) getJobLogs(ctx context.Context) (<-chan string, error) {
 	var pod *corev1.Pod
 
