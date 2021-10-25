@@ -94,12 +94,9 @@ func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
 	}
 
 	job := &batchv1.Job{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "batch/v1",
-			Kind:       "Job",
-		},
+		TypeMeta: metav1.TypeMeta{APIVersion: "batch/v1", Kind: "Job"},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s.%s", w.command.Bundle.Name, w.command.Command.Name),
+			GenerateName: fmt.Sprintf("%s.%s-", w.command.Bundle.Name, w.command.Command.Name),
 			Labels: map[string]string{
 				"gort.bundle":  w.command.Bundle.Name,
 				"gort.command": w.command.Command.Name,
@@ -137,7 +134,9 @@ func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
 
 	w.jobName = job.Name
 
-	watchInterface, err := jobInterface.Watch(ctx, metav1.ListOptions{})
+	// Watch the job status
+	listOptions := metav1.ListOptions{FieldSelector: "metadata.name=" + job.Name}
+	watchInterface, err := jobInterface.Watch(ctx, listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +148,7 @@ func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
 		for !complete {
 			select {
 			case e := <-events:
-				if j, ok := e.Object.(*batchv1.Job); ok && j.Name == w.jobName {
+				if j, ok := e.Object.(*batchv1.Job); ok {
 					for _, c := range j.Status.Conditions {
 						switch c.Type {
 						case batchv1.JobComplete:
@@ -183,8 +182,8 @@ func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
 // (killed). If the timeout is nil, the engine's default is used. A negative
 // timeout indicates no timeout: no forceful termination is performed.
 func (w *KubernetesWorker) Stop(ctx context.Context, timeout *time.Duration) {
+	// Clean up the job
 	jobInterface := w.clientset.BatchV1().Jobs(namespace)
-
 	deleteOptions := metav1.DeleteOptions{}
 	if timeout != nil && timeout.Seconds() > 0 {
 		seconds := int64(timeout.Seconds())
@@ -192,11 +191,24 @@ func (w *KubernetesWorker) Stop(ctx context.Context, timeout *time.Duration) {
 	}
 
 	if err := jobInterface.Delete(ctx, w.jobName, deleteOptions); err != nil {
-		log.WithError(err).WithField("jobName", w.jobName).Trace("failed to delete job")
+		log.WithError(err).WithField("jobName", w.jobName).Error("Failed to delete job")
 		return
 	}
 
-	log.WithField("jobName", w.jobName).Trace("job stopped and removed")
+	// Clean up generated pods
+	podInterface := w.clientset.CoreV1().Pods(namespace)
+	listOptions := metav1.ListOptions{LabelSelector: "job-name=" + w.jobName}
+	pl, err := podInterface.List(ctx, listOptions)
+	if err != nil {
+		log.WithError(err).WithField("jobName", w.jobName).Error("Failed to find pod")
+	}
+	for _, p := range pl.Items {
+		if err := podInterface.Delete(ctx, p.Name, metav1.DeleteOptions{}); err != nil {
+			log.WithError(err).WithField("jobName", w.jobName).Error("Failed to delete pod")
+		}
+	}
+
+	log.WithField("jobName", w.jobName).Info("Job stopped and removed")
 }
 
 // Stopped returns a channel that blocks until this worker's container has stopped.
@@ -246,12 +258,10 @@ func (w *KubernetesWorker) getJobLogs(ctx context.Context) (<-chan string, error
 
 	podInterface := w.clientset.CoreV1().Pods(namespace)
 
-	// listOptions := metav1.ListOptions{LabelSelector: "job-name=" + w.jobName}
-	listOptions := metav1.ListOptions{}
-
+	listOptions := metav1.ListOptions{LabelSelector: "job-name=" + w.jobName}
 	wi, err := podInterface.Watch(ctx, listOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed watch pod list: %w", err)
+		return nil, fmt.Errorf("failed to watch pod list: %w", err)
 	}
 
 	resultChan := wi.ResultChan()

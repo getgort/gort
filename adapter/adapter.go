@@ -758,7 +758,7 @@ func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, use
 		}
 	}
 
-	le.Info("requestor identity built")
+	le.Info("Requestor identity built")
 
 	return id, nil
 }
