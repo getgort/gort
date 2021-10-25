@@ -198,7 +198,7 @@ func (w *ContainerWorker) Start(ctx context.Context) (<-chan string, error) {
 	return logs, nil
 }
 
-// Cleanup will stop (if it's not already stopped) a worker process and cleanup
+// Stop will stop (if it's not already stopped) a worker process and cleanup
 // any resources it's using. If the worker fails to stop gracefully within a
 // timeframe specified by the timeout argument, it is forcefully terminated
 // (killed). If the timeout is nil, the engine's default is used. A negative
