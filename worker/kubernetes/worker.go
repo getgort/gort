@@ -256,8 +256,7 @@ func (w *KubernetesWorker) envVars(ctx context.Context) ([]corev1.EnvVar, error)
 		`GORT_INVOCATION_ID`: fmt.Sprintf("%d", w.command.RequestID),
 		`GORT_ROOM`:          w.command.ChannelID,
 		`GORT_SERVICE_TOKEN`: w.token.Token,
-		// TODO(mtitmus): Make this https always (https://github.com/getgort/gort/issues/136)
-		`GORT_SERVICES_ROOT`: fmt.Sprintf("http://%s:%d", gortIP, gortPort),
+		`GORT_SERVICES_ROOT`: fmt.Sprintf("%s:%d", gortIP, gortPort),
 	}
 
 	var env []corev1.EnvVar
