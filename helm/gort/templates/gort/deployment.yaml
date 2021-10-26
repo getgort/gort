@@ -17,6 +17,15 @@ spec:
         - name: gort
           image: getgort/gort:latest
           command: [ "gort", "start", "-v", "-c", "/etc/config/config.yml" ]
+          env:
+            - name: GORT_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: GORT_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           ports:
             - containerPort: 4000
           volumeMounts:

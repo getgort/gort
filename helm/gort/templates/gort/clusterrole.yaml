@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gort-role
+rules:
+- apiGroups: ["", "batch"]
+  resources: ["jobs", "pods"]
+  verbs: ["create", "delete", "get", "list", "watch"]
+- apiGroups: ["", "batch"]
+  resources: ["pods/log"]
+  verbs: ["get", "watch"]
+- apiGroups: ["", "batch"]
+  resources: ["endpoints"]
+  verbs: ["get"]
