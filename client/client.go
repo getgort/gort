@@ -216,7 +216,6 @@ func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Re
 	default:
 		return nil, gerrs.Wrap(ErrConnectionFailed, err)
 	}
-	defer resp.Body.Close()
 
 	return resp, err
 }

@@ -53,7 +53,11 @@ func (c *GortClient) Authenticate() (rest.Token, error) {
 	}
 
 	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
-	if err != nil {
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "certificate"):
+		return rest.Token{}, fmt.Errorf("self-signed certificate detected: use --allow-insecure to proceed (not recommended)")
+	default:
 		return rest.Token{}, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 
