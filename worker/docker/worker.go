@@ -22,17 +22,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getgort/gort/config"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/telemetry"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-
-	"github.com/getgort/gort/config"
-	"github.com/getgort/gort/data"
-	"github.com/getgort/gort/data/rest"
-	"github.com/getgort/gort/telemetry"
 )
 
 // Worker represents a container executor. It has a lifetime of a single command execution.
@@ -86,7 +86,7 @@ func New(command data.CommandRequest, token rest.Token) (*ContainerWorker, error
 // It returns a string channel that emits the container's combined stdout and stderr streams.
 func (w *ContainerWorker) Start(ctx context.Context) (<-chan string, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	_, sp := tr.Start(ctx, "worker.Start")
+	_, sp := tr.Start(ctx, "worker.docker.Start")
 	defer sp.End()
 
 	// Track time spent in this method
@@ -129,7 +129,7 @@ func (w *ContainerWorker) Start(ctx context.Context) (<-chan string, error) {
 
 	// Create the container
 	resp, err := func() (container.ContainerCreateCreatedBody, error) {
-		ctx, sp := tr.Start(ctx, "docker.ContainerCreate")
+		ctx, sp := tr.Start(ctx, "worker.docker.ContainerCreate")
 		defer sp.End()
 
 		// If a host network is defined, set it here.
@@ -149,7 +149,7 @@ func (w *ContainerWorker) Start(ctx context.Context) (<-chan string, error) {
 
 	// Start the container
 	err = func() error {
-		ctx, sp := tr.Start(ctx, "docker.ContainerStart")
+		ctx, sp := tr.Start(ctx, "worker.docker.ContainerStart")
 		defer sp.End()
 		return cli.ContainerStart(ctx, w.containerID, types.ContainerStartOptions{})
 	}()
@@ -205,7 +205,7 @@ func (w *ContainerWorker) Start(ctx context.Context) (<-chan string, error) {
 // timeout indicates no timeout: no forceful termination is performed.
 func (w *ContainerWorker) Stop(ctx context.Context, timeout *time.Duration) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "worker.Stop")
+	ctx, sp := tr.Start(ctx, "worker.docker.Stop")
 	defer sp.End()
 
 	func() error {
@@ -275,7 +275,7 @@ func (w *ContainerWorker) imageExistsLocally(ctx context.Context, image string) 
 // pullImage pull the worker's image. It blocks until the pull is complete.
 func (w *ContainerWorker) pullImage(ctx context.Context, force bool) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	_, sp := tr.Start(ctx, "worker.pullImage")
+	_, sp := tr.Start(ctx, "worker.docker.pullImage")
 	defer sp.End()
 
 	cli := w.dockerClient

@@ -18,10 +18,13 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
+	"github.com/getgort/gort/worker/docker"
 	"github.com/getgort/gort/worker/kubernetes"
 )
 
@@ -32,27 +35,23 @@ type Worker interface {
 	Stopped() <-chan int64
 }
 
-// New will build and returns a new Worker for a single command execution.
+// New will build and return a new Worker for a single command execution.
 func New(command data.CommandRequest, token rest.Token) (Worker, error) {
-	// dockerDefined := !config.IsUndefined(config.GetDockerConfigs())
+	dockerDefined := !config.IsUndefined(config.GetDockerConfigs())
+	// kubernetesDefined := !config.IsUndefined(config.GetKubernetesConfigs())
 	kubernetesDefined := true
 
-	var worker Worker
-	var err error
+	switch {
+	case dockerDefined && kubernetesDefined:
+		return nil, fmt.Errorf("docker and kubernetes configuration blocks are mutually exclusive")
 
-	if kubernetesDefined {
-		worker, err = kubernetes.New(command, token)
-		if err != nil {
-			return nil, err
-		}
+	case dockerDefined:
+		return docker.New(command, token)
+
+	case kubernetesDefined:
+		return kubernetes.New(command, token)
+
+	default:
+		return nil, fmt.Errorf("exactly one of the following configuration blocks required: docker, kubernetes")
 	}
-
-	// if dockerDefined {
-	// 	worker, err = docker.New(command, token)
-	// 	if err != nil {
-	// 		return nil, nil
-	// 	}
-	// }
-
-	return worker, nil
 }
