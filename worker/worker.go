@@ -18,7 +18,6 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/getgort/gort/config"
@@ -38,20 +37,10 @@ type Worker interface {
 // New will build and return a new Worker for a single command execution.
 func New(command data.CommandRequest, token rest.Token) (Worker, error) {
 	dockerDefined := !config.IsUndefined(config.GetDockerConfigs())
-	// kubernetesDefined := !config.IsUndefined(config.GetKubernetesConfigs())
-	kubernetesDefined := true
 
-	switch {
-	case dockerDefined && kubernetesDefined:
-		return nil, fmt.Errorf("docker and kubernetes configuration blocks are mutually exclusive")
-
-	case dockerDefined:
+	if dockerDefined {
 		return docker.New(command, token)
-
-	case kubernetesDefined:
-		return kubernetes.New(command, token)
-
-	default:
-		return nil, fmt.Errorf("exactly one of the following configuration blocks required: docker, kubernetes")
 	}
+
+	return kubernetes.New(command, token)
 }
