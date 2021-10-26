@@ -86,34 +86,6 @@ func New(command data.CommandRequest, token rest.Token) (*KubernetesWorker, erro
 	return w, nil
 }
 
-// findGortNamespace attempts to find the namespace of the Gort service pod.
-// First, if the GORT_POD_NAMESPACE envvar was set by the Downward API, it uses
-// that. If not, it uses the Kubernetes API to inspect the Gort pod directly.
-// func (w *KubernetesWorker) findGortNamespace(ctx context.Context) (string, error) {
-// 	var ns string
-
-// 	// Use config value
-// 	if ns = config.GetKubernetesConfigs().Namespace; ns != "" {
-// 		return ns, nil
-// 	}
-
-// 	// Get the current namespace via the Downward API
-// 	if ns = os.Getenv("GORT_POD_NAMESPACE"); ns != "" {
-// 		return ns, nil
-// 	}
-
-// 	// Try to find the pod dynamically
-// 	pod, err := w.findGortPod(ctx)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	fmt.Println("******* POD NAME:", pod.Name)
-// 	fmt.Println("******* POD NAMESPACE:", pod.Namespace)
-
-// 	return pod.Namespace, nil
-// }
-
 // Start triggers a worker to run a Kubernetes Job. It returns a string
 // channel that emits the container's combined stdout and stderr streams.
 func (w *KubernetesWorker) Start(ctx context.Context) (<-chan string, error) {
