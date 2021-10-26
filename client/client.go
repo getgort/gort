@@ -18,6 +18,7 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,6 +65,7 @@ var (
 
 // GortClient comments to be written...
 type GortClient struct {
+	client  *http.Client
 	profile ProfileEntry
 	token   *rest.Token
 }
@@ -176,7 +178,20 @@ func NewClient(entry ProfileEntry) (*GortClient, error) {
 		return nil, ErrInsecureURL
 	}
 
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	if entry.AllowInsecure {
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+
 	return &GortClient{
+		client:  client,
 		profile: entry,
 	}, nil
 }
@@ -193,11 +208,15 @@ func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Re
 	}
 	req.Header.Add("X-Session-Token", token.Token)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
+	resp, err := c.client.Do(req)
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "certificate"):
+		return nil, fmt.Errorf("self-signed certificate detected: use --allow-insecure to proceed (not recommended)")
+	default:
 		return nil, gerrs.Wrap(ErrConnectionFailed, err)
 	}
+	defer resp.Body.Close()
 
 	return resp, err
 }
@@ -323,7 +342,7 @@ func parseHostURL(serverURLArg string) (*url.URL, error) {
 		return nil, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 	if !matches {
-		serverURLString = "http://" + serverURLString
+		serverURLString = "https://" + serverURLString
 	}
 
 	// Parse the resulting URL
