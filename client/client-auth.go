@@ -116,7 +116,7 @@ func (c *GortClient) Authenticated() (bool, error) {
 }
 
 // Bootstrap calls the POST /v2/bootstrap endpoint.
-func (c *GortClient) Bootstrap() (rest.User, error) {
+func (c *GortClient) Bootstrap(overwrite bool) (rest.User, error) {
 	endpointURL := fmt.Sprintf("%s/v2/bootstrap", c.profile.URL)
 
 	// Get profile data so we can update it afterwards
@@ -125,7 +125,7 @@ func (c *GortClient) Bootstrap() (rest.User, error) {
 		return rest.User{}, err
 	}
 
-	if _, exists := profile.Profiles[c.profile.Name]; exists {
+	if _, exists := profile.Profiles[c.profile.Name]; exists && !overwrite {
 		return rest.User{}, fmt.Errorf("profile %s already exists", c.profile.Name)
 	}
 
