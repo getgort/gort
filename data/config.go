@@ -75,5 +75,9 @@ type JaegerConfigs struct {
 
 // KubernetesConfigs is the data wrapper for the "kubernetes" section.
 type KubernetesConfigs struct {
-	Namespace string `yaml:"namespace,omitempty"`
+	Namespace             string `yaml:"namespace,omitempty"`
+	EndpointFieldSelector string `yaml:"endpoint_field_selector,omitempty"`
+	EndpointLabelSelector string `yaml:"endpoint_label_selector,omitempty"`
+	PodFieldSelector      string `yaml:"pod_field_selector,omitempty"`
+	PodLabelSelector      string `yaml:"pod_label_selector,omitempty"`
 }

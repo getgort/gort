@@ -1,21 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gort
+  name: {{ template "gort.fullname" . }}
   labels:
-    app: gort
+    app: {{ template "gort.name" . }}
+    chart: {{ template "gort.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
 spec:
   selector:
     matchLabels:
-      app: gort
+      app: {{ template "gort.name" . }}
+      release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: gort
+        app: {{ template "gort.name" . }}
+        release: {{ .Release.Name }}
     spec:
+      serviceAccountName: {{ template "gort.serviceAccountName" . }}
       containers:
         - name: gort
-          image: getgort/gort:latest
+          image: "{{ .Values.gort.image.repository }}:{{ default .Chart.AppVersion .Values.gort.image.version }}"
+          imagePullPolicy: {{ .Values.gort.image.pullPolicy }}
           command: [ "gort", "start", "-v", "-c", "/etc/config/config.yml" ]
           env:
             - name: GORT_POD_NAME
@@ -27,11 +34,11 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
           ports:
-            - containerPort: 4000
+            - containerPort: {{ .Values.gort.internalPort }}
           volumeMounts:
           - name: config-volume
             mountPath: /etc/config
       volumes:
       - name: config-volume
         configMap:
-          name: gort-config
+          name: {{ template "gort.fullname" . }}-config

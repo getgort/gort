@@ -1,11 +1,19 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: gort
+  name: {{ template "gort.fullname" . }}
+  labels:
+    app: {{ template "gort.name" . }}
+    chart: {{ template "gort.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
 spec:
+  type: {{ .Values.gort.service.type }}
   selector:
-    app: gort
+    app: {{ template "gort.name" . }}
+    release: {{ .Release.Name }}
   ports:
-    - protocol: TCP
-      port: 4000
-      targetPort: 4000
+    - port: {{ .Values.gort.externalPort }}
+      targetPort: {{ .Values.gort.internalPort }}
+      protocol: TCP
+      name: {{ .Release.Name }}
