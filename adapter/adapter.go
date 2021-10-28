@@ -284,11 +284,11 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 // StartListening instructs all relays to establish connections, receives all
 // events from all relays, and forwards them to the various On* handler functions.
-func StartListening(ctx context.Context) (<-chan data.CommandRequest, chan<- data.CommandResponse, <-chan error) {
+func StartListening(ctx context.Context) (<-chan data.CommandRequest, chan<- data.CommandResponseEnvelope, <-chan error) {
 	log.Debug("Instructing relays to establish connections")
 
 	commandRequests := make(chan data.CommandRequest)
-	commandResponses := make(chan data.CommandResponse)
+	commandResponses := make(chan data.CommandResponseEnvelope)
 
 	allEvents, adapterErrors := startAdapters(ctx)
 
@@ -416,7 +416,8 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 				tokens[0])
 			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
 		default:
-			msg := formatCommandInputErrorMessage(cmdInput, tokens, err.Error())
+			e := data.NewCommandResponseEnvelope(request, data.WithError("Error", err, 1))
+			msg := formatCommandInputErrorMessage(e)
 			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", msg)
 		}
 
@@ -856,38 +857,42 @@ func findOrMakeGortUser(ctx context.Context, adapter Adapter, info *UserInfo) (*
 }
 
 // TODO Replace this with something resembling a template. Eventually.
-func formatCommandEntryErrorMessage(command data.CommandEntry, params []string, output string) string {
+func formatCommandEntryErrorMessage(envelope data.CommandResponseEnvelope) string {
 	rawCommand := fmt.Sprintf(
 		"%s:%s %s",
-		command.Bundle.Name, command.Command.Name, strings.Join(params, " "))
+		envelope.Request.Bundle.Name,
+		envelope.Request.Command.Name,
+		strings.Join(envelope.Request.Parameters, " "))
 
 	return fmt.Sprintf(
 		"%s\n```%s```\n%s\n```%s```",
 		"The pipeline failed planning the invocation:",
 		rawCommand,
 		"The specific error was:",
-		output,
+		envelope.Response.Out,
 	)
 }
 
 // TODO Replace this with something resembling a template. Eventually.
-func formatCommandInputErrorMessage(cmd command.Command, params []string, output string) string {
+func formatCommandInputErrorMessage(envelope data.CommandResponseEnvelope) string {
 	rawCommand := fmt.Sprintf(
-		"%s:%s %v",
-		cmd.Bundle, cmd.Command, cmd.Parameters)
+		"%s:%s %s",
+		envelope.Request.Bundle.Name,
+		envelope.Request.Command.Name,
+		strings.Join(envelope.Request.Parameters, " "))
 
 	return fmt.Sprintf(
 		"%s\n```%s```\n%s\n```%s```",
 		"The pipeline failed planning the invocation:",
 		rawCommand,
 		"The specific error was:",
-		output,
+		envelope.Response.Out,
 	)
 }
 
 // TODO Replace this with something resembling a template. Eventually.
-func formatCommandOutput(command data.CommandEntry, params []string, output string) string {
-	return fmt.Sprintf("```%s```", output)
+func formatCommandOutput(envelope data.CommandResponseEnvelope) string {
+	return fmt.Sprintf("```%s```", envelope.Response.Out)
 }
 
 func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.CommandRequest, adapterErrors chan<- error) {
@@ -951,42 +956,32 @@ func startAdapters(ctx context.Context) (<-chan *ProviderEvent, chan error) {
 	return allEvents, adapterErrors
 }
 
-func startProviderEventListening(commandRequests chan<- data.CommandRequest,
+func startProviderEventListening(requests chan<- data.CommandRequest,
 	allEvents <-chan *ProviderEvent, adapterErrors chan<- error) {
 
 	for event := range allEvents {
-		handleIncomingEvent(event, commandRequests, adapterErrors)
+		handleIncomingEvent(event, requests, adapterErrors)
 	}
 }
 
-func startRelayResponseListening(commandResponses <-chan data.CommandResponse,
+func startRelayResponseListening(responses <-chan data.CommandResponseEnvelope,
 	allEvents <-chan *ProviderEvent, adapterErrors chan<- error) {
 
-	for response := range commandResponses {
-		adapter, err := GetAdapter(response.Command.Adapter)
+	for envelope := range responses {
+		adapter, err := GetAdapter(envelope.Request.Adapter)
 		if err != nil {
 			adapterErrors <- err
 			continue
 		}
 
-		channelID := response.Command.ChannelID
-		output := strings.Join(response.Output, "\n")
-		title := response.Title
+		channelID := envelope.Request.ChannelID
+		title := envelope.Response.Title
 
-		if response.Status != 0 || response.Error != nil {
-			formatted := formatCommandEntryErrorMessage(
-				response.Command.CommandEntry,
-				response.Command.Parameters,
-				output,
-			)
-
+		if envelope.Data.ExitCode != 0 || envelope.Data.Error != nil {
+			formatted := formatCommandEntryErrorMessage(envelope)
 			err = adapter.SendErrorMessage(channelID, title, formatted)
 		} else {
-			formatted := formatCommandOutput(
-				response.Command.CommandEntry,
-				response.Command.Parameters,
-				output,
-			)
+			formatted := formatCommandOutput(envelope)
 
 			err = adapter.SendMessage(channelID, formatted)
 		}
