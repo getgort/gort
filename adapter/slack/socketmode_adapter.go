@@ -284,13 +284,13 @@ func (s *SocketModeAdapter) wrapEvent(eventType adapter.EventType, info *adapter
 // SendErrorMessage sends an error message to a specified channel.
 func (s *SocketModeAdapter) SendErrorMessage(channelID string, title string, text string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.SendResponseEnvelope(channelID, e)
+	return s.sendResponseEnvelope(channelID, e, DefaultMessageTemplate)
 }
 
 // SendMessage sends a standard output message to a specified channel.
 func (s *SocketModeAdapter) SendMessage(channelID string, message string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-	return s.SendResponseEnvelope(channelID, e)
+	return s.sendResponseEnvelope(channelID, e, DefaultMessageTemplate)
 }
 
 // SendResponseEnvelope sends the contents of a response envelope to a
@@ -302,16 +302,22 @@ func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data
 	if envelope.Data.IsError && envelope.Request.Bundle.Name != "" {
 		templateText = DefaultCommandErrorTemplate
 	} else {
-		templateText = DefaultMessageTemplate
+		templateText = DefaultCommandTemplate
 	}
 
+	return s.sendResponseEnvelope(channelID, envelope, templateText)
+}
+
+// sendResponseEnvelope sends the contents of a response envelope to a
+// specified channel. If channelID is empty the value of
+// envelope.Request.ChannelID will be used.
+func (s *SocketModeAdapter) sendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, templateText string) error {
 	t, err := template.New("envelope").Parse(templateText)
 	if err != nil {
 		return err
 	}
 
 	buffer := new(bytes.Buffer)
-
 	err = t.Execute(buffer, envelope)
 	if err != nil {
 		return err
