@@ -18,6 +18,7 @@ package data
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -33,13 +34,13 @@ type CommandEntry struct {
 // a chat provider.
 type CommandRequest struct {
 	CommandEntry
-	Adapter    string          // The name of the adapter this request originated from.
-	ChannelID  string          // The provider ID of the channel that the request originated in.
+	Adapter    string          // The name of the adapter this request originated from
+	ChannelID  string          // The provider ID of the channel that the request originated in
 	Context    context.Context // The request context
 	Parameters []string        // Tokenized command parameters
 	RequestID  int64           // A unique requestID
 	Timestamp  time.Time       // The time this request was triggered
-	UserID     string          // The provider ID of user making this request.
+	UserID     string          // The provider ID of user making this request
 	UserEmail  string          // The email address associated with the user making the request
 	UserName   string          // The gort username of the user making the request
 }
@@ -150,6 +151,7 @@ func WithError(title string, err error, code int16) CommandResponseEnvelopeOptio
 		e.Data.IsError = code != 0
 		e.Response.Lines = []string{err.Error()}
 		e.Response.Out = err.Error()
+		e.Response.Payload, e.Response.IsStructured = unmarshalResponsePayload(e.Response.Out)
 		e.Response.Title = title
 	}
 }
@@ -157,7 +159,29 @@ func WithError(title string, err error, code int16) CommandResponseEnvelopeOptio
 // WithResponseLines sets Response.Lines and Response.Out.
 func WithResponseLines(r []string) CommandResponseEnvelopeOption {
 	return func(e *CommandResponseEnvelope) {
+
 		e.Response.Lines = r
 		e.Response.Out = strings.Join(r, "\n")
+		e.Response.Payload, e.Response.IsStructured = unmarshalResponsePayload(e.Response.Out)
 	}
+}
+
+// unmarshalResponsePayload will examine the string parameter to determine
+// whether it contains valid JSON. If it does, it will unmarshal the contents
+// and return the result and true; else it will return the original string
+// and false.
+func unmarshalResponsePayload(s string) (interface{}, bool) {
+	b := []byte(s)
+
+	if !json.Valid(b) {
+		return s, false
+	}
+
+	var i interface{}
+
+	if err := json.Unmarshal(b, &i); err != nil {
+		return s, false
+	}
+
+	return i, true
 }
