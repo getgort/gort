@@ -17,8 +17,10 @@
 package slack
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"text/template"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
@@ -280,46 +282,82 @@ func (s *SocketModeAdapter) wrapEvent(eventType adapter.EventType, info *adapter
 }
 
 // SendErrorMessage sends an error message to a specified channel.
-// TODO Create a MessageBuilder at some point to replace this.
 func (s *SocketModeAdapter) SendErrorMessage(channelID string, title string, text string) error {
-	_, _, err := s.client.PostMessage(
-		channelID,
-		slack.MsgOptionAttachments(
-			slack.Attachment{
-				Title:      title,
-				Text:       text,
-				Color:      "#FF0000",
-				MarkdownIn: []string{"text"},
-			},
-		),
+	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
+	return s.SendResponseEnvelope(channelID, e)
+}
+
+// SendMessage sends a standard output message to a specified channel.
+func (s *SocketModeAdapter) SendMessage(channelID string, message string) error {
+	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
+	return s.SendResponseEnvelope(channelID, e)
+}
+
+// SendResponseEnvelope sends the contents of a response envelope to a
+// specified channel. If channelID is empty the value of
+// envelope.Request.ChannelID will be used.
+func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error {
+	var templateText string
+
+	if envelope.Data.IsError && envelope.Request.Bundle.Name != "" {
+		templateText = DefaultCommandErrorTemplate
+	} else {
+		templateText = DefaultMessageTemplate
+	}
+
+	t, err := template.New("envelope").Parse(templateText)
+	if err != nil {
+		return err
+	}
+
+	buffer := new(bytes.Buffer)
+
+	err = t.Execute(buffer, envelope)
+	if err != nil {
+		return err
+	}
+
+	options := []slack.MsgOption{
 		slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionDisableMarkdown(),
 		slack.MsgOptionAsUser(false),
 		slack.MsgOptionUsername(s.provider.BotName),
 		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
 			IconURL:  s.provider.IconURL,
 			Markdown: true,
 		}),
-	)
-	if err != nil {
-		return err
 	}
-	return nil
-}
 
-// SendMessage sends a standard output message to a specified channel.
-// TODO Create a MessageBuilder at some point to replace this.
-func (s *SocketModeAdapter) SendMessage(channelID string, message string) error {
-	_, _, err := s.client.PostMessage(channelID, slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionAsUser(false),
-		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionText(message, false),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}))
-	if err != nil {
-		return err
+	if channelID == "" {
+		channelID = envelope.Request.ChannelID
 	}
-	return nil
+
+	if envelope.Data.IsError {
+		title := envelope.Response.Title
+		if title == "" {
+			title = "Error"
+		}
+
+		options = append(
+			options,
+			slack.MsgOptionAttachments(
+				slack.Attachment{
+					Title:      title,
+					Text:       buffer.String(),
+					Color:      "#FF0000",
+					MarkdownIn: []string{"text"},
+				},
+			),
+		)
+
+	} else {
+		options = append(
+			options,
+			slack.MsgOptionDisableMediaUnfurl(),
+			slack.MsgOptionText(buffer.String(), false),
+		)
+	}
+
+	_, _, err = s.client.PostMessage(channelID, options...)
+
+	return err
 }

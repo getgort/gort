@@ -31,6 +31,13 @@ var (
 	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*:[^|]*\|([^|]*)\>`)
 )
 
+const DefaultCommandErrorTemplate = "The pipeline failed planning the invocation:\n" +
+	"```{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}```\n" +
+	"The specific error was:\n" +
+	"```{{ .Response.Out }}```"
+
+const DefaultMessageTemplate = "```{{ .Response.Out }}```"
+
 // NewAdapter will construct a SlackAdapter instance for a given provider configuration.
 func NewAdapter(provider data.SlackProvider) adapter.Adapter {
 	if provider.APIToken != "" {
@@ -39,7 +46,7 @@ func NewAdapter(provider data.SlackProvider) adapter.Adapter {
 		client := slack.New(provider.APIToken)
 		rtm := client.NewRTM()
 
-		return ClassicAdapter{
+		return &ClassicAdapter{
 			client:   client,
 			provider: provider,
 			rtm:      rtm,

@@ -110,12 +110,15 @@ type Adapter interface {
 	Listen(ctx context.Context) <-chan *ProviderEvent
 
 	// SendErrorMessage sends an error message to a specified channel.
-	// TODO Create a MessageBuilder at some point to replace this.
 	SendErrorMessage(channelID string, title string, text string) error
 
 	// SendMessage sends a standard output message to a specified channel.
-	// TODO Create a MessageBuilder at some point to replace this.
 	SendMessage(channel string, message string) error
+
+	// SendResponseEnvelope sends the contents of a response envelope to a
+	// specified channel. If channelID is empty the value of
+	// envelope.Request.ChannelID will be used.
+	SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error
 }
 
 type RequestorIdentity struct {
@@ -416,9 +419,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 				tokens[0])
 			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
 		default:
-			e := data.NewCommandResponseEnvelope(request, data.WithError("Error", err, 1))
-			msg := formatCommandInputErrorMessage(e)
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", msg)
+			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", err.Error())
 		}
 
 		da.RequestError(ctx, request, err)
@@ -857,43 +858,9 @@ func findOrMakeGortUser(ctx context.Context, adapter Adapter, info *UserInfo) (*
 }
 
 // TODO Replace this with something resembling a template. Eventually.
-func formatCommandEntryErrorMessage(envelope data.CommandResponseEnvelope) string {
-	rawCommand := fmt.Sprintf(
-		"%s:%s %s",
-		envelope.Request.Bundle.Name,
-		envelope.Request.Command.Name,
-		strings.Join(envelope.Request.Parameters, " "))
-
-	return fmt.Sprintf(
-		"%s\n```%s```\n%s\n```%s```",
-		"The pipeline failed planning the invocation:",
-		rawCommand,
-		"The specific error was:",
-		envelope.Response.Out,
-	)
-}
-
-// TODO Replace this with something resembling a template. Eventually.
-func formatCommandInputErrorMessage(envelope data.CommandResponseEnvelope) string {
-	rawCommand := fmt.Sprintf(
-		"%s:%s %s",
-		envelope.Request.Bundle.Name,
-		envelope.Request.Command.Name,
-		strings.Join(envelope.Request.Parameters, " "))
-
-	return fmt.Sprintf(
-		"%s\n```%s```\n%s\n```%s```",
-		"The pipeline failed planning the invocation:",
-		rawCommand,
-		"The specific error was:",
-		envelope.Response.Out,
-	)
-}
-
-// TODO Replace this with something resembling a template. Eventually.
-func formatCommandOutput(envelope data.CommandResponseEnvelope) string {
-	return fmt.Sprintf("```%s```", envelope.Response.Out)
-}
+// func formatCommandOutput(envelope data.CommandResponseEnvelope) string {
+// 	return fmt.Sprintf("```%s```", envelope.Response.Out)
+// }
 
 func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.CommandRequest, adapterErrors chan<- error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -974,19 +941,7 @@ func startRelayResponseListening(responses <-chan data.CommandResponseEnvelope,
 			continue
 		}
 
-		channelID := envelope.Request.ChannelID
-		title := envelope.Response.Title
-
-		if envelope.Data.ExitCode != 0 || envelope.Data.Error != nil {
-			formatted := formatCommandEntryErrorMessage(envelope)
-			err = adapter.SendErrorMessage(channelID, title, formatted)
-		} else {
-			formatted := formatCommandOutput(envelope)
-
-			err = adapter.SendMessage(channelID, formatted)
-		}
-
-		if err != nil {
+		if err := adapter.SendResponseEnvelope(envelope.Request.ChannelID, envelope); err != nil {
 			adapterErrors <- err
 		}
 	}
