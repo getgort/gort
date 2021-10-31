@@ -17,14 +17,20 @@
 package discord
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"html/template"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 )
+
+const DefaultErrorTemplate = "{{ .Response.Title }}\n{{ .Response.Out }}"
+
+const DefaultMessageTemplate = "{{ .Response.Out }}"
 
 // NewAdapter will construct a DiscordAdapter instance for a given provider configuration.
 func NewAdapter(provider data.DiscordProvider) (adapter.Adapter, error) {
@@ -220,19 +226,44 @@ func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adap
 // SendErrorMessage sends an error message to a specified channel.
 // TODO Create a MessageBuilder at some point to replace this.
 func (s *Adapter) SendErrorMessage(channelID string, title string, text string) error {
-	_, err := s.session.ChannelMessageSend(channelID, fmt.Sprintf("%v\n%v", title, text))
-	if err != nil {
-		return err
-	}
-	return nil
+	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
+	return s.SendResponseEnvelope(channelID, e)
 }
 
 // SendMessage sends a standard output message to a specified channel.
 // TODO Create a MessageBuilder at some point to replace this.
 func (s *Adapter) SendMessage(channelID string, message string) error {
-	_, err := s.session.ChannelMessageSend(channelID, message)
+	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
+	return s.SendResponseEnvelope(channelID, e)
+}
+
+// SendResponseEnvelope sends the contents of a response envelope to a
+// specified channel. If channelID is empty the value of
+// envelope.Request.ChannelID will be used.
+func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error {
+	if channelID == "" {
+		channelID = envelope.Request.ChannelID
+	}
+
+	var templateText string
+
+	if envelope.Data.IsError && envelope.Request.Bundle.Name != "" {
+		templateText = DefaultErrorTemplate
+	} else {
+		templateText = DefaultMessageTemplate
+	}
+
+	t, err := template.New("envelope").Parse(templateText)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	buffer := new(bytes.Buffer)
+	err = t.Execute(buffer, envelope)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.session.ChannelMessageSend(channelID, buffer.String())
+	return err
 }
