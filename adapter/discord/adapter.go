@@ -247,7 +247,7 @@ func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandRe
 
 	var templateText string
 
-	if envelope.Data.IsError && envelope.Request.Bundle.Name != "" {
+	if envelope.Data.Error != nil && envelope.Request.Bundle.Name != "" {
 		templateText = DefaultErrorTemplate
 	} else {
 		templateText = DefaultMessageTemplate

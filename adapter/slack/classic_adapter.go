@@ -406,7 +406,7 @@ func (s *ClassicAdapter) SendMessage(channelID string, message string) error {
 func (s *ClassicAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error {
 	var templateText string
 
-	if envelope.Data.IsError && envelope.Request.Bundle.Name != "" {
+	if envelope.Data.Error != nil && envelope.Request.Bundle.Name != "" {
 		templateText = DefaultCommandErrorTemplate
 	} else {
 		templateText = DefaultMessageTemplate
@@ -438,7 +438,7 @@ func (s *ClassicAdapter) SendResponseEnvelope(channelID string, envelope data.Co
 		channelID = envelope.Request.ChannelID
 	}
 
-	if envelope.Data.IsError {
+	if envelope.Data.Error != nil {
 		title := envelope.Response.Title
 		if title == "" {
 			title = "Error"

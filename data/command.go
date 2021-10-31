@@ -51,27 +51,13 @@ type CommandRequest struct {
 	UserName   string            // The gort username of the user making the request
 }
 
-// CommandString is a convenience method that outputs the normalized command
-// string, more or less as the user typed it.
-func (r CommandRequest) CommandString() string {
-	return fmt.Sprintf(
-		"%s:%s %s",
-		r.Bundle.Name,
-		r.Command.Name,
-		strings.Join(r.Parameters, " "))
+// String is a convenience method that outputs the normalized command
+// string more or less as the user typed it.
+func (r CommandRequest) String() string {
+	return fmt.Sprintf("%s:%s %s", r.Bundle.Name, r.Command.Name, r.Parameters)
 }
 
 type CommandResponse struct {
-	// IsStructured is true if the command output is structured as JSON? If
-	// so, then it will be unmarshalled as Payload; else Payload will be a
-	// string (equal to Out).
-	IsStructured bool
-
-	// Title includes a title. Usually only set by the relay for certain
-	// internally-detected errors. It can be used to build a user output
-	// message, and generally contains a short description of the result.
-	Title string
-
 	// Lines contains the command output (from both stdout and stderr) as
 	// a string slice, delimitted along newlines.
 	Lines []string
@@ -79,6 +65,17 @@ type CommandResponse struct {
 	// Out The command output as a single block of text, with lines joined
 	// with newlines.
 	Out string
+
+	// Structured is true if the command output is structured as JSON? If
+	// so, then it will be unmarshalled as Payload; else Payload will be a
+	// string (equal to Out).
+	Structured bool
+
+	// Title includes a title. Usually only set by the relay for certain
+	// internally-detected errors. It can be used to build a user output
+	// message, and generally contains a short description of the result.
+	// If not set this will usually default to "Error".
+	Title string
 
 	// Payload includes the command output. If the output is structured JSON,
 	// it will be unmarshalled and placed here where it can be accessible to
@@ -98,9 +95,6 @@ type CommandResponseData struct {
 
 	// ExitCode is the exit code reported by the command.
 	ExitCode int16
-
-	// IsError is a convenience flag that's set to true if ExitCode isn't 0.
-	IsError bool
 
 	// Error can be set by the relay in certain internal error conditions.
 	// TODO(mtitmus) Do we even need this? Will it be confusing?
@@ -144,7 +138,6 @@ type CommandResponseEnvelopeOption func(e *CommandResponseEnvelope)
 func WithExitCode(code int16) CommandResponseEnvelopeOption {
 	return func(e *CommandResponseEnvelope) {
 		e.Data.ExitCode = code
-		e.Data.IsError = code != 0
 	}
 }
 
@@ -154,10 +147,9 @@ func WithError(title string, err error, code int16) CommandResponseEnvelopeOptio
 	return func(e *CommandResponseEnvelope) {
 		e.Data.Error = err
 		e.Data.ExitCode = code
-		e.Data.IsError = code != 0
 		e.Response.Lines = []string{err.Error()}
 		e.Response.Out = err.Error()
-		e.Response.Payload, e.Response.IsStructured = unmarshalResponsePayload(e.Response.Out)
+		e.Response.Payload, e.Response.Structured = unmarshalResponsePayload(e.Response.Out)
 		e.Response.Title = title
 	}
 }
@@ -167,7 +159,7 @@ func WithResponseLines(r []string) CommandResponseEnvelopeOption {
 	return func(e *CommandResponseEnvelope) {
 		e.Response.Lines = r
 		e.Response.Out = strings.Join(r, "\n")
-		e.Response.Payload, e.Response.IsStructured = unmarshalResponsePayload(e.Response.Out)
+		e.Response.Payload, e.Response.Structured = unmarshalResponsePayload(e.Response.Out)
 	}
 }
 

@@ -39,6 +39,13 @@ func TestLoadBundleFromFile(t *testing.T) {
 	assert.Equal(t, "20.04", b.Docker.Tag)
 	assert.Len(t, b.Commands, 1)
 
+	// Bundle templates
+	assert.Len(t, b.Templates, 2)
+	assert.Equal(t, "Template:Error:All", b.Templates["all"].Error)
+	assert.Equal(t, "Template:Output:All", b.Templates["all"].Output)
+	assert.Equal(t, "Template:Error:Slack", b.Templates["slack"].Error)
+	assert.Equal(t, "Template:Output:Slack", b.Templates["slack"].Output)
+
 	cmd := b.Commands["echox"]
 	assert.Equal(t, "echox", cmd.Name)
 	assert.Equal(t, "Write arguments to the standard output.", cmd.Description)
@@ -49,4 +56,11 @@ Usage:
 	assert.Equal(t, []string{"/bin/echo"}, cmd.Executable)
 	assert.Len(t, cmd.Rules, 1)
 	assert.Equal(t, "must have test:echox", cmd.Rules[0])
+
+	// Command templates
+	assert.Len(t, cmd.Templates, 2)
+	assert.Equal(t, "Template:Error:All", cmd.Templates["all"].Error)
+	assert.Equal(t, "Template:Output:All", cmd.Templates["all"].Output)
+	assert.Equal(t, "Template:Error:Slack", cmd.Templates["slack"].Error)
+	assert.Equal(t, "Template:Output:Slack", cmd.Templates["slack"].Output)
 }

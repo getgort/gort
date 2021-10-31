@@ -299,7 +299,7 @@ func (s *SocketModeAdapter) SendMessage(channelID string, message string) error 
 func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error {
 	var templateText string
 
-	if envelope.Data.IsError && envelope.Request.Bundle.Name != "" {
+	if envelope.Data.Error != nil && envelope.Request.Bundle.Name != "" {
 		templateText = DefaultCommandErrorTemplate
 	} else {
 		templateText = DefaultCommandTemplate
@@ -337,7 +337,7 @@ func (s *SocketModeAdapter) sendResponseEnvelope(channelID string, envelope data
 		channelID = envelope.Request.ChannelID
 	}
 
-	if envelope.Data.IsError {
+	if envelope.Data.Error != nil {
 		title := envelope.Response.Title
 		if title == "" {
 			title = "Error"
