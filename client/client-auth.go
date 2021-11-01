@@ -52,7 +52,7 @@ func (c *GortClient) Authenticate() (rest.Token, error) {
 		return rest.Token{}, gerrs.Wrap(gerrs.ErrMarshal, err)
 	}
 
-	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
+	resp, err := c.client.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
 	switch {
 	case err == nil:
 	case strings.Contains(err.Error(), "certificate"):
