@@ -18,12 +18,11 @@ docker:
   tag: 20.04
 
 templates:
-  all:
-    error:  'Template:Error:All'
-    output: 'Template:Output:All'
-  slack:
-    error:  'Template:Error:Slack'
-    output: 'Template:Output:Slack'
+  default: 'Template:Bundle:Default'
+  command_error: 'Template:Bundle:CommandError'
+  command: 'Template:Bundle:Command'
+  message_error: 'Template:Bundle:MessageError'
+  message: 'Template:Bundle:Message'
 
 commands:
   echox:
@@ -37,9 +36,8 @@ commands:
     rules:
       - must have test:echox
     templates:
-      all:
-        error:  'Template:Error:All'
-        output: 'Template:Output:All'
-      slack:
-        error:  'Template:Error:Slack'
-        output: 'Template:Output:Slack'
+      default: 'Template:Command:Default'
+      command: 'Template:Command:Command'
+      command_error: 'Template:Command:CommandError'
+      message: 'Template:Command:Message'
+      message_error: 'Template:Command:MessageError'

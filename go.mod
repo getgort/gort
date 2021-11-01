@@ -3,6 +3,9 @@ module github.com/getgort/gort
 go 1.16
 
 require (
+	github.com/Masterminds/goutils v1.1.1 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/bwmarrin/discordgo v0.23.2
 	github.com/containerd/containerd v1.5.7 // indirect
@@ -10,7 +13,9 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/gorilla/mux v1.8.0
+	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/lib/pq v1.10.3
+	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect

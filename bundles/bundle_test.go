@@ -40,11 +40,11 @@ func TestLoadBundleFromFile(t *testing.T) {
 	assert.Len(t, b.Commands, 1)
 
 	// Bundle templates
-	assert.Len(t, b.Templates, 2)
-	assert.Equal(t, "Template:Error:All", b.Templates["all"].Error)
-	assert.Equal(t, "Template:Output:All", b.Templates["all"].Output)
-	assert.Equal(t, "Template:Error:Slack", b.Templates["slack"].Error)
-	assert.Equal(t, "Template:Output:Slack", b.Templates["slack"].Output)
+	assert.Equal(t, "Template:Bundle:Default", b.Templates.Default)
+	assert.Equal(t, "Template:Bundle:CommandError", b.Templates.CommandError)
+	assert.Equal(t, "Template:Bundle:Command", b.Templates.Command)
+	assert.Equal(t, "Template:Bundle:MessageError", b.Templates.MessageError)
+	assert.Equal(t, "Template:Bundle:Message", b.Templates.Message)
 
 	cmd := b.Commands["echox"]
 	assert.Equal(t, "echox", cmd.Name)
@@ -58,9 +58,9 @@ Usage:
 	assert.Equal(t, "must have test:echox", cmd.Rules[0])
 
 	// Command templates
-	assert.Len(t, cmd.Templates, 2)
-	assert.Equal(t, "Template:Error:All", cmd.Templates["all"].Error)
-	assert.Equal(t, "Template:Output:All", cmd.Templates["all"].Output)
-	assert.Equal(t, "Template:Error:Slack", cmd.Templates["slack"].Error)
-	assert.Equal(t, "Template:Output:Slack", cmd.Templates["slack"].Output)
+	assert.Equal(t, "Template:Command:Default", cmd.Templates.Default)
+	assert.Equal(t, "Template:Command:CommandError", cmd.Templates.CommandError)
+	assert.Equal(t, "Template:Command:Command", cmd.Templates.Command)
+	assert.Equal(t, "Template:Command:MessageError", cmd.Templates.MessageError)
+	assert.Equal(t, "Template:Command:Message", cmd.Templates.Message)
 }

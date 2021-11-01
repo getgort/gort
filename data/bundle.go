@@ -17,6 +17,7 @@
 package data
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -31,32 +32,32 @@ type BundleInfo struct {
 // Bundle represents a bundle as defined in the "bundles" section of the
 // config.
 type Bundle struct {
-	GortBundleVersion int                        `yaml:"gort_bundle_version,omitempty" json:"gort_bundle_version,omitempty"`
-	Name              string                     `yaml:",omitempty" json:"name,omitempty"`
-	Version           string                     `yaml:",omitempty" json:"version,omitempty"`
-	Enabled           bool                       `yaml:",omitempty" json:"enabled"`
-	Author            string                     `yaml:",omitempty" json:"author,omitempty"`
-	Homepage          string                     `yaml:",omitempty" json:"homepage,omitempty"`
-	Description       string                     `yaml:",omitempty" json:"description,omitempty"`
-	InstalledOn       time.Time                  `yaml:"-" json:"installed_on,omitempty"`
-	InstalledBy       string                     `yaml:",omitempty" json:"installed_by,omitempty"`
-	LongDescription   string                     `yaml:"long_description,omitempty" json:"long_description,omitempty"`
-	Docker            BundleDocker               `yaml:",omitempty" json:"docker,omitempty"`
-	Permissions       []string                   `yaml:",omitempty" json:"permissions,omitempty"`
-	Commands          map[string]*BundleCommand  `yaml:",omitempty" json:"commands,omitempty"`
-	Default           bool                       `yaml:"-" json:"default,omitempty"`
-	Templates         map[string]BundleTemplates `yaml:",omitempty" json:"templates,omitempty"`
+	GortBundleVersion int                       `yaml:"gort_bundle_version,omitempty" json:"gort_bundle_version,omitempty"`
+	Name              string                    `yaml:",omitempty" json:"name,omitempty"`
+	Version           string                    `yaml:",omitempty" json:"version,omitempty"`
+	Enabled           bool                      `yaml:",omitempty" json:"enabled"`
+	Author            string                    `yaml:",omitempty" json:"author,omitempty"`
+	Homepage          string                    `yaml:",omitempty" json:"homepage,omitempty"`
+	Description       string                    `yaml:",omitempty" json:"description,omitempty"`
+	InstalledOn       time.Time                 `yaml:"-" json:"installed_on,omitempty"`
+	InstalledBy       string                    `yaml:",omitempty" json:"installed_by,omitempty"`
+	LongDescription   string                    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
+	Docker            BundleDocker              `yaml:",omitempty" json:"docker,omitempty"`
+	Permissions       []string                  `yaml:",omitempty" json:"permissions,omitempty"`
+	Commands          map[string]*BundleCommand `yaml:",omitempty" json:"commands,omitempty"`
+	Default           bool                      `yaml:"-" json:"default,omitempty"`
+	Templates         Templates                 `yaml:",omitempty" json:"templates,omitempty"`
 }
 
 // BundleCommand represents a bundle command, as defined in the "bundles/commands"
 // section of the config.
 type BundleCommand struct {
-	Description     string                     `yaml:",omitempty" json:"description,omitempty"`
-	Executable      []string                   `yaml:",omitempty,flow" json:"executable,omitempty"`
-	LongDescription string                     `yaml:"long_description,omitempty" json:"long_description,omitempty"`
-	Name            string                     `yaml:"-" json:"-"`
-	Rules           []string                   `yaml:",omitempty" json:"rules,omitempty"`
-	Templates       map[string]BundleTemplates `yaml:",omitempty" json:"templates,omitempty"`
+	Description     string    `yaml:",omitempty" json:"description,omitempty"`
+	Executable      []string  `yaml:",omitempty,flow" json:"executable,omitempty"`
+	LongDescription string    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
+	Name            string    `yaml:"-" json:"-"`
+	Rules           []string  `yaml:",omitempty" json:"rules,omitempty"`
+	Templates       Templates `yaml:",omitempty" json:"templates,omitempty"`
 }
 
 // BundleDocker represents the "bundles/docker" subsection of the config doc
@@ -65,7 +66,29 @@ type BundleDocker struct {
 	Tag   string `yaml:",omitempty" json:"tag,omitempty"`
 }
 
-type BundleTemplates struct {
-	Error  string `yaml:",omitempty" json:"error,omitempty"`
-	Output string `yaml:",omitempty" json:"output,omitempty"`
+type Templates struct {
+	Default      string `yaml:"default,omitempty" json:"default,omitempty"`
+	CommandError string `yaml:"command_error,omitempty" json:"command_error,omitempty"`
+	Command      string `yaml:"command,omitempty" json:"command,omitempty"`
+	MessageError string `yaml:"message_error,omitempty" json:"message_error,omitempty"`
+	Message      string `yaml:"message,omitempty" json:"message,omitempty"`
+}
+
+// Get returns a template string. If no template is defined for the given
+// name/type, an empty string is returned. An invalid name returns an error.
+func (t Templates) Get(name string) (string, error) {
+	switch name {
+	case "default":
+		return t.Default, nil
+	case "command":
+		return t.Command, nil
+	case "command_error":
+		return t.CommandError, nil
+	case "message":
+		return t.Message, nil
+	case "message_error":
+		return t.MessageError, nil
+	default:
+		return "", fmt.Errorf("invalid template type %q", name)
+	}
 }
