@@ -160,7 +160,24 @@ func startServer(ctx context.Context, config data.GortServerConfigs) {
 	// Build the service representation
 	server := service.BuildRESTServer(ctx, config.APIAddress)
 
-	// Start watching the
+	var certFile, keyFile = config.TLSCertFile, config.TLSKeyFile
+	var generated bool
+
+	if certFile == "" || keyFile == "" {
+		log.Warn("Generating TLS certificates, please consider getting real ones")
+
+		cf, kf, err := service.GenerateTemporaryTLSKeys()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to generate TLS certificates")
+			return
+		}
+
+		certFile = cf
+		keyFile = kf
+		generated = true
+	}
+
+	// Start watching the request events
 	go func() {
 		logs := server.Requests()
 		for event := range logs {
@@ -174,16 +191,16 @@ func startServer(ctx context.Context, config data.GortServerConfigs) {
 		}
 	}()
 
-	// Make the service listen.
+	// Make the service listen
 	go func() {
-		var err error
-		if config.TLSCertFile != "" && config.TLSKeyFile != "" {
-			err = server.ListenAndServeTLS(config.TLSCertFile, config.TLSKeyFile)
-		} else {
-			log.Warn("Using http for API connections, please consider using https")
-			err = server.ListenAndServe()
-		}
-		if err != nil {
+		defer func() {
+			if generated {
+				os.Remove(certFile)
+				os.Remove(keyFile)
+			}
+		}()
+
+		if err := server.ListenAndServeTLS(certFile, keyFile); err != nil {
 			telemetry.Errors().WithError(err).Commit(ctx)
 			log.WithError(err).Fatal("Fatal service error")
 		}

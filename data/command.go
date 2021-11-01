@@ -74,7 +74,6 @@ type CommandResponse struct {
 	// Title includes a title. Usually only set by the relay for certain
 	// internally-detected errors. It can be used to build a user output
 	// message, and generally contains a short description of the result.
-	// If not set this will usually default to "Error".
 	Title string
 
 	// Payload includes the command output. If the output is structured JSON,

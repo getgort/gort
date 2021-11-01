@@ -1,3 +1,48 @@
+## Gort service settings
+gort:
+  image:
+    repository: getgort/gort
+    version: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    name: gort
+    type: ClusterIP
+    annotations: {}
+
+  externalPort: 4000
+  internalPort: 4000
+
+## Role Based Access Control
+##
+rbac:
+  create: true
+
+  role:
+    ## Rules to create. It follows the role specification
+    rules:
+    - apiGroups: ['', 'batch']
+      resources: ['jobs', 'pods']
+      verbs: ['create', 'delete', 'get', 'list', 'watch']
+    - apiGroups: ['', 'batch']
+      resources: ['pods/log']
+      verbs: ['get', 'watch']
+    - apiGroups: ['', 'batch']
+      resources: ['endpoints']
+      verbs: ['list']
+
+## Service Account
+##
+serviceAccount:
+  create: true
+
+  ## The name of the ServiceAccount to use.
+  ## If not set and create is true, a name is generated using the fullname template
+  name:
+
+ingress:
+  enabled: true
+
 config:
   global:
     # How long before a command times out. Accepts a duration string: a sequence
@@ -38,15 +83,13 @@ config:
     # The key must not be encrypted with a password.
     # tls_key_file: host.key
 
-  # Configures Gort's Docker host data. At the moment it only includes two
-  # values (which are likely to move into a relay configuration, when
-  # that becomes a thing).
-  docker:
-    # Defines the location of the Docker port. Required.
-    host: unix:///var/run/docker.sock
+  kubernetes:
+    # The selectors for Gort's endpoint resource. Used to dynamically find the
+    # API endpoint. If both are omitted the label selector "app=gort" is used.
+    endpoint_label_selector: "app=gort,release=gort"
+    endpoint_field_selector:
 
-    # The name of a Docker network. If set, any worker containers will be
-    # attached to this network. This can be used to allow workers to communicate
-    # with a containerized Gort controller.
-    # network: gort_gort
-
+    # The selectors for Gort's pod resource. Used to dynamically find the
+    # API endpoint. If both are omitted the label selector "app=gort" is used.
+    pod_field_selector: "app=gort,release=gort"
+    pod_label_selector:

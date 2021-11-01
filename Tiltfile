@@ -33,23 +33,23 @@ def kubernetes():
             set = setValues
         )
     )
-    k8s_resource('gort', port_forwards=4000)
+    k8s_resource('chart-gort', port_forwards=4000)
 
 ## Resources to permit common tasks to be run via the Tilt Web UI.
 
 # Bootstrapping the server
 local_resource(
-    "Bootstrap", 
-    "go run . bootstrap http://localhost:4000 --allow-insecure", 
-    trigger_mode=TRIGGER_MODE_MANUAL, 
+    "Bootstrap",
+    "go run . bootstrap https://localhost:4000 --allow-insecure",
+    trigger_mode=TRIGGER_MODE_MANUAL,
     auto_init=False
 )
 
 # Clear profiles
 local_resource(
-    "Clear Profiles", 
-    "rm -f ~/.gort/profile", 
-    trigger_mode=TRIGGER_MODE_MANUAL, 
+    "Clear Profiles",
+    "rm -f ~/.gort/profile",
+    trigger_mode=TRIGGER_MODE_MANUAL,
     auto_init=False
 )
 

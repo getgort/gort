@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/getgort/gort/data/rest"
@@ -51,8 +52,12 @@ func (c *GortClient) Authenticate() (rest.Token, error) {
 		return rest.Token{}, gerrs.Wrap(gerrs.ErrMarshal, err)
 	}
 
-	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
-	if err != nil {
+	resp, err := c.client.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "certificate"):
+		return rest.Token{}, fmt.Errorf("self-signed certificate detected: use --allow-insecure to proceed (not recommended)")
+	default:
 		return rest.Token{}, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 
@@ -134,8 +139,12 @@ func (c *GortClient) Bootstrap(overwrite bool) (rest.User, error) {
 		return rest.User{}, gerrs.Wrap(gerrs.ErrMarshal, err)
 	}
 
-	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
-	if err != nil {
+	resp, err := c.client.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "certificate"):
+		return rest.User{}, fmt.Errorf("self-signed certificate detected: use --allow-insecure to proceed (not recommended)")
+	default:
 		return rest.User{}, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 	defer resp.Body.Close()
