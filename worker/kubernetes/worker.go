@@ -24,6 +24,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/telemetry"
@@ -277,12 +278,28 @@ func (w *KubernetesWorker) findGortEndpoint(ctx context.Context) (string, int32,
 	defer sp.End()
 
 	epInterface := w.clientset.CoreV1().Endpoints(w.namespace)
-	ep, err := epInterface.Get(ctx, "gort", metav1.GetOptions{})
-	if err != nil {
-		return "", 0, fmt.Errorf("failed to get gort endpoint: %w", err)
+	fieldSelector := config.GetKubernetesConfigs().EndpointFieldSelector
+	labelSelector := config.GetKubernetesConfigs().EndpointFieldSelector
+
+	if fieldSelector == "" && labelSelector == "" {
+		labelSelector = "app=gort"
 	}
 
-	return ep.Subsets[0].Addresses[0].IP, ep.Subsets[0].Ports[0].Port, nil
+	opts := metav1.ListOptions{FieldSelector: fieldSelector, LabelSelector: labelSelector}
+	list, err := epInterface.List(ctx, opts)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to list gort endpoints: %w", err)
+	}
+
+	switch len(list.Items) {
+	case 0:
+		return "", 0, fmt.Errorf("failed to find Gort endpoint (fieldSelector=%q labelSelector=%q)", labelSelector, fieldSelector)
+	case 1:
+		subset := list.Items[0].Subsets[0]
+		return subset.Addresses[0].IP, subset.Ports[0].Port, nil
+	default:
+		return "", 0, fmt.Errorf("found too many endpoints (n=%d fieldSelector=%q labelSelector=%q)", len(list.Items), labelSelector, fieldSelector)
+	}
 }
 
 // findGortPod attempts to find the Gort service pod.
@@ -293,6 +310,7 @@ func (w *KubernetesWorker) findGortPod(ctx context.Context) (*corev1.Pod, error)
 
 	name := os.Getenv("GORT_POD_NAME")
 
+	// The first time this is used, w.namespace may not be defined yet.
 	namespace := w.namespace
 	if namespace == "" {
 		namespace = os.Getenv("GORT_POD_NAMESPACE")
@@ -300,7 +318,7 @@ func (w *KubernetesWorker) findGortPod(ctx context.Context) (*corev1.Pod, error)
 
 	podInterface := w.clientset.CoreV1().Pods(namespace)
 
-	// If we know the namespace and name from the Downward API, this gets easy.
+	// If we know the namespace and name, this gets easy.
 	if name != "" && namespace != "" {
 		pod, err := podInterface.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
@@ -312,26 +330,33 @@ func (w *KubernetesWorker) findGortPod(ctx context.Context) (*corev1.Pod, error)
 	// If we don't know the namespace, we have scan the list of Pods.
 	var listOptions metav1.ListOptions
 
-	// If the Downward API provided the Pod name (and not the namespace), use
-	// the name.
-	if name == "" {
-		listOptions = metav1.ListOptions{LabelSelector: "app=gort"}
-	} else {
+	fieldSelector := config.GetKubernetesConfigs().PodFieldSelector
+	labelSelector := config.GetKubernetesConfigs().PodFieldSelector
+
+	// To find the Gort pod, we use three possible strategies:
+	// 1: If the Downward API provided the Pod name, we use use that
+	// 2: If the config includes selectors, we use those
+	// 3: We use the label selector "app=gort" and hope for the best
+	if name != "" {
 		listOptions = metav1.ListOptions{FieldSelector: "metadata.name=" + name}
+	} else if fieldSelector != "" || labelSelector != "" {
+		listOptions = metav1.ListOptions{FieldSelector: fieldSelector, LabelSelector: labelSelector}
+	} else {
+		listOptions = metav1.ListOptions{LabelSelector: "app=gort"}
 	}
 
-	pl, err := podInterface.List(ctx, listOptions)
+	list, err := podInterface.List(ctx, listOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list pods: %w", err)
+		return nil, fmt.Errorf("failed to list gort pods: %w", err)
 	}
 
-	switch len(pl.Items) {
+	switch len(list.Items) {
 	case 0:
-		return nil, fmt.Errorf("failed to find Gort pod")
+		return nil, fmt.Errorf("failed to find Gort endpoint (fieldSelector=%q labelSelector=%q)", labelSelector, fieldSelector)
 	case 1:
-		return &pl.Items[0], nil
+		return &list.Items[0], nil
 	default:
-		return nil, fmt.Errorf("found too many pods with label app=gort: %d!=1", len(pl.Items))
+		return nil, fmt.Errorf("found too many endpoints (n=%d fieldSelector=%q labelSelector=%q)", len(list.Items), labelSelector, fieldSelector)
 	}
 }
 
