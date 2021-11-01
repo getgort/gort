@@ -149,9 +149,16 @@ func (s *RESTServer) Requests() <-chan RequestEvent {
 
 // ListenAndServe starts the Gort web service.
 func (s *RESTServer) ListenAndServe() error {
-	log.WithField("address", s.Addr).Info("Gort controller is starting")
+	log.WithField("address", s.Addr).Info("Gort controller is starting in HTTP mode")
 
 	return s.Server.ListenAndServe()
+}
+
+// ListenAndServe starts the Gort web service.
+func (s *RESTServer) ListenAndServeTLS(certFile string, keyFile string) error {
+	log.WithField("address", s.Addr).Info("Gort controller is starting in HTTPS mode")
+
+	return s.Server.ListenAndServeTLS(certFile, keyFile)
 }
 
 func addManagementMethodsToRouter(router *mux.Router) {

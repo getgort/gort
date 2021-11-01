@@ -86,8 +86,7 @@ func detailCommand(gortClient *client.GortClient, command string) error {
 	} else if len(ss) == 1 {
 		cmdName = ss[0]
 	} else {
-		fmt.Println("Invalid command syntax: expected <bundle:command> or <command>.")
-		return nil
+		return fmt.Errorf("invalid command syntax: expected <bundle:command> or <command>")
 	}
 
 	var found bool
@@ -125,8 +124,7 @@ func detailCommand(gortClient *client.GortClient, command string) error {
 	}
 
 	if !found {
-		fmt.Printf("Command not found: %v\n", command)
-		return nil
+		return fmt.Errorf("command not found: %v", command)
 	}
 
 	return nil

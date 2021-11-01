@@ -35,7 +35,7 @@ type DataAccess interface {
 	RequestBegin(ctx context.Context, request *data.CommandRequest) error
 	RequestUpdate(ctx context.Context, request data.CommandRequest) error
 	RequestError(ctx context.Context, request data.CommandRequest, err error) error
-	RequestClose(ctx context.Context, result data.CommandResponse) error
+	RequestClose(ctx context.Context, result data.CommandResponseEnvelope) error
 
 	BundleCreate(ctx context.Context, bundle data.Bundle) error
 	BundleDelete(ctx context.Context, name string, version string) error

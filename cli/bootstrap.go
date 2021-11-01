@@ -43,8 +43,9 @@ bootstrapped. This can be overridden using the -P or --profile flags.`
   gort bootstrap [flags] [URL]
 
 Flags:
-  -i, --allow-insecure   Permit http URLs to be used
-  -h, --help             help for bootstrap
+  -i, --allow-insecure    Permit http URLs to be used
+  -F, --force-overwrite   Overwrite the profile if it already exists
+  -h, --help              help for bootstrap
 
 Global Flags:
   -P, --profile string   The Gort profile within the config file to use
@@ -52,7 +53,8 @@ Global Flags:
 )
 
 var (
-	flagBootstrapAllowInsecure bool
+	flagBootstrapAllowInsecure    bool
+	flagBootstrapOverwriteProfile bool
 )
 
 // GetBootstrapCmd bootstrap
@@ -66,6 +68,7 @@ func GetBootstrapCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&flagBootstrapAllowInsecure, "allow-insecure", "i", false, "Permit http URLs to be used")
+	cmd.Flags().BoolVarP(&flagBootstrapOverwriteProfile, "force-overwrite", "F", false, "Overwrite the profile if it already exists")
 
 	cmd.SetUsageTemplate(bootstrapUsage)
 
@@ -86,7 +89,7 @@ func bootstrapCmd(cmd *cobra.Command, args []string) error {
 
 	// Client Bootstrap will create the gort config if necessary, and append
 	// the new credentials to it.
-	user, err := gortClient.Bootstrap()
+	user, err := gortClient.Bootstrap(flagBootstrapOverwriteProfile)
 	if err != nil {
 		return err
 	}

@@ -112,13 +112,7 @@ func testRequestClose(t *testing.T) {
 		UserName:     "testUserName ",
 	}
 
-	res := data.CommandResponse{
-		Command:  req,
-		Duration: time.Second,
-		Status:   1,
-		Error:    fmt.Errorf("Fake error"),
-	}
-
-	err = da.RequestClose(ctx, res)
+	env := data.NewCommandResponseEnvelope(req, data.WithError("", fmt.Errorf("Fake error"), 1))
+	err = da.RequestClose(ctx, env)
 	assert.NoError(t, err)
 }

@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/getgort/gort/data/rest"
@@ -52,7 +53,11 @@ func (c *GortClient) Authenticate() (rest.Token, error) {
 	}
 
 	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
-	if err != nil {
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "certificate"):
+		return rest.Token{}, fmt.Errorf("self-signed certificate detected: use --allow-insecure to proceed (not recommended)")
+	default:
 		return rest.Token{}, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 
@@ -116,7 +121,7 @@ func (c *GortClient) Authenticated() (bool, error) {
 }
 
 // Bootstrap calls the POST /v2/bootstrap endpoint.
-func (c *GortClient) Bootstrap() (rest.User, error) {
+func (c *GortClient) Bootstrap(overwrite bool) (rest.User, error) {
 	endpointURL := fmt.Sprintf("%s/v2/bootstrap", c.profile.URL)
 
 	// Get profile data so we can update it afterwards
@@ -125,7 +130,7 @@ func (c *GortClient) Bootstrap() (rest.User, error) {
 		return rest.User{}, err
 	}
 
-	if _, exists := profile.Profiles[c.profile.Name]; exists {
+	if _, exists := profile.Profiles[c.profile.Name]; exists && !overwrite {
 		return rest.User{}, fmt.Errorf("profile %s already exists", c.profile.Name)
 	}
 
@@ -134,8 +139,12 @@ func (c *GortClient) Bootstrap() (rest.User, error) {
 		return rest.User{}, gerrs.Wrap(gerrs.ErrMarshal, err)
 	}
 
-	resp, err := http.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
-	if err != nil {
+	resp, err := c.client.Post(endpointURL, "application/json", bytes.NewBuffer(postBytes))
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "certificate"):
+		return rest.User{}, fmt.Errorf("self-signed certificate detected: use --allow-insecure to proceed (not recommended)")
+	default:
 		return rest.User{}, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 	defer resp.Body.Close()

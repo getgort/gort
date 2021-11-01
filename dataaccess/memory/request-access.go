@@ -67,12 +67,12 @@ func (da *InMemoryDataAccess) RequestUpdate(ctx context.Context, result data.Com
 }
 
 // Will not implement
-func (da *InMemoryDataAccess) RequestClose(ctx context.Context, result data.CommandResponse) error {
+func (da *InMemoryDataAccess) RequestClose(ctx context.Context, envelope data.CommandResponseEnvelope) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	_, sp := tr.Start(ctx, "memory.RequestClose")
 	defer sp.End()
 
-	if result.Command.RequestID == 0 {
+	if envelope.Request.RequestID == 0 {
 		return fmt.Errorf("command request ID unset")
 	}
 
