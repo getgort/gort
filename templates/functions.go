@@ -19,14 +19,13 @@ package templates
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"text/template"
 
 	"github.com/Masterminds/sprig"
 )
 
-type Functions struct {
-	stackIndex int
-}
+type Functions struct{}
 
 func FunctionMap() template.FuncMap {
 	functions := &Functions{}
@@ -55,7 +54,28 @@ func FunctionMap() template.FuncMap {
 	return fm
 }
 
-func Entag(name string, i interface{}) string {
+type Tag struct {
+	FirstIndex int `json:"-"`
+	LastIndex  int `json:"-"`
+}
+
+func (t *Tag) SetFirst(i int) {
+	t.FirstIndex = i
+}
+
+func (t *Tag) First() int {
+	return t.FirstIndex
+}
+
+func (t *Tag) SetLast(i int) {
+	t.LastIndex = i
+}
+
+func (t *Tag) Last() int {
+	return t.LastIndex
+}
+
+func encodeTag(i interface{}) string {
 	b, _ := json.Marshal(i)
-	return fmt.Sprintf("<<%s|%s>>", name, string(b))
+	return fmt.Sprintf("<<%s|%s>>", reflect.TypeOf(i).Name(), string(b))
 }

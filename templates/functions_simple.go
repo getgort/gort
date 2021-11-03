@@ -16,10 +16,12 @@
 
 package templates
 
-type Divider struct{}
+type Divider struct {
+	Tag
+}
 
 func (o *Divider) String() string {
-	return Entag("DIVIDER", *o)
+	return encodeTag(*o)
 }
 
 func (f *Functions) DividerFunction() *Divider {
@@ -27,11 +29,12 @@ func (f *Functions) DividerFunction() *Divider {
 }
 
 type Image struct {
-	Url string
+	Tag
+	Url string `json:",omitempty"`
 }
 
 func (o *Image) String() string {
-	return Entag("IMAGE", *o)
+	return encodeTag(*o)
 }
 
 func (f *Functions) ImageFunction(url string) *Image {

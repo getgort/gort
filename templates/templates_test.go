@@ -17,13 +17,12 @@
 package templates
 
 import (
-	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
-	"text/template"
 
 	"github.com/getgort/gort/data"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 // var testUnstructuredEnvelope = data.CommandResponseEnvelope{
@@ -68,55 +67,133 @@ var testStructuredEnvelope = data.CommandResponseEnvelope{
 }
 
 const payloadJSON = `{
-	"User": "Assistant to the Regional Manager Dwight",
-	"Requestor": "Michael Scott",
-	"Company": "Dunder Mifflin",
-	"Results": [
-		{
-			"Name": "Farmhouse Thai Cuisine",
-			"Reviews": 1234,
-			"Description": "Awesome",
-			"Stars": 4,
-			"Image": "https://s3-media3.fl.yelpcdn.com/bphoto/c7ed05m9lC2EmA3Aruue7A/o.jpg"
-		}
-	]
+  "User": "Assistant to the Regional Manager Dwight",
+  "Requestor": "Michael Scott",
+  "Company": "Dunder Mifflin",
+  "Results": [
+    {
+      "Name": "Farmhouse Thai Cuisine",
+      "Reviews": 1234,
+      "Description": "Awesome",
+      "Stars": 4,
+      "Image": "https://s3-media3.fl.yelpcdn.com/bphoto/c7ed05m9lC2EmA3Aruue7A/o.jpg"
+    }
+  ]
 }`
 
 const testTemplate = `{{ text | emoji false | monospace true }}
-Hello, {{ .Response.Payload.User }}!
+Hello, {{ .Payload.User }}!
 
-*{{ .Response.Payload.Requestor }}* wants to know where you'd like to take the {{ .Response.Payload.Company }} investors to dinner tonight.
+*{{ .Payload.Requestor }}* wants to know where you'd like to take the {{ .Payload.Company }} investors to dinner tonight.
 
 *Please select a restaurant:*
 {{ endtext }}
 
 {{ divider }}
 
-{{ range $index, $result := .Response.Payload.Results }}
-{{ $stars := int $result.Stars }}
-{{ section }}
-{{ text }}
-	*{{ $result.Name }}*
-	{{ repeat $stars "::star::" }} {{ $result.Reviews }} reviews
-	{{ $result.Description }}
-{{ endtext }}
-{{ image $result.Image }}
-{{ endsection }}
+{{ range $index, $result := .Payload.Results }}
+	{{ $stars := int $result.Stars }}
+	{{ section }}
+		{{ text }}
+			*{{ $result.Name }}*
+			{{ repeat $stars "::star::" }} {{ $result.Reviews }} reviews
+			{{ $result.Description }}
+		{{ endtext }}
+		{{ image $result.Image }}
+	{{ endsection }}
 {{ end }}
 `
 
-func TestAll(t *testing.T) {
-	json.Unmarshal([]byte(payloadJSON), &testStructuredEnvelope.Response.Payload)
+func TestMain(m *testing.M) {
+	json.Unmarshal([]byte(payloadJSON), &testStructuredEnvelope.Payload)
+	m.Run()
+}
 
-	// TODO(mtitmus) Cache this result somewhere?
-	tpl := template.New("envelope")
+// func TestAll(t *testing.T) {
+// 	s, err := Transform(testTemplate, testStructuredEnvelope)
+// 	require.NoError(t, err)
 
-	tpl, err := tpl.Funcs(FunctionMap()).Parse(testTemplate)
-	require.NoError(t, err)
+// 	fmt.Println(s)
 
-	b := new(bytes.Buffer)
-	err = tpl.Execute(b, testStructuredEnvelope)
-	require.NoError(t, err)
+// 	_, err = EncodeElements(s)
+// 	require.NoError(t, err)
+// }
 
-	Parse(b.String())
+func TestCalcLine(t *testing.T) {
+	text := "This is line 1.\n" +
+		"This is line 2.\n" +
+		"\n" +
+		"This is line 4."
+
+	// Out of bounds should return -1
+	assert.Equal(t, -1, calculateLineNumber(text, -1))
+	assert.Equal(t, -1, calculateLineNumber(text, 1000))
+
+	for i, line := range strings.Split(text, "\n") {
+		if len(line) == 0 {
+			continue
+		}
+
+		start := strings.Index(text, line)
+		end := start + len(line)
+		assert.Equal(t, i+1, calculateLineNumber(text, start))
+		assert.Equal(t, i+1, calculateLineNumber(text, end))
+	}
+}
+
+func TestTransformText(t *testing.T) {
+	tests := []struct {
+		Template       string
+		Transformed    string
+		TransformError string
+		Encoded        OutputElements
+		EncodeError    string
+	}{
+		{
+			Template:    `{{ text | emoji true | markup true | monospace true }}Test`,
+			Transformed: `<<Text|{"Emoji":true,"Markup":true,"Monospace":true}>>Test`,
+			EncodeError: "unmatched {{text}} tag on line 1",
+		},
+		{
+			Template:    `Test{{ endtext }}`,
+			Transformed: `Test<<TextEnd|{}>>`,
+			EncodeError: "unmatched {{textend}} tag on line 1",
+		},
+		{
+			Template:    `{{ text | emoji true | markup true | monospace true }}Test{{ endtext }}`,
+			Transformed: `<<Text|{"Emoji":true,"Markup":true,"Monospace":true}>>Test<<TextEnd|{}>>`,
+			Encoded: OutputElements{
+				Elements: []OutputElement{
+					&Text{
+						Tag:       Tag{FirstIndex: 0, LastIndex: 71},
+						Emoji:     true,
+						Markup:    true,
+						Monospace: true,
+						Text:      "Test",
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		tf, err := Transform(test.Template, testStructuredEnvelope)
+		if test.TransformError != "" {
+			assert.EqualError(t, err, test.TransformError)
+			continue
+		} else {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, test.Transformed, tf)
+
+		enc, err := EncodeElements(tf)
+		if test.EncodeError != "" {
+			assert.EqualError(t, err, test.EncodeError)
+			continue
+		} else {
+			assert.NoError(t, err)
+		}
+
+		assert.Equal(t, test.Encoded, enc)
+	}
 }

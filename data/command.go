@@ -75,11 +75,6 @@ type CommandResponse struct {
 	// internally-detected errors. It can be used to build a user output
 	// message, and generally contains a short description of the result.
 	Title string
-
-	// Payload includes the command output. If the output is structured JSON,
-	// it will be unmarshalled and placed here where it can be accessible to
-	// Go templates. If it's not, this will be a string equal to Out.
-	Payload interface{}
 }
 
 // CommandResponseData contains about the command execution, including its
@@ -116,6 +111,11 @@ type CommandResponseEnvelope struct {
 	// Data contains about the command execution, including its duration and exit code.
 	// If the relay set an an explicit error, it will be here as well.
 	Data CommandResponseData
+
+	// Payload includes the command output. If the output is structured JSON,
+	// it will be unmarshalled and placed here where it can be accessible to
+	// Go templates. If it's not, this will be a string equal to Out.
+	Payload interface{}
 }
 
 func NewCommandResponseEnvelope(request CommandRequest, opts ...CommandResponseEnvelopeOption) CommandResponseEnvelope {
@@ -148,8 +148,8 @@ func WithError(title string, err error, code int16) CommandResponseEnvelopeOptio
 		e.Data.ExitCode = code
 		e.Response.Lines = []string{err.Error()}
 		e.Response.Out = err.Error()
-		e.Response.Payload, e.Response.Structured = unmarshalResponsePayload(e.Response.Out)
 		e.Response.Title = title
+		e.Payload, e.Response.Structured = unmarshalResponsePayload(e.Response.Out)
 	}
 }
 
@@ -158,7 +158,7 @@ func WithResponseLines(r []string) CommandResponseEnvelopeOption {
 	return func(e *CommandResponseEnvelope) {
 		e.Response.Lines = r
 		e.Response.Out = strings.Join(r, "\n")
-		e.Response.Payload, e.Response.Structured = unmarshalResponsePayload(e.Response.Out)
+		e.Payload, e.Response.Structured = unmarshalResponsePayload(e.Response.Out)
 	}
 }
 

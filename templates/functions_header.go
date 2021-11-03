@@ -16,27 +16,26 @@
 
 package templates
 
-type Section struct {
+type Header struct {
 	Tag
+	Color string `json:",omitempty"`
+	Title string `json:",omitempty"`
 }
 
-func (o *Section) String() string {
+func (o *Header) String() string {
 	return encodeTag(*o)
 }
 
-func (f *Functions) SectionFunction() *Section {
-	return &Section{}
+func (f *Functions) HeaderFunction() *Header {
+	return &Header{}
 }
 
-type SectionEnd struct {
-	Tag
+func (f *Functions) HeaderColorFunction(s string, t *Header) *Header {
+	t.Color = s
+	return t
 }
 
-func (o *SectionEnd) String() string {
-	return encodeTag(*o)
-}
-
-func (f *Functions) SectionEndFunction() *SectionEnd {
-	o := &SectionEnd{}
-	return o
+func (f *Functions) HeaderTitleFunction(s string, t *Header) *Header {
+	t.Title = s
+	return t
 }

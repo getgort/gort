@@ -59,8 +59,8 @@ func TestNewCommandResponseEnvelope_WithError(t *testing.T) {
 	assert.Equal(t, e.Data.ExitCode, code)
 	assert.Equal(t, e.Response.Lines, []string{msg})
 	assert.Equal(t, e.Response.Out, msg)
-	assert.Equal(t, e.Response.Payload, msg)
 	assert.Equal(t, e.Response.Title, title)
+	assert.Equal(t, e.Payload, msg)
 }
 
 func TestNewCommandResponseEnvelope_WithResponseLines(t *testing.T) {
@@ -72,7 +72,7 @@ func TestNewCommandResponseEnvelope_WithResponseLines(t *testing.T) {
 	assert.Equal(t, e.Response.Lines, lines)
 	assert.Equal(t, e.Response.Out, message)
 	assert.False(t, e.Response.Structured)
-	assert.Equal(t, e.Response.Payload, message)
+	assert.Equal(t, e.Payload, message)
 }
 
 func TestNewCommandResponseEnvelope_WithStructuredResponseLines(t *testing.T) {
@@ -85,7 +85,7 @@ func TestNewCommandResponseEnvelope_WithStructuredResponseLines(t *testing.T) {
 	assert.Equal(t, e.Response.Out, message)
 	assert.True(t, e.Response.Structured)
 
-	p, ok := e.Response.Payload.(map[string]interface{})
+	p, ok := e.Payload.(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "Matt", p["Name"])
 }

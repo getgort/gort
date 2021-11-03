@@ -17,7 +17,7 @@
 package templates
 
 type Text struct {
-	Index     int    `json:",omitempty"`
+	Tag
 	Emoji     bool   `json:",omitempty"`
 	Markup    bool   `json:",omitempty"`
 	Monospace bool   `json:",omitempty"`
@@ -25,11 +25,10 @@ type Text struct {
 }
 
 func (o *Text) String() string {
-	return Entag("TEXT", *o)
+	return encodeTag(*o)
 }
 
 func (f *Functions) TextFunction() *Text {
-	f.stackIndex++
 	return &Text{
 		Emoji:     true,
 		Markup:    true,
@@ -53,10 +52,11 @@ func (f *Functions) TextMonospaceFunction(b bool, t *Text) *Text {
 }
 
 type TextEnd struct {
+	Tag
 }
 
 func (o *TextEnd) String() string {
-	return Entag("TEXTEND", *o)
+	return encodeTag(*o)
 }
 
 func (f *Functions) TextEndFunction() *TextEnd {
