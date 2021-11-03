@@ -25,27 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// var testUnstructuredEnvelope = data.CommandResponseEnvelope{
-// 	Request: data.CommandRequest{
-// 		CommandEntry: data.CommandEntry{
-// 			Bundle: data.Bundle{
-// 				Name: "gort",
-// 			},
-// 			Command: data.BundleCommand{
-// 				Name:       "echo",
-// 				Executable: []string{"echo"},
-// 			},
-// 		},
-// 		Parameters: []string{"foo", "bar"},
-// 	},
-// 	Response: data.CommandResponse{
-// 		Lines:      []string{"foo bar"},
-// 		Out:        "foo bar",
-// 		Structured: false,
-// 		Payload:    "foo bar",
-// 	},
-// }
-
 var testStructuredEnvelope = data.CommandResponseEnvelope{
 	Request: data.CommandRequest{
 		CommandEntry: data.CommandEntry{
@@ -81,43 +60,33 @@ const payloadJSON = `{
   ]
 }`
 
-const testTemplate = `{{ text | emoji false | monospace true }}
-Hello, {{ .Payload.User }}!
+// const testTemplate = `{{ text | emoji false | monospace false }}
+// Hello, {{ .Payload.User }}!
 
-*{{ .Payload.Requestor }}* wants to know where you'd like to take the {{ .Payload.Company }} investors to dinner tonight.
+// *{{ .Payload.Requestor }}* wants to know where you'd like to take the {{ .Payload.Company }} investors to dinner tonight.
 
-*Please select a restaurant:*
-{{ endtext }}
+// *Please select a restaurant:*
+// {{ endtext }}
 
-{{ divider }}
+// {{ divider }}
 
-{{ range $index, $result := .Payload.Results }}
-	{{ $stars := int $result.Stars }}
-	{{ section }}
-		{{ text }}
-			*{{ $result.Name }}*
-			{{ repeat $stars "::star::" }} {{ $result.Reviews }} reviews
-			{{ $result.Description }}
-		{{ endtext }}
-		{{ image $result.Image }}
-	{{ endsection }}
-{{ end }}
-`
+// {{ range $index, $result := .Payload.Results }}
+// 	{{ $stars := int $result.Stars }}
+// 	{{ section }}
+// 		{{ text }}
+// 			*{{ $result.Name }}*
+// 			{{ repeat $stars "::star::" }} {{ $result.Reviews }} reviews
+// 			{{ $result.Description }}
+// 		{{ endtext }}
+// 		{{ image $result.Image }}
+// 	{{ endsection }}
+// {{ end }}
+// `
 
 func TestMain(m *testing.M) {
 	json.Unmarshal([]byte(payloadJSON), &testStructuredEnvelope.Payload)
 	m.Run()
 }
-
-// func TestAll(t *testing.T) {
-// 	s, err := Transform(testTemplate, testStructuredEnvelope)
-// 	require.NoError(t, err)
-
-// 	fmt.Println(s)
-
-// 	_, err = EncodeElements(s)
-// 	require.NoError(t, err)
-// }
 
 func TestCalcLine(t *testing.T) {
 	text := "This is line 1.\n" +
@@ -141,7 +110,29 @@ func TestCalcLine(t *testing.T) {
 	}
 }
 
-func TestTransformText(t *testing.T) {
+func TestNextTag(t *testing.T) {
+	text := `<<Text|{"Foo":"Bar"}>>This is text.<<TextEnd|{}>>`
+
+	tag, json, first, last := nextTag(text, 0)
+	assert.Equal(t, "Text", tag)
+	assert.Equal(t, `{"Foo":"Bar"}`, json)
+	assert.Equal(t, 0, first)
+	assert.Equal(t, 21, last)
+
+	tag, json, first, last = nextTag(text, last)
+	assert.Equal(t, "TextEnd", tag)
+	assert.Equal(t, `{}`, json)
+	assert.Equal(t, 35, first)
+	assert.Equal(t, 48, last)
+
+	tag, json, first, last = nextTag(text, last)
+	assert.Equal(t, "", tag)
+	assert.Equal(t, "", json)
+	assert.Equal(t, -1, first)
+	assert.Equal(t, -1, last)
+}
+
+func TestTransformAndEncodeText(t *testing.T) {
 	tests := []struct {
 		Template       string
 		Transformed    string
@@ -149,6 +140,29 @@ func TestTransformText(t *testing.T) {
 		Encoded        OutputElements
 		EncodeError    string
 	}{
+		{
+			Template:    `{{ divider }}`,
+			Transformed: `<<Divider|{}>>`,
+			Encoded: OutputElements{
+				Elements: []OutputElement{
+					&Divider{
+						Tag: Tag{FirstIndex: 0, LastIndex: 13},
+					},
+				},
+			},
+		},
+		{
+			Template:    `{{ image "https://example.com/image.jpg" }}`,
+			Transformed: `<<Image|{"Url":"https://example.com/image.jpg"}>>`,
+			Encoded: OutputElements{
+				Elements: []OutputElement{
+					&Image{
+						Tag: Tag{FirstIndex: 0, LastIndex: 48},
+						Url: "https://example.com/image.jpg",
+					},
+				},
+			},
+		},
 		{
 			Template:    `{{ text | emoji true | markup true | monospace true }}Test`,
 			Transformed: `<<Text|{"Emoji":true,"Markup":true,"Monospace":true}>>Test`,
@@ -170,6 +184,21 @@ func TestTransformText(t *testing.T) {
 						Markup:    true,
 						Monospace: true,
 						Text:      "Test",
+					},
+				},
+			},
+		},
+		{
+			Template:    `{{ text | emoji true | markup true | monospace true }}{{ .Payload.Company }}{{ endtext }}`,
+			Transformed: `<<Text|{"Emoji":true,"Markup":true,"Monospace":true}>>Dunder Mifflin<<TextEnd|{}>>`,
+			Encoded: OutputElements{
+				Elements: []OutputElement{
+					&Text{
+						Tag:       Tag{FirstIndex: 0, LastIndex: 81},
+						Emoji:     true,
+						Markup:    true,
+						Monospace: true,
+						Text:      "Dunder Mifflin",
 					},
 				},
 			},

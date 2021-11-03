@@ -79,40 +79,40 @@ func EncodeElements(text string) (OutputElements, error) {
 	for tag, jsn, first, last := nextTag(text, 0); first != -1; tag, jsn, first, last = nextTag(text, last) {
 		var e OutputElement
 
+		etag := Tag{FirstIndex: first, LastIndex: last}
+
 		switch tag {
 		case "":
 			continue
-		// no-op
 
 		case "Divider":
-			e = &Divider{}
+			e = &Divider{Tag: etag}
 
 		case "Image":
-			o := &Image{}
+			o := &Image{Tag: etag}
 			json.Unmarshal([]byte(jsn), o)
 			e = o
 
 		case "Section":
-			o := &Section{}
-			o.SetFirst(first)
-			o.SetLast(last)
+			o := &Section{Tag: etag}
 			json.Unmarshal([]byte(jsn), o)
 			lastSection = o
+
 		case "SectionEnd":
 			if lastSection == nil {
 				lineNumber := calculateLineNumber(text, first)
 				return OutputElements{}, fmt.Errorf("unmatched {{sectionend}} tag on line %d", lineNumber)
 			}
+
+			lastSection.SetLast(last)
 			e = lastSection
-			first = lastText.First()
 			lastSection = nil
 
 		case "Text":
-			o := &Text{}
-			o.SetFirst(first)
-			o.SetLast(last)
+			o := &Text{Tag: etag}
 			json.Unmarshal([]byte(jsn), o)
 			lastText = o
+
 		case "TextEnd":
 			if lastText == nil {
 				lineNumber := calculateLineNumber(text, first)
@@ -120,8 +120,8 @@ func EncodeElements(text string) (OutputElements, error) {
 			}
 
 			lastText.Text = text[lastText.Last()+1 : first]
+			lastText.SetLast(last)
 			e = lastText
-			first = lastText.FirstIndex
 			lastText = nil
 
 		default:
@@ -132,8 +132,6 @@ func EncodeElements(text string) (OutputElements, error) {
 			continue
 		}
 
-		e.SetFirst(first)
-		e.SetLast(last)
 		elements.Elements = append(elements.Elements, e)
 	}
 
