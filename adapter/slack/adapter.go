@@ -17,6 +17,7 @@
 package slack
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -91,34 +92,10 @@ func ScrubMarkdown(text string) string {
 	return text
 }
 
-func buildSlackOptions(elements templates.OutputElements) ([]slack.MsgOption, error) {
-
-	// slack.MsgOptionAttachments(
-	// 	slack.Attachment{
-	// 		// Title: "This is a title",
-	// 		// Text:       "text",
-	// 		Color: "#FF0000",
-	// 		// MarkdownIn: []string{"text"},
-	// 		Blocks: slack.Blocks{
-	// 			BlockSet: []slack.Block{
-	// 				slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", "Hello! :wave: Enjoy your cat picture!", false, true), nil, nil),
-	// 				slack.NewImageBlock(
-	// 					img, "A kitty!", "",
-	// 					slack.NewTextBlockObject("plain_text", "Please enjoy this cat picture.", false, false),
-	// 				),
-	// 			},
-	// 		},
-	// 	},
-	// ),
-
+func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, error) {
 	options := []slack.MsgOption{
 		slack.MsgOptionDisableMediaUnfurl(),
 		slack.MsgOptionAsUser(false),
-	}
-
-	attachment := slack.Attachment{
-		Title: elements.Title,
-		Color: elements.Color,
 	}
 
 	var blocks []slack.Block
@@ -127,6 +104,23 @@ func buildSlackOptions(elements templates.OutputElements) ([]slack.MsgOption, er
 		switch t := e.(type) {
 		case *templates.Divider:
 			blocks = append(blocks, slack.NewDividerBlock())
+
+		case *templates.Header:
+			elements.Color = t.Color
+			elements.Title = t.Title
+
+			if elements.Title != "" {
+				text := &templates.Text{
+					Markdown: true,
+					Text:     fmt.Sprintf("*%s*", t.Title),
+				}
+				textBlock, err := buildTextBlockObject(text)
+				if err != nil {
+					return nil, err
+				}
+
+				blocks = append(blocks, slack.NewSectionBlock(textBlock, nil, nil))
+			}
 
 		case *templates.Image:
 			blocks = append(blocks, slack.NewImageBlock(t.URL, "alt-text", "", nil))
@@ -137,13 +131,22 @@ func buildSlackOptions(elements templates.OutputElements) ([]slack.MsgOption, er
 			var tba *slack.Accessory = &slack.Accessory{}
 
 			if t.Text != nil {
-				tbo = buildTextBlockObject(t.Text)
+				textBlock, err := buildTextBlockObject(t.Text)
+				if err != nil {
+					return nil, err
+				}
+
+				tbo = textBlock
 			}
 
 			for _, tf := range t.Fields {
 				switch t := tf.(type) {
 				case *templates.Text:
-					tbf = append(tbf, buildTextBlockObject(t))
+					textBlock, err := buildTextBlockObject(t)
+					if err != nil {
+						return nil, err
+					}
+					tbf = append(tbf, textBlock)
 				case *templates.Image:
 					tba.ImageElement = slack.NewImageBlockElement(t.URL, "alt-text")
 				default:
@@ -154,27 +157,92 @@ func buildSlackOptions(elements templates.OutputElements) ([]slack.MsgOption, er
 			blocks = append(blocks, slack.NewSectionBlock(tbo, tbf, tba))
 
 		case *templates.Text:
-			blocks = append(blocks, slack.NewSectionBlock(
-				buildTextBlockObject(t), nil, nil,
-			))
+			textBlock, err := buildTextBlockObject(t)
+			if err != nil {
+				return nil, err
+			}
+
+			blocks = append(blocks, slack.NewSectionBlock(textBlock, nil, nil))
 
 		default:
-			return nil, fmt.Errorf("%T elements are not yet supported for Slack", e)
+			return nil, fmt.Errorf("%T elements are not yet supported by Gort for Slack", e)
 		}
 	}
 
-	if blocks != nil {
-		attachment.Blocks = slack.Blocks{BlockSet: blocks}
-	}
+	if elements.Color != "" {
+		b, _ := json.MarshalIndent(blocks, "", "  ")
+		fmt.Println("A\n", string(b))
 
-	options = append(options, slack.MsgOptionAttachments(attachment))
+		attachment := slack.Attachment{
+			Color:  elements.Color,
+			Blocks: slack.Blocks{BlockSet: blocks},
+		}
+
+		options = append(options, slack.MsgOptionAttachments(attachment))
+	} else {
+		b, _ := json.MarshalIndent(blocks, "", "  ")
+		fmt.Println("B\n", string(b))
+		options = append(options, slack.MsgOptionBlocks(blocks...))
+	}
 
 	return options, nil
 }
 
-func buildTextBlockObject(t *templates.Text) *slack.TextBlockObject {
-	textType := "mrkdwn"
-	if !t.Markdown {
+// SendMessage sends a standard output message to a specified channel.
+func (s *SocketModeAdapter) SendMessageExample(channelID string, message string) error {
+	img := "https://placekitten.com/500/500"
+
+	switch message[6:] {
+	case "tabby":
+		img = "https://pictures-of-cats.org/wp-content/uploads/2019/11/Striped-tabby4.jpg"
+	}
+
+	_, _, err := s.client.PostMessage(channelID,
+		slack.MsgOptionAttachments(
+			slack.Attachment{
+				// Title: "This is a title",
+				// Text:       "text",
+				Color: "#FF0000",
+				// MarkdownIn: []string{"text"},
+				Blocks: slack.Blocks{
+					BlockSet: []slack.Block{
+						slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", "Hello! :wave: Enjoy your cat picture!", false, true), nil, nil),
+						slack.NewImageBlock(
+							img, "A kitty!", "",
+							slack.NewTextBlockObject("plain_text", "Please enjoy this cat picture.", false, false),
+						),
+					},
+				},
+			},
+		),
+		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
+			IconURL:  s.provider.IconURL,
+			Markdown: true,
+		}),
+
+		// slack.MsgOptionBlocks(
+		// 	slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", "Hello! :wave: Enjoy your cat picture!", false, true), nil, nil),
+		// 	slack.NewImageBlock(
+		// 		img, "A kitty!", "",
+		// 		slack.NewTextBlockObject("plain_text", "Please enjoy this cat picture.", false, false),
+		// 	),
+		// ),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func buildTextBlockObject(t *templates.Text) (*slack.TextBlockObject, error) {
+	var textType string
+	var emoji = t.Emoji
+
+	if t.Markdown {
+		textType = "mrkdwn"
+		emoji = false
+	} else {
 		textType = "plain_text"
 	}
 
@@ -183,5 +251,7 @@ func buildTextBlockObject(t *templates.Text) *slack.TextBlockObject {
 		txt = fmt.Sprintf("```%s```", txt)
 	}
 
-	return slack.NewTextBlockObject(textType, txt, t.Emoji, t.Markdown)
+	tbo := slack.NewTextBlockObject(textType, txt, emoji, t.Markdown)
+
+	return tbo, tbo.Validate()
 }

@@ -414,7 +414,7 @@ func (s *ClassicAdapter) SendResponseEnvelope(channelID string, envelope data.Co
 		return err
 	}
 
-	options, err := buildSlackOptions(elements)
+	options, err := buildSlackOptions(&elements)
 	if err != nil {
 		return err
 	}

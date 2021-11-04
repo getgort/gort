@@ -291,8 +291,11 @@ func (s *SocketModeAdapter) SendErrorMessage(channelID string, title string, tex
 // SendMessage sends a standard output message to a specified channel.
 func (s *SocketModeAdapter) SendMessage(channelID string, message string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-
 	return s.SendResponseEnvelope(channelID, e, templates.Message)
+}
+
+func (s *SocketModeAdapter) logError(err error) {
+	log.WithError(err).WithField("adapter", s.GetName()).Error("Failed to send message")
 }
 
 // SendResponseEnvelope sends the contents of a response envelope to a
@@ -301,6 +304,7 @@ func (s *SocketModeAdapter) SendMessage(channelID string, message string) error 
 func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error {
 	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
 	if err != nil {
+		s.logError(err)
 		return err
 	}
 
@@ -308,11 +312,13 @@ func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data
 
 	// elements, err := templates.TransformAndEncode(template, envelope)
 	// if err != nil {
-	// 	return err
+	// s.logError(err)
+	// return err
 	// }
 
 	tf, err := templates.Transform(template, envelope)
 	if err != nil {
+		s.logError(err)
 		return err
 	}
 
@@ -320,19 +326,25 @@ func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data
 
 	elements, err := templates.EncodeElements(tf)
 	if err != nil {
+		s.logError(err)
 		return err
 	}
 
 	b, _ := json.MarshalIndent(elements, "", "  ")
 	fmt.Printf("ELEMENTS (len=%d):\n%s\n", len(elements.Elements), string(b))
 
-	options, err := buildSlackOptions(elements)
+	options, err := buildSlackOptions(&elements)
 	if err != nil {
+		s.logError(err)
 		return err
 	}
 
+	b, _ = json.MarshalIndent(options, "", "  ")
+	fmt.Printf("OPTIONS:\n%s\n", string(b))
+
 	_, _, err = s.client.PostMessage(channelID, options...)
 	if err != nil {
+		s.logError(err)
 		return err
 	}
 

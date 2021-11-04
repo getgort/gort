@@ -33,10 +33,11 @@ const (
 
 	DefaultCommand = `{{ text | monospace true }}{{ .Response.Out }}{{ endtext }}`
 
-	DefaultCommandError = `{{ text }}The pipeline failed planning the invocation:{{ endtext }}
-{{ endtext | monospace true}}{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}{{ endtext }}
+	DefaultCommandError = `{{ header | color "#FF0000" }}{{ .Response.Title }}{{ endheader }}
+{{ text }}The pipeline failed planning the invocation:{{ endtext }}
+{{ text | monospace true }}{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}{{ endtext }}
 {{ text }}The specific error was:{{ endtext }}
-{{ endtext | monospace true}}{{ .Response.Out }}{{ endtext}}`
+{{ text | monospace true }}{{ .Response.Out }}{{ endtext }}`
 )
 
 const (

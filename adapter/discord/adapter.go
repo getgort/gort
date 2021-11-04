@@ -361,7 +361,7 @@ func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandRe
 			})
 
 		default:
-			return fmt.Errorf("%T fields are not yet supported for Discord", e)
+			return fmt.Errorf("%T fields are not yet supported by Gort for Discord", e)
 		}
 	}
 
