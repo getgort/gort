@@ -92,18 +92,33 @@ func ScrubMarkdown(text string) string {
 }
 
 func buildSlackOptions(elements templates.OutputElements) ([]slack.MsgOption, error) {
+
+	// slack.MsgOptionAttachments(
+	// 	slack.Attachment{
+	// 		// Title: "This is a title",
+	// 		// Text:       "text",
+	// 		Color: "#FF0000",
+	// 		// MarkdownIn: []string{"text"},
+	// 		Blocks: slack.Blocks{
+	// 			BlockSet: []slack.Block{
+	// 				slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", "Hello! :wave: Enjoy your cat picture!", false, true), nil, nil),
+	// 				slack.NewImageBlock(
+	// 					img, "A kitty!", "",
+	// 					slack.NewTextBlockObject("plain_text", "Please enjoy this cat picture.", false, false),
+	// 				),
+	// 			},
+	// 		},
+	// 	},
+	// ),
+
 	options := []slack.MsgOption{
 		slack.MsgOptionDisableMediaUnfurl(),
 		slack.MsgOptionAsUser(false),
 	}
 
-	var attachments []slack.Attachment
-
-	if elements.Title != "" || elements.Color != "" {
-		attachments = append(attachments, slack.Attachment{
-			Title: elements.Title,
-			Color: elements.Color,
-		})
+	attachment := slack.Attachment{
+		Title: elements.Title,
+		Color: elements.Color,
 	}
 
 	var blocks []slack.Block
@@ -148,11 +163,11 @@ func buildSlackOptions(elements templates.OutputElements) ([]slack.MsgOption, er
 		}
 	}
 
-	if attachments != nil {
-		options = append(options, slack.MsgOptionAttachments(attachments...))
+	if blocks != nil {
+		attachment.Blocks = slack.Blocks{BlockSet: blocks}
 	}
 
-	options = append(options, slack.MsgOptionBlocks(blocks...))
+	options = append(options, slack.MsgOptionAttachments(attachment))
 
 	return options, nil
 }
