@@ -240,33 +240,6 @@ func (s *Adapter) SendMessage(channelID string, message string) error {
 // SendResponseEnvelope sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
-// func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error {
-// 	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	elements, err := templates.TransformAndEncode(template, envelope)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	options, err := buildSlackOptions(elements)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	_, _, err = s.client.PostMessage(channelID, options...)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// SendResponseEnvelope sends the contents of a response envelope to a
-// specified channel. If channelID is empty the value of
-// envelope.Request.ChannelID will be used.
 func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error {
 	if channelID == "" {
 		channelID = envelope.Request.ChannelID

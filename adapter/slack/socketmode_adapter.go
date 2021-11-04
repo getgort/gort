@@ -18,7 +18,6 @@ package slack
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/getgort/gort/adapter"
@@ -294,119 +293,93 @@ func (s *SocketModeAdapter) SendMessage(channelID string, message string) error 
 	return s.SendResponseEnvelope(channelID, e, templates.Message)
 }
 
-func (s *SocketModeAdapter) logError(err error) {
-	log.WithError(err).WithField("adapter", s.GetName()).Error("Failed to send message")
-}
-
 // SendResponseEnvelope sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
 func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error {
 	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
 	if err != nil {
-		s.logError(err)
+		s.handleSendError(channelID, err, tt)
 		return err
 	}
-
-	fmt.Printf("TEMPLATE (len=%d):\n%s\n", len(template), template)
-
-	// elements, err := templates.TransformAndEncode(template, envelope)
-	// if err != nil {
-	// s.logError(err)
-	// return err
-	// }
 
 	tf, err := templates.Transform(template, envelope)
 	if err != nil {
-		s.logError(err)
+		s.handleSendError(channelID, err, tt)
 		return err
 	}
-
-	fmt.Printf("TRANSFORM TEXT (len=%d):\n%s\n", len(tf), tf)
 
 	elements, err := templates.EncodeElements(tf)
 	if err != nil {
-		s.logError(err)
+		s.handleSendError(channelID, err, tt)
 		return err
 	}
-
-	b, _ := json.MarshalIndent(elements, "", "  ")
-	fmt.Printf("ELEMENTS (len=%d):\n%s\n", len(elements.Elements), string(b))
 
 	options, err := buildSlackOptions(&elements)
 	if err != nil {
-		s.logError(err)
+		s.handleSendError(channelID, err, tt)
 		return err
 	}
 
-	b, _ = json.MarshalIndent(options, "", "  ")
-	fmt.Printf("OPTIONS:\n%s\n", string(b))
-
 	_, _, err = s.client.PostMessage(channelID, options...)
 	if err != nil {
-		s.logError(err)
+		s.handleSendError(channelID, err, tt)
 		return err
 	}
 
 	return nil
 }
 
-// // sendResponseEnvelope sends the contents of a response envelope to a
-// // specified channel. If channelID is empty the value of
-// // envelope.Request.ChannelID will be used.
-// func (s *SocketModeAdapter) sendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, templateText string) error {
-// 	t, err := template.New("envelope").Parse(templateText)
-// 	if err != nil {
-// 		return err
-// 	}
+func (s *SocketModeAdapter) SendTemplateErrorMessage(channelID string, msg error) error {
+	_, _, err := s.client.PostMessage(
+		channelID,
+		slack.MsgOptionAttachments(
+			slack.Attachment{
+				Title:      "Template Error",
+				Text:       msg.Error(),
+				Color:      "#FF0000",
+				MarkdownIn: []string{"text"},
+			},
+		),
+		slack.MsgOptionDisableMediaUnfurl(),
+		slack.MsgOptionDisableMarkdown(),
+		slack.MsgOptionAsUser(false),
+		slack.MsgOptionUsername(s.provider.BotName),
+		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
+			IconURL:  s.provider.IconURL,
+			Markdown: true,
+		}),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-// 	buffer := new(bytes.Buffer)
-// 	err = t.Execute(buffer, envelope)
-// 	if err != nil {
-// 		return err
-// 	}
+func (s *SocketModeAdapter) handleSendError(channelID string, err error, tt templates.TemplateType) {
+	log.WithError(err).WithField("adapter", s.GetName()).WithField("template_type", tt).Error("Failed to send message")
 
-// 	options := []slack.MsgOption{
-// 		slack.MsgOptionDisableMediaUnfurl(),
-// 		slack.MsgOptionAsUser(false),
-// 		slack.MsgOptionUsername(s.provider.BotName),
-// 		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-// 			IconURL:  s.provider.IconURL,
-// 			Markdown: true,
-// 		}),
-// 	}
+	_, _, err = s.client.PostMessage(
+		channelID,
+		slack.MsgOptionAttachments(
+			slack.Attachment{
+				Title:      "Templating Error",
+				Text:       err.Error(),
+				Color:      "#FF0000",
+				MarkdownIn: []string{"text"},
+			},
+		),
+		slack.MsgOptionDisableMediaUnfurl(),
+		slack.MsgOptionDisableMarkdown(),
+		slack.MsgOptionAsUser(false),
+		slack.MsgOptionUsername(s.provider.BotName),
+		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
+			IconURL:  s.provider.IconURL,
+			Markdown: true,
+		}),
+	)
 
-// 	if channelID == "" {
-// 		channelID = envelope.Request.ChannelID
-// 	}
-
-// 	if envelope.Data.Error != nil {
-// 		title := envelope.Response.Title
-// 		if title == "" {
-// 			title = "Error"
-// 		}
-
-// 		options = append(
-// 			options,
-// 			slack.MsgOptionAttachments(
-// 				slack.Attachment{
-// 					Title:      title,
-// 					Text:       buffer.String(),
-// 					Color:      "#FF0000",
-// 					MarkdownIn: []string{"text"},
-// 				},
-// 			),
-// 		)
-
-// 	} else {
-// 		options = append(
-// 			options,
-// 			slack.MsgOptionDisableMediaUnfurl(),
-// 			slack.MsgOptionText(buffer.String(), false),
-// 		)
-// 	}
-
-// 	_, _, err = s.client.PostMessage(channelID, options...)
-
-// 	return err
-// }
+	if err != nil {
+		log.WithError(err).WithField("adapter", s.GetName()).Error("Failed to send break-glass error message!")
+	}
+}
