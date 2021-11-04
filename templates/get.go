@@ -24,14 +24,19 @@ import (
 )
 
 const (
-	defaultDefault      = "{{ .Response.Out }}"
-	defaultMessage      = "{{ .Response.Out }}"
-	defaultMessageError = "{{ .Response.Out }}"
-	defaultCommand      = "```{{ .Response.Out }}```"
-	defaultCommandError = "The pipeline failed planning the invocation:\n" +
-		"```{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}```\n" +
-		"The specific error was:\n" +
-		"```{{ .Response.Out }}```"
+	DefaultDefault = `{{ text }}{{ .Response.Out }}{{ endtext }}`
+
+	DefaultMessage = `{{ text }}{{ .Response.Out }}{{ endtext }}`
+
+	DefaultMessageError = `{{ header | color "#FF0000" }}{{ .Response.Title }}{{ endheader }}
+{{ text }}{{ .Response.Out }}{{ endtext }}`
+
+	DefaultCommand = `{{ text | monospace true }}{{ .Response.Out }}{{ endtext }}`
+
+	DefaultCommandError = `{{ text }}The pipeline failed planning the invocation:{{ endtext }}
+{{ endtext | monospace true}}{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}{{ endtext }}
+{{ text }}The specific error was:{{ endtext }}
+{{ endtext | monospace true}}{{ .Response.Out }}{{ endtext}}`
 )
 
 const (
@@ -45,11 +50,11 @@ const (
 type TemplateType string
 
 var templateDefaults = data.Templates{
-	Default:      defaultDefault,
-	Message:      defaultMessage,
-	MessageError: defaultMessageError,
-	Command:      defaultCommand,
-	CommandError: defaultCommandError,
+	Default:      DefaultDefault,
+	Message:      DefaultMessage,
+	MessageError: DefaultMessageError,
+	Command:      DefaultCommand,
+	CommandError: DefaultCommandError,
 }
 
 // Get returns the first defined template found in the following sequence:

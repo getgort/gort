@@ -31,13 +31,18 @@ func FunctionMap() template.FuncMap {
 	functions := &Functions{}
 
 	fm := map[string]interface{}{
+		// Header
+		"header":    functions.HeaderFunction,
+		"endheader": functions.HeaderEndFunction,
+		"color":     functions.HeaderColorFunction,
+
 		// Section
 		"section":    functions.SectionFunction,
 		"endsection": functions.SectionEndFunction,
 
 		// Text
 		"text":      functions.TextFunction,
-		"markup":    functions.TextMarkupFunction,
+		"markdown":  functions.TextMarkdownFunction,
 		"monospace": functions.TextMonospaceFunction,
 		"emoji":     functions.TextEmojiFunction,
 		"endtext":   functions.TextEndFunction,
@@ -59,16 +64,8 @@ type Tag struct {
 	LastIndex  int `json:"-"`
 }
 
-func (t *Tag) SetFirst(i int) {
-	t.FirstIndex = i
-}
-
 func (t *Tag) First() int {
 	return t.FirstIndex
-}
-
-func (t *Tag) SetLast(i int) {
-	t.LastIndex = i
 }
 
 func (t *Tag) Last() int {

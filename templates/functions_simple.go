@@ -30,7 +30,9 @@ func (f *Functions) DividerFunction() *Divider {
 
 type Image struct {
 	Tag
-	Url string `json:",omitempty"`
+	Height int    `json:",omitempty"`
+	Width  int    `json:",omitempty"`
+	URL    string `json:",omitempty"`
 }
 
 func (o *Image) String() string {
@@ -38,5 +40,5 @@ func (o *Image) String() string {
 }
 
 func (f *Functions) ImageFunction(url string) *Image {
-	return &Image{Url: url}
+	return &Image{URL: url}
 }

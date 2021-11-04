@@ -24,7 +24,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -40,6 +39,7 @@ import (
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/rules"
 	"github.com/getgort/gort/telemetry"
+	"github.com/getgort/gort/templates"
 	"github.com/getgort/gort/version"
 )
 
@@ -118,7 +118,7 @@ type Adapter interface {
 	// SendResponseEnvelope sends the contents of a response envelope to a
 	// specified channel. If channelID is empty the value of
 	// envelope.Request.ChannelID will be used.
-	SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error
+	SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error
 }
 
 type RequestorIdentity struct {
@@ -857,11 +857,6 @@ func findOrMakeGortUser(ctx context.Context, adapter Adapter, info *UserInfo) (*
 	return &user, true, da.UserCreate(ctx, user)
 }
 
-// TODO Replace this with something resembling a template. Eventually.
-// func formatCommandOutput(envelope data.CommandResponseEnvelope) string {
-// 	return fmt.Sprintf("```%s```", envelope.Response.Out)
-// }
-
 func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.CommandRequest, adapterErrors chan<- error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(context.Background(), "adapter.handleIncomingEvent")
@@ -941,7 +936,12 @@ func startRelayResponseListening(responses <-chan data.CommandResponseEnvelope,
 			continue
 		}
 
-		if err := adapter.SendResponseEnvelope(envelope.Request.ChannelID, envelope); err != nil {
+		tt := templates.Command
+		if envelope.Data.ExitCode != 0 {
+			tt = templates.CommandError
+		}
+
+		if err := adapter.SendResponseEnvelope(envelope.Request.ChannelID, envelope, tt); err != nil {
 			adapterErrors <- err
 		}
 	}

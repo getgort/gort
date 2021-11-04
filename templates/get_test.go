@@ -125,22 +125,22 @@ func TestLoadBundleFromFile(t *testing.T) {
 	bundle.Templates = data.Templates{}
 
 	template, err = Get(cmd, bundle, Default)
-	assert.Equal(t, defaultDefault, template)
+	assert.Equal(t, DefaultDefault, template)
 	assert.NoError(t, err)
 
 	template, err = Get(cmd, bundle, Command)
-	assert.Equal(t, defaultCommand, template)
+	assert.Equal(t, DefaultCommand, template)
 	assert.NoError(t, err)
 
 	template, err = Get(cmd, bundle, CommandError)
-	assert.Equal(t, defaultCommandError, template)
+	assert.Equal(t, DefaultCommandError, template)
 	assert.NoError(t, err)
 
 	template, err = Get(cmd, bundle, Message)
-	assert.Equal(t, defaultMessage, template)
+	assert.Equal(t, DefaultMessage, template)
 	assert.NoError(t, err)
 
 	template, err = Get(cmd, bundle, MessageError)
-	assert.Equal(t, defaultMessageError, template)
+	assert.Equal(t, DefaultMessageError, template)
 	assert.NoError(t, err)
 }

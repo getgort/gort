@@ -19,7 +19,7 @@ package templates
 type Text struct {
 	Tag
 	Emoji     bool   `json:",omitempty"`
-	Markup    bool   `json:",omitempty"`
+	Markdown  bool   `json:",omitempty"`
 	Monospace bool   `json:",omitempty"`
 	Text      string `json:",omitempty"`
 }
@@ -31,7 +31,7 @@ func (o *Text) String() string {
 func (f *Functions) TextFunction() *Text {
 	return &Text{
 		Emoji:     true,
-		Markup:    true,
+		Markdown:  true,
 		Monospace: false,
 	}
 }
@@ -41,8 +41,8 @@ func (f *Functions) TextEmojiFunction(b bool, t *Text) *Text {
 	return t
 }
 
-func (f *Functions) TextMarkupFunction(b bool, t *Text) *Text {
-	t.Markup = b
+func (f *Functions) TextMarkdownFunction(b bool, t *Text) *Text {
+	t.Markdown = b
 	return t
 }
 

@@ -18,6 +18,8 @@ package templates
 
 type Section struct {
 	Tag
+	Text   *Text           `json:",omitempty"`
+	Fields []OutputElement `json:",omitempty"`
 }
 
 func (o *Section) String() string {

@@ -17,14 +17,15 @@
 package slack
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"text/template"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/telemetry"
+	"github.com/getgort/gort/templates"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
@@ -284,86 +285,116 @@ func (s *SocketModeAdapter) wrapEvent(eventType adapter.EventType, info *adapter
 // SendErrorMessage sends an error message to a specified channel.
 func (s *SocketModeAdapter) SendErrorMessage(channelID string, title string, text string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.sendResponseEnvelope(channelID, e, DefaultMessageTemplate)
+	return s.SendResponseEnvelope(channelID, e, templates.MessageError)
 }
 
 // SendMessage sends a standard output message to a specified channel.
 func (s *SocketModeAdapter) SendMessage(channelID string, message string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-	return s.sendResponseEnvelope(channelID, e, DefaultMessageTemplate)
+
+	return s.SendResponseEnvelope(channelID, e, templates.Message)
 }
 
 // SendResponseEnvelope sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
-func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error {
-	var templateText string
-
-	if envelope.Data.Error != nil && envelope.Request.Bundle.Name != "" {
-		templateText = DefaultCommandErrorTemplate
-	} else {
-		templateText = DefaultCommandTemplate
-	}
-
-	return s.sendResponseEnvelope(channelID, envelope, templateText)
-}
-
-// sendResponseEnvelope sends the contents of a response envelope to a
-// specified channel. If channelID is empty the value of
-// envelope.Request.ChannelID will be used.
-func (s *SocketModeAdapter) sendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, templateText string) error {
-	t, err := template.New("envelope").Parse(templateText)
+func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error {
+	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
 	if err != nil {
 		return err
 	}
 
-	buffer := new(bytes.Buffer)
-	err = t.Execute(buffer, envelope)
+	fmt.Printf("TEMPLATE (len=%d):\n%s\n", len(template), template)
+
+	// elements, err := templates.TransformAndEncode(template, envelope)
+	// if err != nil {
+	// 	return err
+	// }
+
+	tf, err := templates.Transform(template, envelope)
 	if err != nil {
 		return err
 	}
 
-	options := []slack.MsgOption{
-		slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionAsUser(false),
-		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}),
+	fmt.Printf("TRANSFORM TEXT (len=%d):\n%s\n", len(tf), tf)
+
+	elements, err := templates.EncodeElements(tf)
+	if err != nil {
+		return err
 	}
 
-	if channelID == "" {
-		channelID = envelope.Request.ChannelID
-	}
+	b, _ := json.MarshalIndent(elements, "", "  ")
+	fmt.Printf("ELEMENTS (len=%d):\n%s\n", len(elements.Elements), string(b))
 
-	if envelope.Data.Error != nil {
-		title := envelope.Response.Title
-		if title == "" {
-			title = "Error"
-		}
-
-		options = append(
-			options,
-			slack.MsgOptionAttachments(
-				slack.Attachment{
-					Title:      title,
-					Text:       buffer.String(),
-					Color:      "#FF0000",
-					MarkdownIn: []string{"text"},
-				},
-			),
-		)
-
-	} else {
-		options = append(
-			options,
-			slack.MsgOptionDisableMediaUnfurl(),
-			slack.MsgOptionText(buffer.String(), false),
-		)
+	options, err := buildSlackOptions(elements)
+	if err != nil {
+		return err
 	}
 
 	_, _, err = s.client.PostMessage(channelID, options...)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
+
+// // sendResponseEnvelope sends the contents of a response envelope to a
+// // specified channel. If channelID is empty the value of
+// // envelope.Request.ChannelID will be used.
+// func (s *SocketModeAdapter) sendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, templateText string) error {
+// 	t, err := template.New("envelope").Parse(templateText)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	buffer := new(bytes.Buffer)
+// 	err = t.Execute(buffer, envelope)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	options := []slack.MsgOption{
+// 		slack.MsgOptionDisableMediaUnfurl(),
+// 		slack.MsgOptionAsUser(false),
+// 		slack.MsgOptionUsername(s.provider.BotName),
+// 		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
+// 			IconURL:  s.provider.IconURL,
+// 			Markdown: true,
+// 		}),
+// 	}
+
+// 	if channelID == "" {
+// 		channelID = envelope.Request.ChannelID
+// 	}
+
+// 	if envelope.Data.Error != nil {
+// 		title := envelope.Response.Title
+// 		if title == "" {
+// 			title = "Error"
+// 		}
+
+// 		options = append(
+// 			options,
+// 			slack.MsgOptionAttachments(
+// 				slack.Attachment{
+// 					Title:      title,
+// 					Text:       buffer.String(),
+// 					Color:      "#FF0000",
+// 					MarkdownIn: []string{"text"},
+// 				},
+// 			),
+// 		)
+
+// 	} else {
+// 		options = append(
+// 			options,
+// 			slack.MsgOptionDisableMediaUnfurl(),
+// 			slack.MsgOptionText(buffer.String(), false),
+// 		)
+// 	}
+
+// 	_, _, err = s.client.PostMessage(channelID, options...)
+
+// 	return err
+// }

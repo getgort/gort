@@ -17,10 +17,12 @@
 package slack
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/templates"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
@@ -31,14 +33,14 @@ var (
 	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*:[^|]*\|([^|]*)\>`)
 )
 
-const DefaultCommandTemplate = "```{{ .Response.Out }}```"
+// const DefaultCommandTemplate = "```{{ .Response.Out }}```"
 
-const DefaultCommandErrorTemplate = "The pipeline failed planning the invocation:\n" +
-	"```{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}```\n" +
-	"The specific error was:\n" +
-	"```{{ .Response.Out }}```"
+// const DefaultCommandErrorTemplate = "The pipeline failed planning the invocation:\n" +
+// 	"```{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}```\n" +
+// 	"The specific error was:\n" +
+// 	"```{{ .Response.Out }}```"
 
-const DefaultMessageTemplate = "{{ .Response.Out }}"
+// const DefaultMessageTemplate = "{{ .Response.Out }}"
 
 // NewAdapter will construct a SlackAdapter instance for a given provider configuration.
 func NewAdapter(provider data.SlackProvider) adapter.Adapter {
@@ -87,4 +89,84 @@ func ScrubMarkdown(text string) string {
 	}
 
 	return text
+}
+
+func buildSlackOptions(elements templates.OutputElements) ([]slack.MsgOption, error) {
+	options := []slack.MsgOption{
+		slack.MsgOptionDisableMediaUnfurl(),
+		slack.MsgOptionAsUser(false),
+	}
+
+	var attachments []slack.Attachment
+
+	if elements.Title != "" || elements.Color != "" {
+		attachments = append(attachments, slack.Attachment{
+			Title: elements.Title,
+			Color: elements.Color,
+		})
+	}
+
+	var blocks []slack.Block
+
+	for _, e := range elements.Elements {
+		switch t := e.(type) {
+		case *templates.Divider:
+			blocks = append(blocks, slack.NewDividerBlock())
+
+		case *templates.Image:
+			blocks = append(blocks, slack.NewImageBlock(t.URL, "alt-text", "", nil))
+
+		case *templates.Section:
+			var tbf []*slack.TextBlockObject
+			var tbo *slack.TextBlockObject // TODO(mtitmus) There's currently no way for a user to set this.
+			var tba *slack.Accessory = &slack.Accessory{}
+
+			if t.Text != nil {
+				tbo = buildTextBlockObject(t.Text)
+			}
+
+			for _, tf := range t.Fields {
+				switch t := tf.(type) {
+				case *templates.Text:
+					tbf = append(tbf, buildTextBlockObject(t))
+				case *templates.Image:
+					tba.ImageElement = slack.NewImageBlockElement(t.URL, "alt-text")
+				default:
+					return nil, fmt.Errorf("%T elements are not supported inside a Section for Slack", e)
+				}
+			}
+
+			blocks = append(blocks, slack.NewSectionBlock(tbo, tbf, tba))
+
+		case *templates.Text:
+			blocks = append(blocks, slack.NewSectionBlock(
+				buildTextBlockObject(t), nil, nil,
+			))
+
+		default:
+			return nil, fmt.Errorf("%T elements are not yet supported for Slack", e)
+		}
+	}
+
+	if attachments != nil {
+		options = append(options, slack.MsgOptionAttachments(attachments...))
+	}
+
+	options = append(options, slack.MsgOptionBlocks(blocks...))
+
+	return options, nil
+}
+
+func buildTextBlockObject(t *templates.Text) *slack.TextBlockObject {
+	textType := "mrkdwn"
+	if !t.Markdown {
+		textType = "plain_text"
+	}
+
+	txt := t.Text
+	if t.Monospace {
+		txt = fmt.Sprintf("```%s```", txt)
+	}
+
+	return slack.NewTextBlockObject(textType, txt, t.Emoji, t.Markdown)
 }
