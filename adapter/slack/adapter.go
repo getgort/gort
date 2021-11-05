@@ -17,13 +17,13 @@
 package slack
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/templates"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
@@ -33,15 +33,6 @@ var (
 	linkMarkdownRegexShort = regexp.MustCompile(`\<([^|:]*:[^|]*)\>`)
 	linkMarkdownRegexLong  = regexp.MustCompile(`\<[^|:]*:[^|]*\|([^|]*)\>`)
 )
-
-// const DefaultCommandTemplate = "```{{ .Response.Out }}```"
-
-// const DefaultCommandErrorTemplate = "The pipeline failed planning the invocation:\n" +
-// 	"```{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}```\n" +
-// 	"The specific error was:\n" +
-// 	"```{{ .Response.Out }}```"
-
-// const DefaultMessageTemplate = "{{ .Response.Out }}"
 
 // NewAdapter will construct a SlackAdapter instance for a given provider configuration.
 func NewAdapter(provider data.SlackProvider) adapter.Adapter {
@@ -74,6 +65,7 @@ func NewAdapter(provider data.SlackProvider) adapter.Adapter {
 
 // ScrubMarkdown removes unnecessary/undesirable Slack markdown (of links, of
 // example) from text received from Slack.
+// TODO(mtitmus) Can this be replaced by using Slack's "verbatim text" option?
 func ScrubMarkdown(text string) string {
 	// Remove links of the format "<https://google.com>"
 	if index := linkMarkdownRegexShort.FindStringIndex(text); index != nil {
@@ -90,6 +82,9 @@ func ScrubMarkdown(text string) string {
 	return text
 }
 
+// buildSlackOptions accepts a templates.OutputElements value produced by
+// templates.EncodeElements and produces a roughly equivalent []slack.MsgOption
+// value. It's used directly by the two adapter implementations.
 func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, error) {
 	options := []slack.MsgOption{
 		slack.MsgOptionDisableMediaUnfurl(),
@@ -97,6 +92,7 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 	}
 
 	var blocks []slack.Block
+	var headerBlock *slack.SectionBlock
 
 	for _, e := range elements.Elements {
 		switch t := e.(type) {
@@ -107,17 +103,15 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 			elements.Color = t.Color
 			elements.Title = t.Title
 
-			if elements.Title != "" {
-				text := &templates.Text{
-					Markdown: true,
-					Text:     fmt.Sprintf("*%s*", t.Title),
-				}
-				textBlock, err := buildTextBlockObject(text)
-				if err != nil {
-					return nil, err
-				}
+			if t.Title != "" {
+				text := &templates.Text{Markdown: true, Text: fmt.Sprintf("*%s*", t.Title)}
 
-				blocks = append(blocks, slack.NewSectionBlock(textBlock, nil, nil))
+				if textBlock, err := buildTextBlockObject(text); err != nil {
+					return nil, err
+				} else {
+					// blocks = append(blocks, slack.NewSectionBlock(textBlock, nil, nil))
+					headerBlock = slack.NewSectionBlock(textBlock, nil, nil)
+				}
 			}
 
 		case *templates.Image:
@@ -170,29 +164,52 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 		}
 	}
 
-	if elements.Color != "" {
-		b, _ := json.MarshalIndent(elements, "", "  ")
-		fmt.Println("A\n", string(b))
-		b, _ = json.MarshalIndent(blocks, "", "  ")
-		fmt.Println("A\n", string(b))
+	// Slack attachments are funny. If you try to use a default one you get
+	// an error. Also if you try to set a title and use blocks you get an
+	// error. Therefore we only use one if we have
 
-		attachment := slack.Attachment{
-			Color:  elements.Color,
-			Blocks: slack.Blocks{BlockSet: blocks},
+	// If there's no color set, we just use blocks and no attachment options.
+	if elements.Color == "" {
+		if headerBlock != nil {
+			blocks = append([]slack.Block{headerBlock}, blocks...)
 		}
-
-		options = append(options, slack.MsgOptionAttachments(attachment))
-	} else {
-		b, _ := json.MarshalIndent(elements, "", "  ")
-		fmt.Println("B\n", string(b))
-		b, _ = json.MarshalIndent(blocks, "", "  ")
-		fmt.Println("B\n", string(b))
 		options = append(options, slack.MsgOptionBlocks(blocks...))
+
+		return options, nil
 	}
+
+	// If we have one block, and it's a text block, we can use a title!
+	// This isn't TECHNICALLY necessary, but it produces a cleaner output.
+	if sb, ok := blocks[0].(*slack.SectionBlock); ok && sb.Text != nil && len(blocks) == 1 {
+		attachment := slack.Attachment{
+			Color: elements.Color,
+			Title: elements.Title,
+			Text:  sb.Text.Text,
+		}
+		options = append(options, slack.MsgOptionAttachments(attachment))
+
+		return options, nil
+	}
+
+	// We CAN use an attachment to set a message color (without a title) and
+	// still use blocks. Let's do that.
+
+	if headerBlock != nil {
+		blocks = append([]slack.Block{headerBlock}, blocks...)
+	}
+	attachment := slack.Attachment{
+		Color:  elements.Color,
+		Blocks: slack.Blocks{BlockSet: blocks},
+	}
+	options = append(options, slack.MsgOptionAttachments(attachment))
 
 	return options, nil
 }
 
+// buildTextBlockObject accepts a templates.Text value, does some basic error
+// correction to satisty the very tempermental Slack API, and returns an
+// equivalent slack.TextBlockObject. It produces an error if the resulting
+// TextBlockObject is not valid (according to TextBlockObject.Validate())
 func buildTextBlockObject(t *templates.Text) (*slack.TextBlockObject, error) {
 	var textType string
 	var emoji = t.Emoji
