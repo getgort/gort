@@ -39,6 +39,7 @@ import (
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/rules"
 	"github.com/getgort/gort/telemetry"
+	"github.com/getgort/gort/templates"
 	"github.com/getgort/gort/version"
 )
 
@@ -108,16 +109,15 @@ type Adapter interface {
 	// begin relaying back events (including errors) via the returned channel.
 	Listen(ctx context.Context) <-chan *ProviderEvent
 
-	// SendErrorMessage sends an error message to a specified channel.
-	SendErrorMessage(channelID string, title string, text string) error
-
-	// SendMessage sends a standard output message to a specified channel.
-	SendMessage(channel string, message string) error
-
-	// SendResponseEnvelope sends the contents of a response envelope to a
+	// SendEnvelope sends the contents of a response envelope to a
 	// specified channel. If channelID is empty the value of
 	// envelope.Request.ChannelID will be used.
-	SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error
+	Send(ctx context.Context, channelID string, elements templates.OutputElements) error
+
+	// SendError is a break-glass error message function that's used when the
+	// templating function fails somehow. Obviously, it does not utilize the
+	// templating engine.
+	SendError(ctx context.Context, channelID string, err error) error
 }
 
 type RequestorIdentity struct {
@@ -209,7 +209,7 @@ func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent
 
 	for _, c := range channels {
 		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", version.Version, c.Name)
-		err := event.Adapter.SendMessage(c.ID, message)
+		err := SendMessage(ctx, event.Adapter, c.ID, message)
 		if err != nil {
 			telemetry.Errors().WithError(err).Commit(ctx)
 			addSpanAttributes(ctx, sp, err)
@@ -242,7 +242,7 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 		return nil, err
 	}
 
@@ -272,7 +272,7 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 		return nil, err
 	}
 
@@ -282,6 +282,67 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 	addSpanAttributes(ctx, sp, event, attribute.String("command.raw", rawCommandText))
 
 	return TriggerCommand(ctx, rawCommandText, id)
+}
+
+// SendErrorMessage sends an error message to a specified channel.
+func SendErrorMessage(ctx context.Context, a Adapter, channelID string, title, text string) error {
+	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
+	return SendEnvelope(ctx, a, channelID, e, data.MessageError)
+}
+
+// SendMessage sends a standard output message to a specified channel.
+func SendMessage(ctx context.Context, a Adapter, channelID string, message string) error {
+	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
+	return SendEnvelope(ctx, a, channelID, e, data.Message)
+}
+
+// SendEnvelope sends the contents of a response envelope to a
+// specified channel. If channelID is empty the value of
+// envelope.Request.ChannelID will be used.
+func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "adapter.SendEnvelope")
+	defer sp.End()
+
+	e := adapterLogEntry(ctx, log.WithContext(ctx), a).WithField("message.type", tt)
+
+	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
+	if err != nil {
+		e.WithError(err).Error("failed to get template")
+		if err := a.SendError(ctx, channelID, err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	tf, err := templates.Transform(template, envelope)
+	if err != nil {
+		e.WithError(err).Error("template engine failed to transform template")
+		if err := a.SendError(ctx, channelID, err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	elements, err := templates.EncodeElements(tf)
+	if err != nil {
+		e.WithError(err).Error("template engine failed to encode elements")
+		if err := a.SendError(ctx, channelID, err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	err = a.Send(ctx, channelID, elements)
+	if err != nil {
+		e.WithError(err).Error("failed to send message to adapter")
+		if err := a.SendError(ctx, channelID, err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	return nil
 }
 
 // StartListening instructs all relays to establish connections, receives all
@@ -337,15 +398,15 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 					"interact with me.\n\n\nYou'll need to ask a Gort " +
 					"administrator to fix this situation and to register your " +
 					"Slack handle."
-				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Account", msg)
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Account", msg)
 			case gerrs.Is(err, ErrGortNotBootstrapped):
 				msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
 					"use `gort bootstrap` to properly bootstrap the Gort " +
 					"environment before proceeding."
-				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Not Bootstrapped?", msg)
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Not Bootstrapped?", msg)
 			default:
 				msg := "An unexpected error has occurred"
-				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", msg)
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", msg)
 			}
 
 			da.RequestError(ctx, request, err)
@@ -366,7 +427,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
 				"owner of a shiny new Gort account named `%s`!",
 				id.GortUser.Username)
-			id.Adapter.SendMessage(id.ChatUser.ID, message)
+			SendMessage(ctx, id.Adapter, id.ChatUser.ID, message)
 
 			le.Info("Autocreating Gort user")
 		}
@@ -378,7 +439,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("Command tokenization error")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("command tokenization error: %w", err)
 	}
@@ -398,7 +459,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("Command parse error")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("command parse error: %w", err)
 	}
@@ -411,14 +472,14 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
 				"If this is not expected, you should contact a Gort administrator.",
 				tokens[0])
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
 		case gerrs.Is(err, ErrMultipleCommands):
 			msg := fmt.Sprintf("The command %s matches multiple bundles.\n"+
 				"Please namespace your command using the bundle name: `bundle:command`.",
 				tokens[0])
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
 		default:
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", err.Error())
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", err.Error())
 		}
 
 		da.RequestError(ctx, request, err)
@@ -436,7 +497,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("Command parse error")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("command parse error: %w", err)
 	}
@@ -459,7 +520,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("User permission load failure")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("user permission load error: %w", err)
 	}
@@ -472,7 +533,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		switch {
 		case gerrs.Is(err, auth.ErrRuleLoadError):
 			le.WithError(err).Error("Rule load error")
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 			return nil, fmt.Errorf("rule load error: %w", err)
 
 		case gerrs.Is(err, auth.ErrNoRulesDefined):
@@ -480,14 +541,14 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
 				"For a command to be executable, it must have at least one rule.",
 				cmdEntry.Bundle.Name, cmdEntry.Command.Name)
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Rules Defined", msg)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Rules Defined", msg)
 			return nil, err
 		}
 	}
 
 	if !allowed {
 		msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Permission Denied", msg)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Permission Denied", msg)
 
 		err = fmt.Errorf("permission denied")
 		da.RequestError(ctx, request, err)
@@ -940,7 +1001,9 @@ func startRelayResponseListening(responses <-chan data.CommandResponseEnvelope,
 			tt = data.CommandError
 		}
 
-		if err := adapter.SendResponseEnvelope(envelope.Request.ChannelID, envelope, tt); err != nil {
+		ctx := context.Background()
+		channelID := envelope.Request.ChannelID
+		if err := SendEnvelope(ctx, adapter, channelID, envelope, tt); err != nil {
 			adapterErrors <- err
 		}
 	}

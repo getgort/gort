@@ -224,36 +224,11 @@ func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adap
 	}
 }
 
-// SendErrorMessage sends an error message to a specified channel.
-func (s *Adapter) SendErrorMessage(channelID string, title string, text string) error {
-	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.SendResponseEnvelope(channelID, e, data.MessageError)
-}
-
-// SendMessage sends a standard output message to a specified channel.
-func (s *Adapter) SendMessage(channelID string, message string) error {
-	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-
-	return s.SendResponseEnvelope(channelID, e, data.Message)
-}
-
-// SendResponseEnvelope sends the contents of a response envelope to a
+// SendEnvelope sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
-func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
-	if channelID == "" {
-		channelID = envelope.Request.ChannelID
-	}
-
-	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
-	if err != nil {
-		return err
-	}
-
-	elements, err := templates.TransformAndEncode(template, envelope)
-	if err != nil {
-		return err
-	}
+func (s *Adapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
+	var err error
 
 	var color uint64
 	if elements.Color != "" {
@@ -339,6 +314,23 @@ func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandRe
 	}
 
 	embed.Fields = fields
+
+	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
+
+	return err
+}
+
+// SendError is a break-glass error message function that's used when the
+// templating function fails somehow. Obviously, it does not utilize the
+// templating engine.
+func (s *Adapter) SendError(ctx context.Context, channelID string, err error) error {
+	embed := &discordgo.MessageEmbed{
+		Color:     0xFF0000,
+		Title:     "Error",
+		Timestamp: time.Now().Format(time.RFC3339),
+		Type:      discordgo.EmbedTypeRich,
+		Fields:    []*discordgo.MessageEmbedField{{Value: err.Error()}},
+	}
 
 	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
 

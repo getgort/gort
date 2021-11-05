@@ -207,84 +207,15 @@ func (s *SocketModeAdapter) Listen(ctx context.Context) <-chan *adapter.Provider
 	return events
 }
 
-// SendErrorMessage sends an error message to a specified channel.
-func (s *SocketModeAdapter) SendErrorMessage(channelID string, title string, text string) error {
-	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.SendResponseEnvelope(channelID, e, data.MessageError)
-}
-
-// SendMessage sends a standard output message to a specified channel.
-func (s *SocketModeAdapter) SendMessage(channelID string, message string) error {
-	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-	return s.SendResponseEnvelope(channelID, e, data.Message)
-}
-
-// SendResponseEnvelope sends the contents of a response envelope to a
+// Send sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
-func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
-	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
-	if err != nil {
-		s.handleSendError(channelID, err, tt)
-		return err
-	}
-
-	tf, err := templates.Transform(template, envelope)
-	if err != nil {
-		s.handleSendError(channelID, err, tt)
-		return err
-	}
-
-	elements, err := templates.EncodeElements(tf)
-	if err != nil {
-		s.handleSendError(channelID, err, tt)
-		return err
-	}
-
-	options, err := buildSlackOptions(&elements)
-	if err != nil {
-		s.handleSendError(channelID, err, tt)
-		return err
-	}
-
-	_, _, err = s.client.PostMessage(channelID, options...)
-	if err != nil {
-		s.handleSendError(channelID, err, tt)
-		return err
-	}
-
-	return nil
+func (s *SocketModeAdapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
+	return Send(ctx, s.client, s, channelID, elements)
 }
 
-func (s *SocketModeAdapter) handleSendError(channelID string, err error, tt data.TemplateType) {
-	log.WithError(err).WithField("adapter", s.GetName()).WithField("template_type", tt).Error("Failed to send message")
-
-	text := fmt.Sprintf("There was an error in the relevant template (type=%s).\nThe specific error was:\n```%s```", tt, err.Error())
-
-	_, _, err = s.client.PostMessage(
-		channelID,
-		slack.MsgOptionAttachments(
-			slack.Attachment{
-				Title:      "Template Error",
-				Text:       text,
-				Color:      "#FF0000",
-				MarkdownIn: []string{"text"},
-				ThumbURL:   "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/apple/285/fire_1f525.png",
-			},
-		),
-		slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionDisableMarkdown(),
-		slack.MsgOptionAsUser(false),
-		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}),
-	)
-
-	if err != nil {
-		log.WithError(err).WithField("adapter", s.GetName()).Error("Failed to send break-glass error message!")
-	}
+func (s *SocketModeAdapter) SendError(ctx context.Context, channelID string, err error) error {
+	return SendError(ctx, s.client, channelID, err)
 }
 
 // onChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.

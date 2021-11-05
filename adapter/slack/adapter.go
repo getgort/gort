@@ -17,6 +17,7 @@
 package slack
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 
@@ -80,6 +81,53 @@ func ScrubMarkdown(text string) string {
 	}
 
 	return text
+}
+
+// Send sends the contents of a response envelope to a
+// specified channel. If channelID is empty the value of
+// envelope.Request.ChannelID will be used.
+func Send(ctx context.Context, client *slack.Client, a adapter.Adapter, channelID string, elements templates.OutputElements) error {
+	e := log.WithContext(ctx)
+
+	options, err := buildSlackOptions(&elements)
+	if err != nil {
+		e.WithError(err).Error("failed to build Slack options")
+		if err := a.SendError(ctx, channelID, err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	_, _, err = client.PostMessage(channelID, options...)
+	if err != nil {
+		e.WithError(err).Error("failed to post Slack message")
+		if err := a.SendError(ctx, channelID, err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	return nil
+}
+
+func SendError(ctx context.Context, client *slack.Client, channelID string, err error) error {
+	_, _, e := client.PostMessage(
+		channelID,
+		slack.MsgOptionAttachments(
+			slack.Attachment{
+				Title:      "Error",
+				Text:       err.Error(),
+				Color:      "#FF0000",
+				MarkdownIn: []string{"text"},
+				ThumbURL:   "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/apple/285/fire_1f525.png",
+			},
+		),
+		slack.MsgOptionDisableMediaUnfurl(),
+		slack.MsgOptionDisableMarkdown(),
+		slack.MsgOptionAsUser(false),
+	)
+
+	return e
 }
 
 // buildSlackOptions accepts a templates.OutputElements value produced by
