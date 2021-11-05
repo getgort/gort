@@ -76,14 +76,12 @@ func NewAdapter(provider data.SlackProvider) adapter.Adapter {
 // example) from text received from Slack.
 func ScrubMarkdown(text string) string {
 	// Remove links of the format "<https://google.com>"
-	//
 	if index := linkMarkdownRegexShort.FindStringIndex(text); index != nil {
 		submatch := linkMarkdownRegexShort.FindStringSubmatch(text)
 		text = text[:index[0]] + submatch[1] + text[index[1]:]
 	}
 
 	// Remove links of the format "<http://google.com|google.com>"
-	//
 	if index := linkMarkdownRegexLong.FindStringIndex(text); index != nil {
 		submatch := linkMarkdownRegexLong.FindStringSubmatch(text)
 		text = text[:index[0]] + submatch[1] + text[index[1]:]
@@ -128,7 +126,7 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 		case *templates.Section:
 			var tbf []*slack.TextBlockObject
 			var tbo *slack.TextBlockObject // TODO(mtitmus) There's currently no way for a user to set this.
-			var tba *slack.Accessory = &slack.Accessory{}
+			var tba *slack.Accessory
 
 			if t.Text != nil {
 				textBlock, err := buildTextBlockObject(t.Text)
@@ -142,12 +140,15 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 			for _, tf := range t.Fields {
 				switch t := tf.(type) {
 				case *templates.Text:
-					textBlock, err := buildTextBlockObject(t)
-					if err != nil {
+					if textBlock, err := buildTextBlockObject(t); err != nil {
 						return nil, err
+					} else {
+						tbf = append(tbf, textBlock)
 					}
-					tbf = append(tbf, textBlock)
 				case *templates.Image:
+					if tba == nil {
+						tba = &slack.Accessory{}
+					}
 					tba.ImageElement = slack.NewImageBlockElement(t.URL, "alt-text")
 				default:
 					return nil, fmt.Errorf("%T elements are not supported inside a Section for Slack", e)
@@ -170,7 +171,9 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 	}
 
 	if elements.Color != "" {
-		b, _ := json.MarshalIndent(blocks, "", "  ")
+		b, _ := json.MarshalIndent(elements, "", "  ")
+		fmt.Println("A\n", string(b))
+		b, _ = json.MarshalIndent(blocks, "", "  ")
 		fmt.Println("A\n", string(b))
 
 		attachment := slack.Attachment{
@@ -180,59 +183,14 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 
 		options = append(options, slack.MsgOptionAttachments(attachment))
 	} else {
-		b, _ := json.MarshalIndent(blocks, "", "  ")
+		b, _ := json.MarshalIndent(elements, "", "  ")
+		fmt.Println("B\n", string(b))
+		b, _ = json.MarshalIndent(blocks, "", "  ")
 		fmt.Println("B\n", string(b))
 		options = append(options, slack.MsgOptionBlocks(blocks...))
 	}
 
 	return options, nil
-}
-
-// SendMessage sends a standard output message to a specified channel.
-func (s *SocketModeAdapter) SendMessageExample(channelID string, message string) error {
-	img := "https://placekitten.com/500/500"
-
-	switch message[6:] {
-	case "tabby":
-		img = "https://pictures-of-cats.org/wp-content/uploads/2019/11/Striped-tabby4.jpg"
-	}
-
-	_, _, err := s.client.PostMessage(channelID,
-		slack.MsgOptionAttachments(
-			slack.Attachment{
-				// Title: "This is a title",
-				// Text:       "text",
-				Color: "#FF0000",
-				// MarkdownIn: []string{"text"},
-				Blocks: slack.Blocks{
-					BlockSet: []slack.Block{
-						slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", "Hello! :wave: Enjoy your cat picture!", false, true), nil, nil),
-						slack.NewImageBlock(
-							img, "A kitty!", "",
-							slack.NewTextBlockObject("plain_text", "Please enjoy this cat picture.", false, false),
-						),
-					},
-				},
-			},
-		),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}),
-
-		// slack.MsgOptionBlocks(
-		// 	slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", "Hello! :wave: Enjoy your cat picture!", false, true), nil, nil),
-		// 	slack.NewImageBlock(
-		// 		img, "A kitty!", "",
-		// 		slack.NewTextBlockObject("plain_text", "Please enjoy this cat picture.", false, false),
-		// 	),
-		// ),
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func buildTextBlockObject(t *templates.Text) (*slack.TextBlockObject, error) {
@@ -251,7 +209,7 @@ func buildTextBlockObject(t *templates.Text) (*slack.TextBlockObject, error) {
 		txt = fmt.Sprintf("```%s```", txt)
 	}
 
-	tbo := slack.NewTextBlockObject(textType, txt, emoji, t.Markdown)
+	tbo := slack.NewTextBlockObject(textType, txt, emoji, false)
 
 	return tbo, tbo.Validate()
 }

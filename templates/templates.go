@@ -103,6 +103,8 @@ func EncodeElements(text string) (OutputElements, error) {
 			switch {
 			case header != nil:
 				return encodingError(text, first, "duplicate {{header}} on line %d")
+			case len(elements.Elements) != 0:
+				return encodingError(text, first, "unexpected {{header}} on line %d; header must be the first element")
 			case lastSection != nil:
 				return encodingError(text, first, "illegal {{header}} in {{section}} on line %d")
 			case lastText != nil:
@@ -165,8 +167,6 @@ func EncodeElements(text string) (OutputElements, error) {
 			switch {
 			case lastText != nil:
 				return encodingError(text, first, "illegal {{text}} in {{text}} on line %d")
-			case lastSection != nil:
-				lastSection.Fields = append(lastSection.Fields, o)
 			default:
 				lastText = o
 			}
@@ -175,6 +175,11 @@ func EncodeElements(text string) (OutputElements, error) {
 			switch {
 			case lastText == nil:
 				return encodingError(text, first, "unmatched {{endtext}} on line %d")
+			case lastSection != nil:
+				lastText.Text = text[lastText.Last()+1 : first]
+				lastText.Tag.LastIndex = last
+				lastSection.Fields = append(lastSection.Fields, lastText)
+				lastText = nil
 			default:
 				lastText.Text = text[lastText.Last()+1 : first]
 				lastText.Tag.LastIndex = last
