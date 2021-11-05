@@ -227,20 +227,20 @@ func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adap
 // SendErrorMessage sends an error message to a specified channel.
 func (s *Adapter) SendErrorMessage(channelID string, title string, text string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.SendResponseEnvelope(channelID, e, templates.MessageError)
+	return s.SendResponseEnvelope(channelID, e, data.MessageError)
 }
 
 // SendMessage sends a standard output message to a specified channel.
 func (s *Adapter) SendMessage(channelID string, message string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
 
-	return s.SendResponseEnvelope(channelID, e, templates.Message)
+	return s.SendResponseEnvelope(channelID, e, data.Message)
 }
 
 // SendResponseEnvelope sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
-func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error {
+func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
 	if channelID == "" {
 		channelID = envelope.Request.ChannelID
 	}

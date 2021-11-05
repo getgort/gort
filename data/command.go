@@ -57,6 +57,7 @@ func (r CommandRequest) String() string {
 	return fmt.Sprintf("%s:%s %s", r.Bundle.Name, r.Command.Name, r.Parameters)
 }
 
+// CommandResponse wraps the response text emitted by an executed command.
 type CommandResponse struct {
 	// Lines contains the command output (from both stdout and stderr) as
 	// a string slice, delimitted along newlines.
@@ -66,9 +67,9 @@ type CommandResponse struct {
 	// with newlines.
 	Out string
 
-	// Structured is true if the command output is structured as JSON? If
-	// so, then it will be unmarshalled as Payload; else Payload will be a
-	// string (equal to Out).
+	// Structured is true if the command output is valid JSON. If so, then it
+	// also be unmarshalled as Payload; else Payload will be a string (equal
+	// to Out).
 	Structured bool
 
 	// Title includes a title. Usually only set by the relay for certain
@@ -77,29 +78,27 @@ type CommandResponse struct {
 	Title string
 }
 
-// CommandResponseData contains about the command execution, including its
+// CommandResponseData contains about a command execution, including its
 // duration and exit code. If the relay set an an explicit error, it will
 // be here as well.
 type CommandResponseData struct {
 	// Duration is how long the command required to execute.
 	// TODO(mtitmus) What are the start and endpoints? Do we want to track
-	// multiple durations for "famework time" and "command time" and whatever
+	// multiple durations for "framework time" and "command time" and whatever
 	// else?
 	Duration time.Duration
 
 	// ExitCode is the exit code reported by the command.
 	ExitCode int16
 
-	// Error can be set by the relay in certain internal error conditions.
-	// TODO(mtitmus) Do we even need this? Will it be confusing?
+	// Error is set by the relay under certain internal error conditions.
 	Error error
 }
 
 // CommandResponseEnvelope encapsulates the data and metadata around a command
 // execution and response. It's returned by a relay when a command has been
-// executed. It is passed directly into the response formatter where it can be
+// executed. It is passed directly into the templating engine where it can be
 // accessed by the Go templates that describe the response formats.
-// https://play.golang.org/p/tYe4zc0E1cB
 type CommandResponseEnvelope struct {
 	// Request is the original request used to execute the command. It contains
 	// the original CommandEntry value as well as the user and adapter data.
@@ -118,6 +117,8 @@ type CommandResponseEnvelope struct {
 	Payload interface{}
 }
 
+// NewCommandResponseEnvelope can be used to generate a new
+// CommandResponseEnvelope value with the provided options.
 func NewCommandResponseEnvelope(request CommandRequest, opts ...CommandResponseEnvelopeOption) CommandResponseEnvelope {
 	envelope := CommandResponseEnvelope{
 		Request:  request,
@@ -131,17 +132,19 @@ func NewCommandResponseEnvelope(request CommandRequest, opts ...CommandResponseE
 	return envelope
 }
 
+// CommandResponseEnvelopeOption is returned by the various WithX functions
+// and accepted by NewCommandResponseEnvelope.
 type CommandResponseEnvelopeOption func(e *CommandResponseEnvelope)
 
-// WithExitCode sets Data.ExitCode and Data.IsError
+// WithExitCode sets Data.ExitCode. It does NOT set
 func WithExitCode(code int16) CommandResponseEnvelopeOption {
 	return func(e *CommandResponseEnvelope) {
 		e.Data.ExitCode = code
 	}
 }
 
-// WithError sets e.Data.Error, Data.ExitCode, Data.IsError, Response.Lines,
-// Response.Out, and Response.Title.
+// WithError sets Data.Error, Data.ExitCode, Response.Lines, Response.Out,
+// Response.Structured, Response.Title, and Payload (as err.Error).
 func WithError(title string, err error, code int16) CommandResponseEnvelopeOption {
 	return func(e *CommandResponseEnvelope) {
 		e.Data.Error = err
@@ -153,7 +156,8 @@ func WithError(title string, err error, code int16) CommandResponseEnvelopeOptio
 	}
 }
 
-// WithResponseLines sets Response.Lines and Response.Out.
+// WithResponseLines sets Response.Lines, Response.Out, Response.Structured,
+// and Payload.
 func WithResponseLines(r []string) CommandResponseEnvelopeOption {
 	return func(e *CommandResponseEnvelope) {
 		e.Response.Lines = r
@@ -162,8 +166,8 @@ func WithResponseLines(r []string) CommandResponseEnvelopeOption {
 	}
 }
 
-// unmarshalResponsePayload will examine the string parameter to determine
-// whether it contains valid JSON. If it does, it will unmarshal the contents
+// unmarshalResponsePayload examines the string parameter to determine
+// whether it contains valid JSON. If it does it will unmarshal the contents
 // and return the result and true; else it will return the original string
 // and false.
 func unmarshalResponsePayload(s string) (interface{}, bool) {

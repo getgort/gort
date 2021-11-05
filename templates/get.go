@@ -24,34 +24,29 @@ import (
 )
 
 const (
-	DefaultDefault = `{{ text }}{{ .Response.Out }}{{ endtext }}`
-
-	DefaultMessage = `{{ text }}{{ .Response.Out }}{{ endtext }}`
-
-	DefaultMessageError = `{{ header | color "#FF0000" }}{{ .Response.Title }}{{ endheader }}
-{{ text }}{{ .Response.Out }}{{ endtext }}`
-
+	// DefaultCommand is a template used to format the outputs from successfully
+	// executed commands.
 	DefaultCommand = `{{ text | monospace true }}{{ .Response.Out }}{{ endtext }}`
 
+	// CommandError is a template used to format the error messages produced
+	// by commands that return with a non-zero status.
 	DefaultCommandError = `{{ header | color "#FF0000" }}{{ .Response.Title }}{{ endheader }}
 {{ text }}The pipeline failed planning the invocation:{{ endtext }}
 {{ text | monospace true }}{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}{{ endtext }}
 {{ text }}The specific error was:{{ endtext }}
 {{ text | monospace true }}{{ .Response.Out }}{{ endtext }}`
-)
 
-const (
-	Default      TemplateType = "default"
-	Message      TemplateType = "message"
-	MessageError TemplateType = "message_error"
-	Command      TemplateType = "command"
-	CommandError TemplateType = "command_error"
-)
+	// Message is a template used to format standard informative (non-error)
+	// messages from the Gort system (not commands).
+	DefaultMessage = `{{ text }}{{ .Response.Out }}{{ endtext }}`
 
-type TemplateType string
+	// MessageError is a template used to format error messages from the Gor
+	// system (not commands).
+	DefaultMessageError = `{{ header | color "#FF0000" }}{{ .Response.Title }}{{ endheader }}
+{{ text }}{{ .Response.Out }}{{ endtext }}`
+)
 
 var templateDefaults = data.Templates{
-	Default:      DefaultDefault,
 	Message:      DefaultMessage,
 	MessageError: DefaultMessageError,
 	Command:      DefaultCommand,
@@ -59,45 +54,29 @@ var templateDefaults = data.Templates{
 }
 
 // Get returns the first defined template found in the following sequence:
-// 1. Command (type-specific, then default)
-// 2. Bundle (type-specific, then default)
-// 3. Config (type-specific, then default)
-// 4. Default (type-specific, then default)
-func Get(cmd data.BundleCommand, bundle data.Bundle, tt TemplateType) (string, error) {
+// 1. Command
+// 2. Bundle
+// 3. Config
+// 4. Default
+func Get(cmd data.BundleCommand, bundle data.Bundle, tt data.TemplateType) (string, error) {
 	// We really only need to check for an error on the first call. The
 	// outcome won't change after this.
-	switch template, err := cmd.Templates.Get(string(tt)); {
+	switch template, err := cmd.Templates.Get(tt); {
 	case err != nil:
 		return "", err
 	case template != "":
 		return template, nil
 	}
 
-	if template, _ := cmd.Templates.Get(string(Default)); template != "" {
+	if template, _ := bundle.Templates.Get(tt); template != "" {
 		return template, nil
 	}
 
-	if template, _ := bundle.Templates.Get(string(tt)); template != "" {
+	if template, _ := config.GetTemplates().Get(tt); template != "" {
 		return template, nil
 	}
 
-	if template, _ := bundle.Templates.Get(string(Default)); template != "" {
-		return template, nil
-	}
-
-	if template, _ := config.GetTemplates().Get(string(tt)); template != "" {
-		return template, nil
-	}
-
-	if template, _ := config.GetTemplates().Get(string(Default)); template != "" {
-		return template, nil
-	}
-
-	if template, _ := templateDefaults.Get(string(tt)); template != "" {
-		return template, nil
-	}
-
-	if template, _ := templateDefaults.Get(string(Default)); template != "" {
+	if template, _ := templateDefaults.Get(tt); template != "" {
 		return template, nil
 	}
 

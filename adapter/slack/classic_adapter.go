@@ -289,19 +289,19 @@ func (s ClassicAdapter) Listen(ctx context.Context) <-chan *adapter.ProviderEven
 // SendErrorMessage sends an error message to a specified channel.
 func (s *ClassicAdapter) SendErrorMessage(channelID string, title string, text string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.SendResponseEnvelope(channelID, e, templates.MessageError)
+	return s.SendResponseEnvelope(channelID, e, data.MessageError)
 }
 
 // SendMessage sends a standard output message to a specified channel.
 func (s *ClassicAdapter) SendMessage(channelID string, message string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-	return s.SendResponseEnvelope(channelID, e, templates.Message)
+	return s.SendResponseEnvelope(channelID, e, data.Message)
 }
 
 // SendResponseEnvelope sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
-func (s *ClassicAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error {
+func (s *ClassicAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
 	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
 	if err != nil {
 		s.handleSendError(channelID, err, tt)
@@ -335,7 +335,7 @@ func (s *ClassicAdapter) SendResponseEnvelope(channelID string, envelope data.Co
 	return nil
 }
 
-func (s *ClassicAdapter) handleSendError(channelID string, err error, tt templates.TemplateType) {
+func (s *ClassicAdapter) handleSendError(channelID string, err error, tt data.TemplateType) {
 	log.WithError(err).WithField("adapter", s.GetName()).WithField("template_type", tt).Error("Failed to send message")
 
 	_, _, err = s.client.PostMessage(
@@ -346,6 +346,7 @@ func (s *ClassicAdapter) handleSendError(channelID string, err error, tt templat
 				Text:       err.Error(),
 				Color:      "#FF0000",
 				MarkdownIn: []string{"text"},
+				ThumbURL:   "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/apple/285/fire_1f525.png",
 			},
 		),
 		slack.MsgOptionDisableMediaUnfurl(),

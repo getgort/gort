@@ -210,19 +210,19 @@ func (s *SocketModeAdapter) Listen(ctx context.Context) <-chan *adapter.Provider
 // SendErrorMessage sends an error message to a specified channel.
 func (s *SocketModeAdapter) SendErrorMessage(channelID string, title string, text string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.SendResponseEnvelope(channelID, e, templates.MessageError)
+	return s.SendResponseEnvelope(channelID, e, data.MessageError)
 }
 
 // SendMessage sends a standard output message to a specified channel.
 func (s *SocketModeAdapter) SendMessage(channelID string, message string) error {
 	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-	return s.SendResponseEnvelope(channelID, e, templates.Message)
+	return s.SendResponseEnvelope(channelID, e, data.Message)
 }
 
 // SendResponseEnvelope sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
-func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error {
+func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
 	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
 	if err != nil {
 		s.handleSendError(channelID, err, tt)
@@ -256,7 +256,7 @@ func (s *SocketModeAdapter) SendResponseEnvelope(channelID string, envelope data
 	return nil
 }
 
-func (s *SocketModeAdapter) handleSendError(channelID string, err error, tt templates.TemplateType) {
+func (s *SocketModeAdapter) handleSendError(channelID string, err error, tt data.TemplateType) {
 	log.WithError(err).WithField("adapter", s.GetName()).WithField("template_type", tt).Error("Failed to send message")
 
 	text := fmt.Sprintf("There was an error in the relevant template (type=%s).\nThe specific error was:\n```%s```", tt, err.Error())

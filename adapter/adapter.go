@@ -39,7 +39,6 @@ import (
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/rules"
 	"github.com/getgort/gort/telemetry"
-	"github.com/getgort/gort/templates"
 	"github.com/getgort/gort/version"
 )
 
@@ -118,7 +117,7 @@ type Adapter interface {
 	// SendResponseEnvelope sends the contents of a response envelope to a
 	// specified channel. If channelID is empty the value of
 	// envelope.Request.ChannelID will be used.
-	SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt templates.TemplateType) error
+	SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error
 }
 
 type RequestorIdentity struct {
@@ -936,9 +935,9 @@ func startRelayResponseListening(responses <-chan data.CommandResponseEnvelope,
 			continue
 		}
 
-		tt := templates.Command
+		tt := data.Command
 		if envelope.Data.ExitCode != 0 {
-			tt = templates.CommandError
+			tt = data.CommandError
 		}
 
 		if err := adapter.SendResponseEnvelope(envelope.Request.ChannelID, envelope, tt); err != nil {

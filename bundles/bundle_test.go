@@ -40,7 +40,6 @@ func TestLoadBundleFromFile(t *testing.T) {
 	assert.Len(t, b.Commands, 1)
 
 	// Bundle templates
-	assert.Equal(t, "Template:Bundle:Default", b.Templates.Default)
 	assert.Equal(t, "Template:Bundle:CommandError", b.Templates.CommandError)
 	assert.Equal(t, "Template:Bundle:Command", b.Templates.Command)
 	assert.Equal(t, "Template:Bundle:MessageError", b.Templates.MessageError)
@@ -58,7 +57,6 @@ Usage:
 	assert.Equal(t, "must have test:echox", cmd.Rules[0])
 
 	// Command templates
-	assert.Equal(t, "Template:Command:Default", cmd.Templates.Default)
 	assert.Equal(t, "Template:Command:CommandError", cmd.Templates.CommandError)
 	assert.Equal(t, "Template:Command:Command", cmd.Templates.Command)
 	assert.Equal(t, "Template:Command:MessageError", cmd.Templates.MessageError)

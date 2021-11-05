@@ -17,7 +17,6 @@
 package data
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -64,31 +63,4 @@ type BundleCommand struct {
 type BundleDocker struct {
 	Image string `yaml:",omitempty" json:"image,omitempty"`
 	Tag   string `yaml:",omitempty" json:"tag,omitempty"`
-}
-
-type Templates struct {
-	Default      string `yaml:"default,omitempty" json:"default,omitempty"`
-	CommandError string `yaml:"command_error,omitempty" json:"command_error,omitempty"`
-	Command      string `yaml:"command,omitempty" json:"command,omitempty"`
-	MessageError string `yaml:"message_error,omitempty" json:"message_error,omitempty"`
-	Message      string `yaml:"message,omitempty" json:"message,omitempty"`
-}
-
-// Get returns a template string. If no template is defined for the given
-// name/type, an empty string is returned. An invalid name returns an error.
-func (t Templates) Get(name string) (string, error) {
-	switch name {
-	case "default":
-		return t.Default, nil
-	case "command":
-		return t.Command, nil
-	case "command_error":
-		return t.CommandError, nil
-	case "message":
-		return t.Message, nil
-	case "message_error":
-		return t.MessageError, nil
-	default:
-		return "", fmt.Errorf("invalid template type %q", name)
-	}
 }

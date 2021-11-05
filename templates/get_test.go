@@ -32,115 +32,59 @@ func TestLoadBundleFromFile(t *testing.T) {
 	}
 	cmd := *bundle.Commands["echox"]
 
-	template, err := Get(cmd, bundle, TemplateType("foo"))
+	template, err := Get(cmd, bundle, data.TemplateType("foo"))
 	require.Equal(t, "", template)
 	require.Error(t, err)
 
-	template, err = Get(cmd, bundle, Default)
-	assert.Equal(t, "Template:Command:Default", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, Command)
+	template, err = Get(cmd, bundle, data.Command)
 	assert.Equal(t, "Template:Command:Command", template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, CommandError)
+	template, err = Get(cmd, bundle, data.CommandError)
 	assert.Equal(t, "Template:Command:CommandError", template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, Message)
+	template, err = Get(cmd, bundle, data.Message)
 	assert.Equal(t, "Template:Command:Message", template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, MessageError)
+	template, err = Get(cmd, bundle, data.MessageError)
 	assert.Equal(t, "Template:Command:MessageError", template)
-	assert.NoError(t, err)
-
-	cmd.Templates = data.Templates{Default: "FOO"}
-
-	template, err = Get(cmd, bundle, Default)
-	assert.Equal(t, "FOO", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, Command)
-	assert.Equal(t, "FOO", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, CommandError)
-	assert.Equal(t, "FOO", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, Message)
-	assert.Equal(t, "FOO", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, MessageError)
-	assert.Equal(t, "FOO", template)
 	assert.NoError(t, err)
 
 	cmd.Templates = data.Templates{}
 
-	template, err = Get(cmd, bundle, Default)
-	assert.Equal(t, "Template:Bundle:Default", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, Command)
+	template, err = Get(cmd, bundle, data.Command)
 	assert.Equal(t, "Template:Bundle:Command", template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, CommandError)
+	template, err = Get(cmd, bundle, data.CommandError)
 	assert.Equal(t, "Template:Bundle:CommandError", template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, Message)
+	template, err = Get(cmd, bundle, data.Message)
 	assert.Equal(t, "Template:Bundle:Message", template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, MessageError)
+	template, err = Get(cmd, bundle, data.MessageError)
 	assert.Equal(t, "Template:Bundle:MessageError", template)
-	assert.NoError(t, err)
-
-	bundle.Templates = data.Templates{Default: "BAR"}
-
-	template, err = Get(cmd, bundle, Default)
-	assert.Equal(t, "BAR", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, Command)
-	assert.Equal(t, "BAR", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, CommandError)
-	assert.Equal(t, "BAR", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, Message)
-	assert.Equal(t, "BAR", template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, MessageError)
-	assert.Equal(t, "BAR", template)
 	assert.NoError(t, err)
 
 	bundle.Templates = data.Templates{}
 
-	template, err = Get(cmd, bundle, Default)
-	assert.Equal(t, DefaultDefault, template)
-	assert.NoError(t, err)
-
-	template, err = Get(cmd, bundle, Command)
+	template, err = Get(cmd, bundle, data.Command)
 	assert.Equal(t, DefaultCommand, template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, CommandError)
+	template, err = Get(cmd, bundle, data.CommandError)
 	assert.Equal(t, DefaultCommandError, template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, Message)
+	template, err = Get(cmd, bundle, data.Message)
 	assert.Equal(t, DefaultMessage, template)
 	assert.NoError(t, err)
 
-	template, err = Get(cmd, bundle, MessageError)
+	template, err = Get(cmd, bundle, data.MessageError)
 	assert.Equal(t, DefaultMessageError, template)
 	assert.NoError(t, err)
 }

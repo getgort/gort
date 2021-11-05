@@ -24,6 +24,7 @@ import (
 
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
+
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -35,10 +36,10 @@ var (
 
 func LoadBundleFromFile(file string) (data.Bundle, error) {
 	f, err := os.Open(file)
-	defer f.Close()
 	if err != nil {
 		return data.Bundle{}, err
 	}
+	defer f.Close()
 	return LoadBundle(f)
 }
 
