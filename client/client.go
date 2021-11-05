@@ -102,14 +102,16 @@ func (c Error) Status() uint {
 func Connect(profileName string) (*GortClient, error) {
 	// If the GORT_SERVICE_TOKEN envvar is set, use that first.
 	if te, exists := os.LookupEnv("GORT_SERVICE_TOKEN"); exists {
-		entry := ProfileEntry{URLString: os.Getenv("GORT_SERVICES_ROOT")}
+		entry := ProfileEntry{
+			URLString:     os.Getenv("GORT_SERVICES_ROOT"),
+			AllowInsecure: true, // TODO(mtitmus) Fine for now, but maybe fix this later?
+		}
 
 		url, err := parseHostURL(entry.URLString)
 		if err != nil {
 			return nil, err
 		}
 
-		entry.AllowInsecure = url.Scheme == "http"
 		entry.URL = url
 
 		client, err := NewClient(entry)
