@@ -46,6 +46,8 @@ func (da DataAccessTester) testLoadTestData(t *testing.T) {
 	b, err := getTestBundle()
 	assert.NoError(t, err)
 
+	assert.NotZero(t, b.Templates)
+
 	assert.NotEmpty(t, b.Commands)
 	assert.NotEmpty(t, b.Commands["echox"].Description)
 	assert.NotEmpty(t, b.Commands["echox"].Executable)
