@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package postgres
+package tests
 
 import (
 	"fmt"
@@ -25,13 +25,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testRequestAccess(t *testing.T) {
-	t.Run("testRequestBegin", testRequestBegin)
-	t.Run("testRequestUpdate", testRequestUpdate)
-	t.Run("testRequestClose", testRequestClose)
+func (da DataAccessTester) testRequestAccess(t *testing.T) {
+	t.Run("testRequestBegin", da.testRequestBegin)
+	t.Run("testRequestUpdate", da.testRequestUpdate)
+	t.Run("testRequestClose", da.testRequestClose)
 }
 
-func testRequestBegin(t *testing.T) {
+func (da DataAccessTester) testRequestBegin(t *testing.T) {
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 
@@ -53,16 +53,16 @@ func testRequestBegin(t *testing.T) {
 
 	assert.Zero(t, req.RequestID)
 
-	err = da.RequestBegin(ctx, &req)
+	err = da.RequestBegin(da.ctx, &req)
 	assert.NoError(t, err)
 
 	assert.NotZero(t, req.RequestID)
 
-	err = da.RequestBegin(ctx, &req)
+	err = da.RequestBegin(da.ctx, &req)
 	assert.Error(t, err)
 }
 
-func testRequestUpdate(t *testing.T) {
+func (da DataAccessTester) testRequestUpdate(t *testing.T) {
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 
@@ -82,16 +82,16 @@ func testRequestUpdate(t *testing.T) {
 		UserName:     "testUserName ",
 	}
 
-	err = da.RequestUpdate(ctx, req)
+	err = da.RequestUpdate(da.ctx, req)
 	assert.Error(t, err)
 
 	req.RequestID = 1
 
-	err = da.RequestUpdate(ctx, req)
+	err = da.RequestUpdate(da.ctx, req)
 	assert.NoError(t, err)
 }
 
-func testRequestClose(t *testing.T) {
+func (da DataAccessTester) testRequestClose(t *testing.T) {
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 
@@ -112,7 +112,7 @@ func testRequestClose(t *testing.T) {
 		UserName:     "testUserName ",
 	}
 
-	env := data.NewCommandResponseEnvelope(req, data.WithError("", fmt.Errorf("Fake error"), 1))
-	err = da.RequestClose(ctx, env)
+	env := data.NewCommandResponseEnvelope(req, data.WithError("", fmt.Errorf("fake error"), 1))
+	err = da.RequestClose(da.ctx, env)
 	assert.NoError(t, err)
 }

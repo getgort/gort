@@ -14,39 +14,32 @@
  * limitations under the License.
  */
 
-package memory
+package tests
 
 import (
 	"context"
 	"testing"
-	"time"
-
-	"github.com/getgort/gort/dataaccess/tests"
-	"github.com/stretchr/testify/assert"
 )
 
-var (
-	ctx    context.Context
+type DataAccessTester struct {
+	TestDataAccess
 	cancel context.CancelFunc
-	da     *InMemoryDataAccess
-)
-
-func testInitialize(t *testing.T) {
-	// Reset for repeated runs
-	Reset()
-
-	ctx, cancel = context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
-	da = NewInMemoryDataAccess()
-
-	err := da.Initialize(ctx)
-	assert.NoError(t, err)
+	ctx    context.Context
 }
 
-func TestMemoryDataAccessMain(t *testing.T) {
-	t.Run("testInitialize", testInitialize)
+func NewDataAccessTester(ctx context.Context, cancel context.CancelFunc, da TestDataAccess) DataAccessTester {
+	return DataAccessTester{
+		TestDataAccess: da,
+		ctx:            ctx,
+		cancel:         cancel,
+	}
+}
 
-	dat := tests.NewDataAccessTester(ctx, cancel, da)
-	t.Run("RunAllTests", dat.RunAllTests)
+func (da DataAccessTester) RunAllTests(t *testing.T) {
+	t.Run("testUserAccess", da.testUserAccess)
+	t.Run("testGroupAccess", da.testGroupAccess)
+	t.Run("testTokenAccess", da.testTokenAccess)
+	t.Run("testBundleAccess", da.testBundleAccess)
+	t.Run("testRoleAccess", da.testRoleAccess)
+	t.Run("testRequestAccess", da.testRequestAccess)
 }

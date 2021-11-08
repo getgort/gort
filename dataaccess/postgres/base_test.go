@@ -25,11 +25,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess/tests"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/getgort/gort/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +56,7 @@ var DoNotCleanUpDatabase = false
 
 func TestPostgresDataAccessMain(t *testing.T) {
 	ctx, cancel = context.WithTimeout(context.Background(), time.Minute)
-	// defer cancel()
+	defer cancel()
 
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -70,12 +72,9 @@ func TestPostgresDataAccessMain(t *testing.T) {
 	require.NoError(t, err, "failed to start database container")
 
 	t.Run("testInitialize", testInitialize)
-	t.Run("testUserAccess", testUserAccess)
-	t.Run("testGroupAccess", testGroupAccess)
-	t.Run("testTokenAccess", testTokenAccess)
-	t.Run("testBundleAccess", testBundleAccess)
-	t.Run("testRoleAccess", testRoleAccess)
-	t.Run("testRequestAccess", testRequestAccess)
+
+	dat := tests.NewDataAccessTester(ctx, cancel, da)
+	t.Run("RunAllTests", dat.RunAllTests)
 }
 
 func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
