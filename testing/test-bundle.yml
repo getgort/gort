@@ -18,7 +18,6 @@ docker:
   tag: 20.04
 
 templates:
-  default: 'Template:Bundle:Default'
   command_error: 'Template:Bundle:CommandError'
   command: 'Template:Bundle:Command'
   message_error: 'Template:Bundle:MessageError'
@@ -36,7 +35,6 @@ commands:
     rules:
       - must have test:echox
     templates:
-      default: 'Template:Command:Default'
       command: 'Template:Command:Command'
       command_error: 'Template:Command:CommandError'
       message: 'Template:Command:Message'
