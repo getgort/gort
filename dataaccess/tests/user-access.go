@@ -21,6 +21,7 @@ import (
 
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,10 +47,7 @@ func (da DataAccessTester) testUserAuthenticate(t *testing.T) {
 
 	authenticated, err := da.UserAuthenticate(da.ctx, "test-auth", "no-match")
 	assert.Error(t, err, errs.ErrNoSuchUser)
-	if authenticated {
-		t.Error("Expected false")
-		t.FailNow()
-	}
+	require.False(t, authenticated)
 
 	// Expect no error
 	err = da.UserCreate(da.ctx, rest.User{
@@ -62,17 +60,11 @@ func (da DataAccessTester) testUserAuthenticate(t *testing.T) {
 
 	authenticated, err = da.UserAuthenticate(da.ctx, "test-auth", "no-match")
 	assert.NoError(t, err)
-	if authenticated {
-		t.Error("Expected false")
-		t.FailNow()
-	}
+	require.False(t, authenticated)
 
 	authenticated, err = da.UserAuthenticate(da.ctx, "test-auth", "password")
 	assert.NoError(t, err)
-	if !authenticated {
-		t.Error("Expected true")
-		t.FailNow()
-	}
+	require.True(t, authenticated)
 }
 
 func (da DataAccessTester) testUserCreate(t *testing.T) {
@@ -114,10 +106,7 @@ func (da DataAccessTester) testUserDelete(t *testing.T) {
 	assert.NoError(t, err)
 
 	exists, _ := da.UserExists(da.ctx, "test-delete")
-	if exists {
-		t.Error("Shouldn't exist anymore!")
-		t.FailNow()
-	}
+	require.False(t, exists)
 }
 
 func (da DataAccessTester) testUserExists(t *testing.T) {
@@ -135,10 +124,7 @@ func (da DataAccessTester) testUserExists(t *testing.T) {
 	assert.NoError(t, err)
 
 	exists, _ = da.UserExists(da.ctx, "test-exists")
-	if !exists {
-		t.Error("User should exist now")
-		t.FailNow()
-	}
+	require.True(t, exists)
 }
 
 func (da DataAccessTester) testUserGet(t *testing.T) {
@@ -298,9 +284,7 @@ func (da DataAccessTester) testUserGroupList(t *testing.T) {
 	expected := []rest.Group{{Name: "group-test-user-group-list-0", Users: nil}}
 
 	actual, err := da.UserGroupList(da.ctx, "user-test-user-group-list")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, expected, actual)
 }
@@ -318,25 +302,11 @@ func (da DataAccessTester) testUserList(t *testing.T) {
 	users, err := da.UserList(da.ctx)
 	assert.NoError(t, err)
 
-	if len(users) != 4 {
-		for i, u := range users {
-			t.Logf("User %d: %v\n", i+1, u)
-		}
-
-		t.Errorf("Expected len(users) = 4; got %d", len(users))
-		t.FailNow()
-	}
+	require.Len(t, users, 4)
 
 	for _, u := range users {
-		if u.Password != "" {
-			t.Error("Expected empty password")
-			t.FailNow()
-		}
-
-		if u.Username == "" {
-			t.Error("Expected non-empty username")
-			t.FailNow()
-		}
+		require.Empty(t, u.Password)
+		require.NotEmpty(t, u.Username)
 	}
 }
 
@@ -347,10 +317,7 @@ func (da DataAccessTester) testUserNotExists(t *testing.T) {
 	assert.NoError(t, err)
 
 	exists, _ = da.UserExists(da.ctx, "test-not-exists")
-	if exists {
-		t.Error("User should not exist now")
-		t.FailNow()
-	}
+	require.False(t, exists)
 }
 
 func (da DataAccessTester) testUserPermissionList(t *testing.T) {
@@ -358,50 +325,32 @@ func (da DataAccessTester) testUserPermissionList(t *testing.T) {
 
 	err = da.GroupCreate(da.ctx, rest.Group{Name: "test-perms"})
 	defer da.GroupDelete(da.ctx, "test-perms")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	err = da.UserCreate(da.ctx, rest.User{Username: "test-perms", Password: "password0!", Email: "test-perms"})
 	defer da.UserDelete(da.ctx, "test-perms")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	err = da.GroupUserAdd(da.ctx, "test-perms", "test-perms")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	da.RoleCreate(da.ctx, "test-perms")
 	defer da.RoleDelete(da.ctx, "test-perms")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	err = da.GroupRoleAdd(da.ctx, "test-perms", "test-perms")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	err = da.RolePermissionAdd(da.ctx, "test-perms", "test", "test-perms-1")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	err = da.RolePermissionAdd(da.ctx, "test-perms", "test", "test-perms-2")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	err = da.RolePermissionAdd(da.ctx, "test-perms", "test", "test-perms-0")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	// Expected: a sorted list of strings
 	expected := []string{"test:test-perms-0", "test:test-perms-1", "test:test-perms-2"}
 
 	actual, err := da.UserPermissionList(da.ctx, "test-perms")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, expected, actual.Strings())
 }
@@ -421,10 +370,7 @@ func (da DataAccessTester) testUserUpdate(t *testing.T) {
 
 	// Get the user we just added. Emails should match.
 	user1, _ := da.UserGet(da.ctx, "test-update")
-	if userA.Email != user1.Email {
-		t.Errorf("Email mismatch: %q vs %q", userA.Email, user1.Email)
-		t.FailNow()
-	}
+	require.Equal(t, userA.Email, user1.Email)
 
 	// Do the update
 	userB := rest.User{Username: "test-update", Email: "foo2.example.com"}
@@ -433,8 +379,5 @@ func (da DataAccessTester) testUserUpdate(t *testing.T) {
 
 	// Get the user we just updated. Emails should match.
 	user2, _ := da.UserGet(da.ctx, "test-update")
-	if userB.Email != user2.Email {
-		t.Errorf("Email mismatch: %q vs %q", userB.Email, user2.Email)
-		t.FailNow()
-	}
+	require.Equal(t, userB.Email, user2.Email)
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func (da DataAccessTester) testRoleAccess(t *testing.T) {
@@ -101,30 +102,21 @@ func (da DataAccessTester) testRoleDelete(t *testing.T) {
 	assert.NoError(t, err)
 
 	exists, _ := da.RoleExists(da.ctx, "test-delete")
-	if exists {
-		t.Error("Shouldn't exist anymore!")
-		t.FailNow()
-	}
+	require.False(t, exists)
 }
 
 func (da DataAccessTester) testRoleExists(t *testing.T) {
 	var exists bool
 
 	exists, _ = da.RoleExists(da.ctx, "test-exists")
-	if exists {
-		t.Error("Role should not exist now")
-		t.FailNow()
-	}
+	require.False(t, exists)
 
 	// Now we add a group to find.
 	da.RoleCreate(da.ctx, "test-exists")
 	defer da.RoleDelete(da.ctx, "test-exists")
 
 	exists, _ = da.RoleExists(da.ctx, "test-exists")
-	if !exists {
-		t.Error("Role should exist now")
-		t.FailNow()
-	}
+	require.True(t, exists)
 }
 
 func (da DataAccessTester) testRoleGet(t *testing.T) {
@@ -144,10 +136,7 @@ func (da DataAccessTester) testRoleGet(t *testing.T) {
 
 	// da.Role da.ctx, should exist now
 	exists, _ := da.RoleExists(da.ctx, "test-get")
-	if !exists {
-		t.Error("Role should exist now")
-		t.FailNow()
-	}
+	require.True(t, exists)
 
 	err = da.RolePermissionAdd(da.ctx, "test-get", "foo", "bar")
 	assert.NoError(t, err)
@@ -310,43 +299,29 @@ func (da DataAccessTester) testRolePermissionAdd(t *testing.T) {
 	defer da.RoleDelete(da.ctx, rolename)
 
 	role, _ := da.RoleGet(da.ctx, rolename)
-	if !assert.Len(t, role.Permissions, 0) {
-		t.FailNow()
-	}
+	require.Len(t, role.Permissions, 0)
 
 	// First permission
 	err = da.RolePermissionAdd(da.ctx, rolename, bundlename, permname1)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	defer da.RolePermissionDelete(da.ctx, rolename, bundlename, permname1)
 
 	role, _ = da.RoleGet(da.ctx, rolename)
-	if !assert.Len(t, role.Permissions, 1) {
-		t.FailNow()
-	}
+	require.Len(t, role.Permissions, 1)
 
 	exists, _ = da.RolePermissionExists(da.ctx, rolename, bundlename, permname1)
-	if !assert.True(t, exists) {
-		t.FailNow()
-	}
+	require.True(t, exists)
 
 	// Second permission
 	err = da.RolePermissionAdd(da.ctx, rolename, bundlename, permname2)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	defer da.RolePermissionDelete(da.ctx, rolename, bundlename, permname2)
 
 	role, _ = da.RoleGet(da.ctx, rolename)
-	if !assert.Len(t, role.Permissions, 2) {
-		t.FailNow()
-	}
+	require.Len(t, role.Permissions, 2)
 
 	exists, _ = da.RolePermissionExists(da.ctx, rolename, bundlename, permname2)
-	if !assert.True(t, exists) {
-		t.FailNow()
-	}
+	require.True(t, exists)
 }
 
 func (da DataAccessTester) testRolePermissionExists(t *testing.T) {
@@ -356,25 +331,20 @@ func (da DataAccessTester) testRolePermissionExists(t *testing.T) {
 	defer da.RoleDelete(da.ctx, "role-test-role-has-permission")
 
 	has, err := da.RolePermissionExists(da.ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
-	if !assert.NoError(t, err) || !assert.False(t, has) {
-		t.FailNow()
-	}
+	assert.NoError(t, err)
+	require.False(t, has)
 
 	err = da.RolePermissionAdd(da.ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	defer da.RolePermissionDelete(da.ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
 
 	has, err = da.RolePermissionExists(da.ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-1")
-	if !assert.NoError(t, err) || !assert.True(t, has) {
-		t.FailNow()
-	}
+	assert.NoError(t, err)
+	require.True(t, has)
 
 	has, err = da.RolePermissionExists(da.ctx, "role-test-role-has-permission", "test", "permission-test-role-has-permission-2")
-	if !assert.NoError(t, err) || !assert.False(t, has) {
-		t.FailNow()
-	}
+	assert.NoError(t, err)
+	require.False(t, has)
 }
 
 func (da DataAccessTester) testRolePermissionList(t *testing.T) {
@@ -384,21 +354,15 @@ func (da DataAccessTester) testRolePermissionList(t *testing.T) {
 	defer da.RoleDelete(da.ctx, "role-test-role-permission-list")
 
 	err = da.RolePermissionAdd(da.ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-1")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	defer da.RolePermissionDelete(da.ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-1")
 
 	err = da.RolePermissionAdd(da.ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-3")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	defer da.RolePermissionDelete(da.ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-3")
 
 	err = da.RolePermissionAdd(da.ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-2")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	defer da.RolePermissionDelete(da.ctx, "role-test-role-permission-list", "test", "permission-test-role-permission-list-2")
 
 	// Expect a sorted list!
@@ -409,9 +373,7 @@ func (da DataAccessTester) testRolePermissionList(t *testing.T) {
 	}
 
 	actual, err := da.RolePermissionList(da.ctx, "role-test-role-permission-list")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, expect, actual)
 }
