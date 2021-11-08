@@ -73,9 +73,8 @@ func TestPostgresDataAccessMain(t *testing.T) {
 
 	t.Run("testInitialize", testInitialize)
 
-	dat := tests.NewDataAccessTest(ctx, cancel, da)
-
-	t.Run("testUserAccess", dat.RunTests)
+	dat := tests.NewDataAccessTester(ctx, cancel, da)
+	t.Run("RunAllTests", dat.RunAllTests)
 }
 
 func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {

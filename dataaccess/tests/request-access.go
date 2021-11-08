@@ -25,13 +25,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func (da DataAccessTest) testRequestAccess(t *testing.T) {
+func (da DataAccessTester) testRequestAccess(t *testing.T) {
 	t.Run("testRequestBegin", da.testRequestBegin)
 	t.Run("testRequestUpdate", da.testRequestUpdate)
 	t.Run("testRequestClose", da.testRequestClose)
 }
 
-func (da DataAccessTest) testRequestBegin(t *testing.T) {
+func (da DataAccessTester) testRequestBegin(t *testing.T) {
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 
@@ -62,7 +62,7 @@ func (da DataAccessTest) testRequestBegin(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func (da DataAccessTest) testRequestUpdate(t *testing.T) {
+func (da DataAccessTester) testRequestUpdate(t *testing.T) {
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 
@@ -91,7 +91,7 @@ func (da DataAccessTest) testRequestUpdate(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func (da DataAccessTest) testRequestClose(t *testing.T) {
+func (da DataAccessTester) testRequestClose(t *testing.T) {
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 

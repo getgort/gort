@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/getgort/gort/dataaccess/tests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,10 +46,7 @@ func testInitialize(t *testing.T) {
 
 func TestMemoryDataAccessMain(t *testing.T) {
 	t.Run("testInitialize", testInitialize)
-	t.Run("testUserAccess", testUserAccess)
-	t.Run("testGroupAccess", testGroupAccess)
-	t.Run("testTokenAccess", testTokenAccess)
-	t.Run("testBundleAccess", testBundleAccess)
-	t.Run("testRoleAccess", testRoleAccess)
-	t.Run("testRequestAccess", testRequestAccess)
+
+	dat := tests.NewDataAccessTester(ctx, cancel, da)
+	t.Run("RunAllTests", dat.RunAllTests)
 }

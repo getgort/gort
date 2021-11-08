@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func (da DataAccessTest) testGroupAccess(t *testing.T) {
+func (da DataAccessTester) testGroupAccess(t *testing.T) {
 	t.Run("testGroupUserAdd", da.testGroupUserAdd)
 	t.Run("testGroupUserList", da.testGroupUserList)
 	t.Run("testGroupCreate", da.testGroupCreate)
@@ -38,7 +38,7 @@ func (da DataAccessTest) testGroupAccess(t *testing.T) {
 	t.Run("testGroupUserDelete", da.testGroupUserDelete)
 }
 
-func (da DataAccessTest) testGroupUserAdd(t *testing.T) {
+func (da DataAccessTester) testGroupUserAdd(t *testing.T) {
 	var (
 		groupname = "group-test-group-user-add"
 		username  = "user-test-group-user-add"
@@ -70,7 +70,7 @@ func (da DataAccessTest) testGroupUserAdd(t *testing.T) {
 	assert.Equal(t, group.Users[0].Email, useremail)
 }
 
-func (da DataAccessTest) testGroupUserList(t *testing.T) {
+func (da DataAccessTester) testGroupUserList(t *testing.T) {
 	var (
 		groupname = "group-test-group-user-list"
 		expected  = []rest.User{
@@ -106,7 +106,7 @@ func (da DataAccessTest) testGroupUserList(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func (da DataAccessTest) testGroupCreate(t *testing.T) {
+func (da DataAccessTester) testGroupCreate(t *testing.T) {
 	var err error
 	var group rest.Group
 
@@ -124,7 +124,7 @@ func (da DataAccessTest) testGroupCreate(t *testing.T) {
 	assert.Error(t, err, errs.ErrGroupExists)
 }
 
-func (da DataAccessTest) testGroupDelete(t *testing.T) {
+func (da DataAccessTester) testGroupDelete(t *testing.T) {
 	// Delete blank group
 	err := da.GroupDelete(da.ctx, "")
 	assert.Error(t, err, errs.ErrEmptyGroupName)
@@ -146,7 +146,7 @@ func (da DataAccessTest) testGroupDelete(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testGroupExists(t *testing.T) {
+func (da DataAccessTester) testGroupExists(t *testing.T) {
 	var exists bool
 
 	exists, _ = da.GroupExists(da.ctx, "test-exists")
@@ -166,7 +166,7 @@ func (da DataAccessTest) testGroupExists(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testGroupGet(t *testing.T) {
+func (da DataAccessTester) testGroupGet(t *testing.T) {
 	groupname := "group-test-group-get"
 
 	var err error
@@ -199,7 +199,7 @@ func (da DataAccessTest) testGroupGet(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testGroupPermissionList(t *testing.T) {
+func (da DataAccessTester) testGroupPermissionList(t *testing.T) {
 	const (
 		groupname  = "group-test-group-permission-list"
 		rolename   = "role-test-group-permission-list"
@@ -237,7 +237,7 @@ func (da DataAccessTest) testGroupPermissionList(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func (da DataAccessTest) testGroupRoleAdd(t *testing.T) {
+func (da DataAccessTester) testGroupRoleAdd(t *testing.T) {
 	var err error
 
 	groupName := "group-group-grant-role"
@@ -293,7 +293,7 @@ func (da DataAccessTest) testGroupRoleAdd(t *testing.T) {
 	assert.Equal(t, expectedRoles, roles)
 }
 
-func (da DataAccessTest) testGroupList(t *testing.T) {
+func (da DataAccessTester) testGroupList(t *testing.T) {
 	da.GroupCreate(da.ctx, rest.Group{Name: "test-list-0"})
 	defer da.GroupDelete(da.ctx, "test-list-0")
 	da.GroupCreate(da.ctx, rest.Group{Name: "test-list-1"})
@@ -319,7 +319,7 @@ func (da DataAccessTest) testGroupList(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testGroupRoleList(t *testing.T) {
+func (da DataAccessTester) testGroupRoleList(t *testing.T) {
 	var (
 		groupname = "group-test-group-list-roles"
 		rolenames = []string{
@@ -373,7 +373,7 @@ func (da DataAccessTest) testGroupRoleList(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func (da DataAccessTest) testGroupUserDelete(t *testing.T) {
+func (da DataAccessTester) testGroupUserDelete(t *testing.T) {
 	da.GroupCreate(da.ctx, rest.Group{Name: "foo"})
 	defer da.GroupDelete(da.ctx, "foo")
 

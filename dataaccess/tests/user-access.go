@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func (da DataAccessTest) testUserAccess(t *testing.T) {
+func (da DataAccessTester) testUserAccess(t *testing.T) {
 	t.Run("testUserAuthenticate", da.testUserAuthenticate)
 	t.Run("testUserCreate", da.testUserCreate)
 	t.Run("testUserDelete", da.testUserDelete)
@@ -41,7 +41,7 @@ func (da DataAccessTest) testUserAccess(t *testing.T) {
 	t.Run("testUserUpdate", da.testUserUpdate)
 }
 
-func (da DataAccessTest) testUserAuthenticate(t *testing.T) {
+func (da DataAccessTester) testUserAuthenticate(t *testing.T) {
 	var err error
 
 	authenticated, err := da.UserAuthenticate(da.ctx, "test-auth", "no-match")
@@ -75,7 +75,7 @@ func (da DataAccessTest) testUserAuthenticate(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testUserCreate(t *testing.T) {
+func (da DataAccessTester) testUserCreate(t *testing.T) {
 	var err error
 	var user rest.User
 
@@ -93,7 +93,7 @@ func (da DataAccessTest) testUserCreate(t *testing.T) {
 	assert.Error(t, err, errs.ErrUserExists)
 }
 
-func (da DataAccessTest) testUserDelete(t *testing.T) {
+func (da DataAccessTester) testUserDelete(t *testing.T) {
 	// Delete blank user
 	err := da.UserDelete(da.ctx, "")
 	assert.Error(t, err, errs.ErrEmptyUserName)
@@ -120,7 +120,7 @@ func (da DataAccessTest) testUserDelete(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testUserExists(t *testing.T) {
+func (da DataAccessTester) testUserExists(t *testing.T) {
 	var exists bool
 
 	exists, _ = da.UserExists(da.ctx, "test-exists")
@@ -141,7 +141,7 @@ func (da DataAccessTest) testUserExists(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testUserGet(t *testing.T) {
+func (da DataAccessTester) testUserGet(t *testing.T) {
 	const userName = "test-get"
 	const userEmail = "test-get@foo.com"
 	const userAdapter = "slack-get"
@@ -181,7 +181,7 @@ func (da DataAccessTest) testUserGet(t *testing.T) {
 	require.Equal(t, userAdapterID, user.Mappings[userAdapter])
 }
 
-func (da DataAccessTest) testUserGetNoMappings(t *testing.T) {
+func (da DataAccessTester) testUserGetNoMappings(t *testing.T) {
 	const userName = "test-get-no-mappings"
 	const userEmail = "test-get-no-mappings@foo.com"
 
@@ -201,7 +201,7 @@ func (da DataAccessTest) testUserGetNoMappings(t *testing.T) {
 	require.NotNil(t, user.Mappings)
 }
 
-func (da DataAccessTest) testUserGetByEmail(t *testing.T) {
+func (da DataAccessTester) testUserGetByEmail(t *testing.T) {
 	const userName = "test-get-by-email"
 	const userEmail = "test-get-by-email@foo.com"
 	const userAdapter = "slack-get-by-email"
@@ -241,7 +241,7 @@ func (da DataAccessTest) testUserGetByEmail(t *testing.T) {
 	require.Equal(t, userAdapterID, user.Mappings[userAdapter])
 }
 
-func (da DataAccessTest) testUserGetByID(t *testing.T) {
+func (da DataAccessTester) testUserGetByID(t *testing.T) {
 	const userName = "test-get-by-id"
 	const userEmail = "test-get-by-id@foo.com"
 	const userAdapter = "slack-get-by-id"
@@ -283,7 +283,7 @@ func (da DataAccessTest) testUserGetByID(t *testing.T) {
 	require.Equal(t, userAdapterID, user.Mappings[userAdapter])
 }
 
-func (da DataAccessTest) testUserGroupList(t *testing.T) {
+func (da DataAccessTester) testUserGroupList(t *testing.T) {
 	da.GroupCreate(da.ctx, rest.Group{Name: "group-test-user-group-list-0"})
 	defer da.GroupDelete(da.ctx, "group-test-user-group-list-0")
 
@@ -305,7 +305,7 @@ func (da DataAccessTest) testUserGroupList(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func (da DataAccessTest) testUserList(t *testing.T) {
+func (da DataAccessTester) testUserList(t *testing.T) {
 	da.UserCreate(da.ctx, rest.User{Username: "test-list-0", Password: "password0!", Email: "test-list-0"})
 	defer da.UserDelete(da.ctx, "test-list-0")
 	da.UserCreate(da.ctx, rest.User{Username: "test-list-1", Password: "password1!", Email: "test-list-1"})
@@ -340,7 +340,7 @@ func (da DataAccessTest) testUserList(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testUserNotExists(t *testing.T) {
+func (da DataAccessTester) testUserNotExists(t *testing.T) {
 	var exists bool
 
 	err := da.Initialize(da.ctx)
@@ -353,7 +353,7 @@ func (da DataAccessTest) testUserNotExists(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testUserPermissionList(t *testing.T) {
+func (da DataAccessTester) testUserPermissionList(t *testing.T) {
 	var err error
 
 	err = da.GroupCreate(da.ctx, rest.Group{Name: "test-perms"})
@@ -406,7 +406,7 @@ func (da DataAccessTest) testUserPermissionList(t *testing.T) {
 	assert.Equal(t, expected, actual.Strings())
 }
 
-func (da DataAccessTest) testUserUpdate(t *testing.T) {
+func (da DataAccessTester) testUserUpdate(t *testing.T) {
 	// Update blank user
 	err := da.UserUpdate(da.ctx, rest.User{})
 	assert.Error(t, err, errs.ErrEmptyUserName)

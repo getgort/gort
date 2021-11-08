@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func (da DataAccessTest) testTokenAccess(t *testing.T) {
+func (da DataAccessTester) testTokenAccess(t *testing.T) {
 	t.Run("testTokenGenerate", da.testTokenGenerate)
 	t.Run("testTokenRetrieveByUser", da.testTokenRetrieveByUser)
 	t.Run("testTokenRetrieveByToken", da.testTokenRetrieveByToken)
@@ -33,7 +33,7 @@ func (da DataAccessTest) testTokenAccess(t *testing.T) {
 	t.Run("testTokenInvalidate", da.testTokenInvalidate)
 }
 
-func (da DataAccessTest) testTokenGenerate(t *testing.T) {
+func (da DataAccessTester) testTokenGenerate(t *testing.T) {
 	err := da.UserCreate(da.ctx, rest.User{Username: "test_generate"})
 	defer da.UserDelete(da.ctx, "test_generate")
 	assert.NoError(t, err)
@@ -58,7 +58,7 @@ func (da DataAccessTest) testTokenGenerate(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testTokenRetrieveByUser(t *testing.T) {
+func (da DataAccessTester) testTokenRetrieveByUser(t *testing.T) {
 	_, err := da.TokenRetrieveByUser(da.ctx, "no-such-user")
 	assert.Error(t, err, errs.ErrNoSuchToken)
 
@@ -79,7 +79,7 @@ func (da DataAccessTest) testTokenRetrieveByUser(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testTokenRetrieveByToken(t *testing.T) {
+func (da DataAccessTester) testTokenRetrieveByToken(t *testing.T) {
 	_, err := da.TokenRetrieveByToken(da.ctx, "no-such-token")
 	assert.Error(t, err, errs.ErrNoSuchToken)
 
@@ -100,7 +100,7 @@ func (da DataAccessTest) testTokenRetrieveByToken(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testTokenExpiry(t *testing.T) {
+func (da DataAccessTester) testTokenExpiry(t *testing.T) {
 	err := da.UserCreate(da.ctx, rest.User{Username: "test_expires", Email: "test_expires"})
 	defer da.UserDelete(da.ctx, "test_expires")
 	assert.NoError(t, err)
@@ -122,7 +122,7 @@ func (da DataAccessTest) testTokenExpiry(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testTokenInvalidate(t *testing.T) {
+func (da DataAccessTester) testTokenInvalidate(t *testing.T) {
 	err := da.UserCreate(da.ctx, rest.User{Username: "test_invalidate", Email: "test_invalidate"})
 	defer da.UserDelete(da.ctx, "test_invalidate")
 	assert.NoError(t, err)

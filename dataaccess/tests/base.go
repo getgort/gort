@@ -19,25 +19,23 @@ package tests
 import (
 	"context"
 	"testing"
-
-	"github.com/getgort/gort/dataaccess"
 )
 
-type DataAccessTest struct {
-	dataaccess.DataAccess
+type DataAccessTester struct {
+	TestDataAccess
 	cancel context.CancelFunc
 	ctx    context.Context
 }
 
-func NewDataAccessTest(ctx context.Context, cancel context.CancelFunc, da dataaccess.DataAccess) DataAccessTest {
-	return DataAccessTest{
-		DataAccess: da,
-		ctx:        ctx,
-		cancel:     cancel,
+func NewDataAccessTester(ctx context.Context, cancel context.CancelFunc, da TestDataAccess) DataAccessTester {
+	return DataAccessTester{
+		TestDataAccess: da,
+		ctx:            ctx,
+		cancel:         cancel,
 	}
 }
 
-func (da DataAccessTest) RunTests(t *testing.T) {
+func (da DataAccessTester) RunAllTests(t *testing.T) {
 	t.Run("testUserAccess", da.testUserAccess)
 	t.Run("testGroupAccess", da.testGroupAccess)
 	t.Run("testTokenAccess", da.testTokenAccess)

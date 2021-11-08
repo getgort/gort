@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func (da DataAccessTest) testRoleAccess(t *testing.T) {
+func (da DataAccessTester) testRoleAccess(t *testing.T) {
 	t.Run("testRoleCreate", da.testRoleCreate)
 	t.Run("testRoleList", da.testRoleList)
 	t.Run("testRoleExists", da.testRoleExists)
@@ -39,7 +39,7 @@ func (da DataAccessTest) testRoleAccess(t *testing.T) {
 	t.Run("testRolePermissionList", da.testRolePermissionList)
 }
 
-func (da DataAccessTest) testRoleCreate(t *testing.T) {
+func (da DataAccessTester) testRoleCreate(t *testing.T) {
 	var err error
 
 	// Expect an error
@@ -56,7 +56,7 @@ func (da DataAccessTest) testRoleCreate(t *testing.T) {
 	assert.Error(t, err, errs.ErrRoleExists)
 }
 
-func (da DataAccessTest) testRoleList(t *testing.T) {
+func (da DataAccessTester) testRoleList(t *testing.T) {
 	var err error
 
 	// Get initial set of roles
@@ -85,7 +85,7 @@ func (da DataAccessTest) testRoleList(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testRoleDelete(t *testing.T) {
+func (da DataAccessTester) testRoleDelete(t *testing.T) {
 	// Delete blank group
 	err := da.RoleDelete(da.ctx, "")
 	assert.Error(t, err, errs.ErrEmptyRoleName)
@@ -107,7 +107,7 @@ func (da DataAccessTest) testRoleDelete(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testRoleExists(t *testing.T) {
+func (da DataAccessTester) testRoleExists(t *testing.T) {
 	var exists bool
 
 	exists, _ = da.RoleExists(da.ctx, "test-exists")
@@ -127,7 +127,7 @@ func (da DataAccessTest) testRoleExists(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testRoleGet(t *testing.T) {
+func (da DataAccessTester) testRoleGet(t *testing.T) {
 	var err error
 	var role rest.Role
 
@@ -169,7 +169,7 @@ func (da DataAccessTest) testRoleGet(t *testing.T) {
 	assert.Equal(t, expected, role)
 }
 
-func (da DataAccessTest) testRoleGroupAdd(t *testing.T) {
+func (da DataAccessTester) testRoleGroupAdd(t *testing.T) {
 	var err error
 
 	rolename := "role-test-role-group-add"
@@ -205,11 +205,11 @@ func (da DataAccessTest) testRoleGroupAdd(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testRoleGroupDelete(t *testing.T) {
+func (da DataAccessTester) testRoleGroupDelete(t *testing.T) {
 
 }
 
-func (da DataAccessTest) testRoleGroupExists(t *testing.T) {
+func (da DataAccessTester) testRoleGroupExists(t *testing.T) {
 	var err error
 
 	rolename := "role-test-role-group-exists"
@@ -253,7 +253,7 @@ func (da DataAccessTest) testRoleGroupExists(t *testing.T) {
 	assert.False(t, exists)
 }
 
-func (da DataAccessTest) testRoleGroupList(t *testing.T) {
+func (da DataAccessTester) testRoleGroupList(t *testing.T) {
 	var err error
 
 	rolename := "role-test-role-group-list"
@@ -297,7 +297,7 @@ func (da DataAccessTest) testRoleGroupList(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testRolePermissionAdd(t *testing.T) {
+func (da DataAccessTester) testRolePermissionAdd(t *testing.T) {
 	var exists bool
 	var err error
 
@@ -349,7 +349,7 @@ func (da DataAccessTest) testRolePermissionAdd(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testRolePermissionExists(t *testing.T) {
+func (da DataAccessTester) testRolePermissionExists(t *testing.T) {
 	var err error
 
 	da.RoleCreate(da.ctx, "role-test-role-has-permission")
@@ -377,7 +377,7 @@ func (da DataAccessTest) testRolePermissionExists(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testRolePermissionList(t *testing.T) {
+func (da DataAccessTester) testRolePermissionList(t *testing.T) {
 	var err error
 
 	da.RoleCreate(da.ctx, "role-test-role-permission-list")

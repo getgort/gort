@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func (da DataAccessTest) testBundleAccess(t *testing.T) {
+func (da DataAccessTester) testBundleAccess(t *testing.T) {
 	t.Run("testLoadTestData", da.testLoadTestData)
 	t.Run("testBundleCreate", da.testBundleCreate)
 	t.Run("testBundleCreateMissingRequired", da.testBundleCreateMissingRequired)
@@ -42,7 +42,7 @@ func (da DataAccessTest) testBundleAccess(t *testing.T) {
 }
 
 // Fail-fast: can the test bundle be loaded?
-func (da DataAccessTest) testLoadTestData(t *testing.T) {
+func (da DataAccessTester) testLoadTestData(t *testing.T) {
 	b, err := getTestBundle()
 	assert.NoError(t, err)
 
@@ -54,7 +54,7 @@ func (da DataAccessTest) testLoadTestData(t *testing.T) {
 	assert.NotEmpty(t, b.Commands["echox"].Rules)
 }
 
-func (da DataAccessTest) testBundleCreate(t *testing.T) {
+func (da DataAccessTester) testBundleCreate(t *testing.T) {
 	// Expect an error
 	err := da.BundleCreate(da.ctx, data.Bundle{})
 	if !assert.Error(t, err, errs.ErrEmptyBundleName) {
@@ -77,7 +77,7 @@ func (da DataAccessTest) testBundleCreate(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testBundleCreateMissingRequired(t *testing.T) {
+func (da DataAccessTester) testBundleCreateMissingRequired(t *testing.T) {
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 	bundle.Name = "test-missing-required"
@@ -103,7 +103,7 @@ func (da DataAccessTest) testBundleCreateMissingRequired(t *testing.T) {
 	bundle.Description = originalDescription
 }
 
-func (da DataAccessTest) testBundleEnable(t *testing.T) {
+func (da DataAccessTester) testBundleEnable(t *testing.T) {
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
 	bundle.Name = "test-enable"
@@ -145,7 +145,7 @@ func (da DataAccessTest) testBundleEnable(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func (da DataAccessTest) testBundleEnableTwo(t *testing.T) {
+func (da DataAccessTester) testBundleEnableTwo(t *testing.T) {
 	bundleA, err := getTestBundle()
 	assert.NoError(t, err)
 	bundleA.Name = "test-enable-2"
@@ -209,7 +209,7 @@ func (da DataAccessTest) testBundleEnableTwo(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testBundleExists(t *testing.T) {
+func (da DataAccessTester) testBundleExists(t *testing.T) {
 	var exists bool
 
 	bundle, err := getTestBundle()
@@ -233,7 +233,7 @@ func (da DataAccessTest) testBundleExists(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testBundleDelete(t *testing.T) {
+func (da DataAccessTester) testBundleDelete(t *testing.T) {
 	// Delete blank bundle
 	err := da.BundleDelete(da.ctx, "", "0.0.1")
 	if !assert.Error(t, err, errs.ErrEmptyBundleName) {
@@ -270,7 +270,7 @@ func (da DataAccessTest) testBundleDelete(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testBundleDeleteDoesntDisable(t *testing.T) {
+func (da DataAccessTester) testBundleDeleteDoesntDisable(t *testing.T) {
 	var err error
 
 	bundle, _ := getTestBundle()
@@ -298,7 +298,7 @@ func (da DataAccessTest) testBundleDeleteDoesntDisable(t *testing.T) {
 	assert.True(t, bundle2.Enabled)
 }
 
-func (da DataAccessTest) testBundleGet(t *testing.T) {
+func (da DataAccessTester) testBundleGet(t *testing.T) {
 	var err error
 
 	// Empty bundle name. Expect a ErrEmptyBundleName.
@@ -354,7 +354,7 @@ func (da DataAccessTest) testBundleGet(t *testing.T) {
 	assert.Equal(t, bundleCreate, bundleGet)
 }
 
-func (da DataAccessTest) testBundleList(t *testing.T) {
+func (da DataAccessTester) testBundleList(t *testing.T) {
 	da.BundleCreate(da.ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete(da.ctx, "test-list-0", "0.0")
 	da.BundleCreate(da.ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
@@ -377,7 +377,7 @@ func (da DataAccessTest) testBundleList(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testBundleVersionList(t *testing.T) {
+func (da DataAccessTester) testBundleVersionList(t *testing.T) {
 	da.BundleCreate(da.ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.0", Description: "foo"})
 	defer da.BundleDelete(da.ctx, "test-list-0", "0.0")
 	da.BundleCreate(da.ctx, data.Bundle{GortBundleVersion: 5, Name: "test-list-0", Version: "0.1", Description: "foo"})
@@ -400,7 +400,7 @@ func (da DataAccessTest) testBundleVersionList(t *testing.T) {
 	}
 }
 
-func (da DataAccessTest) testFindCommandEntry(t *testing.T) {
+func (da DataAccessTester) testFindCommandEntry(t *testing.T) {
 	const BundleName = "test"
 	const BundleVersion = "0.0.1"
 	const CommandName = "echox"
