@@ -23,6 +23,7 @@ import (
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func (da DataAccessTester) testTokenAccess(t *testing.T) {
@@ -42,20 +43,9 @@ func (da DataAccessTester) testTokenGenerate(t *testing.T) {
 	defer da.TokenInvalidate(da.ctx, token.Token)
 	assert.NoError(t, err)
 
-	if token.Duration != 10*time.Minute {
-		t.Errorf("Duration mismatch: %v vs %v\n", token.Duration, 10*time.Minute)
-		t.FailNow()
-	}
-
-	if token.User != "test_generate" {
-		t.Error("User mismatch")
-		t.FailNow()
-	}
-
-	if token.ValidFrom.Add(10*time.Minute) != token.ValidUntil {
-		t.Error("Validity duration mismatch")
-		t.FailNow()
-	}
+	require.Equal(t, token.Duration, 10*time.Minute)
+	require.Equal(t, token.User, "test_generate")
+	require.Equal(t, token.ValidFrom.Add(10*time.Minute), token.ValidUntil)
 }
 
 func (da DataAccessTester) testTokenRetrieveByUser(t *testing.T) {
@@ -72,11 +62,7 @@ func (da DataAccessTester) testTokenRetrieveByUser(t *testing.T) {
 
 	rtoken, err := da.TokenRetrieveByUser(da.ctx, "test_uretrieve")
 	assert.NoError(t, err)
-
-	if token.Token != rtoken.Token {
-		t.Error("token mismatch")
-		t.FailNow()
-	}
+	require.Equal(t, token.Token, rtoken.Token)
 }
 
 func (da DataAccessTester) testTokenRetrieveByToken(t *testing.T) {
@@ -93,11 +79,7 @@ func (da DataAccessTester) testTokenRetrieveByToken(t *testing.T) {
 
 	rtoken, err := da.TokenRetrieveByToken(da.ctx, token.Token)
 	assert.NoError(t, err)
-
-	if token.Token != rtoken.Token {
-		t.Error("token mismatch")
-		t.FailNow()
-	}
+	require.Equal(t, token.Token, rtoken.Token)
 }
 
 func (da DataAccessTester) testTokenExpiry(t *testing.T) {
@@ -108,18 +90,11 @@ func (da DataAccessTester) testTokenExpiry(t *testing.T) {
 	token, err := da.TokenGenerate(da.ctx, "test_expires", 1*time.Second)
 	defer da.TokenInvalidate(da.ctx, token.Token)
 	assert.NoError(t, err)
-
-	if token.IsExpired() {
-		t.Error("Expected token to be unexpired")
-		t.FailNow()
-	}
+	require.False(t, token.IsExpired())
 
 	time.Sleep(time.Second)
 
-	if !token.IsExpired() {
-		t.Error("Expected token to be expired")
-		t.FailNow()
-	}
+	require.True(t, token.IsExpired())
 }
 
 func (da DataAccessTester) testTokenInvalidate(t *testing.T) {
@@ -130,17 +105,9 @@ func (da DataAccessTester) testTokenInvalidate(t *testing.T) {
 	token, err := da.TokenGenerate(da.ctx, "test_invalidate", 10*time.Minute)
 	defer da.TokenInvalidate(da.ctx, token.Token)
 	assert.NoError(t, err)
-
-	if !da.TokenEvaluate(da.ctx, token.Token) {
-		t.Error("Expected token to be valid")
-		t.FailNow()
-	}
+	require.True(t, da.TokenEvaluate(da.ctx, token.Token))
 
 	err = da.TokenInvalidate(da.ctx, token.Token)
 	assert.NoError(t, err)
-
-	if da.TokenEvaluate(da.ctx, token.Token) {
-		t.Error("Expected token to be invalid")
-		t.FailNow()
-	}
+	require.False(t, da.TokenEvaluate(da.ctx, token.Token))
 }

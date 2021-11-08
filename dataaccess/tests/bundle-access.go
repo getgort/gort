@@ -22,6 +22,7 @@ import (
 	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,9 +58,7 @@ func (da DataAccessTester) testLoadTestData(t *testing.T) {
 func (da DataAccessTester) testBundleCreate(t *testing.T) {
 	// Expect an error
 	err := da.BundleCreate(da.ctx, data.Bundle{})
-	if !assert.Error(t, err, errs.ErrEmptyBundleName) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrEmptyBundleName)
 
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
@@ -72,9 +71,7 @@ func (da DataAccessTester) testBundleCreate(t *testing.T) {
 
 	// Expect an error
 	err = da.BundleCreate(da.ctx, bundle)
-	if !assert.Error(t, err, errs.ErrBundleExists) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrBundleExists)
 }
 
 func (da DataAccessTester) testBundleCreateMissingRequired(t *testing.T) {
@@ -88,18 +85,14 @@ func (da DataAccessTester) testBundleCreateMissingRequired(t *testing.T) {
 	originalGortBundleVersion := bundle.GortBundleVersion
 	bundle.GortBundleVersion = 0
 	err = da.BundleCreate(da.ctx, bundle)
-	if !assert.Error(t, err, errs.ErrFieldRequired) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrFieldRequired)
 	bundle.GortBundleVersion = originalGortBundleVersion
 
 	// Description
 	originalDescription := bundle.Description
 	bundle.Description = ""
 	err = da.BundleCreate(da.ctx, bundle)
-	if !assert.Error(t, err, errs.ErrFieldRequired) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrFieldRequired)
 	bundle.Description = originalDescription
 }
 
@@ -115,10 +108,7 @@ func (da DataAccessTester) testBundleEnable(t *testing.T) {
 	// No version should be enabled
 	enabled, err := da.BundleEnabledVersion(da.ctx, bundle.Name)
 	assert.NoError(t, err)
-	if enabled != "" {
-		t.Error("Expected no version to be enabled")
-		t.FailNow()
-	}
+	require.Empty(t, enabled)
 
 	// Reload and verify enabled value is false
 	bundle, err = da.BundleGet(da.ctx, bundle.Name, bundle.Version)
@@ -131,10 +121,7 @@ func (da DataAccessTester) testBundleEnable(t *testing.T) {
 
 	enabled, err = da.BundleEnabledVersion(da.ctx, bundle.Name)
 	assert.NoError(t, err)
-	if enabled != bundle.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundle.Version, enabled)
-		t.FailNow()
-	}
+	require.Equal(t, enabled, bundle.Version)
 
 	bundle, err = da.BundleGet(da.ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
@@ -161,11 +148,7 @@ func (da DataAccessTester) testBundleEnableTwo(t *testing.T) {
 
 	enabled, err := da.BundleEnabledVersion(da.ctx, bundleA.Name)
 	assert.NoError(t, err)
-
-	if enabled != bundleA.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundleA.Version, enabled)
-		t.FailNow()
-	}
+	require.Equal(t, enabled, bundleA.Version)
 
 	// Create a new version of the same bundle
 
@@ -182,19 +165,11 @@ func (da DataAccessTester) testBundleEnableTwo(t *testing.T) {
 
 	enabled, err = da.BundleEnabledVersion(da.ctx, bundleA.Name)
 	assert.NoError(t, err)
-
-	if enabled != bundleA.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundleA.Version, enabled)
-		t.FailNow()
-	}
+	require.Equal(t, enabled, bundleA.Version)
 
 	enabled, err = da.BundleEnabledVersion(da.ctx, bundleA.Name)
 	assert.NoError(t, err)
-
-	if enabled != bundleA.Version {
-		t.Errorf("Bundle should be enabled now. Expected=%q; Got=%q", bundleA.Version, enabled)
-		t.FailNow()
-	}
+	require.Equal(t, enabled, bundleA.Version)
 
 	// Enable and verify
 	err = da.BundleEnable(da.ctx, bundleB.Name, bundleB.Version)
@@ -236,21 +211,15 @@ func (da DataAccessTester) testBundleExists(t *testing.T) {
 func (da DataAccessTester) testBundleDelete(t *testing.T) {
 	// Delete blank bundle
 	err := da.BundleDelete(da.ctx, "", "0.0.1")
-	if !assert.Error(t, err, errs.ErrEmptyBundleName) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrEmptyBundleName)
 
 	// Delete blank bundle
 	err = da.BundleDelete(da.ctx, "foo", "")
-	if !assert.Error(t, err, errs.ErrEmptyBundleVersion) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrEmptyBundleVersion)
 
 	// Delete bundle that doesn't exist
 	err = da.BundleDelete(da.ctx, "no-such-bundle", "0.0.1")
-	if !assert.Error(t, err, errs.ErrNoSuchBundle) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrNoSuchBundle)
 
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
@@ -303,21 +272,15 @@ func (da DataAccessTester) testBundleGet(t *testing.T) {
 
 	// Empty bundle name. Expect a ErrEmptyBundleName.
 	_, err = da.BundleGet(da.ctx, "", "0.0.1")
-	if !assert.Error(t, err, errs.ErrEmptyBundleName) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrEmptyBundleName)
 
 	// Empty bundle name. Expect a ErrEmptyBundleVersion.
 	_, err = da.BundleGet(da.ctx, "test-get", "")
-	if !assert.Error(t, err, errs.ErrEmptyBundleVersion) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrEmptyBundleVersion)
 
 	// Bundle that doesn't exist. Expect a ErrNoSuchBundle.
 	_, err = da.BundleGet(da.ctx, "test-get", "0.0.1")
-	if !assert.Error(t, err, errs.ErrNoSuchBundle) {
-		t.FailNow()
-	}
+	require.Error(t, err, errs.ErrNoSuchBundle)
 
 	// Get the test bundle. Expect no error.
 	bundleCreate, err := getTestBundle()
@@ -366,15 +329,7 @@ func (da DataAccessTester) testBundleList(t *testing.T) {
 
 	bundles, err := da.BundleList(da.ctx)
 	assert.NoError(t, err)
-
-	if len(bundles) != 4 {
-		for i, u := range bundles {
-			t.Logf("Bundle %d: %v\n", i+1, u)
-		}
-
-		t.Errorf("Expected len(bundles) = 4; got %d", len(bundles))
-		t.FailNow()
-	}
+	require.Len(t, bundles, 4)
 }
 
 func (da DataAccessTester) testBundleVersionList(t *testing.T) {
@@ -389,15 +344,7 @@ func (da DataAccessTester) testBundleVersionList(t *testing.T) {
 
 	bundles, err := da.BundleVersionList(da.ctx, "test-list-0")
 	assert.NoError(t, err)
-
-	if len(bundles) != 2 {
-		for i, u := range bundles {
-			t.Logf("Bundle %d: %v\n", i+1, u)
-		}
-
-		t.Errorf("Expected len(bundles) = 2; got %d", len(bundles))
-		t.FailNow()
-	}
+	require.Len(t, bundles, 2)
 }
 
 func (da DataAccessTester) testFindCommandEntry(t *testing.T) {

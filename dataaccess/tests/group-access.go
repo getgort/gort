@@ -21,7 +21,9 @@ import (
 
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess/errs"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func (da DataAccessTester) testGroupAccess(t *testing.T) {
@@ -61,10 +63,7 @@ func (da DataAccessTester) testGroupUserAdd(t *testing.T) {
 	assert.NoError(t, err)
 
 	group, _ := da.GroupGet(da.ctx, groupname)
-
-	if !assert.Len(t, group.Users, 1) {
-		t.FailNow()
-	}
+	require.Len(t, group.Users, 1)
 
 	assert.Equal(t, group.Users[0].Username, username)
 	assert.Equal(t, group.Users[0].Email, useremail)
@@ -95,13 +94,8 @@ func (da DataAccessTester) testGroupUserList(t *testing.T) {
 	da.GroupUserAdd(da.ctx, groupname, expected[1].Username)
 
 	actual, err := da.GroupUserList(da.ctx, groupname)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-
-	if !assert.Len(t, actual, 2) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
+	require.Len(t, actual, 2)
 
 	assert.Equal(t, expected, actual)
 }
@@ -185,18 +179,12 @@ func (da DataAccessTester) testGroupGet(t *testing.T) {
 
 	// da.Group ctx, should exist now
 	exists, _ := da.GroupExists(da.ctx, groupname)
-	if !assert.True(t, exists) {
-		t.FailNow()
-	}
+	require.True(t, exists)
 
 	// Expect no error
 	group, err = da.GroupGet(da.ctx, groupname)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	if !assert.Equal(t, groupname, group.Name) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
+	require.Equal(t, groupname, group.Name)
 }
 
 func (da DataAccessTester) testGroupPermissionList(t *testing.T) {
@@ -221,18 +209,14 @@ func (da DataAccessTester) testGroupPermissionList(t *testing.T) {
 	defer da.RoleDelete(da.ctx, rolename)
 
 	err = da.GroupRoleAdd(da.ctx, groupname, rolename)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	da.RolePermissionAdd(da.ctx, rolename, expected[0].BundleName, expected[0].Permission)
 	da.RolePermissionAdd(da.ctx, rolename, expected[1].BundleName, expected[1].Permission)
 	da.RolePermissionAdd(da.ctx, rolename, expected[2].BundleName, expected[2].Permission)
 
 	actual, err := da.GroupPermissionList(da.ctx, groupname)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, expected, actual)
 }
@@ -249,20 +233,14 @@ func (da DataAccessTester) testGroupRoleAdd(t *testing.T) {
 	defer da.GroupDelete(da.ctx, groupName)
 
 	err = da.RoleCreate(da.ctx, roleName)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	defer da.RoleDelete(da.ctx, roleName)
 
 	err = da.RolePermissionAdd(da.ctx, roleName, bundleName, permissionName)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	err = da.GroupRoleAdd(da.ctx, groupName, roleName)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	expectedRoles := []rest.Role{
 		{
@@ -272,23 +250,17 @@ func (da DataAccessTester) testGroupRoleAdd(t *testing.T) {
 	}
 
 	roles, err := da.GroupRoleList(da.ctx, groupName)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, expectedRoles, roles)
 
 	err = da.GroupRoleDelete(da.ctx, groupName, roleName)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	expectedRoles = []rest.Role{}
 
 	roles, err = da.GroupRoleList(da.ctx, groupName)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, expectedRoles, roles)
 }
@@ -341,22 +313,15 @@ func (da DataAccessTester) testGroupRoleList(t *testing.T) {
 	defer da.RoleDelete(da.ctx, rolenames[2])
 
 	roles, err := da.GroupRoleList(da.ctx, groupname)
-	if !assert.NoError(t, err) && !assert.Empty(t, roles) {
-		t.FailNow()
-	}
+	assert.NoError(t, err)
+	require.Empty(t, roles)
 
 	err = da.GroupRoleAdd(da.ctx, groupname, rolenames[1])
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	err = da.GroupRoleAdd(da.ctx, groupname, rolenames[0])
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	err = da.GroupRoleAdd(da.ctx, groupname, rolenames[2])
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	// Note: alphabetically sorted!
 	expected := []rest.Role{
@@ -366,10 +331,7 @@ func (da DataAccessTester) testGroupRoleList(t *testing.T) {
 	}
 
 	actual, err := da.GroupRoleList(da.ctx, groupname)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-
+	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 }
 
