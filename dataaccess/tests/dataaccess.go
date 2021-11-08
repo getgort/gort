@@ -26,6 +26,7 @@ import (
 )
 
 // This is a copy of dataaccess.DataAccess, to break an import cycle.
+// DO NOT USE THIS.
 type TestDataAccess interface {
 	bundles.CommandEntryFinder
 
