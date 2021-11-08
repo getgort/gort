@@ -157,7 +157,6 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 				if textBlock, err := buildTextBlockObject(text); err != nil {
 					return nil, err
 				} else {
-					// blocks = append(blocks, slack.NewSectionBlock(textBlock, nil, nil))
 					headerBlock = slack.NewSectionBlock(textBlock, nil, nil)
 				}
 			}

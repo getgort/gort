@@ -62,29 +62,6 @@ const payloadJSON = `{
   ]
 }`
 
-// const testTemplate = `{{ text | emoji false | monospace false }}
-// Hello, {{ .Payload.User }}!
-
-// *{{ .Payload.Requestor }}* wants to know where you'd like to take the {{ .Payload.Company }} investors to dinner tonight.
-
-// *Please select a restaurant:*
-// {{ endtext }}
-
-// {{ divider }}
-
-// {{ range $index, $result := .Payload.Results }}
-// 	{{ $stars := int $result.Stars }}
-// 	{{ section }}
-// 		{{ text }}
-// 			*{{ $result.Name }}*
-// 			{{ repeat $stars "::star::" }} {{ $result.Reviews }} reviews
-// 			{{ $result.Description }}
-// 		{{ endtext }}
-// 		{{ image $result.Image }}
-// 	{{ endsection }}
-// {{ end }}
-// `
-
 func TestMain(m *testing.M) {
 	json.Unmarshal([]byte(payloadJSON), &testStructuredEnvelope.Payload)
 	m.Run()
