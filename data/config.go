@@ -28,6 +28,7 @@ type GortConfig struct {
 	KubernetesConfigs KubernetesConfigs `yaml:"kubernetes,omitempty"`
 	SlackProviders    []SlackProvider   `yaml:"slack,omitempty"`
 	DiscordProviders  []DiscordProvider `yaml:"discord,omitempty"`
+	Templates         Templates         `yaml:"templates,omitempty"`
 }
 
 // GortServerConfigs is the data wrapper for the "gort" section.

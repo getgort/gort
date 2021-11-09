@@ -284,6 +284,19 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		ON DELETE CASCADE
 	);
 
+	CREATE TABLE bundle_templates (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		command				TEXT,
+		command_error		TEXT,
+		message				TEXT,
+		message_error		TEXT,
+		CONSTRAINT			unq_bundle_template UNIQUE(bundle_name, bundle_version),
+		PRIMARY KEY			(bundle_name, bundle_version),
+		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
+		ON DELETE CASCADE
+	);
+
 	CREATE TABLE bundle_commands (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
@@ -303,6 +316,21 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		command_name		TEXT NOT NULL,
 		rule				TEXT NOT NULL CHECK(rule <> ''),
 		PRIMARY KEY			(bundle_name, bundle_version, command_name, rule),
+		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
+		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
+		ON DELETE CASCADE
+	);
+
+	CREATE TABLE bundle_command_templates (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		command_name		TEXT NOT NULL,
+		command				TEXT,
+		command_error		TEXT,
+		message				TEXT,
+		message_error		TEXT,
+		CONSTRAINT			unq_bundle_command_templates UNIQUE(bundle_name, bundle_version, command_name),
+		PRIMARY KEY			(bundle_name, bundle_version, command_name),
 		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
 		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
 		ON DELETE CASCADE

@@ -17,15 +17,16 @@
 package discord
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"html/template"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/templates"
 )
 
 const DefaultErrorTemplate = "{{ .Response.Title }}\n{{ .Response.Out }}"
@@ -223,47 +224,115 @@ func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adap
 	}
 }
 
-// SendErrorMessage sends an error message to a specified channel.
-// TODO Create a MessageBuilder at some point to replace this.
-func (s *Adapter) SendErrorMessage(channelID string, title string, text string) error {
-	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.SendResponseEnvelope(channelID, e)
-}
-
-// SendMessage sends a standard output message to a specified channel.
-// TODO Create a MessageBuilder at some point to replace this.
-func (s *Adapter) SendMessage(channelID string, message string) error {
-	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-	return s.SendResponseEnvelope(channelID, e)
-}
-
-// SendResponseEnvelope sends the contents of a response envelope to a
+// SendEnvelope sends the contents of a response envelope to a
 // specified channel. If channelID is empty the value of
 // envelope.Request.ChannelID will be used.
-func (s *Adapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error {
-	if channelID == "" {
-		channelID = envelope.Request.ChannelID
+func (s *Adapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
+	var err error
+
+	var color uint64
+	if elements.Color != "" {
+		color, err = strconv.ParseUint(strings.Replace(elements.Color, "#", "", 1), 16, 64)
+		if err != nil {
+			return fmt.Errorf("badly-formatted color code: %q", elements.Color)
+		}
 	}
 
-	var templateText string
-
-	if envelope.Data.IsError && envelope.Request.Bundle.Name != "" {
-		templateText = DefaultErrorTemplate
-	} else {
-		templateText = DefaultMessageTemplate
+	embed := &discordgo.MessageEmbed{
+		Color:     int(color),
+		Title:     elements.Title,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Type:      discordgo.EmbedTypeRich,
 	}
 
-	t, err := template.New("envelope").Parse(templateText)
-	if err != nil {
-		return err
+	var fields []*discordgo.MessageEmbedField
+
+	for _, e := range elements.Elements {
+		switch t := e.(type) {
+		case *templates.Divider:
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Value: "--------------------------",
+			})
+
+		case *templates.Image:
+			img := &discordgo.MessageEmbedImage{URL: t.URL}
+			if t.Height != 0 {
+				img.Height = t.Height
+			}
+			if t.Width != 0 {
+				img.Width = t.Width
+			}
+			embed.Image = img
+
+		case *templates.Section:
+			if t.Text != nil {
+				fields = append(fields, &discordgo.MessageEmbedField{
+					Value:  t.Text.Text,
+					Inline: false,
+				})
+			}
+
+			for _, tf := range t.Fields {
+				switch t := tf.(type) {
+				case *templates.Divider:
+					fields = append(fields, &discordgo.MessageEmbedField{
+						Value: "--------------------------",
+					})
+
+				case *templates.Text:
+					txt := t.Text
+					if txt == "" {
+						txt = "\u200b"
+					} else if t.Monospace {
+						txt = fmt.Sprintf("```%s```", txt)
+					}
+
+					fields = append(fields, &discordgo.MessageEmbedField{
+						Value:  txt,
+						Inline: true,
+					})
+				default:
+					return fmt.Errorf("%T fields are not supported inside a Section for Discord", e)
+				}
+			}
+
+		case *templates.Text:
+			txt := t.Text
+			if txt == "" {
+				txt = "\u200b"
+			} else if t.Monospace {
+				txt = fmt.Sprintf("```%s```", txt)
+			}
+
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Value: txt,
+			})
+
+		default:
+			return fmt.Errorf("%T fields are not yet supported by Gort for Discord", e)
+		}
 	}
 
-	buffer := new(bytes.Buffer)
-	err = t.Execute(buffer, envelope)
-	if err != nil {
-		return err
+	embed.Fields = fields
+
+	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
+
+	return err
+}
+
+// SendError is a break-glass error message function that's used when the
+// templating function fails somehow. Obviously, it does not utilize the
+// templating engine.
+func (s *Adapter) SendError(ctx context.Context, channelID string, err error) error {
+	embed := &discordgo.MessageEmbed{
+		Color:     0xFF0000,
+		Title:     "Error",
+		Timestamp: time.Now().Format(time.RFC3339),
+		Type:      discordgo.EmbedTypeRich,
+		Fields:    []*discordgo.MessageEmbedField{{Value: err.Error()}},
 	}
 
-	_, err = s.session.ChannelMessageSend(channelID, buffer.String())
+	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
+
 	return err
 }

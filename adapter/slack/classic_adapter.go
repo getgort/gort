@@ -17,16 +17,15 @@
 package slack
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"reflect"
 	"strings"
-	"text/template"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/telemetry"
+	"github.com/getgort/gort/templates"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 )
@@ -287,6 +286,17 @@ func (s ClassicAdapter) Listen(ctx context.Context) <-chan *adapter.ProviderEven
 	return events
 }
 
+// Send sends the contents of a response envelope to a
+// specified channel. If channelID is empty the value of
+// envelope.Request.ChannelID will be used.
+func (s *ClassicAdapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
+	return Send(ctx, s.client, s, channelID, elements)
+}
+
+func (s *ClassicAdapter) SendError(ctx context.Context, channelID string, err error) error {
+	return SendError(ctx, s.client, channelID, err)
+}
+
 // onChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.
 func (s *ClassicAdapter) onChannelMessage(event *slack.MessageEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
@@ -386,87 +396,6 @@ func (s *ClassicAdapter) onRTMError(event *slack.RTMError, info *adapter.Info) *
 			Msg:  event.Msg,
 		},
 	)
-}
-
-// SendErrorMessage sends an error message to a specified channel.
-func (s *ClassicAdapter) SendErrorMessage(channelID string, title string, text string) error {
-	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
-	return s.SendResponseEnvelope(channelID, e)
-}
-
-// SendMessage sends a standard output message to a specified channel.
-func (s *ClassicAdapter) SendMessage(channelID string, message string) error {
-	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
-	return s.SendResponseEnvelope(channelID, e)
-}
-
-// SendResponseEnvelope sends the contents of a response envelope to a
-// specified channel. If channelID is empty the value of
-// envelope.Request.ChannelID will be used.
-func (s *ClassicAdapter) SendResponseEnvelope(channelID string, envelope data.CommandResponseEnvelope) error {
-	var templateText string
-
-	if envelope.Data.IsError && envelope.Request.Bundle.Name != "" {
-		templateText = DefaultCommandErrorTemplate
-	} else {
-		templateText = DefaultMessageTemplate
-	}
-
-	t, err := template.New("envelope").Parse(templateText)
-	if err != nil {
-		return err
-	}
-
-	buffer := new(bytes.Buffer)
-
-	err = t.Execute(buffer, envelope)
-	if err != nil {
-		return err
-	}
-
-	options := []slack.MsgOption{
-		slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionAsUser(false),
-		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}),
-	}
-
-	if channelID == "" {
-		channelID = envelope.Request.ChannelID
-	}
-
-	if envelope.Data.IsError {
-		title := envelope.Response.Title
-		if title == "" {
-			title = "Error"
-		}
-
-		options = append(
-			options,
-			slack.MsgOptionAttachments(
-				slack.Attachment{
-					Title:      title,
-					Text:       buffer.String(),
-					Color:      "#FF0000",
-					MarkdownIn: []string{"text"},
-				},
-			),
-		)
-
-	} else {
-		options = append(
-			options,
-			slack.MsgOptionDisableMediaUnfurl(),
-			slack.MsgOptionText(buffer.String(), false),
-		)
-	}
-
-	_, _, err = s.client.PostMessage(channelID, options...)
-
-	return err
 }
 
 // wrapEvent creates a new ProviderEvent instance with metadata and the Event data attached.

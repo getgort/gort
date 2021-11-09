@@ -45,20 +45,22 @@ type Bundle struct {
 	Permissions       []string                  `yaml:",omitempty" json:"permissions,omitempty"`
 	Commands          map[string]*BundleCommand `yaml:",omitempty" json:"commands,omitempty"`
 	Default           bool                      `yaml:"-" json:"default,omitempty"`
+	Templates         Templates                 `yaml:",omitempty" json:"templates,omitempty"`
+}
+
+// BundleCommand represents a bundle command, as defined in the "bundles/commands"
+// section of the config.
+type BundleCommand struct {
+	Description     string    `yaml:",omitempty" json:"description,omitempty"`
+	Executable      []string  `yaml:",omitempty,flow" json:"executable,omitempty"`
+	LongDescription string    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
+	Name            string    `yaml:"-" json:"-"`
+	Rules           []string  `yaml:",omitempty" json:"rules,omitempty"`
+	Templates       Templates `yaml:",omitempty" json:"templates,omitempty"`
 }
 
 // BundleDocker represents the "bundles/docker" subsection of the config doc
 type BundleDocker struct {
 	Image string `yaml:",omitempty" json:"image,omitempty"`
 	Tag   string `yaml:",omitempty" json:"tag,omitempty"`
-}
-
-// BundleCommand represents a bundle command, as defined in the "bundles/commands"
-// section of the config.
-type BundleCommand struct {
-	Description     string   `yaml:",omitempty" json:"description,omitempty"`
-	Executable      []string `yaml:",omitempty,flow" json:"executable,omitempty"`
-	LongDescription string   `yaml:"long_description,omitempty" json:"long_description,omitempty"`
-	Name            string   `yaml:"-" json:"-"`
-	Rules           []string `yaml:",omitempty" json:"rules,omitempty"`
 }

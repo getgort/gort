@@ -17,6 +17,12 @@ docker:
   image: ubuntu
   tag: 20.04
 
+templates:
+  command_error: 'Template:Bundle:CommandError'
+  command: 'Template:Bundle:Command'
+  message_error: 'Template:Bundle:MessageError'
+  message: 'Template:Bundle:Message'
+
 commands:
   echox:
     description: "Write arguments to the standard output."
@@ -28,3 +34,8 @@ commands:
     executable: [ "/bin/echo" ]
     rules:
       - must have test:echox
+    templates:
+      command: 'Template:Command:Command'
+      command_error: 'Template:Command:CommandError'
+      message: 'Template:Command:Message'
+      message_error: 'Template:Command:MessageError'
