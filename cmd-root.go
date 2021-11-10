@@ -37,10 +37,9 @@ const (
 // GetRootCmd root
 func GetRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   rootUse,
-		Short: rootShort,
-		Long:  rootLong,
-		// SilenceErrors: true,
+		Use:          rootUse,
+		Short:        rootShort,
+		Long:         rootLong,
 		SilenceUsage: true,
 	}
 
