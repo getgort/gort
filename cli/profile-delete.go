@@ -17,9 +17,8 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/getgort/gort/client"
+
 	"github.com/spf13/cobra"
 )
 
@@ -51,39 +50,42 @@ func GetProfileDeleteCmd() *cobra.Command {
 }
 
 func profileDeleteCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		Profile string `json:",omitempty" yaml:",omitempty"`
+		Warning string `json:",omitempty" yaml:",omitempty"`
+	}{CommandResult: &CommandResult{}}
+
 	profile, err := client.LoadClientProfile()
 	if err != nil {
-		fmt.Println("Failed to load existing profiles:", err)
-		return nil
+		return OutputError(cmd, o, err)
 	}
 
 	if len(profile.Profiles) == 0 {
-		fmt.Println("No profile file found.")
-		fmt.Println("Use 'gort profile create' to create a new profile.")
-		return nil
+		message := "No profile file found.\nUse 'gort profile create' to create a new profile."
+		return OutputErrorMessage(cmd, o, message)
 	}
 
 	name := args[0]
+	o.Profile = name
 
 	if _, exists := profile.Profiles[name]; !exists {
-		fmt.Printf("Profile '%s' doesn't exist.\n", name)
-		return nil
+		message := "Profile doesn't exist."
+		return OutputErrorMessage(cmd, o, message)
 	}
 
 	delete(profile.Profiles, name)
 
 	if profile.Defaults.Profile == name {
-		fmt.Println("WARNING: Deleting default profile!")
+		o.Warning = "Deleting default profile"
 		profile.Defaults.Profile = ""
 	}
 
 	err = client.SaveClientProfile(profile)
 	if err != nil {
-		fmt.Printf("Failed to update profile: %s\n", err.Error())
-		return nil
+		return OutputError(cmd, o, err)
 	}
 
-	fmt.Printf("Profile '%s' deleted.\n", name)
-
-	return nil
+	tmpl := `Profile {{ .Profile | quote }} deleted.`
+	return OutputSuccess(cmd, o, tmpl)
 }

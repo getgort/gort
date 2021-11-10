@@ -52,9 +52,9 @@ type ProfileDefaults struct {
 
 // ProfileEntry represents a single profile entry.
 type ProfileEntry struct {
-	Name          string   `json:"-" yaml:"-"`
+	Name          string   `json:",omitempty" yaml:",omitempty"`
 	URLString     string   `json:"URL,omitempty" yaml:"url,omitempty"`
-	Password      string   `json:",omitempty" yaml:"password,omitempty"`
+	Password      string   `json:",omitempty" yaml:",omitempty"`
 	URL           *url.URL `json:"-" yaml:"-"`
 	Username      string   `json:",omitempty" yaml:"user,omitempty"`
 	AllowInsecure bool     `json:",omitempty" yaml:"allow_insecure,omitempty"`

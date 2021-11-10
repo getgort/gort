@@ -21,6 +21,7 @@ import (
 	"sort"
 
 	"github.com/getgort/gort/client"
+
 	"github.com/spf13/cobra"
 )
 
@@ -54,30 +55,32 @@ func GetPermissionListCmd() *cobra.Command {
 }
 
 func permissionListCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		Permissions []string
+	}{CommandResult: &CommandResult{}}
+
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	bundles, err := gortClient.BundleList()
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
-
-	names := make([]string, 0)
 
 	for _, b := range bundles {
 		for _, p := range b.Permissions {
-			names = append(names, fmt.Sprintf("%v:%v", b.Name, p))
+			o.Permissions = append(o.Permissions, fmt.Sprintf("%v:%v", b.Name, p))
 		}
 	}
 
 	// Sort by name, for presentation purposes.
-	sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
+	sort.Slice(o.Permissions, func(i, j int) bool { return o.Permissions[i] < o.Permissions[j] })
 
-	c := &Columnizer{}
-	c.StringColumn("NAME", func(i int) string { return names[i] })
-	c.Print(names)
-
-	return nil
+	tmpl := `NAME
+{{ range $index, $p := .Permissions }}{{ $p }}
+{{ end }}`
+	return OutputSuccess(cmd, o, tmpl)
 }

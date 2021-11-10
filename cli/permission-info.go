@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/getgort/gort/client"
+
 	"github.com/spf13/cobra"
 )
 
@@ -54,28 +55,43 @@ func GetPermissionInfoCmd() *cobra.Command {
 }
 
 func permissionInfoCmd(cmd *cobra.Command, args []string) error {
-	const format = "%-12s %-12s %-12s\n"
+	type Perm struct {
+		Bundle     string
+		Permission string
+		Version    string
+	}
+
+	o := struct {
+		*CommandResult
+		Permission  string
+		Permissions []Perm
+	}{
+		Permission:    args[0],
+		CommandResult: &CommandResult{},
+	}
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	bundles, err := gortClient.BundleList()
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
-
-	fmt.Printf(format, "BUNDLE", "PERMISSION", "VERSION")
 
 	for _, b := range bundles {
 		for _, p := range b.Permissions {
 			combinedName := fmt.Sprintf("%v:%v", b.Name, p)
-			if p == args[0] || combinedName == args[0] {
-				fmt.Printf(format, b.Name, p, b.Version)
+			if p == o.Permission || combinedName == o.Permission {
+				o.Permissions = append(o.Permissions, Perm{Bundle: b.Name, Permission: p, Version: b.Version})
 			}
 		}
 	}
 
-	return nil
+	tmpl := `{{ printf "%-10s" "BUNDLE" }} {{ printf "%-18s" "PERMISSION" }} {{ printf "%-12s" "VERSION" }}
+{{ range $index, $p := .Permissions }}{{ printf "%-10s" $p.Bundle }} {{ printf "%-18s" $p.Permission }} {{ printf "%-12s" $p.Version }}
+{{ end }}`
+
+	return OutputSuccess(cmd, o, tmpl)
 }

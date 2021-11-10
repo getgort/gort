@@ -61,13 +61,25 @@ func (c *CommandResult) SetSuccess(b bool) {
 	c.Success = b
 }
 
-func OutputError(cmd *cobra.Command, o Errorable, err error) error {
+func OutputError(cmd *cobra.Command, o Errorable, e error) error {
 	// Silence command errors, because we want to control the output.
 	cmd.SilenceErrors = true
-	o.SetErr(err)
+	o.SetErr(e)
 
-	if err2 := Output(cmd, o, ErrorTemplate); err2 != nil {
-		return err2
+	if err := Output(cmd, o, ErrorTemplate); err != nil {
+		return err
+	}
+
+	return o
+}
+
+func OutputErrorMessage(cmd *cobra.Command, o Errorable, message string) error {
+	// Silence command errors, because we want to control the output.
+	cmd.SilenceErrors = true
+	o.SetErr(fmt.Errorf(message))
+
+	if err := Output(cmd, o, `{{ .Error }}`); err != nil {
+		return err
 	}
 
 	return o

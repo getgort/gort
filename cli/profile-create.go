@@ -21,6 +21,7 @@ import (
 	"net/url"
 
 	"github.com/getgort/gort/client"
+
 	"github.com/spf13/cobra"
 )
 
@@ -60,52 +61,45 @@ func GetProfileCreateCmd() *cobra.Command {
 }
 
 func profileCreateCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		Profile client.ProfileEntry `json:",omitempty" yaml:",omitempty"`
+	}{
+		CommandResult: &CommandResult{},
+		Profile: client.ProfileEntry{
+			Name:     args[0],
+			Password: args[2],
+			Username: args[3],
+		},
+	}
+
 	profile, err := client.LoadClientProfile()
 	if err != nil {
-		fmt.Println("Failed to load existing profiles:", err)
-		return nil
+		return OutputError(cmd, o, err)
 	}
 
-	if len(profile.Profiles) == 0 {
-		fmt.Println("No profile file found. Creating.")
+	if _, exists := profile.Profiles[o.Profile.Name]; exists {
+		message := "Profile already exists."
+		return OutputErrorMessage(cmd, o, message)
 	}
 
-	name := args[0]
-	urlstring := args[1]
-	user := args[2]
-	password := args[3]
-
-	if _, exists := profile.Profiles[name]; exists {
-		fmt.Printf("Profile '%s' already exists.\n", name)
-		return nil
-	}
-
-	furl, err := url.Parse(urlstring)
+	o.Profile.URL, err = url.Parse(args[1])
 	if err != nil {
-		fmt.Printf("Failed to parse URL '%s': %s\n", urlstring, err.Error())
-		return nil
+		return OutputError(cmd, o, fmt.Errorf("failed to parse url %q: %w", args[1], err))
 	}
+	o.Profile.URLString = o.Profile.URL.String()
 
-	pe := client.ProfileEntry{
-		Name:      name,
-		URLString: furl.String(),
-		Password:  password,
-		Username:  user,
-	}
-
-	profile.Profiles[name] = pe
+	profile.Profiles[o.Profile.Name] = o.Profile
 
 	if profile.Defaults.Profile == "" {
-		profile.Defaults.Profile = pe.Name
+		profile.Defaults.Profile = o.Profile.Name
 	}
 
 	err = client.SaveClientProfile(profile)
 	if err != nil {
-		fmt.Printf("Failed to update profile: %s\n", err.Error())
-		return nil
+		return OutputError(cmd, o, err)
 	}
 
-	fmt.Printf("Profile '%s' (%s@%s) created.\n", pe.Name, pe.Username, pe.URLString)
-
-	return nil
+	tmpl := `Profile {{ .Profile | quote }} ({{ .Profile.Username }}@{{ .Profile.URLString }}) created.`
+	return OutputSuccess(cmd, o, tmpl)
 }

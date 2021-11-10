@@ -17,10 +17,11 @@
 package cli
 
 import (
-	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/getgort/gort/client"
+
 	"github.com/spf13/cobra"
 )
 
@@ -52,44 +53,48 @@ func GetProfileListCmd() *cobra.Command {
 }
 
 func profileListCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		Default  string
+		Profiles []client.ProfileEntry
+	}{CommandResult: &CommandResult{}}
+
 	profile, err := client.LoadClientProfile()
 	if err != nil {
-		fmt.Println("Failed to load existing profiles:", err)
-		return nil
+		return OutputError(cmd, o, err)
 	}
 
 	if len(profile.Profiles) == 0 {
-		fmt.Println("No profile file found.")
-		fmt.Println("Use 'gort profile create' to create a new profile.")
-		return nil
+		message := "No profile file found.\nUse 'gort profile create' to create a new profile."
+		return OutputErrorMessage(cmd, o, message)
 	}
 
-	profiles := []client.ProfileEntry{}
+	o.Default = profile.Defaults.Profile
 	for name, p := range profile.Profiles {
 		p.Name = name
-		profiles = append(profiles, p)
-
+		p.Password = ""
+		o.Profiles = append(o.Profiles, p)
 	}
 
 	// Sort by name, for presentation purposes.
-	sort.Slice(profiles, func(i, j int) bool { return profiles[i].Name < profiles[j].Name })
+	sort.Slice(o.Profiles, func(i, j int) bool { return o.Profiles[i].Name < o.Profiles[j].Name })
 
 	c := &Columnizer{}
-	c.StringColumn("NAME", func(i int) string { return profiles[i].Name })
-	c.StringColumn("USER", func(i int) string { return profiles[i].Username })
-	c.StringColumn("URL", func(i int) string { return profiles[i].URL.String() })
+	c.StringColumn("NAME", func(i int) string { return o.Profiles[i].Name })
+	c.StringColumn("USER", func(i int) string { return o.Profiles[i].Username })
+	c.StringColumn("URL", func(i int) string { return o.Profiles[i].URL.String() })
 	c.StringColumn("DEFAULT", func(i int) string {
 		def := ""
-		if profiles[i].Name == profile.Defaults.Profile {
+		if o.Profiles[i].Name == o.Default {
 			def = "   *"
 		}
 		return def
 	})
-	c.Print(profiles)
+	tmpl := strings.Join(c.Format(o.Profiles), "\n")
 
-	if profile.Defaults.Profile == "" {
-		fmt.Println("\nWARNING: No default profile set! Use 'gort profile default' to fix.")
+	if o.Default == "" {
+		tmpl += "\nWARNING: No default profile set! Use 'gort profile default' to fix."
 	}
 
-	return nil
+	return OutputSuccess(cmd, o, tmpl)
 }
