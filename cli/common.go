@@ -23,6 +23,10 @@ import (
 var (
 	// FlagGortProfile is a persistent flag
 	FlagGortProfile string
+
+	// FlagGortFormat is the selected output format. Can be text (default),
+	// json, or yaml.
+	FlagGortFormat string
 )
 
 func groupNames(groups []rest.Group) []string {

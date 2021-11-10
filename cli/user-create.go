@@ -17,8 +17,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data/rest"
 	"github.com/spf13/cobra"
@@ -96,8 +94,18 @@ func userCreateCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	user.Password = ""
 
-	fmt.Printf("User %q created.\n", user.Username)
+	o := struct {
+		User rest.User
+	}{
+		User: user,
+	}
+
+	tmpl := `User {{ .User.Username | quote }} created.`
+	if err := Output(FlagGortFormat, o, tmpl); err != nil {
+		return err
+	}
 
 	return nil
 }

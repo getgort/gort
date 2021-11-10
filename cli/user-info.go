@@ -17,11 +17,11 @@
 package cli
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data/rest"
 	"github.com/spf13/cobra"
 )
 
@@ -77,23 +77,24 @@ func userInfoCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	const format = `Name       %s
-Full Name  %s
-Email      %s
-Groups     %s
+	o := struct {
+		User   rest.User
+		Groups []rest.Group `json:"groups"`
+	}{
+		User:   user,
+		Groups: groups,
+	}
+
+	tmpl := `Name       {{ if .User.Username }}{{ .User.Username }}{{ else }}<undefined>{{ end }}
+Full Name  {{ if .User.FullName }}{{ .User.FullName }}{{ else }}<undefined>{{ end }}
+Email      {{ if .User.Email }}{{ .User.Email }}{{ else }}<undefined>{{ end }}
+Groups    {{ range $index, $group := .Groups }} {{ $group.Name}}{{ end }}
 
 `
 
-	fmt.Printf(format,
-		process(user.Username),
-		process(user.FullName),
-		process(user.Email),
-		process(groupNames(groups)),
-	)
-
 	if len(user.Mappings) == 0 {
-		fmt.Println("This user has no chat provider mappings. Use 'gort user map' to map a Gort\n" +
-			"user to one or more chat provider IDs.")
+		tmpl += "This user has no chat provider mappings. Use 'gort user map' to map a Gort\n" +
+			"user to one or more chat provider IDs."
 	} else {
 		var keys []string
 		for k, _ := range user.Mappings {
@@ -104,27 +105,12 @@ Groups     %s
 		c := &Columnizer{}
 		c.StringColumn("ADAPTER", func(i int) string { return keys[i] })
 		c.StringColumn("ID MAPPING", func(i int) string { return user.Mappings[keys[i]] })
-		c.Print(keys)
+		tmpl += strings.Join(c.Format(keys), "\n")
+	}
+
+	if err := Output(FlagGortFormat, o, tmpl); err != nil {
+		return err
 	}
 
 	return nil
-}
-
-func process(i interface{}) string {
-	switch v := i.(type) {
-	case string:
-		if v == "" {
-			return "<undefined>"
-		}
-
-		return v
-	case []string:
-		if len(v) == 0 {
-			return "<undefined>"
-		}
-
-		return strings.Join(v, ", ")
-	default:
-		return fmt.Sprintf("<unexpected type: %T>", i)
-	}
 }

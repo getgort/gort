@@ -17,8 +17,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/getgort/gort/client"
@@ -94,7 +92,16 @@ func bootstrapCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("User %q created and credentials appended to gort config.\n", user.Username)
+	o := struct {
+		User string
+	}{
+		User: user.Username,
+	}
+
+	template := `User {{ .User | quote }} created and credentials appended to Gort config.`
+	if err := Output(FlagGortFormat, o, template); err != nil {
+		return err
+	}
 
 	return nil
 }

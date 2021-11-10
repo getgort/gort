@@ -31,16 +31,16 @@ type BundleInfo struct {
 // Bundle represents a bundle as defined in the "bundles" section of the
 // config.
 type Bundle struct {
-	GortBundleVersion int                       `yaml:"gort_bundle_version,omitempty" json:"gort_bundle_version,omitempty"`
+	GortBundleVersion int                       `yaml:"gort_bundle_version,omitempty" json:"gortBundleVersion,omitempty"`
 	Name              string                    `yaml:",omitempty" json:"name,omitempty"`
 	Version           string                    `yaml:",omitempty" json:"version,omitempty"`
 	Enabled           bool                      `yaml:",omitempty" json:"enabled"`
 	Author            string                    `yaml:",omitempty" json:"author,omitempty"`
 	Homepage          string                    `yaml:",omitempty" json:"homepage,omitempty"`
 	Description       string                    `yaml:",omitempty" json:"description,omitempty"`
-	InstalledOn       time.Time                 `yaml:"-" json:"installed_on,omitempty"`
-	InstalledBy       string                    `yaml:",omitempty" json:"installed_by,omitempty"`
-	LongDescription   string                    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
+	InstalledOn       time.Time                 `yaml:"-" json:"installedOn,omitempty"`
+	InstalledBy       string                    `yaml:",omitempty" json:"installedBy,omitempty"`
+	LongDescription   string                    `yaml:"long_description,omitempty" json:"longDescription,omitempty"`
 	Docker            BundleDocker              `yaml:",omitempty" json:"docker,omitempty"`
 	Permissions       []string                  `yaml:",omitempty" json:"permissions,omitempty"`
 	Commands          map[string]*BundleCommand `yaml:",omitempty" json:"commands,omitempty"`
@@ -53,7 +53,7 @@ type Bundle struct {
 type BundleCommand struct {
 	Description     string    `yaml:",omitempty" json:"description,omitempty"`
 	Executable      []string  `yaml:",omitempty,flow" json:"executable,omitempty"`
-	LongDescription string    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
+	LongDescription string    `yaml:"long_description,omitempty" json:"longDescription,omitempty"`
 	Name            string    `yaml:"-" json:"-"`
 	Rules           []string  `yaml:",omitempty" json:"rules,omitempty"`
 	Templates       Templates `yaml:",omitempty" json:"templates,omitempty"`

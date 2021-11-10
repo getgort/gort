@@ -18,8 +18,10 @@ package cli
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data/rest"
 	"github.com/spf13/cobra"
 )
 
@@ -71,7 +73,17 @@ func userListCmd(cmd *cobra.Command, args []string) error {
 	c.StringColumn("USER NAME", func(i int) string { return users[i].Username })
 	c.StringColumn("FULL NAME", func(i int) string { return users[i].FullName })
 	c.StringColumn("EMAIL", func(i int) string { return users[i].Email })
-	c.Print(users)
+	text := strings.Join(c.Format(users), "\n")
+
+	o := struct {
+		Users []rest.User
+	}{
+		Users: users,
+	}
+
+	if err := Output(FlagGortFormat, o, text); err != nil {
+		return err
+	}
 
 	return nil
 }

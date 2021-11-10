@@ -17,11 +17,8 @@
 package cli
 
 import (
-	"fmt"
-
-	"github.com/spf13/cobra"
-
 	"github.com/getgort/gort/version"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -49,12 +46,23 @@ func GetVersionCmd() *cobra.Command {
 }
 
 func versionCmd(cmd *cobra.Command, args []string) error {
-	if flagVersionShort {
-		fmt.Println(version.Version)
-		return nil
+	o := struct {
+		Version string
+	}{
+		Version: version.Version,
 	}
 
-	fmt.Printf("Gort ChatOps Engine v%s\n", version.Version)
+	var tmpl string
+
+	if flagVersionShort {
+		tmpl = `{{ .Version }}`
+	} else {
+		tmpl = `Gort ChatOps Engine v{{ .Version }}`
+	}
+
+	if err := Output(FlagGortFormat, o, tmpl); err != nil {
+		return err
+	}
 
 	return nil
 }

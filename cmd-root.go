@@ -17,7 +17,13 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+
 	"github.com/spf13/cobra"
+	yaml "gopkg.in/yaml.v3"
 
 	"github.com/getgort/gort/cli"
 )
@@ -49,6 +55,42 @@ func GetRootCmd() *cobra.Command {
 	root.AddCommand(cli.GetVersionCmd())
 
 	root.PersistentFlags().StringVarP(&cli.FlagGortProfile, "profile", "P", "", "The Gort profile within the config file to use")
+	root.PersistentFlags().StringVarP(&cli.FlagGortFormat, "output", "o", "text", "The output format: text (default), json, yaml")
+
+	root.SetErr(errorWriter{})
 
 	return root
+}
+
+type errorWriter struct {
+}
+
+func (w errorWriter) Write(p []byte) (n int, err error) {
+	o := struct{ Error string }{Error: strings.TrimSpace(string(p))}
+
+	var text string
+
+	switch f := strings.ToLower(cli.FlagGortFormat); f {
+	case "json":
+		b, err := json.MarshalIndent(o, "", "  ")
+		if err != nil {
+			return 0, fmt.Errorf("failed to marshal as json: %w", err)
+		}
+		text = string(b)
+
+	case "yaml":
+		b, err := yaml.Marshal(o)
+		if err != nil {
+			return 0, fmt.Errorf("failed to marshal as yaml: %w", err)
+		}
+		text = string(b)
+
+	case "text":
+		text = o.Error
+
+	default:
+		return 0, fmt.Errorf("unsupported output format: %s", f)
+	}
+
+	return fmt.Fprintln(os.Stderr, strings.TrimSpace(text))
 }

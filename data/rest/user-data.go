@@ -21,7 +21,7 @@ package rest
 type User struct {
 	Email    string `json:"email,omitempty"`
 	FullName string `json:"fullname,omitempty"`
-	Password string `json:"password,omitempty"`
+	Password string `json:"password,omitempty" yaml:",omitempty"`
 	Username string `json:"username,omitempty"`
 
 	// Mappings stores this user's identity mappings for each chat service.
