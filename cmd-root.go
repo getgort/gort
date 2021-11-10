@@ -43,12 +43,6 @@ func GetRootCmd() *cobra.Command {
 		SilenceUsage: true,
 	}
 
-	// This makes sure that flag errors are still output.
-	root.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
-		fmt.Fprintln(cmd.ErrOrStderr(), err)
-		return err
-	})
-
 	root.AddCommand(GetStartCmd())
 	root.AddCommand(cli.GetBootstrapCmd())
 	root.AddCommand(cli.GetBundleCmd())
