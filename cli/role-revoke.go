@@ -17,11 +17,9 @@
 package cli
 
 import (
-	"fmt"
+	"github.com/getgort/gort/client"
 
 	"github.com/spf13/cobra"
-
-	"github.com/getgort/gort/client"
 )
 
 const (
@@ -35,6 +33,7 @@ Flags:
   -h, --help   Show this message and exit
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -55,21 +54,28 @@ func GetRoleRevokeCmd() *cobra.Command {
 }
 
 func roleRevokeCmd(cmd *cobra.Command, args []string) error {
-	rolename := args[0]
-	bundlename := args[1]
-	permissionname := args[2]
+	o := struct {
+		*CommandResult
+		Role       string
+		Bundle     string
+		Permission string
+	}{
+		CommandResult: &CommandResult{},
+		Role:          args[0],
+		Bundle:        args[1],
+		Permission:    args[2],
+	}
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	err = gortClient.RolePermissionRevoke(rolename, bundlename, permissionname)
+	err = gortClient.RolePermissionRevoke(o.Role, o.Bundle, o.Permission)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	fmt.Printf("Permission Revoked from %s: %s\n", rolename, permissionname)
-
-	return nil
+	var tmpl = `Permission revoked from {{ .Role }}: {{ .Permission }}.`
+	return OutputSuccess(cmd, o, tmpl)
 }

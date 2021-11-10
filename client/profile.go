@@ -21,10 +21,10 @@ import (
 	"net/url"
 	"os"
 
-	yaml "gopkg.in/yaml.v3"
-
 	"github.com/getgort/gort/data/rest"
 	gerrs "github.com/getgort/gort/errors"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Profile represents a set of user profiles from a $HOME/.gort/profiles file
@@ -52,13 +52,13 @@ type ProfileDefaults struct {
 
 // ProfileEntry represents a single profile entry.
 type ProfileEntry struct {
-	Name          string   `yaml:"-"`
-	URLString     string   `yaml:"url,omitempty"`
-	Password      string   `yaml:"password,omitempty"`
-	URL           *url.URL `yaml:"-"`
-	Username      string   `yaml:"user,omitempty"`
-	AllowInsecure bool     `yaml:"allow_insecure,omitempty"`
-	TLSCertFile   string   `yaml:"tls_cert_file,omitempty"`
+	Name          string   `json:"-" yaml:"-"`
+	URLString     string   `json:"URL,omitempty" yaml:"url,omitempty"`
+	Password      string   `json:",omitempty" yaml:"password,omitempty"`
+	URL           *url.URL `json:"-" yaml:"-"`
+	Username      string   `json:",omitempty" yaml:"user,omitempty"`
+	AllowInsecure bool     `json:",omitempty" yaml:"allow_insecure,omitempty"`
+	TLSCertFile   string   `json:",omitempty" yaml:"tls_cert_file,omitempty"`
 }
 
 // User is a convenience method that returns a rest.User pre-set with the

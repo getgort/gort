@@ -17,10 +17,9 @@
 package cli
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data/rest"
+
 	"github.com/spf13/cobra"
 )
 
@@ -35,6 +34,7 @@ Flags:
   -h, --help   Show this message and exit
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -55,27 +55,27 @@ func GetRoleInfoCmd() *cobra.Command {
 }
 
 func roleInfoCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		Role rest.Role `json:",omitempty" yaml:",omitempty"`
+	}{CommandResult: &CommandResult{}}
+
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	rolename := args[0]
 
-	role, err := gortClient.RoleGet(rolename)
+	o.Role, err = gortClient.RoleGet(rolename)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	const format = `Name         %s
-Permissions  %s
-Groups       %s
+	tmpl := `Name         {{ if .Role.Name }}{{ .Role.Name }}{{ else }}<undefined>{{ end }}
+Groups      {{ range $index, $group := .Role.Groups }} {{ $group.Name }}{{ end }}
+Permissions {{ range $index, $p := .Role.Permissions }} {{ $p.BundleName }}:{{ $p.Permission }}{{ end }}
 `
 
-	fmt.Printf(format,
-		role.Name,
-		strings.Join(role.Permissions.Strings(), ", "),
-		strings.Join(groupNames(role.Groups), ", "))
-
-	return nil
+	return OutputSuccess(cmd, o, tmpl)
 }

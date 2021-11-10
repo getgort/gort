@@ -19,10 +19,10 @@ package rest
 // User is a data struct used to exchange data between a Gort client and a
 // Gort controller REST service.
 type User struct {
-	Email    string `json:"email,omitempty"`
-	FullName string `json:"fullname,omitempty"`
-	Password string `json:"password,omitempty" yaml:",omitempty"`
-	Username string `json:"username,omitempty"`
+	Email    string `json:",omitempty"`
+	FullName string `json:",omitempty"`
+	Password string `json:",omitempty" yaml:",omitempty"`
+	Username string `json:",omitempty"`
 
 	// Mappings stores this user's identity mappings for each chat service.
 	// The key is the adapter name as defined in the config; the value is the

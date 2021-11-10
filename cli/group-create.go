@@ -21,6 +21,7 @@ import (
 
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data/rest"
+
 	"github.com/spf13/cobra"
 )
 

@@ -29,16 +29,6 @@ var (
 	FlagGortFormat string
 )
 
-func groupNames(groups []rest.Group) []string {
-	names := make([]string, 0)
-
-	for _, g := range groups {
-		names = append(names, g.Name)
-	}
-
-	return names
-}
-
 func userNames(users []rest.User) []string {
 	names := make([]string, 0)
 

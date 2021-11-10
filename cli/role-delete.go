@@ -17,11 +17,10 @@
 package cli
 
 import (
-	"fmt"
+	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data/rest"
 
 	"github.com/spf13/cobra"
-
-	"github.com/getgort/gort/client"
 )
 
 const (
@@ -35,6 +34,7 @@ Flags:
   -h, --help   Show this message and exit
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -55,6 +55,11 @@ func GetRoleDeleteCmd() *cobra.Command {
 }
 
 func roleDeleteCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		Role rest.Role `json:",omitempty" yaml:",omitempty"`
+	}{CommandResult: &CommandResult{}}
+
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
@@ -62,19 +67,16 @@ func roleDeleteCmd(cmd *cobra.Command, args []string) error {
 
 	rolename := args[0]
 
-	role, err := gortClient.RoleGet(rolename)
+	o.Role, err = gortClient.RoleGet(rolename)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	fmt.Printf("Deleting role %s... ", role.Name)
-
-	err = gortClient.RoleDelete(role.Name)
+	err = gortClient.RoleDelete(o.Role.Name)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	fmt.Println("Successful.")
-
-	return nil
+	var tmpl = `Deleted user {{ .Role.Name | quote }}.`
+	return OutputSuccess(cmd, o, tmpl)
 }

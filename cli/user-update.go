@@ -17,10 +17,9 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data/rest"
+
 	"github.com/spf13/cobra"
 )
 
@@ -51,6 +50,7 @@ Flags:
   -p, --password string   Password for user
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -83,34 +83,43 @@ func GetUserUpdateCmd() *cobra.Command {
 func userUpdateCmd(cmd *cobra.Command, args []string) error {
 	username := args[0]
 
+	o := struct {
+		*CommandResult
+		User   rest.User
+		Exists bool
+	}{CommandResult: &CommandResult{}}
+
 	c, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	// Only allow this operation if the user already exists.
-	exists, err := c.UserExists(username)
+	o.Exists, err = c.UserExists(username)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
-	if !exists {
-		return client.ErrResourceNotFound
+	if !o.Exists {
+		return OutputError(cmd, o, client.ErrResourceNotFound)
 	}
 
 	// Empty fields will not be overwritten.
-	user := rest.User{
+	o.User = rest.User{
 		Email:    flagUserUpdateEmail,
 		FullName: flagUserUpdateName,
 		Password: flagUserUpdatePassword,
 		Username: username,
 	}
 
-	err = c.UserSave(user)
+	err = c.UserSave(o.User)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	fmt.Printf("User %q updated.\n", user.Username)
+	if o.User.Password != "" {
+		o.User.Password = "(updated)"
+	}
 
-	return nil
+	var tmpl = `User {{ .Username | quote }} updated.`
+	return OutputSuccess(cmd, o, tmpl)
 }

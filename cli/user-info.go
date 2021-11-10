@@ -22,6 +22,7 @@ import (
 
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data/rest"
+
 	"github.com/spf13/cobra"
 )
 
@@ -36,6 +37,7 @@ Flags:
   -h, --help   Show this message and exit
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -56,9 +58,15 @@ func GetUserInfoCmd() *cobra.Command {
 }
 
 func userInfoCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		User   rest.User    `json:",omitempty" yaml:",omitempty"`
+		Groups []rest.Group `json:",omitempty" yaml:",omitempty"`
+	}{CommandResult: &CommandResult{}}
+
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	//
@@ -67,50 +75,38 @@ func userInfoCmd(cmd *cobra.Command, args []string) error {
 
 	username := args[0]
 
-	user, err := gortClient.UserGet(username)
+	o.User, err = gortClient.UserGet(username)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	groups, err := gortClient.UserGroupList(username)
+	o.Groups, err = gortClient.UserGroupList(username)
 	if err != nil {
-		return err
-	}
-
-	o := struct {
-		User   rest.User
-		Groups []rest.Group `json:"groups"`
-	}{
-		User:   user,
-		Groups: groups,
+		return OutputError(cmd, o, err)
 	}
 
 	tmpl := `Name       {{ if .User.Username }}{{ .User.Username }}{{ else }}<undefined>{{ end }}
 Full Name  {{ if .User.FullName }}{{ .User.FullName }}{{ else }}<undefined>{{ end }}
 Email      {{ if .User.Email }}{{ .User.Email }}{{ else }}<undefined>{{ end }}
-Groups    {{ range $index, $group := .Groups }} {{ $group.Name}}{{ end }}
+Groups    {{ range $index, $group := .Groups }} {{ $group.Name }}{{ end }}
 
 `
 
-	if len(user.Mappings) == 0 {
+	if len(o.User.Mappings) == 0 {
 		tmpl += "This user has no chat provider mappings. Use 'gort user map' to map a Gort\n" +
 			"user to one or more chat provider IDs."
 	} else {
 		var keys []string
-		for k, _ := range user.Mappings {
+		for k := range o.User.Mappings {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
 
 		c := &Columnizer{}
 		c.StringColumn("ADAPTER", func(i int) string { return keys[i] })
-		c.StringColumn("ID MAPPING", func(i int) string { return user.Mappings[keys[i]] })
+		c.StringColumn("ID MAPPING", func(i int) string { return o.User.Mappings[keys[i]] })
 		tmpl += strings.Join(c.Format(keys), "\n")
 	}
 
-	if err := Output(FlagGortFormat, o, tmpl); err != nil {
-		return err
-	}
-
-	return nil
+	return OutputSuccess(cmd, o, tmpl)
 }

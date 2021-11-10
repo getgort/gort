@@ -19,9 +19,9 @@ package rest
 import "fmt"
 
 type Role struct {
-	Name        string
-	Permissions RolePermissionList
-	Groups      []Group
+	Name        string             `json:",omitempty" yaml:",omitempty"`
+	Permissions RolePermissionList `json:",omitempty" yaml:",omitempty"`
+	Groups      []Group            `json:",omitempty" yaml:",omitempty"`
 }
 
 type RolePermission struct {

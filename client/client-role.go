@@ -60,27 +60,27 @@ func (c *GortClient) RoleCreate(rolename string) error {
 }
 
 // RoleList comments to be written...
-func (c *GortClient) RoleList() ([]rest.Group, error) {
+func (c *GortClient) RoleList() ([]rest.Role, error) {
 	url := fmt.Sprintf("%s/v2/roles", c.profile.URL.String())
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
-		return []rest.Group{}, err
+		return []rest.Role{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return []rest.Group{}, getResponseError(resp)
+		return []rest.Role{}, getResponseError(resp)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return []rest.Group{}, err
+		return []rest.Role{}, err
 	}
 
-	roles := []rest.Group{}
+	roles := []rest.Role{}
 	err = json.Unmarshal(body, &roles)
 	if err != nil {
-		return []rest.Group{}, err
+		return []rest.Role{}, err
 	}
 
 	return roles, nil

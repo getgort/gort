@@ -20,6 +20,8 @@ import (
 	"sort"
 
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data/rest"
+
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +36,7 @@ Flags:
   -h, --help   Show this message and exit
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -53,22 +56,27 @@ func GetRoleListCmd() *cobra.Command {
 }
 
 func roleListCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		Roles []rest.Role `json:",omitempty" yaml:",omitempty"`
+	}{CommandResult: &CommandResult{}}
+
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	roles, err := gortClient.RoleList()
+	o.Roles, err = gortClient.RoleList()
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	// Sort by name, for presentation purposes.
-	sort.Slice(roles, func(i, j int) bool { return roles[i].Name < roles[j].Name })
+	sort.Slice(o.Roles, func(i, j int) bool { return o.Roles[i].Name < o.Roles[j].Name })
 
-	c := &Columnizer{}
-	c.StringColumn("ROLE NAME", func(i int) string { return roles[i].Name })
-	c.Print(roles)
+	tmpl := `ROLE NAME
+{{ range $index, $role := .Roles }}{{ $role.Name }}{{end}}
+`
 
-	return nil
+	return OutputSuccess(cmd, o, tmpl)
 }

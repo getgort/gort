@@ -18,6 +18,7 @@ package cli
 
 import (
 	"github.com/getgort/gort/version"
+
 	"github.com/spf13/cobra"
 )
 
@@ -47,9 +48,11 @@ func GetVersionCmd() *cobra.Command {
 
 func versionCmd(cmd *cobra.Command, args []string) error {
 	o := struct {
-		Version string
+		*CommandResult
+		Version string `json:",omitempty" yaml:",omitempty"`
 	}{
-		Version: version.Version,
+		CommandResult: &CommandResult{},
+		Version:       version.Version,
 	}
 
 	var tmpl string
@@ -60,9 +63,5 @@ func versionCmd(cmd *cobra.Command, args []string) error {
 		tmpl = `Gort ChatOps Engine v{{ .Version }}`
 	}
 
-	if err := Output(FlagGortFormat, o, tmpl); err != nil {
-		return err
-	}
-
-	return nil
+	return OutputSuccess(cmd, o, tmpl)
 }

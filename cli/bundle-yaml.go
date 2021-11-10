@@ -21,7 +21,7 @@ import (
 
 	"github.com/getgort/gort/client"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 const (

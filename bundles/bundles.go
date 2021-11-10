@@ -25,7 +25,7 @@ import (
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
 
-	yaml "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 var (

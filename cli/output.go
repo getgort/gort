@@ -20,46 +20,115 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig"
-	yaml "gopkg.in/yaml.v3"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
-func Output(format string, o interface{}, tmpl string) error {
+const ErrorTemplate = `Error: {{ .Error }}`
+
+type Errorable interface {
+	Error() string
+	HasErr() bool
+	SetErr(err error) Errorable
+	SetSuccess(b bool)
+}
+
+type CommandResult struct {
+	Success bool
+	Err     string `json:"Error,omitempty" yaml:"error,omitempty"`
+}
+
+func (c *CommandResult) Error() string {
+	return c.Err
+}
+
+func (c *CommandResult) HasErr() bool {
+	return c.Err != ""
+}
+
+func (c *CommandResult) SetErr(err error) Errorable {
+	c.Err = err.Error()
+	return c
+}
+
+func (c *CommandResult) SetSuccess(b bool) {
+	c.Success = b
+}
+
+func OutputError(cmd *cobra.Command, o Errorable, err error) error {
+	// Silence command errors, because we want to control the output.
+	cmd.SilenceErrors = true
+	o.SetErr(err)
+
+	if err2 := Output(cmd, o, ErrorTemplate); err2 != nil {
+		return err2
+	}
+
+	return o
+}
+
+func OutputSuccess(cmd *cobra.Command, o Errorable, tmpl string) error {
+	o.SetSuccess(true)
+	return Output(cmd, o, tmpl)
+}
+
+func Output(cmd *cobra.Command, o Errorable, tmpl string) error {
 	var text string
 
-	switch f := strings.ToLower(format); f {
+	switch f := strings.ToLower(FlagGortFormat); f {
 	case "json":
 		b, err := json.MarshalIndent(o, "", "  ")
 		if err != nil {
-			return fmt.Errorf("failed to marshal as json: %w", err)
+			err = fmt.Errorf("Output error: failed to marshal as json: %w", err)
+			fmt.Fprintln(os.Stderr, err.Error())
+			return err
 		}
 		text = string(b)
 
 	case "yaml":
 		b, err := yaml.Marshal(o)
 		if err != nil {
-			return fmt.Errorf("failed to marshal as yaml: %w", err)
+			err = fmt.Errorf("Output error: failed to marshal as yaml: %w", err)
+			fmt.Fprintln(os.Stderr, err.Error())
+			return err
 		}
 		text = string(b)
 
 	case "text":
 		t, err := template.New("template").Funcs(template.FuncMap(sprig.FuncMap())).Parse(tmpl)
 		if err != nil {
-			return fmt.Errorf("failed to parse template: %w", err)
+			err = fmt.Errorf("Output error: failed to parse response template: %w", err)
+			fmt.Fprintln(os.Stderr, err.Error())
+			return err
 		}
 		b := &bytes.Buffer{}
 		if err := t.Execute(b, o); err != nil {
-			return fmt.Errorf("failed to execute template: %w", err)
+			err = fmt.Errorf("Output error: failed to execute response template: %w", err)
+			fmt.Fprintln(os.Stderr, err.Error())
+			return err
 		}
 		text = b.String()
 
 	default:
-		return fmt.Errorf("unsupported output format: %s", f)
+		err := fmt.Errorf("Output error: unsupported output format: %s", f)
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
 	}
 
-	fmt.Println(strings.TrimSpace(text))
+	var w io.Writer
+	if o.HasErr() {
+		w = os.Stderr
+	} else {
+		w = os.Stdout
+	}
+
+	fmt.Fprintln(w, strings.TrimSpace(text))
+
 	return nil
 }

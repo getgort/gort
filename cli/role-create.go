@@ -17,11 +17,10 @@
 package cli
 
 import (
-	"fmt"
+	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data/rest"
 
 	"github.com/spf13/cobra"
-
-	"github.com/getgort/gort/client"
 )
 
 // $ cogctl role create --help
@@ -43,6 +42,7 @@ Flags:
   -h, --help   Show this message and exit
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -65,28 +65,37 @@ func GetRoleCreateCmd() *cobra.Command {
 func roleCreateCmd(cmd *cobra.Command, args []string) error {
 	rolename := args[0]
 
+	o := struct {
+		*CommandResult
+		Exists bool
+		Role   rest.Role
+	}{CommandResult: &CommandResult{}}
+
 	c, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	// Only allow this operation if the role doesn't already exist.
-	exists, err := c.RoleExists(rolename)
+	o.Exists, err = c.RoleExists(rolename)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
-	if exists {
-		return client.ErrResourceExists
+	if o.Exists {
+		return OutputError(cmd, o, client.ErrResourceExists)
+	}
+
+	o.Role = rest.Role{
+		Name: rolename,
 	}
 
 	// Client roleCreate will create the gort config if necessary, and append
 	// the new credentials to it.
 	err = c.RoleCreate(rolename)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	fmt.Printf("role %q created.\n", rolename)
-
-	return nil
+	tmpl := `Role {{ .Role.Name | quote }} created.`
+	return OutputSuccess(cmd, o, tmpl)
 }

@@ -22,6 +22,7 @@ import (
 
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data/rest"
+
 	"github.com/spf13/cobra"
 )
 
@@ -36,6 +37,7 @@ Flags:
   -h, --help   Show this message and exit
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -55,35 +57,30 @@ func GetUserListCmd() *cobra.Command {
 }
 
 func userListCmd(cmd *cobra.Command, args []string) error {
+	o := struct {
+		*CommandResult
+		Users []rest.User
+	}{CommandResult: &CommandResult{}}
 
 	gortClient, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	users, err := gortClient.UserList()
-	if err != nil {
-		return err
+	if users, err := gortClient.UserList(); err != nil {
+		return OutputError(cmd, o, err)
+	} else {
+		sort.Slice(users, func(i, j int) bool { return users[i].Username < users[j].Username })
+		o.Users = users
 	}
 
 	// Sort by name, for presentation purposes.
-	sort.Slice(users, func(i, j int) bool { return users[i].Username < users[j].Username })
 
 	c := &Columnizer{}
-	c.StringColumn("USER NAME", func(i int) string { return users[i].Username })
-	c.StringColumn("FULL NAME", func(i int) string { return users[i].FullName })
-	c.StringColumn("EMAIL", func(i int) string { return users[i].Email })
-	text := strings.Join(c.Format(users), "\n")
+	c.StringColumn("USER NAME", func(i int) string { return o.Users[i].Username })
+	c.StringColumn("FULL NAME", func(i int) string { return o.Users[i].FullName })
+	c.StringColumn("EMAIL", func(i int) string { return o.Users[i].Email })
+	text := strings.Join(c.Format(o.Users), "\n")
 
-	o := struct {
-		Users []rest.User
-	}{
-		Users: users,
-	}
-
-	if err := Output(FlagGortFormat, o, text); err != nil {
-		return err
-	}
-
-	return nil
+	return OutputSuccess(cmd, o, text)
 }

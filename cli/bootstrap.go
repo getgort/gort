@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/getgort/gort/client"
+	"github.com/getgort/gort/data/rest"
 )
 
 const (
@@ -46,6 +47,7 @@ Flags:
   -h, --help              help for bootstrap
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -74,34 +76,37 @@ func GetBootstrapCmd() *cobra.Command {
 }
 
 func bootstrapCmd(cmd *cobra.Command, args []string) error {
-	entry := client.ProfileEntry{
+	o := struct {
+		*CommandResult
+		client.ProfileEntry
+		OverwriteProfile bool
+		User             rest.User `json:",omitempty" yaml:",omitempty"`
+	}{
+		CommandResult:    &CommandResult{},
+		OverwriteProfile: flagBootstrapOverwriteProfile,
+	}
+
+	o.ProfileEntry = client.ProfileEntry{
 		Name:          FlagGortProfile,
 		URLString:     args[0],
 		AllowInsecure: flagBootstrapAllowInsecure,
 	}
 
-	gortClient, err := client.ConnectWithNewProfile(entry)
+	gortClient, err := client.ConnectWithNewProfile(o.ProfileEntry)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	// Client Bootstrap will create the gort config if necessary, and append
 	// the new credentials to it.
-	user, err := gortClient.Bootstrap(flagBootstrapOverwriteProfile)
+	o.User, err = gortClient.Bootstrap(flagBootstrapOverwriteProfile)
+	if o.User.Password != "" {
+		o.User.Password = "(redacted)"
+	}
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	o := struct {
-		User string
-	}{
-		User: user.Username,
-	}
-
-	template := `User {{ .User | quote }} created and credentials appended to Gort config.`
-	if err := Output(FlagGortFormat, o, template); err != nil {
-		return err
-	}
-
-	return nil
+	tmpl := `User {{ .User | quote }} created and credentials appended to Gort config.`
+	return OutputSuccess(cmd, o, tmpl)
 }

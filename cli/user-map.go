@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/getgort/gort/client"
+
 	"github.com/spf13/cobra"
 )
 
@@ -39,14 +40,15 @@ A Gort user can only be mapped to one ID per adapter, and each adapter:ID pair
 can only be mapped to one Gort user.`
 
 	userMapUsage = `Usage:
-   gort user map [flags] username adapter_name [chat_user_id]
+  gort user map [flags] username adapter_name [chat_user_id]
 
- Flags:
-   -D, --delete   Delete a mapping instead of creating
-   -h, --help     Show this message and exit
+Flags:
+  -D, --delete   Delete a mapping instead of creating
+  -h, --help     Show this message and exit
 
- Global Flags:
-   -P, --profile string   The Gort profile within the config file to use
+Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
+  -P, --profile string   The Gort profile within the config file to use
 `
 )
 
@@ -72,21 +74,38 @@ func GetUserMapCmd() *cobra.Command {
 }
 
 func userMapCmd(cmd *cobra.Command, args []string) error {
-	username := args[0]
-	adapter := args[1]
+	o := struct {
+		*CommandResult
+		Action   string
+		Adapter  string
+		Username string
+		ChatID   string `json:",omitempty" yaml:",omitempty"`
+	}{
+		CommandResult: &CommandResult{},
+		Adapter:       args[1],
+		Username:      args[0],
+	}
+
+	if flagUserMapDelete {
+		o.Action = "delete"
+	} else {
+		o.Action = "add"
+	}
+
+	var tmpl string
 
 	if len(args) == 2 && !flagUserMapDelete {
-		return fmt.Errorf("chat provider user ID is missing")
+		return OutputError(cmd, o, fmt.Errorf("chat provider user ID is missing"))
 	}
 
 	c, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
-	user, err := c.UserGet(username)
+	user, err := c.UserGet(o.Username)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	if user.Mappings == nil {
@@ -94,27 +113,27 @@ func userMapCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if flagUserMapDelete {
-		if user.Mappings[adapter] == "" {
-			return fmt.Errorf("user %q doesn't have a mapping for provider %q", user.Username, adapter)
+		tmpl = `user {{ .Username | quote }} unmapped from {{ .Adapter | quote }}.`
+
+		if user.Mappings[o.Adapter] == "" {
+			return OutputError(cmd, o, fmt.Errorf("user %q doesn't have a mapping for provider %q", user.Username, o.Adapter))
 		}
 
-		delete(user.Mappings, adapter)
+		delete(user.Mappings, o.Adapter)
 
 		if err := c.UserSave(user); err != nil {
-			return err
+			return OutputError(cmd, o, err)
 		}
-
-		fmt.Printf("User %q unmapped from %q.\n", user.Username, adapter)
 	} else {
-		chatID := args[2]
-		user.Mappings[adapter] = chatID
+		o.ChatID = args[2]
+		tmpl = `user {{ .Username | quote }} unmapped from {{ printf "%s:%s" .Adapter .ChatID | quote }}.`
+
+		user.Mappings[o.Adapter] = o.ChatID
 
 		if err := c.UserSave(user); err != nil {
-			return err
+			return OutputError(cmd, o, err)
 		}
-
-		fmt.Printf("User %q mapped to \"%s:%s\".\n", user.Username, adapter, chatID)
 	}
 
-	return nil
+	return OutputSuccess(cmd, o, tmpl)
 }

@@ -22,10 +22,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v3"
-
 	"github.com/getgort/gort/cli"
+
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -37,11 +37,18 @@ const (
 // GetRootCmd root
 func GetRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:          rootUse,
-		Short:        rootShort,
-		Long:         rootLong,
+		Use:   rootUse,
+		Short: rootShort,
+		Long:  rootLong,
+		// SilenceErrors: true,
 		SilenceUsage: true,
 	}
+
+	// This makes sure that flag errors are still output.
+	// root.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+	// 	fmt.Fprintln(cmd.ErrOrStderr(), err)
+	// 	return err
+	// })
 
 	root.AddCommand(GetStartCmd())
 	root.AddCommand(cli.GetBootstrapCmd())
@@ -62,11 +69,18 @@ func GetRootCmd() *cobra.Command {
 	return root
 }
 
-type errorWriter struct {
-}
+// errorWriter takes the place of os.Stderr as the root command's error message
+// destination. If the command output format is "json" or "yaml", it constructs
+// an error value and marshals that into the appropriate format to output.
+type errorWriter struct{}
 
 func (w errorWriter) Write(p []byte) (n int, err error) {
-	o := struct{ Error string }{Error: strings.TrimSpace(string(p))}
+	msg := strings.TrimSpace(string(p))
+	if strings.HasPrefix(msg, "Error: ") {
+		msg = strings.Replace(msg, "Error: ", "", 1)
+	}
+
+	o := struct{ Error string }{Error: msg}
 
 	var text string
 
@@ -86,7 +100,7 @@ func (w errorWriter) Write(p []byte) (n int, err error) {
 		text = string(b)
 
 	case "text":
-		text = o.Error
+		text = "Error: " + o.Error
 
 	default:
 		return 0, fmt.Errorf("unsupported output format: %s", f)

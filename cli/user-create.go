@@ -19,6 +19,7 @@ package cli
 import (
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data/rest"
+
 	"github.com/spf13/cobra"
 )
 
@@ -33,6 +34,7 @@ Flags:
   -h, --help   Show this message and exit
 
 Global Flags:
+  -o, --output string    The output format: text (default), json, yaml
   -P, --profile string   The Gort profile within the config file to use
 `
 )
@@ -69,43 +71,42 @@ func GetUserCreateCmd() *cobra.Command {
 func userCreateCmd(cmd *cobra.Command, args []string) error {
 	username := args[0]
 
+	o := struct {
+		*CommandResult
+		Exists bool
+		User   rest.User
+	}{CommandResult: &CommandResult{}}
+
 	c, err := client.Connect(FlagGortProfile)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
 
 	// Only allow this operation if the user doesn't already exist.
-	exists, err := c.UserExists(username)
+	o.Exists, err = c.UserExists(username)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
-	if exists {
-		return client.ErrResourceExists
+	if o.Exists {
+		return OutputError(cmd, o, client.ErrResourceExists)
 	}
 
-	user := rest.User{
+	o.User = rest.User{
 		Email:    flagUserCreateEmail,
 		FullName: flagUserCreateName,
 		Password: flagUserCreatePassword,
 		Username: username,
 	}
 
-	err = c.UserSave(user)
+	err = c.UserSave(o.User)
 	if err != nil {
-		return err
+		return OutputError(cmd, o, err)
 	}
-	user.Password = ""
 
-	o := struct {
-		User rest.User
-	}{
-		User: user,
+	if o.User.Password != "" {
+		o.User.Password = "(redacted)"
 	}
 
 	tmpl := `User {{ .User.Username | quote }} created.`
-	if err := Output(FlagGortFormat, o, tmpl); err != nil {
-		return err
-	}
-
-	return nil
+	return OutputSuccess(cmd, o, tmpl)
 }
