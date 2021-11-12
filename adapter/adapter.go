@@ -18,6 +18,7 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -117,7 +118,7 @@ type Adapter interface {
 	// SendError is a break-glass error message function that's used when the
 	// templating function fails somehow. Obviously, it does not utilize the
 	// templating engine.
-	SendError(ctx context.Context, channelID string, err error) error
+	SendError(ctx context.Context, channelID string, title string, err error) error
 }
 
 type RequestorIdentity struct {
@@ -309,34 +310,42 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
 	if err != nil {
 		e.WithError(err).Error("failed to get template")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Failed to Get Template", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
 	}
+
+	fmt.Println("----Template----\n", template)
 
 	tf, err := templates.Transform(template, envelope)
 	if err != nil {
 		e.WithError(err).Error("template engine failed to transform template")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Failed to Transform Template", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
 	}
+
+	b, _ := json.MarshalIndent(tf, "", "  ")
+	fmt.Println("----TransformedTemplate----\n", string(b))
 
 	elements, err := templates.EncodeElements(tf)
 	if err != nil {
 		e.WithError(err).Error("template engine failed to encode elements")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Failed to Transform Template", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
 	}
 
+	b, _ = json.MarshalIndent(tf, "", "  ")
+	fmt.Println("----EncodedElements----\n", string(b))
+
 	err = a.Send(ctx, channelID, elements)
 	if err != nil {
 		e.WithError(err).Error("failed to send message to adapter")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Failed to Send Message", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
