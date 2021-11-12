@@ -286,15 +286,17 @@ func (s ClassicAdapter) Listen(ctx context.Context) <-chan *adapter.ProviderEven
 	return events
 }
 
-// Send sends the contents of a response envelope to a
-// specified channel. If channelID is empty the value of
-// envelope.Request.ChannelID will be used.
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
 func (s *ClassicAdapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
 	return Send(ctx, s.client, s, channelID, elements)
 }
 
-func (s *ClassicAdapter) SendError(ctx context.Context, channelID string, err error) error {
-	return SendError(ctx, s.client, channelID, err)
+// SendError is a break-glass error message function that's used when the
+// templating function fails somehow. Obviously, it does not utilize the
+// templating engine.
+func (s *ClassicAdapter) SendError(ctx context.Context, channelID string, title string, err error) error {
+	return SendError(ctx, s.client, channelID, title, err)
 }
 
 // onChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.

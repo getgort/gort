@@ -92,7 +92,7 @@ func Send(ctx context.Context, client *slack.Client, a adapter.Adapter, channelI
 	options, err := buildSlackOptions(&elements)
 	if err != nil {
 		e.WithError(err).Error("failed to build Slack options")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Slack Option Build Failure", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
@@ -101,7 +101,7 @@ func Send(ctx context.Context, client *slack.Client, a adapter.Adapter, channelI
 	_, _, err = client.PostMessage(channelID, options...)
 	if err != nil {
 		e.WithError(err).Error("failed to post Slack message")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Slack Message Failure", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
@@ -110,16 +110,19 @@ func Send(ctx context.Context, client *slack.Client, a adapter.Adapter, channelI
 	return nil
 }
 
-func SendError(ctx context.Context, client *slack.Client, channelID string, err error) error {
+func SendError(ctx context.Context, client *slack.Client, channelID string, title string, err error) error {
+	if title == "" {
+		title = "Unhandled Error"
+	}
+
 	_, _, e := client.PostMessage(
 		channelID,
 		slack.MsgOptionAttachments(
 			slack.Attachment{
-				Title:      "Error",
+				Title:      title,
 				Text:       err.Error(),
 				Color:      "#FF0000",
 				MarkdownIn: []string{"text"},
-				ThumbURL:   "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/apple/285/fire_1f525.png",
 			},
 		),
 		slack.MsgOptionDisableMediaUnfurl(),

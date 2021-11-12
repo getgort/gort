@@ -24,7 +24,10 @@ import (
 
 type Header struct {
 	Tag
+
+	// Color must be expressed in RGB hex as "#123456"
 	Color string `json:",omitempty"`
+
 	Title string `json:",omitempty"`
 }
 
