@@ -26,9 +26,9 @@ import (
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/templates"
+	"github.com/prometheus/common/log"
 
 	"github.com/bwmarrin/discordgo"
-	log "github.com/sirupsen/logrus"
 )
 
 const ZeroWidthSpace = "\u200b"
@@ -133,6 +133,84 @@ func (s *Adapter) Listen(ctx context.Context) <-chan *adapter.ProviderEvent {
 	}()
 
 	return s.events
+}
+
+// This function will be called (due to AddHandler above) every time a new
+// message is created on any channel that the authenticated bot has access to.
+func (s *Adapter) messageCreate(sess *discordgo.Session, m *discordgo.MessageCreate) {
+	// Ignore all messages created by the bot itself
+	if m.Author.ID == sess.State.User.ID {
+		return
+	}
+	channel, err := sess.Channel(m.ChannelID)
+	if err != nil {
+		panic(err)
+	}
+	if len(channel.Recipients) > 0 {
+		s.events <- s.wrapEvent(
+			adapter.EventChannelMessage,
+			&adapter.DirectMessageEvent{
+				ChannelID: m.ChannelID,
+				Text:      m.Content,
+				UserID:    m.Author.ID,
+			},
+		)
+	} else {
+		s.events <- s.wrapEvent(
+			adapter.EventChannelMessage,
+			&adapter.ChannelMessageEvent{
+				ChannelID: m.ChannelID,
+				Text:      m.Content,
+				UserID:    m.Author.ID,
+			},
+		)
+	}
+}
+
+// onConnected is called when the Slack API emits a ConnectedEvent.
+func (s *Adapter) onConnected(sess *discordgo.Session, m *discordgo.Connect) *adapter.ProviderEvent {
+	return s.wrapEvent(
+		adapter.EventConnected,
+		&adapter.ConnectedEvent{},
+	)
+}
+
+// onConnectionError is called when the Slack API emits an ConnectionErrorEvent.
+func (s *Adapter) onConnectionError(message string) *adapter.ProviderEvent {
+	return s.wrapEvent(
+		adapter.EventConnectionError,
+		&adapter.ErrorEvent{Msg: message},
+	)
+}
+
+// onDisconnected is called when the Discord API emits a DisconnectedEvent.
+func (s *Adapter) onDisconnected(sess *discordgo.Session, m *discordgo.Disconnect) {
+	s.events <- s.wrapEvent(
+		adapter.EventDisconnected,
+		&adapter.DisconnectedEvent{},
+	)
+}
+
+// onInvalidAuth is called when the Slack API emits an InvalidAuthEvent.
+func (s *Adapter) onInvalidAuth() *adapter.ProviderEvent {
+	return s.wrapEvent(
+		adapter.EventAuthenticationError,
+		&adapter.AuthenticationErrorEvent{
+			Msg: fmt.Sprintf("Connection failed to %s: invalid credentials", s.provider.Name),
+		},
+	)
+}
+
+// wrapEvent creates a new ProviderEvent instance with metadata and the Event data attached.
+func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adapter.ProviderEvent {
+	return &adapter.ProviderEvent{
+		EventType: eventType,
+		Data:      data,
+		Info: &adapter.Info{
+			Provider: adapter.NewProviderInfoFromConfig(s.provider),
+		},
+		Adapter: s,
+	}
 }
 
 // Send the contents of a response envelope to a specified channel. If
@@ -244,84 +322,6 @@ func (s *Adapter) SendError(ctx context.Context, channelID string, title string,
 	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
 
 	return err
-}
-
-// This function will be called (due to AddHandler above) every time a new
-// message is created on any channel that the authenticated bot has access to.
-func (s *Adapter) messageCreate(sess *discordgo.Session, m *discordgo.MessageCreate) {
-	// Ignore all messages created by the bot itself
-	if m.Author.ID == sess.State.User.ID {
-		return
-	}
-	channel, err := sess.Channel(m.ChannelID)
-	if err != nil {
-		panic(err)
-	}
-	if len(channel.Recipients) > 0 {
-		s.events <- s.wrapEvent(
-			adapter.EventChannelMessage,
-			&adapter.DirectMessageEvent{
-				ChannelID: m.ChannelID,
-				Text:      m.Content,
-				UserID:    m.Author.ID,
-			},
-		)
-	} else {
-		s.events <- s.wrapEvent(
-			adapter.EventChannelMessage,
-			&adapter.ChannelMessageEvent{
-				ChannelID: m.ChannelID,
-				Text:      m.Content,
-				UserID:    m.Author.ID,
-			},
-		)
-	}
-}
-
-// onConnected is called when the Slack API emits a ConnectedEvent.
-func (s *Adapter) onConnected(sess *discordgo.Session, m *discordgo.Connect) *adapter.ProviderEvent {
-	return s.wrapEvent(
-		adapter.EventConnected,
-		&adapter.ConnectedEvent{},
-	)
-}
-
-// onConnectionError is called when the Slack API emits an ConnectionErrorEvent.
-func (s *Adapter) onConnectionError(message string) *adapter.ProviderEvent {
-	return s.wrapEvent(
-		adapter.EventConnectionError,
-		&adapter.ErrorEvent{Msg: message},
-	)
-}
-
-// onDisconnected is called when the Discord API emits a DisconnectedEvent.
-func (s *Adapter) onDisconnected(sess *discordgo.Session, m *discordgo.Disconnect) {
-	s.events <- s.wrapEvent(
-		adapter.EventDisconnected,
-		&adapter.DisconnectedEvent{},
-	)
-}
-
-// onInvalidAuth is called when the Slack API emits an InvalidAuthEvent.
-func (s *Adapter) onInvalidAuth() *adapter.ProviderEvent {
-	return s.wrapEvent(
-		adapter.EventAuthenticationError,
-		&adapter.AuthenticationErrorEvent{
-			Msg: fmt.Sprintf("Connection failed to %s: invalid credentials", s.provider.Name),
-		},
-	)
-}
-
-// wrapEvent creates a new ProviderEvent instance with metadata and the Event data attached.
-func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adapter.ProviderEvent {
-	return &adapter.ProviderEvent{
-		EventType: eventType,
-		Data:      data,
-		Info: &adapter.Info{
-			Provider: adapter.NewProviderInfoFromConfig(s.provider),
-		},
-		Adapter: s,
-	}
 }
 
 func newUserInfoFromDiscordUser(user *discordgo.User) *adapter.UserInfo {
