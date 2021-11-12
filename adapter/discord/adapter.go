@@ -26,7 +26,6 @@ import (
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/templates"
-	"github.com/prometheus/common/log"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -217,8 +216,6 @@ func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adap
 // channelID is empty the value of envelope.Request.ChannelID will be used.
 func (s *Adapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
 	var err error
-
-	log.Debug("Classic Slack apps are deprecated, please upgrade to a Socket mode app.")
 
 	var color uint64
 	if elements.Color != "" {

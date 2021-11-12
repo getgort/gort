@@ -18,7 +18,6 @@ package adapter
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -316,8 +315,6 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 		return err
 	}
 
-	fmt.Println("----Template----\n", template)
-
 	tf, err := templates.Transform(template, envelope)
 	if err != nil {
 		e.WithError(err).Error("template engine failed to transform template")
@@ -327,9 +324,6 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 		return err
 	}
 
-	b, _ := json.MarshalIndent(tf, "", "  ")
-	fmt.Println("----TransformedTemplate----\n", string(b))
-
 	elements, err := templates.EncodeElements(tf)
 	if err != nil {
 		e.WithError(err).Error("template engine failed to encode elements")
@@ -338,9 +332,6 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 		}
 		return err
 	}
-
-	b, _ = json.MarshalIndent(tf, "", "  ")
-	fmt.Println("----EncodedElements----\n", string(b))
 
 	err = a.Send(ctx, channelID, elements)
 	if err != nil {
