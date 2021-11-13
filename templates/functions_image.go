@@ -16,37 +16,23 @@
 
 package templates
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
-)
-
-type Header struct {
+type Image struct {
 	Tag
-
-	// Color must be expressed in RGB hex as "#123456"
-	Color string `json:",omitempty"`
-
-	Title string `json:",omitempty"`
+	Height    int    `json:",omitempty"`
+	Width     int    `json:",omitempty"`
+	URL       string `json:",omitempty"`
+	Thumbnail bool   `json:",omitempty"`
 }
 
-func (o *Header) String() string {
+func (o *Image) String() string {
 	return encodeTag(*o)
 }
 
-func (f *Functions) HeaderFunction() *Header {
-	return &Header{}
+func (f *Functions) ImageFunction(url string) *Image {
+	return &Image{URL: url}
 }
 
-func (f *Functions) HeaderColorFunction(s string, t *Header) (*Header, error) {
-	s = strings.Replace(s, "#", "", 1)
-
-	v, err := strconv.ParseUint(s, 16, 64)
-	if err != nil {
-		return nil, fmt.Errorf("colors should be expressed in RGB hex format: #123456")
-	}
-
-	t.Color = fmt.Sprintf("#%X", v)
-	return t, nil
+func (f *Functions) ImageThumbnailunction(b bool, i *Image) *Image {
+	i.Thumbnail = b
+	return i
 }

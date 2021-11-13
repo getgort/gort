@@ -105,24 +105,10 @@ func EncodeElements(text string) (OutputElements, error) {
 				return encodingError(text, first, "duplicate {{header}} on line %d")
 			case len(elements.Elements) != 0:
 				return encodingError(text, first, "unexpected {{header}} on line %d; header must be the first element")
-			case lastSection != nil:
-				return encodingError(text, first, "illegal {{header}} in {{section}} on line %d")
-			case lastText != nil:
-				return encodingError(text, first, "illegal {{header}} in {{text}} on line %d")
 			default:
 				o := &Header{Tag: etag}
 				json.Unmarshal([]byte(jsn), o)
-				header = o
-			}
-
-		case "HeaderEnd":
-			switch {
-			case header == nil:
-				return encodingError(text, first, "unmatched {{endheader}} on line %d")
-			default:
-				header.Title = text[header.Last()+1 : first]
-				header.Tag.LastIndex = last
-				elements.Elements = append(elements.Elements, header)
+				elements.Elements = append(elements.Elements, o)
 			}
 
 		case "Image":

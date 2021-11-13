@@ -16,37 +16,17 @@
 
 package templates
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
-)
+import "fmt"
 
-type Header struct {
-	Tag
-
-	// Color must be expressed in RGB hex as "#123456"
-	Color string `json:",omitempty"`
-
-	Title string `json:",omitempty"`
-}
-
-func (o *Header) String() string {
-	return encodeTag(*o)
-}
-
-func (f *Functions) HeaderFunction() *Header {
-	return &Header{}
-}
-
-func (f *Functions) HeaderColorFunction(s string, t *Header) (*Header, error) {
-	s = strings.Replace(s, "#", "", 1)
-
-	v, err := strconv.ParseUint(s, 16, 64)
-	if err != nil {
-		return nil, fmt.Errorf("colors should be expressed in RGB hex format: #123456")
+func (f *Functions) MultipleTitleFunction(s string, i interface{}) (interface{}, error) {
+	switch t := i.(type) {
+	case *Header:
+		t.Title = s
+		return t, nil
+	case *Text:
+		t.Title = s
+		return t, nil
+	default:
+		return nil, fmt.Errorf("%T does not support the header function", t)
 	}
-
-	t.Color = fmt.Sprintf("#%X", v)
-	return t, nil
 }
