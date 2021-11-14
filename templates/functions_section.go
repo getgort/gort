@@ -16,6 +16,8 @@
 
 package templates
 
+import "fmt"
+
 type Section struct {
 	Tag
 	Text   *Text           `json:",omitempty"`
@@ -24,6 +26,17 @@ type Section struct {
 
 func (o *Section) String() string {
 	return encodeTag(*o)
+}
+
+func (o *Section) Alt() string {
+	var out string
+	if o.Text != nil {
+		out = o.Text.Text
+	}
+	for _, element := range o.Fields {
+		out = fmt.Sprintf("%v\n\n%v", out, element.Alt())
+	}
+	return out
 }
 
 func (f *Functions) SectionFunction() *Section {
@@ -36,6 +49,10 @@ type SectionEnd struct {
 
 func (o *SectionEnd) String() string {
 	return encodeTag(*o)
+}
+
+func (o *SectionEnd) Alt() string {
+	return ""
 }
 
 func (f *Functions) SectionEndFunction() *SectionEnd {

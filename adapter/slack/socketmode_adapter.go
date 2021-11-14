@@ -213,6 +213,11 @@ func (s *SocketModeAdapter) Send(ctx context.Context, channelID string, elements
 	return Send(ctx, s.client, s, channelID, elements)
 }
 
+// SendText sends a simple text message to the specified channel.
+func (s *SocketModeAdapter) SendText(ctx context.Context, channelID string, message string) error {
+	return SendText(ctx, s.client, s, channelID, message)
+}
+
 // SendError is a break-glass error message function that's used when the
 // templating function fails somehow. Obviously, it does not utilize the
 // templating engine.

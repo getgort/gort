@@ -266,6 +266,9 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 		case *templates.Section:
 			// Ignore sections entirely in Discord.
 
+		case *templates.Alt:
+			// Ignore Alt, only rendered as fallback
+
 		case *templates.Text:
 			var title = t.Title
 			var text = t.Text
@@ -309,6 +312,12 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 	return err
 }
 
+// SendText sends a simple text message to the specified channel.
+func (s *Adapter) SendText(ctx context.Context, channelID string, message string) error {
+	_, err := s.session.ChannelMessageSend(channelID, message)
+	return err
+}
+
 // SendError is a break-glass error message function that's used when the
 // templating function fails somehow. Obviously, it does not utilize the
 // templating engine.
@@ -326,7 +335,6 @@ func (s *Adapter) SendError(ctx context.Context, channelID string, title string,
 	}
 
 	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
-
 	return err
 }
 

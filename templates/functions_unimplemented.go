@@ -16,18 +16,20 @@
 
 package templates
 
-type Divider struct {
+// Unimplemented is an OutputElement that should not be implemented by any chat adapters.
+// It may be used when testing to force a fallback to alt text.
+type Unimplemented struct {
 	Tag
 }
 
-func (o *Divider) String() string {
+func (o *Unimplemented) String() string {
 	return encodeTag(*o)
 }
 
-func (o *Divider) Alt() string {
-	return "==="
+func (o *Unimplemented) Alt() string {
+	return "Unimplemented Element"
 }
 
-func (f *Functions) DividerFunction() *Divider {
-	return &Divider{}
+func (f *Functions) UnimplementedFunction() *Unimplemented {
+	return &Unimplemented{}
 }

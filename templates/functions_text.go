@@ -30,6 +30,10 @@ func (o *Text) String() string {
 	return encodeTag(*o)
 }
 
+func (o *Text) Alt() string {
+	return o.Text
+}
+
 func (f *Functions) TextFunction() *Text {
 	return &Text{
 		Emoji:    true,
@@ -63,6 +67,10 @@ type TextEnd struct {
 
 func (o *TextEnd) String() string {
 	return encodeTag(*o)
+}
+
+func (o *TextEnd) Alt() string {
+	return ""
 }
 
 func (f *Functions) TextEndFunction() *TextEnd {

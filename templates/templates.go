@@ -30,6 +30,7 @@ type OutputElement interface {
 	First() int
 	Last() int
 	String() string
+	Alt() string
 }
 
 type OutputElements struct {
@@ -42,6 +43,22 @@ type OutputElements struct {
 
 	// Elements includes the various message construction elements.
 	Elements []OutputElement
+}
+
+// Alt returns simplified text for this output.
+// It will either return a concatenation of the text form for each element, separated by newlines,
+// or the first Alt element.
+func (o *OutputElements) Alt() string {
+	var out string = o.Title
+	for _, element := range o.Elements {
+		switch t := element.(type) {
+		case *Alt:
+			return t.Text
+		default:
+			out = fmt.Sprintf("%v\n\n%v", out, element.Alt())
+		}
+	}
+	return out
 }
 
 func TransformAndEncode(tmpl string, envelope data.CommandResponseEnvelope) (OutputElements, error) {
@@ -172,6 +189,13 @@ func EncodeElements(text string) (OutputElements, error) {
 				elements.Elements = append(elements.Elements, lastText)
 				lastText = nil
 			}
+		case "Unimplemented":
+			elements.Elements = append(elements.Elements, &Unimplemented{Tag: etag})
+
+		case "Alt":
+			o := &Alt{Tag: etag}
+			json.Unmarshal([]byte(jsn), o)
+			elements.Elements = append(elements.Elements, o)
 
 		default:
 			return OutputElements{}, fmt.Errorf("unsupported {{ %s }}", tag)

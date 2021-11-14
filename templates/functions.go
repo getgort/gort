@@ -56,6 +56,12 @@ func FunctionMap() template.FuncMap {
 
 		// Simple blocks
 		"divider": functions.DividerFunction,
+
+		// Alternative text
+		"alt": functions.AltFunction,
+
+		// Unimplemented - for testing fallback behavior
+		"unimplemented": functions.UnimplementedFunction,
 	}
 
 	sprigFuncs := sprig.FuncMap()
