@@ -19,8 +19,10 @@ package templates
 type Text struct {
 	Tag
 	Emoji     bool   `json:",omitempty"`
+	Inline    bool   `json:",omitempty"`
 	Markdown  bool   `json:",omitempty"`
 	Monospace bool   `json:",omitempty"`
+	Title     string `json:",omitempty"`
 	Text      string `json:",omitempty"`
 }
 
@@ -30,14 +32,18 @@ func (o *Text) String() string {
 
 func (f *Functions) TextFunction() *Text {
 	return &Text{
-		Emoji:     true,
-		Markdown:  true,
-		Monospace: false,
+		Emoji:    true,
+		Markdown: true,
 	}
 }
 
 func (f *Functions) TextEmojiFunction(b bool, t *Text) *Text {
 	t.Emoji = b
+	return t
+}
+
+func (f *Functions) TextInlineFunction(b bool, t *Text) *Text {
+	t.Inline = b
 	return t
 }
 

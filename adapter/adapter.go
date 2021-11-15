@@ -296,9 +296,8 @@ func SendMessage(ctx context.Context, a Adapter, channelID string, message strin
 	return SendEnvelope(ctx, a, channelID, e, data.Message)
 }
 
-// SendEnvelope sends the contents of a response envelope to a
-// specified channel. If channelID is empty the value of
-// envelope.Request.ChannelID will be used.
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
 func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "adapter.SendEnvelope")

@@ -215,26 +215,22 @@ func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adap
 // Send the contents of a response envelope to a specified channel. If
 // channelID is empty the value of envelope.Request.ChannelID will be used.
 func (s *Adapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
-	var err error
+	var flattened []templates.OutputElement
 
-	var color uint64
-	if elements.Color != "" {
-		color, err = strconv.ParseUint(strings.Replace(elements.Color, "#", "", 1), 16, 64)
-		if err != nil {
-			return fmt.Errorf("badly-formatted color code: %q", elements.Color)
+	for _, e := range elements.Elements {
+		if section, ok := e.(*templates.Section); ok {
+			flattened = append(flattened, section.Fields...)
+		} else {
+			flattened = append(flattened, e)
 		}
 	}
 
-	embed := &discordgo.MessageEmbed{
-		Color:     int(color),
-		Title:     elements.Title,
-		Timestamp: time.Now().Format(time.RFC3339),
-		Type:      discordgo.EmbedTypeRich,
-	}
-
+	var err error
 	var fields []*discordgo.MessageEmbedField
 
-	for _, e := range elements.Elements {
+	embed := &discordgo.MessageEmbed{Type: discordgo.EmbedTypeRich}
+
+	for _, e := range flattened {
 		switch t := e.(type) {
 		case *templates.Divider:
 			// Discord dividers are just empty text fields.
@@ -243,14 +239,25 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 			})
 
 		case *templates.Image:
-			img := &discordgo.MessageEmbedImage{URL: t.URL}
-			if t.Height != 0 {
-				img.Height = t.Height
+			if t.Thumbnail {
+				img := &discordgo.MessageEmbedThumbnail{URL: t.URL}
+				if t.Height != 0 {
+					img.Height = t.Height
+				}
+				if t.Width != 0 {
+					img.Width = t.Width
+				}
+				embed.Thumbnail = img
+			} else {
+				img := &discordgo.MessageEmbedImage{URL: t.URL}
+				if t.Height != 0 {
+					img.Height = t.Height
+				}
+				if t.Width != 0 {
+					img.Width = t.Width
+				}
+				embed.Image = img
 			}
-			if t.Width != 0 {
-				img.Width = t.Width
-			}
-			embed.Image = img
 
 		case *templates.Header:
 			elements.Color = strings.TrimPrefix(t.Color, "#")
@@ -260,7 +267,7 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 			// Ignore sections entirely in Discord.
 
 		case *templates.Text:
-			var title = "" // TODO(mtitmus) Implement this.
+			var title = t.Title
 			var text = t.Text
 
 			if title == "" {
@@ -276,7 +283,7 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 			fields = append(fields, &discordgo.MessageEmbedField{
 				Name:   title,
 				Value:  text,
-				Inline: false, // TODO(mtitmus) Implement this.
+				Inline: t.Inline,
 			})
 
 		default:
@@ -284,14 +291,16 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 		}
 	}
 
+	var color uint64
+
 	if elements.Color != "" {
-		c, err := strconv.ParseInt(elements.Color, 16, 64)
+		color, err = strconv.ParseUint(strings.Replace(elements.Color, "#", "", 1), 16, 64)
 		if err != nil {
-			return fmt.Errorf("invalid color format (expected '#123456'): %w", err)
+			return fmt.Errorf("badly-formatted color code: %q", elements.Color)
 		}
-		embed.Color = int(c)
 	}
 
+	embed.Color = int(color)
 	embed.Title = elements.Title
 	embed.Fields = fields
 
@@ -310,7 +319,7 @@ func (s *Adapter) SendError(ctx context.Context, channelID string, title string,
 
 	embed := &discordgo.MessageEmbed{
 		Color:     0xFF0000,
-		Title:     "Unhandled Error",
+		Title:     title,
 		Timestamp: time.Now().Format(time.RFC3339),
 		Type:      discordgo.EmbedTypeRich,
 		Fields:    []*discordgo.MessageEmbedField{{Name: title, Value: err.Error()}},

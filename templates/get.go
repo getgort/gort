@@ -30,7 +30,7 @@ const (
 
 	// CommandError is a template used to format the error messages produced
 	// by commands that return with a non-zero status.
-	DefaultCommandError = `{{ header | color "#FF0000" }}{{ .Response.Title }}{{ endheader }}
+	DefaultCommandError = `{{ header | color "#FF0000" | title .Response.Title }}
 {{ text }}The pipeline failed planning the invocation:{{ endtext }}
 {{ text | monospace true }}{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}{{ endtext }}
 {{ text }}The specific error was:{{ endtext }}
@@ -42,7 +42,7 @@ const (
 
 	// MessageError is a template used to format error messages from the Gor
 	// system (not commands).
-	DefaultMessageError = `{{ header | color "#FF0000" }}{{ .Response.Title }}{{ endheader }}
+	DefaultMessageError = `{{ header | color "#FF0000" | title .Response.Title }}
 {{ text }}{{ .Response.Out }}{{ endtext }}`
 )
 
