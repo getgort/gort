@@ -220,6 +220,7 @@ func (w *KubernetesWorker) buildJobData(ctx context.Context) (*batchv1.Job, erro
 			BackoffLimit: &backoffLimit,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
+					ServiceAccountName: w.command.Bundle.Kubernetes.ServiceAccountName,
 					Containers: []corev1.Container{
 						{
 							Name:    "command",

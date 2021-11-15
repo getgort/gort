@@ -41,6 +41,7 @@ def kubernetes():
             set = setValues
         )
     )
+    k8s_resource('postgres', port_forwards=5432)
     k8s_resource('chart-gort', port_forwards=4000)
 
 ## Resources to permit common tasks to be run via the Tilt Web UI.

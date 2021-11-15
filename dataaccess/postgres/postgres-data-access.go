@@ -181,6 +181,18 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 		}
 	}
 
+	// Check whether the bundles_kubernetes table exists
+	exists, err = da.tableExists(ctx, "bundle_kubernetes", db)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		err = da.createBundleKubernetesTables(ctx, db)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Check whether the roles table exists
 	exists, err = da.tableExists(ctx, "roles", db)
 	if err != nil {
@@ -334,6 +346,24 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
 		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
 		ON DELETE CASCADE
+	);
+	`
+
+	_, err = db.ExecContext(ctx, createBundlesQuery)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) createBundleKubernetesTables(ctx context.Context, db *sql.DB) error {
+	var err error
+
+	createBundlesQuery := `CREATE TABLE bundle_kubernetes (
+		bundle_version 			TEXT NOT NULL,
+		bundle_name				TEXT NOT NULL,
+		service_account_name 	TEXT NOT NULL
 	);
 	`
 
