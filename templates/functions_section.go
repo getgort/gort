@@ -34,7 +34,9 @@ func (o *Section) Alt() string {
 		out = o.Text.Text
 	}
 	for _, element := range o.Fields {
-		out = fmt.Sprintf("%v\n\n%v", out, element.Alt())
+		if a, isAlt := element.(WithAlt); isAlt {
+			out = fmt.Sprintf("%v\n\n%v", out, a.Alt())
+		}
 	}
 	return out
 }

@@ -30,6 +30,9 @@ type OutputElement interface {
 	First() int
 	Last() int
 	String() string
+}
+
+type WithAlt interface {
 	Alt() string
 }
 
@@ -55,7 +58,9 @@ func (o *OutputElements) Alt() string {
 		case *Alt:
 			return t.Text
 		default:
-			out = fmt.Sprintf("%v\n\n%v", out, element.Alt())
+			if a, isAlt := element.(WithAlt); isAlt {
+				out = fmt.Sprintf("%v\n\n%v", out, a.Alt())
+			}
 		}
 	}
 	return out

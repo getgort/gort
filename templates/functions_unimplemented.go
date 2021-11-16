@@ -26,10 +26,6 @@ func (o *Unimplemented) String() string {
 	return encodeTag(*o)
 }
 
-func (o *Unimplemented) Alt() string {
-	return "Unimplemented Element"
-}
-
 func (f *Functions) UnimplementedFunction() *Unimplemented {
 	return &Unimplemented{}
 }
