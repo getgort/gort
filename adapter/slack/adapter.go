@@ -109,6 +109,23 @@ func Send(ctx context.Context, client *slack.Client, a adapter.Adapter, channelI
 	return nil
 }
 
+// SendText sends a text message to a specified channel.
+// If channelID is empty the value of envelope.Request.ChannelID will be used.
+func SendText(ctx context.Context, client *slack.Client, a adapter.Adapter, channelID string, message string) error {
+	e := log.WithContext(ctx)
+
+	_, _, err := client.PostMessage(channelID, slack.MsgOptionText(message, false))
+	if err != nil {
+		e.WithError(err).Error("failed to post Slack message")
+		if err := a.SendError(ctx, channelID, "Slack Message Failure", err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	return nil
+}
+
 func SendError(ctx context.Context, client *slack.Client, channelID string, title string, err error) error {
 	if title == "" {
 		title = "Unhandled Error"
@@ -256,6 +273,9 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 			} else {
 				currentSection.Text.Text += "\n" + t.Text
 			}
+
+		case *templates.Alt:
+			// Ignore Alt, only rendered as fallback
 
 		default:
 			return nil, fmt.Errorf("%T elements are not yet supported by Gort for Slack", e)

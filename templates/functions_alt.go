@@ -16,18 +16,21 @@
 
 package templates
 
-type Divider struct {
+// Alt provides alternative text to be shown if other elements in a message cannot be rendered.
+// Only the first instance of Alt will be shown.
+type Alt struct {
 	Tag
+	Text string
 }
 
-func (o *Divider) String() string {
+func (o *Alt) String() string {
 	return encodeTag(*o)
 }
 
-func (o *Divider) Alt() string {
-	return "==="
+func (o *Alt) Alt() string {
+	return o.Text
 }
 
-func (f *Functions) DividerFunction() *Divider {
-	return &Divider{}
+func (f *Functions) AltFunction(content string) *Alt {
+	return &Alt{Text: content}
 }

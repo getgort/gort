@@ -28,6 +28,10 @@ func (o *Image) String() string {
 	return encodeTag(*o)
 }
 
+func (o *Image) Alt() string {
+	return o.URL
+}
+
 func (f *Functions) ImageFunction(url string) *Image {
 	return &Image{URL: url}
 }

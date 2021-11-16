@@ -35,6 +35,10 @@ func (o *Header) String() string {
 	return encodeTag(*o)
 }
 
+func (o *Header) Alt() string {
+	return o.Title
+}
+
 func (f *Functions) HeaderFunction() *Header {
 	return &Header{}
 }

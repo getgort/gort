@@ -109,10 +109,13 @@ type Adapter interface {
 	// begin relaying back events (including errors) via the returned channel.
 	Listen(ctx context.Context) <-chan *ProviderEvent
 
-	// SendEnvelope sends the contents of a response envelope to a
+	// Send sends the contents of a response envelope to a
 	// specified channel. If channelID is empty the value of
 	// envelope.Request.ChannelID will be used.
 	Send(ctx context.Context, channelID string, elements templates.OutputElements) error
+
+	// SendText sends a simple text message to the specified channel.
+	SendText(ctx context.Context, channelID string, message string) error
 
 	// SendError is a break-glass error message function that's used when the
 	// templating function fails somehow. Obviously, it does not utilize the
@@ -333,6 +336,12 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	}
 
 	err = a.Send(ctx, channelID, elements)
+	if err == nil {
+		return nil
+	}
+
+	e.WithError(err).Warn("failed to send rich message to adapter, falling back to alt text")
+	err = a.SendText(ctx, channelID, elements.Alt())
 	if err != nil {
 		e.WithError(err).Error("failed to send message to adapter")
 		if err := a.SendError(ctx, channelID, "Failed to Send Message", err); err != nil {
