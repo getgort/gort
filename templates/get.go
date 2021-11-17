@@ -28,20 +28,20 @@ const (
 	// executed commands.
 	DefaultCommand = `{{ text | monospace true }}{{ .Response.Out }}{{ endtext }}`
 
-	// CommandError is a template used to format the error messages produced
-	// by commands that return with a non-zero status.
+	// DefaultCommandError is a template used to format the error messages
+	// produced by commands that return with a non-zero status.
 	DefaultCommandError = `{{ header | color "#FF0000" | title .Response.Title }}
-{{ text }}The pipeline failed planning the invocation:{{ endtext }}
+{{ text }}Gort failed to execute the following command:{{ endtext }}
 {{ text | monospace true }}{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}{{ endtext }}
 {{ text }}The specific error was:{{ endtext }}
 {{ text | monospace true }}{{ .Response.Out }}{{ endtext }}`
 
-	// Message is a template used to format standard informative (non-error)
-	// messages from the Gort system (not commands).
+	// DefaultMessage is a template used to format standard informative
+	// (non-error) messages from the Gort system (not commands).
 	DefaultMessage = `{{ text }}{{ .Response.Out }}{{ endtext }}`
 
-	// MessageError is a template used to format error messages from the Gor
-	// system (not commands).
+	// DefaultMessageError is a template used to format error messages from the
+	// Gort system (not commands).
 	DefaultMessageError = `{{ header | color "#FF0000" | title .Response.Title }}
 {{ text }}{{ .Response.Out }}{{ endtext }}`
 )
