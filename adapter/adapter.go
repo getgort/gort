@@ -404,8 +404,8 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 					"account for you, or your chat handle has not been " +
 					"registered. Currently, only registered users can " +
 					"interact with me.\n\nYou'll need a Gort administrator " +
-					"to map your Gort to the adapter (%s) and chat user " +
-					"ID (%s)."
+					"to map your Gort user to the adapter (%s) and chat " +
+					"user ID (%s)."
 
 				msg = fmt.Sprintf(msg, id.Adapter.GetName(), id.ChatUser.ID)
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Account", msg)
