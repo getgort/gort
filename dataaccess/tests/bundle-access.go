@@ -89,13 +89,6 @@ func (da DataAccessTester) testBundleCreateMissingRequired(t *testing.T) {
 	err = da.BundleCreate(da.ctx, bundle)
 	require.Error(t, err, errs.ErrFieldRequired)
 	bundle.GortBundleVersion = originalGortBundleVersion
-
-	// Description
-	originalDescription := bundle.Description
-	bundle.Description = ""
-	err = da.BundleCreate(da.ctx, bundle)
-	require.Error(t, err, errs.ErrFieldRequired)
-	bundle.Description = originalDescription
 }
 
 func (da DataAccessTester) testBundleEnable(t *testing.T) {
