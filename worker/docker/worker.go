@@ -233,13 +233,15 @@ func (w *ContainerWorker) envVars() []string {
 	env := []string{}
 
 	vars := map[string]string{
+		`GORT_ADAPTER`:       w.command.Adapter,
 		`GORT_BUNDLE`:        w.command.Bundle.Name,
 		`GORT_COMMAND`:       w.command.Command.Name,
-		`GORT_CHAT_HANDLE`:   w.command.UserID,
+		`GORT_CHAT_ID`:       w.command.UserID,
 		`GORT_INVOCATION_ID`: fmt.Sprintf("%d", w.command.RequestID),
 		`GORT_ROOM`:          w.command.ChannelID,
 		`GORT_SERVICE_TOKEN`: w.token.Token,
 		`GORT_SERVICES_ROOT`: config.GetGortServerConfigs().APIURLBase,
+		`GORT_USER`:          w.command.UserName,
 	}
 
 	for k, v := range vars {
