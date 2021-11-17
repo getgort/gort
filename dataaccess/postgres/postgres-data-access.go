@@ -252,7 +252,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		version				TEXT NOT NULL CHECK(version <> ''),
 		author				TEXT,
 		homepage			TEXT,
-		description			TEXT NOT NULL,
+		description			TEXT NOT NULL CHECK(description <> ''),
 		long_description	TEXT,
 		docker_image		TEXT,
 		docker_tag			TEXT,

@@ -227,6 +227,7 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 
 	var err error
 	var fields []*discordgo.MessageEmbedField
+	var textOnly = true
 
 	embed := &discordgo.MessageEmbed{Type: discordgo.EmbedTypeRich}
 
@@ -258,10 +259,12 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 				}
 				embed.Image = img
 			}
+			textOnly = false
 
 		case *templates.Header:
 			elements.Color = strings.TrimPrefix(t.Color, "#")
 			elements.Title = t.Title
+			textOnly = false
 
 		case *templates.Section:
 			// Ignore sections entirely in Discord.
@@ -294,20 +297,34 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 		}
 	}
 
-	var color uint64
+	if elements.Color == "" && elements.Title == "" && textOnly {
+		var text string
 
-	if elements.Color != "" {
-		color, err = strconv.ParseUint(strings.Replace(elements.Color, "#", "", 1), 16, 64)
-		if err != nil {
-			return fmt.Errorf("badly-formatted color code: %q", elements.Color)
+		if len(fields) > 0 {
+			text = fields[0].Value
 		}
+
+		for i := 1; i < len(fields); i++ {
+			text += "\n" + fields[i].Value
+		}
+
+		_, err = s.session.ChannelMessageSend(channelID, text)
+	} else {
+		var color uint64
+
+		if elements.Color != "" {
+			color, err = strconv.ParseUint(strings.Replace(elements.Color, "#", "", 1), 16, 64)
+			if err != nil {
+				return fmt.Errorf("badly-formatted color code: %q", elements.Color)
+			}
+		}
+
+		embed.Color = int(color)
+		embed.Title = elements.Title
+		embed.Fields = fields
+
+		_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
 	}
-
-	embed.Color = int(color)
-	embed.Title = elements.Title
-	embed.Fields = fields
-
-	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
 
 	return err
 }
