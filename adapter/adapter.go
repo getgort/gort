@@ -406,7 +406,6 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 					"interact with me.\n\nYou'll need a Gort administrator " +
 					"to map your Gort user to the adapter (%s) and chat " +
 					"user ID (%s)."
-
 				msg = fmt.Sprintf(msg, id.Adapter.GetName(), id.ChatUser.ID)
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Account", msg)
 
@@ -415,6 +414,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 					"use `gort bootstrap` to properly bootstrap the Gort " +
 					"environment before proceeding."
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Not Bootstrapped?", msg)
+
 			default:
 				msg := "An unexpected error has occurred"
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", msg)
