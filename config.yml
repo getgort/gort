@@ -18,7 +18,7 @@ gort:
   # scheme (either http or https), a host, an optional port (defaulting to 80
   # for http and 443 for https), and an optional path.
   # Defaults to localhost
-  api_url_base: localhost
+  api_url_base: https://gort:4000
 
   # Enables development mode. Currently this only affects log output format.
   # Defaults to false
@@ -93,32 +93,30 @@ docker:
   # The name of a Docker network. If set, any worker containers will be
   # attached to this network. This can be used to allow workers to communicate
   # with a containerized Gort controller.
-  # network: gort_gort
+  network: gort_gort
 
-jaeger:
-  # The URL for the Jaeger collector that spans are sent to. If not set then
-  # no exporter will be created.
-  endpoint: http://jaeger:14268/api/traces
+kubernetes:
+  # The selectors for Gort's endpoint resource. Used to dynamically find the
+  # API endpoint. If both are omitted the label selector "app=gort" is used.
+  endpoint_label_selector: "app=gort,release=gort"
+  endpoint_field_selector:
 
-  # The username to be used in the authorization header sent for all requests
-  # to the collector. If not set no username will be passed.
-  username: gort
-
-  # The password to be used in the authorization header sent for all requests
-  # to the collector.
-  password: veryKleverPassw0rd!
+  # The selectors for Gort's pod resource. Used to dynamically find the
+  # API endpoint. If both are omitted the label selector "app=gort" is used.
+  pod_field_selector: "app=gort,release=gort"
+  pod_label_selector:
 
 # List of Discord adapters. Delete this section if not using Discord.
 discord:
 - # An arbitrary name for human labelling purposes.
   name: MyWorkspace
 
-  # Bot User OAuth Access Token
-  bot_token: INSERT BOT TOKEN HERE
-
   # The name of the bot, as it appears in Discord. Defaults to the name used
   # when the bot was added to the account.
   bot_name: Gort
+
+  # Bot User OAuth Access Token
+  bot_token: INSERT BOT TOKEN HERE
 
 # List of Slack adapters. Delete this section if not using Slack.
 slack:
@@ -139,3 +137,16 @@ slack:
   # The name of the bot, as it appears in Slack. Defaults to the name used
   # when the bot was added to the account.
   bot_name: Gort
+
+jaeger:
+  # The URL for the Jaeger collector that spans are sent to. If not set then
+  # no exporter will be created.
+  endpoint: http://jaeger:14268/api/traces
+
+  # The username to be used in the authorization header sent for all requests
+  # to the collector. If not set no username will be passed.
+  username: gort
+
+  # The password to be used in the authorization header sent for all requests
+  # to the collector.
+  password: veryKleverPassw0rd!
