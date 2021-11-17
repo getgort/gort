@@ -67,8 +67,6 @@ func hiddenWhoamiCmd(cmd *cobra.Command, args []string) error {
 
 	if gortUser = os.Getenv("GORT_USER"); gortUser == "" {
 		gortUser = "*UNDEFINED!*"
-	} else if gortUser == "nobody" {
-		gortUser = "Nobody"
 	}
 
 	tmpl := `Adapter:   %s
