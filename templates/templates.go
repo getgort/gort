@@ -32,6 +32,10 @@ type OutputElement interface {
 	String() string
 }
 
+type WithAlt interface {
+	Alt() string
+}
+
 type OutputElements struct {
 	// Color is the representation of the RGB color hex code. If defined, it
 	// MUST adhere to the format "#RRGGBB". Optional.
@@ -42,6 +46,24 @@ type OutputElements struct {
 
 	// Elements includes the various message construction elements.
 	Elements []OutputElement
+}
+
+// Alt returns simplified text for this output.
+// It will either return a concatenation of the text form for each element, separated by newlines,
+// or the first Alt element.
+func (o *OutputElements) Alt() string {
+	var out string = o.Title
+	for _, element := range o.Elements {
+		switch t := element.(type) {
+		case *Alt:
+			return t.Text
+		default:
+			if a, isAlt := element.(WithAlt); isAlt {
+				out = fmt.Sprintf("%v\n\n%v", out, a.Alt())
+			}
+		}
+	}
+	return out
 }
 
 func TransformAndEncode(tmpl string, envelope data.CommandResponseEnvelope) (OutputElements, error) {
@@ -105,24 +127,10 @@ func EncodeElements(text string) (OutputElements, error) {
 				return encodingError(text, first, "duplicate {{header}} on line %d")
 			case len(elements.Elements) != 0:
 				return encodingError(text, first, "unexpected {{header}} on line %d; header must be the first element")
-			case lastSection != nil:
-				return encodingError(text, first, "illegal {{header}} in {{section}} on line %d")
-			case lastText != nil:
-				return encodingError(text, first, "illegal {{header}} in {{text}} on line %d")
 			default:
 				o := &Header{Tag: etag}
 				json.Unmarshal([]byte(jsn), o)
-				header = o
-			}
-
-		case "HeaderEnd":
-			switch {
-			case header == nil:
-				return encodingError(text, first, "unmatched {{endheader}} on line %d")
-			default:
-				header.Title = text[header.Last()+1 : first]
-				header.Tag.LastIndex = last
-				elements.Elements = append(elements.Elements, header)
+				elements.Elements = append(elements.Elements, o)
 			}
 
 		case "Image":
@@ -186,6 +194,13 @@ func EncodeElements(text string) (OutputElements, error) {
 				elements.Elements = append(elements.Elements, lastText)
 				lastText = nil
 			}
+		case "Unimplemented":
+			elements.Elements = append(elements.Elements, &Unimplemented{Tag: etag})
+
+		case "Alt":
+			o := &Alt{Tag: etag}
+			json.Unmarshal([]byte(jsn), o)
+			elements.Elements = append(elements.Elements, o)
 
 		default:
 			return OutputElements{}, fmt.Errorf("unsupported {{ %s }}", tag)

@@ -37,7 +37,7 @@ func TestLoadBundleFromFile(t *testing.T) {
 	assert.Len(t, b.Permissions, 1)
 	assert.Equal(t, "ubuntu", b.Docker.Image)
 	assert.Equal(t, "20.04", b.Docker.Tag)
-	assert.Len(t, b.Commands, 1)
+	assert.Len(t, b.Commands, 4)
 
 	// Bundle templates
 	assert.Equal(t, "Template:Bundle:CommandError", b.Templates.CommandError)

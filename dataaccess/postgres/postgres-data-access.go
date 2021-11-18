@@ -25,9 +25,9 @@ import (
 	"github.com/getgort/gort/dataaccess/errs"
 	gerr "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/telemetry"
-	"go.opentelemetry.io/otel"
 
 	_ "github.com/lib/pq" // Load the Postgres drivers
+	"go.opentelemetry.io/otel"
 )
 
 const (
@@ -301,7 +301,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		name				TEXT NOT NULL CHECK(name <> ''),
-		description			TEXT NOT NULL CHECK(description <> ''),
+		description			TEXT NOT NULL,
 		executable			TEXT NOT NULL,
 		long_description	TEXT,
 		CONSTRAINT			unq_bundle_command UNIQUE(bundle_name, bundle_version, name),

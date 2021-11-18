@@ -32,9 +32,12 @@ func FunctionMap() template.FuncMap {
 
 	fm := map[string]interface{}{
 		// Header
-		"header":    functions.HeaderFunction,
-		"endheader": functions.HeaderEndFunction,
-		"color":     functions.HeaderColorFunction,
+		"header": functions.HeaderFunction,
+		"color":  functions.HeaderColorFunction,
+
+		// Image
+		"image":     functions.ImageFunction,
+		"thumbnail": functions.ImageThumbnailunction,
 
 		// Section
 		"section":    functions.SectionFunction,
@@ -42,21 +45,32 @@ func FunctionMap() template.FuncMap {
 
 		// Text
 		"text":      functions.TextFunction,
+		"inline":    functions.TextInlineFunction,
 		"markdown":  functions.TextMarkdownFunction,
 		"monospace": functions.TextMonospaceFunction,
 		"emoji":     functions.TextEmojiFunction,
 		"endtext":   functions.TextEndFunction,
 
+		// Multiform functions
+		"title": functions.MultipleTitleFunction,
+
 		// Simple blocks
 		"divider": functions.DividerFunction,
-		"image":   functions.ImageFunction,
+
+		// Alternative text
+		"alt": functions.AltFunction,
+
+		// Unimplemented - for testing fallback behavior
+		"unimplemented": functions.UnimplementedFunction,
 	}
 
-	for k, f := range sprig.FuncMap() {
-		fm[k] = f
+	sprigFuncs := sprig.FuncMap()
+
+	for k, f := range fm {
+		sprigFuncs[k] = f
 	}
 
-	return fm
+	return template.FuncMap(sprigFuncs)
 }
 
 type Tag struct {

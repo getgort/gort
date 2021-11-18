@@ -16,18 +16,17 @@
 
 package templates
 
-type Divider struct {
-	Tag
-}
+import "fmt"
 
-func (o *Divider) String() string {
-	return encodeTag(*o)
-}
-
-func (o *Divider) Alt() string {
-	return "==="
-}
-
-func (f *Functions) DividerFunction() *Divider {
-	return &Divider{}
+func (f *Functions) MultipleTitleFunction(s string, i interface{}) (interface{}, error) {
+	switch t := i.(type) {
+	case *Header:
+		t.Title = s
+		return t, nil
+	case *Text:
+		t.Title = s
+		return t, nil
+	default:
+		return nil, fmt.Errorf("%T does not support the header function", t)
+	}
 }

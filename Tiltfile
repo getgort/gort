@@ -19,14 +19,22 @@ def loadRelayConfig(devConfig,relayType,setValues):
             for key in discord:
                 setValues.append("config.{0}[{1}].{2}={3}".format(relayType,i,key,discord[key]))
 
+def loadDbConfig(devConfig,setValues):
+    db = devConfig["database"]
+    for key in db:
+        value = "config.{0}.{1}={2}".format("database",key,db[key])
+        setValues.append(value)
+
 setValues = []
 if os.path.exists("development.yml"):
     devConfig = read_yaml("development.yml")
     loadRelayConfig(devConfig,"discord",setValues)
     loadRelayConfig(devConfig,"slack",setValues)
+    loadDbConfig(devConfig,setValues)
 
 # Set up resources using Kubernetes
 def kubernetes():
+    k8s_yaml('tilt-datasources.yaml')
     k8s_yaml(
         helm(
             './helm/gort',

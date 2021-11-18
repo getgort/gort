@@ -109,15 +109,18 @@ type Adapter interface {
 	// begin relaying back events (including errors) via the returned channel.
 	Listen(ctx context.Context) <-chan *ProviderEvent
 
-	// SendEnvelope sends the contents of a response envelope to a
+	// Send sends the contents of a response envelope to a
 	// specified channel. If channelID is empty the value of
 	// envelope.Request.ChannelID will be used.
 	Send(ctx context.Context, channelID string, elements templates.OutputElements) error
 
+	// SendText sends a simple text message to the specified channel.
+	SendText(ctx context.Context, channelID string, message string) error
+
 	// SendError is a break-glass error message function that's used when the
 	// templating function fails somehow. Obviously, it does not utilize the
 	// templating engine.
-	SendError(ctx context.Context, channelID string, err error) error
+	SendError(ctx context.Context, channelID string, title string, err error) error
 }
 
 type RequestorIdentity struct {
@@ -296,9 +299,8 @@ func SendMessage(ctx context.Context, a Adapter, channelID string, message strin
 	return SendEnvelope(ctx, a, channelID, e, data.Message)
 }
 
-// SendEnvelope sends the contents of a response envelope to a
-// specified channel. If channelID is empty the value of
-// envelope.Request.ChannelID will be used.
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
 func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "adapter.SendEnvelope")
@@ -309,7 +311,7 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
 	if err != nil {
 		e.WithError(err).Error("failed to get template")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Failed to Get Template", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
@@ -318,7 +320,7 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	tf, err := templates.Transform(template, envelope)
 	if err != nil {
 		e.WithError(err).Error("template engine failed to transform template")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Failed to Transform Template", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
@@ -327,16 +329,22 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	elements, err := templates.EncodeElements(tf)
 	if err != nil {
 		e.WithError(err).Error("template engine failed to encode elements")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Failed to Transform Template", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
 	}
 
 	err = a.Send(ctx, channelID, elements)
+	if err == nil {
+		return nil
+	}
+
+	e.WithError(err).Warn("failed to send rich message to adapter, falling back to alt text")
+	err = a.SendText(ctx, channelID, elements.Alt())
 	if err != nil {
 		e.WithError(err).Error("failed to send message to adapter")
-		if err := a.SendError(ctx, channelID, err); err != nil {
+		if err := a.SendError(ctx, channelID, "Failed to Send Message", err); err != nil {
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
