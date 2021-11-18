@@ -84,58 +84,6 @@ func (s ClassicAdapter) GetUserInfo(userID string) (*adapter.UserInfo, error) {
 	return newUserInfoFromSlackUser(u), nil
 }
 
-func getFields(name string, i interface{}) map[string]interface{} {
-	merge := func(m, n map[string]interface{}) map[string]interface{} {
-		for k, v := range n {
-			m[k] = v
-		}
-		return m
-	}
-
-	value := reflect.ValueOf(i)
-
-	if value.IsZero() {
-		return map[string]interface{}{}
-	}
-
-	switch value.Kind() {
-	case reflect.Interface:
-		fallthrough
-
-	case reflect.Ptr:
-		if value.IsNil() {
-			return map[string]interface{}{}
-		}
-
-		v := value.Elem()
-		if !v.CanInterface() {
-			return map[string]interface{}{}
-		}
-
-		return getFields(name, v.Interface())
-
-	case reflect.Struct:
-		m := map[string]interface{}{}
-		t := value.Type()
-
-		for i := 0; i < t.NumField(); i++ {
-			fv := value.Field(i)
-			fn := t.Field(i).Name
-
-			if !fv.CanInterface() {
-				continue
-			}
-
-			m = merge(m, getFields(strings.ToLower(fn), fv.Interface()))
-		}
-
-		return m
-
-	default:
-		return map[string]interface{}{name: i}
-	}
-}
-
 // Listen instructs the relay to begin listening to the provider that it's attached to.
 // It exits immediately, returning a channel that emits ProviderEvents.
 func (s ClassicAdapter) Listen(ctx context.Context) <-chan *adapter.ProviderEvent {
@@ -412,5 +360,57 @@ func (s *ClassicAdapter) wrapEvent(eventType adapter.EventType, info *adapter.In
 		Data:      data,
 		Info:      info,
 		Adapter:   s,
+	}
+}
+
+func getFields(name string, i interface{}) map[string]interface{} {
+	merge := func(m, n map[string]interface{}) map[string]interface{} {
+		for k, v := range n {
+			m[k] = v
+		}
+		return m
+	}
+
+	value := reflect.ValueOf(i)
+
+	if value.IsZero() {
+		return map[string]interface{}{}
+	}
+
+	switch value.Kind() {
+	case reflect.Interface:
+		fallthrough
+
+	case reflect.Ptr:
+		if value.IsNil() {
+			return map[string]interface{}{}
+		}
+
+		v := value.Elem()
+		if !v.CanInterface() {
+			return map[string]interface{}{}
+		}
+
+		return getFields(name, v.Interface())
+
+	case reflect.Struct:
+		m := map[string]interface{}{}
+		t := value.Type()
+
+		for i := 0; i < t.NumField(); i++ {
+			fv := value.Field(i)
+			fn := t.Field(i).Name
+
+			if !fv.CanInterface() {
+				continue
+			}
+
+			m = merge(m, getFields(strings.ToLower(fn), fv.Interface()))
+		}
+
+		return m
+
+	default:
+		return map[string]interface{}{name: i}
 	}
 }
