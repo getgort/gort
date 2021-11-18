@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sort"
 
 	"github.com/getgort/gort/data"
 )
@@ -138,6 +139,9 @@ func (c *GortClient) BundleListVersions(bundlename string) ([]data.Bundle, error
 	if err != nil {
 		return []data.Bundle{}, err
 	}
+
+	// Always sort by version
+	sort.Slice(bundles, func(i, j int) bool { return bundles[i].Semver().LessThan(bundles[j].Semver()) })
 
 	return bundles, nil
 }

@@ -17,7 +17,10 @@
 package data
 
 import (
+	"strings"
 	"time"
+
+	"github.com/coreos/go-semver/semver"
 )
 
 // BundleInfo wraps a minimal amount of data about a bundle.
@@ -46,6 +49,24 @@ type Bundle struct {
 	Commands          map[string]*BundleCommand `yaml:",omitempty" json:"commands,omitempty"`
 	Default           bool                      `yaml:"-" json:"default,omitempty"`
 	Templates         Templates                 `yaml:",omitempty" json:"templates,omitempty"`
+}
+
+func (b Bundle) Semver() semver.Version {
+	var version = b.Version
+
+	if version == "" {
+		return semver.Version{}
+	}
+
+	if strings.ToLower(version)[0] == 'v' {
+		version = version[1:]
+	}
+
+	if v, err := semver.NewVersion(version); err != nil {
+		return semver.Version{}
+	} else {
+		return *v
+	}
 }
 
 // BundleCommand represents a bundle command, as defined in the "bundles/commands"
