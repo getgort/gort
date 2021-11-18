@@ -400,18 +400,21 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		if id.GortUser, autocreated, err = findOrMakeGortUser(ctx, id.Adapter, id.ChatUser); err != nil {
 			switch {
 			case gerrs.Is(err, ErrSelfRegistrationOff):
-				msg := "I'm terribly sorry, but either I don't " +
-					"have a Gort account for you, or your Slack chat handle has " +
-					"not been registered. Currently, only registered users can " +
-					"interact with me.\n\n\nYou'll need to ask a Gort " +
-					"administrator to fix this situation and to register your " +
-					"Slack handle."
+				msg := "I'm terribly sorry, but either I don't have a Gort " +
+					"account for you, or your chat handle has not been " +
+					"registered. Currently, only registered users can " +
+					"interact with me.\n\nYou'll need a Gort administrator " +
+					"to map your Gort user to the adapter (%s) and chat " +
+					"user ID (%s)."
+				msg = fmt.Sprintf(msg, id.Adapter.GetName(), id.ChatUser.ID)
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Account", msg)
+
 			case gerrs.Is(err, ErrGortNotBootstrapped):
 				msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
 					"use `gort bootstrap` to properly bootstrap the Gort " +
 					"environment before proceeding."
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Not Bootstrapped?", msg)
+
 			default:
 				msg := "An unexpected error has occurred"
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", msg)
