@@ -94,8 +94,15 @@ func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundl
 		return err
 	}
 
-	// Save commands
+	// Save templates
 	err = da.doBundleInsertTemplates(ctx, tx, bundle)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Save kubernetes config
+	err = da.doBundleInsertKubernetes(ctx, tx, bundle)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -500,8 +507,14 @@ func (da PostgresDataAccess) FindCommandEntry(ctx context.Context, bundleName, c
 }
 
 func (da PostgresDataAccess) doBundleDelete(ctx context.Context, tx *sql.Tx, name string, version string) error {
-	query := "DELETE FROM bundle_command_rules WHERE bundle_name=$1 AND bundle_version=$2;"
+	query := "DELETE FROM bundle_kubernetes WHERE bundle_name=$1 AND bundle_version=$2;"
 	_, err := tx.ExecContext(ctx, query, name, version)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	query = "DELETE FROM bundle_command_rules WHERE bundle_name=$1 AND bundle_version=$2;"
+	_, err = tx.ExecContext(ctx, query, name, version)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -677,6 +690,11 @@ func (da PostgresDataAccess) doBundleGet(ctx context.Context, tx *sql.Tx, name s
 		return bundle, gerr.Wrap(fmt.Errorf("failed to get bundle templates"), err)
 	}
 
+	bundle.Kubernetes, err = da.doBundleGetKubernetes(ctx, tx, name, version)
+	if err != nil {
+		return bundle, gerr.Wrap(fmt.Errorf("failed to get bundle kubernetes config"), err)
+	}
+
 	return bundle, nil
 }
 
@@ -802,6 +820,26 @@ func (da PostgresDataAccess) doBundleGetCommandTemplates(ctx context.Context, tx
 	}
 
 	return templates, nil
+}
+
+func (da PostgresDataAccess) doBundleGetKubernetes(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion string) (data.BundleKubernetes, error) {
+	query := `SELECT service_account_name
+		FROM bundle_kubernetes
+		WHERE bundle_name=$1 AND bundle_version=$2`
+
+	var kubernetes data.BundleKubernetes
+
+	err := tx.QueryRowContext(ctx, query, bundleName, bundleVersion).
+		Scan(&kubernetes.ServiceAccountName)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return data.BundleKubernetes{}, errs.ErrNoSuchUser
+	case err != nil:
+		return data.BundleKubernetes{}, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return kubernetes, nil
 }
 
 func (da PostgresDataAccess) doBundleGetPermissions(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion string) ([]string, error) {
@@ -989,6 +1027,27 @@ func (da PostgresDataAccess) doBundleInsertTemplates(ctx context.Context, tx *sq
 	_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
 		bundle.Templates.Command, bundle.Templates.CommandError,
 		bundle.Templates.Message, bundle.Templates.MessageError)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "violates") {
+			err = gerr.Wrap(errs.ErrFieldRequired, err)
+		} else {
+			err = gerr.Wrap(errs.ErrDataAccess, err)
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) doBundleInsertKubernetes(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
+	query := `INSERT INTO bundle_kubernetes
+		(bundle_name, bundle_version, service_account_name)
+		VALUES ($1, $2, $3);`
+
+	_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
+		bundle.Kubernetes.ServiceAccountName)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "violates") {

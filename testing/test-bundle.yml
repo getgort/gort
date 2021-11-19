@@ -23,6 +23,9 @@ templates:
   message_error: 'Template:Bundle:MessageError'
   message: 'Template:Bundle:Message'
 
+kubernetes:
+  serviceAccountName: service-account
+
 commands:
   echox:
     description: "Write arguments to the standard output."

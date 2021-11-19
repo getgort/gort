@@ -314,6 +314,7 @@ func (da DataAccessTester) testBundleGet(t *testing.T) {
 	assert.Equal(t, bundleCreate.Docker, bundleGet.Docker)
 	assert.ElementsMatch(t, bundleCreate.Permissions, bundleGet.Permissions)
 	assert.Equal(t, bundleCreate.Commands, bundleGet.Commands)
+	assert.Equal(t, bundleCreate.Kubernetes, bundleGet.Kubernetes)
 
 	// Compare everything for good measure
 	assert.Equal(t, bundleCreate, bundleGet)

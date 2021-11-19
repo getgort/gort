@@ -45,10 +45,16 @@ type Bundle struct {
 	InstalledBy       string                    `yaml:",omitempty" json:"installed_by,omitempty"`
 	LongDescription   string                    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
 	Docker            BundleDocker              `yaml:",omitempty" json:"docker,omitempty"`
+	Kubernetes        BundleKubernetes          `yaml:",omitempty" json:"kubernetes,omitempty"`
 	Permissions       []string                  `yaml:",omitempty" json:"permissions,omitempty"`
 	Commands          map[string]*BundleCommand `yaml:",omitempty" json:"commands,omitempty"`
 	Default           bool                      `yaml:"-" json:"default,omitempty"`
 	Templates         Templates                 `yaml:",omitempty" json:"templates,omitempty"`
+}
+
+// BundleKubernetes represents the "bundles/kubernetes" subsection of the config doc
+type BundleKubernetes struct {
+	ServiceAccountName string `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
 }
 
 func (b Bundle) Semver() semver.Version {
