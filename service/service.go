@@ -294,7 +294,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := dataAccessLayer.TokenGenerate(r.Context(), username, 10*time.Minute)
+	token, err := dataAccessLayer.TokenGenerate(r.Context(), username, 10*time.Second)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return

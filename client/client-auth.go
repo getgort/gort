@@ -188,6 +188,11 @@ func (c *GortClient) Bootstrap(overwrite bool) (rest.User, error) {
 		return user, err
 	}
 
+	// Delete any old tokens that may be laying around
+	if err := c.deleteHostToken(); err != nil {
+		return user, nil
+	}
+
 	return user, nil
 }
 
