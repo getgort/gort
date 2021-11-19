@@ -135,6 +135,5 @@ func TestSemver(t *testing.T) {
 		b := Bundle{Version: test.Version}
 		result := b.Semver()
 		assert.Equal(t, test.Expected, result, "Test case: %q", test.Version)
-
 	}
 }
