@@ -24,7 +24,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -40,6 +39,7 @@ import (
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/rules"
 	"github.com/getgort/gort/telemetry"
+	"github.com/getgort/gort/templates"
 	"github.com/getgort/gort/version"
 )
 
@@ -109,13 +109,18 @@ type Adapter interface {
 	// begin relaying back events (including errors) via the returned channel.
 	Listen(ctx context.Context) <-chan *ProviderEvent
 
-	// SendErrorMessage sends an error message to a specified channel.
-	// TODO Create a MessageBuilder at some point to replace this.
-	SendErrorMessage(channelID string, title string, text string) error
+	// Send sends the contents of a response envelope to a
+	// specified channel. If channelID is empty the value of
+	// envelope.Request.ChannelID will be used.
+	Send(ctx context.Context, channelID string, elements templates.OutputElements) error
 
-	// SendMessage sends a standard output message to a specified channel.
-	// TODO Create a MessageBuilder at some point to replace this.
-	SendMessage(channel string, message string) error
+	// SendText sends a simple text message to the specified channel.
+	SendText(ctx context.Context, channelID string, message string) error
+
+	// SendError is a break-glass error message function that's used when the
+	// templating function fails somehow. Obviously, it does not utilize the
+	// templating engine.
+	SendError(ctx context.Context, channelID string, title string, err error) error
 }
 
 type RequestorIdentity struct {
@@ -207,7 +212,7 @@ func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent
 
 	for _, c := range channels {
 		message := fmt.Sprintf("Gort version %s is online. Hello, %s!", version.Version, c.Name)
-		err := event.Adapter.SendMessage(c.ID, message)
+		err := SendMessage(ctx, event.Adapter, c.ID, message)
 		if err != nil {
 			telemetry.Errors().WithError(err).Commit(ctx)
 			addSpanAttributes(ctx, sp, err)
@@ -240,7 +245,7 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 		return nil, err
 	}
 
@@ -270,7 +275,7 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 		return nil, err
 	}
 
@@ -282,13 +287,79 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 	return TriggerCommand(ctx, rawCommandText, id)
 }
 
+// SendErrorMessage sends an error message to a specified channel.
+func SendErrorMessage(ctx context.Context, a Adapter, channelID string, title, text string) error {
+	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithError(title, fmt.Errorf(text), 1))
+	return SendEnvelope(ctx, a, channelID, e, data.MessageError)
+}
+
+// SendMessage sends a standard output message to a specified channel.
+func SendMessage(ctx context.Context, a Adapter, channelID string, message string) error {
+	e := data.NewCommandResponseEnvelope(data.CommandRequest{}, data.WithResponseLines([]string{message}))
+	return SendEnvelope(ctx, a, channelID, e, data.Message)
+}
+
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
+func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "adapter.SendEnvelope")
+	defer sp.End()
+
+	e := adapterLogEntry(ctx, log.WithContext(ctx), a).WithField("message.type", tt)
+
+	template, err := templates.Get(envelope.Request.Command, envelope.Request.Bundle, tt)
+	if err != nil {
+		e.WithError(err).Error("failed to get template")
+		if err := a.SendError(ctx, channelID, "Failed to Get Template", err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	tf, err := templates.Transform(template, envelope)
+	if err != nil {
+		e.WithError(err).Error("template engine failed to transform template")
+		if err := a.SendError(ctx, channelID, "Failed to Transform Template", err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	elements, err := templates.EncodeElements(tf)
+	if err != nil {
+		e.WithError(err).Error("template engine failed to encode elements")
+		if err := a.SendError(ctx, channelID, "Failed to Transform Template", err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	err = a.Send(ctx, channelID, elements)
+	if err == nil {
+		return nil
+	}
+
+	e.WithError(err).Warn("failed to send rich message to adapter, falling back to alt text")
+	err = a.SendText(ctx, channelID, elements.Alt())
+	if err != nil {
+		e.WithError(err).Error("failed to send message to adapter")
+		if err := a.SendError(ctx, channelID, "Failed to Send Message", err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	return nil
+}
+
 // StartListening instructs all relays to establish connections, receives all
 // events from all relays, and forwards them to the various On* handler functions.
-func StartListening(ctx context.Context) (<-chan data.CommandRequest, chan<- data.CommandResponse, <-chan error) {
+func StartListening(ctx context.Context) (<-chan data.CommandRequest, chan<- data.CommandResponseEnvelope, <-chan error) {
 	log.Debug("Instructing relays to establish connections")
 
 	commandRequests := make(chan data.CommandRequest)
-	commandResponses := make(chan data.CommandResponse)
+	commandResponses := make(chan data.CommandResponseEnvelope)
 
 	allEvents, adapterErrors := startAdapters(ctx)
 
@@ -329,21 +400,24 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		if id.GortUser, autocreated, err = findOrMakeGortUser(ctx, id.Adapter, id.ChatUser); err != nil {
 			switch {
 			case gerrs.Is(err, ErrSelfRegistrationOff):
-				msg := "I'm terribly sorry, but either I don't " +
-					"have a Gort account for you, or your Slack chat handle has " +
-					"not been registered. Currently, only registered users can " +
-					"interact with me.\n\n\nYou'll need to ask a Gort " +
-					"administrator to fix this situation and to register your " +
-					"Slack handle."
-				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Account", msg)
+				msg := "I'm terribly sorry, but either I don't have a Gort " +
+					"account for you, or your chat handle has not been " +
+					"registered. Currently, only registered users can " +
+					"interact with me.\n\nYou'll need a Gort administrator " +
+					"to map your Gort user to the adapter (%s) and chat " +
+					"user ID (%s)."
+				msg = fmt.Sprintf(msg, id.Adapter.GetName(), id.ChatUser.ID)
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Account", msg)
+
 			case gerrs.Is(err, ErrGortNotBootstrapped):
 				msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
 					"use `gort bootstrap` to properly bootstrap the Gort " +
 					"environment before proceeding."
-				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Not Bootstrapped?", msg)
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Not Bootstrapped?", msg)
+
 			default:
 				msg := "An unexpected error has occurred"
-				id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", msg)
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", msg)
 			}
 
 			da.RequestError(ctx, request, err)
@@ -364,7 +438,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
 				"owner of a shiny new Gort account named `%s`!",
 				id.GortUser.Username)
-			id.Adapter.SendMessage(id.ChatUser.ID, message)
+			SendMessage(ctx, id.Adapter, id.ChatUser.ID, message)
 
 			le.Info("Autocreating Gort user")
 		}
@@ -376,7 +450,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("Command tokenization error")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("command tokenization error: %w", err)
 	}
@@ -396,7 +470,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("Command parse error")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("command parse error: %w", err)
 	}
@@ -409,15 +483,14 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
 				"If this is not expected, you should contact a Gort administrator.",
 				tokens[0])
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
 		case gerrs.Is(err, ErrMultipleCommands):
 			msg := fmt.Sprintf("The command %s matches multiple bundles.\n"+
 				"Please namespace your command using the bundle name: `bundle:command`.",
 				tokens[0])
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Such Command", msg)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
 		default:
-			msg := formatCommandInputErrorMessage(cmdInput, tokens, err.Error())
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", msg)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", err.Error())
 		}
 
 		da.RequestError(ctx, request, err)
@@ -435,7 +508,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("Command parse error")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("command parse error: %w", err)
 	}
@@ -458,7 +531,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		da.RequestError(ctx, request, err)
 		telemetry.Errors().WithError(err).Commit(ctx)
 		le.WithError(err).Error("User permission load failure")
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 
 		return nil, fmt.Errorf("user permission load error: %w", err)
 	}
@@ -471,7 +544,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		switch {
 		case gerrs.Is(err, auth.ErrRuleLoadError):
 			le.WithError(err).Error("Rule load error")
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Error", unexpectedError)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
 			return nil, fmt.Errorf("rule load error: %w", err)
 
 		case gerrs.Is(err, auth.ErrNoRulesDefined):
@@ -479,14 +552,14 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 			msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
 				"For a command to be executable, it must have at least one rule.",
 				cmdEntry.Bundle.Name, cmdEntry.Command.Name)
-			id.Adapter.SendErrorMessage(id.ChatChannel.ID, "No Rules Defined", msg)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Rules Defined", msg)
 			return nil, err
 		}
 	}
 
 	if !allowed {
 		msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
-		id.Adapter.SendErrorMessage(id.ChatChannel.ID, "Permission Denied", msg)
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Permission Denied", msg)
 
 		err = fmt.Errorf("permission denied")
 		da.RequestError(ctx, request, err)
@@ -758,7 +831,7 @@ func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, use
 		}
 	}
 
-	le.Info("requestor identity built")
+	le.Info("Requestor identity built")
 
 	return id, nil
 }
@@ -855,41 +928,6 @@ func findOrMakeGortUser(ctx context.Context, adapter Adapter, info *UserInfo) (*
 	return &user, true, da.UserCreate(ctx, user)
 }
 
-// TODO Replace this with something resembling a template. Eventually.
-func formatCommandEntryErrorMessage(command data.CommandEntry, params []string, output string) string {
-	rawCommand := fmt.Sprintf(
-		"%s:%s %s",
-		command.Bundle.Name, command.Command.Name, strings.Join(params, " "))
-
-	return fmt.Sprintf(
-		"%s\n```%s```\n%s\n```%s```",
-		"The pipeline failed planning the invocation:",
-		rawCommand,
-		"The specific error was:",
-		output,
-	)
-}
-
-// TODO Replace this with something resembling a template. Eventually.
-func formatCommandInputErrorMessage(cmd command.Command, params []string, output string) string {
-	rawCommand := fmt.Sprintf(
-		"%s:%s %v",
-		cmd.Bundle, cmd.Command, cmd.Parameters)
-
-	return fmt.Sprintf(
-		"%s\n```%s```\n%s\n```%s```",
-		"The pipeline failed planning the invocation:",
-		rawCommand,
-		"The specific error was:",
-		output,
-	)
-}
-
-// TODO Replace this with something resembling a template. Eventually.
-func formatCommandOutput(command data.CommandEntry, params []string, output string) string {
-	return fmt.Sprintf("```%s```", output)
-}
-
 func handleIncomingEvent(event *ProviderEvent, commandRequests chan<- data.CommandRequest, adapterErrors chan<- error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(context.Background(), "adapter.handleIncomingEvent")
@@ -951,47 +989,32 @@ func startAdapters(ctx context.Context) (<-chan *ProviderEvent, chan error) {
 	return allEvents, adapterErrors
 }
 
-func startProviderEventListening(commandRequests chan<- data.CommandRequest,
+func startProviderEventListening(requests chan<- data.CommandRequest,
 	allEvents <-chan *ProviderEvent, adapterErrors chan<- error) {
 
 	for event := range allEvents {
-		handleIncomingEvent(event, commandRequests, adapterErrors)
+		handleIncomingEvent(event, requests, adapterErrors)
 	}
 }
 
-func startRelayResponseListening(commandResponses <-chan data.CommandResponse,
+func startRelayResponseListening(responses <-chan data.CommandResponseEnvelope,
 	allEvents <-chan *ProviderEvent, adapterErrors chan<- error) {
 
-	for response := range commandResponses {
-		adapter, err := GetAdapter(response.Command.Adapter)
+	for envelope := range responses {
+		adapter, err := GetAdapter(envelope.Request.Adapter)
 		if err != nil {
 			adapterErrors <- err
 			continue
 		}
 
-		channelID := response.Command.ChannelID
-		output := strings.Join(response.Output, "\n")
-		title := response.Title
-
-		if response.Status != 0 || response.Error != nil {
-			formatted := formatCommandEntryErrorMessage(
-				response.Command.CommandEntry,
-				response.Command.Parameters,
-				output,
-			)
-
-			err = adapter.SendErrorMessage(channelID, title, formatted)
-		} else {
-			formatted := formatCommandOutput(
-				response.Command.CommandEntry,
-				response.Command.Parameters,
-				output,
-			)
-
-			err = adapter.SendMessage(channelID, formatted)
+		tt := data.Command
+		if envelope.Data.ExitCode != 0 {
+			tt = data.CommandError
 		}
 
-		if err != nil {
+		ctx := context.Background()
+		channelID := envelope.Request.ChannelID
+		if err := SendEnvelope(ctx, adapter, channelID, envelope, tt); err != nil {
 			adapterErrors <- err
 		}
 	}

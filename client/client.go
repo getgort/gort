@@ -18,6 +18,7 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,6 +65,7 @@ var (
 
 // GortClient comments to be written...
 type GortClient struct {
+	client  *http.Client
 	profile ProfileEntry
 	token   *rest.Token
 }
@@ -100,14 +102,16 @@ func (c Error) Status() uint {
 func Connect(profileName string) (*GortClient, error) {
 	// If the GORT_SERVICE_TOKEN envvar is set, use that first.
 	if te, exists := os.LookupEnv("GORT_SERVICE_TOKEN"); exists {
-		entry := ProfileEntry{URLString: os.Getenv("GORT_SERVICES_ROOT")}
+		entry := ProfileEntry{
+			URLString:     os.Getenv("GORT_SERVICES_ROOT"),
+			AllowInsecure: true, // TODO(mtitmus) Fine for now, but maybe fix this later?
+		}
 
 		url, err := parseHostURL(entry.URLString)
 		if err != nil {
 			return nil, err
 		}
 
-		entry.AllowInsecure = url.Scheme == "http"
 		entry.URL = url
 
 		client, err := NewClient(entry)
@@ -176,9 +180,37 @@ func NewClient(entry ProfileEntry) (*GortClient, error) {
 		return nil, ErrInsecureURL
 	}
 
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	if entry.AllowInsecure {
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+
 	return &GortClient{
+		client:  client,
 		profile: entry,
 	}, nil
+}
+
+// deleteHostToken attempts to delete an existing token file.
+func (c *GortClient) deleteHostToken() error {
+	tokenFileName, err := c.getGortTokenFilename()
+	if err != nil {
+		return gerrs.Wrap(gerrs.ErrIO, err)
+	}
+
+	// File doesn't exist. Not an error.
+	if _, err := os.Stat(tokenFileName); err != nil {
+		return nil
+	}
+
+	return os.Remove(tokenFileName)
 }
 
 func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Response, error) {
@@ -193,9 +225,12 @@ func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Re
 	}
 	req.Header.Add("X-Session-Token", token.Token)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
+	resp, err := c.client.Do(req)
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "certificate"):
+		return nil, fmt.Errorf("self-signed certificate detected: use --allow-insecure to proceed (not recommended)")
+	default:
 		return nil, gerrs.Wrap(ErrConnectionFailed, err)
 	}
 
@@ -323,7 +358,7 @@ func parseHostURL(serverURLArg string) (*url.URL, error) {
 		return nil, gerrs.Wrap(gerrs.ErrIO, err)
 	}
 	if !matches {
-		serverURLString = "http://" + serverURLString
+		serverURLString = "https://" + serverURLString
 	}
 
 	// Parse the resulting URL

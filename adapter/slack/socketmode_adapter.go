@@ -23,6 +23,8 @@ import (
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/telemetry"
+	"github.com/getgort/gort/templates"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
@@ -205,6 +207,24 @@ func (s *SocketModeAdapter) Listen(ctx context.Context) <-chan *adapter.Provider
 	return events
 }
 
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
+func (s *SocketModeAdapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
+	return Send(ctx, s.client, s, channelID, elements)
+}
+
+// SendText sends a simple text message to the specified channel.
+func (s *SocketModeAdapter) SendText(ctx context.Context, channelID string, message string) error {
+	return SendText(ctx, s.client, s, channelID, message)
+}
+
+// SendError is a break-glass error message function that's used when the
+// templating function fails somehow. Obviously, it does not utilize the
+// templating engine.
+func (s *SocketModeAdapter) SendError(ctx context.Context, channelID string, title string, err error) error {
+	return SendError(ctx, s.client, channelID, title, err)
+}
+
 // onChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.
 func (s *SocketModeAdapter) onChannelMessage(event *slackevents.MessageEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
@@ -277,49 +297,4 @@ func (s *SocketModeAdapter) wrapEvent(eventType adapter.EventType, info *adapter
 		Info:      info,
 		Adapter:   s,
 	}
-}
-
-// SendErrorMessage sends an error message to a specified channel.
-// TODO Create a MessageBuilder at some point to replace this.
-func (s *SocketModeAdapter) SendErrorMessage(channelID string, title string, text string) error {
-	_, _, err := s.client.PostMessage(
-		channelID,
-		slack.MsgOptionAttachments(
-			slack.Attachment{
-				Title:      title,
-				Text:       text,
-				Color:      "#FF0000",
-				MarkdownIn: []string{"text"},
-			},
-		),
-		slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionDisableMarkdown(),
-		slack.MsgOptionAsUser(false),
-		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}),
-	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// SendMessage sends a standard output message to a specified channel.
-// TODO Create a MessageBuilder at some point to replace this.
-func (s *SocketModeAdapter) SendMessage(channelID string, message string) error {
-	_, _, err := s.client.PostMessage(channelID, slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionAsUser(false),
-		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionText(message, false),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}))
-	if err != nil {
-		return err
-	}
-	return nil
 }

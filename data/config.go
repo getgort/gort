@@ -25,8 +25,10 @@ type GortConfig struct {
 	DatabaseConfigs   DatabaseConfigs   `yaml:"database,omitempty"`
 	DockerConfigs     DockerConfigs     `yaml:"docker,omitempty"`
 	JaegerConfigs     JaegerConfigs     `yaml:"jaeger,omitempty"`
+	KubernetesConfigs KubernetesConfigs `yaml:"kubernetes,omitempty"`
 	SlackProviders    []SlackProvider   `yaml:"slack,omitempty"`
 	DiscordProviders  []DiscordProvider `yaml:"discord,omitempty"`
+	Templates         Templates         `yaml:"templates,omitempty"`
 }
 
 // GortServerConfigs is the data wrapper for the "gort" section.
@@ -60,7 +62,6 @@ type DatabaseConfigs struct {
 }
 
 // DockerConfigs is the data wrapper for the "docker" section.
-// This will move into the relay config(s) eventually.
 type DockerConfigs struct {
 	DockerHost string `yaml:"host,omitempty"`
 	Network    string `yaml:"network,omitempty"`
@@ -71,4 +72,13 @@ type JaegerConfigs struct {
 	Endpoint string `yaml:"endpoint,omitempty"`
 	Password string `yaml:"password,omitempty"`
 	Username string `yaml:"username,omitempty"`
+}
+
+// KubernetesConfigs is the data wrapper for the "kubernetes" section.
+type KubernetesConfigs struct {
+	Namespace             string `yaml:"namespace,omitempty"`
+	EndpointFieldSelector string `yaml:"endpoint_field_selector,omitempty"`
+	EndpointLabelSelector string `yaml:"endpoint_label_selector,omitempty"`
+	PodFieldSelector      string `yaml:"pod_field_selector,omitempty"`
+	PodLabelSelector      string `yaml:"pod_label_selector,omitempty"`
 }

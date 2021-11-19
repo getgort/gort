@@ -112,12 +112,28 @@ func GetDatabaseConfigs() data.DatabaseConfigs {
 	return config.DatabaseConfigs
 }
 
+// GetDiscordProviders returns the data wrapper for the "discord" config section.
+func GetDiscordProviders() []data.DiscordProvider {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	return config.DiscordProviders
+}
+
 // GetDockerConfigs returns the data wrapper for the "docker" config section.
 func GetDockerConfigs() data.DockerConfigs {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 
 	return config.DockerConfigs
+}
+
+// GetGlobalConfigs returns the data wrapper for the "global" config section.
+func GetGlobalConfigs() data.GlobalConfigs {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	return config.GlobalConfigs
 }
 
 // GetGortServerConfigs returns the data wrapper for the "gort" config section.
@@ -136,12 +152,12 @@ func GetJaegerConfigs() data.JaegerConfigs {
 	return config.JaegerConfigs
 }
 
-// GetGlobalConfigs returns the data wrapper for the "global" config section.
-func GetGlobalConfigs() data.GlobalConfigs {
+// GetKubernetesConfigs returns the data wrapper for the "jaeger" config section.
+func GetKubernetesConfigs() data.KubernetesConfigs {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 
-	return config.GlobalConfigs
+	return config.KubernetesConfigs
 }
 
 // GetSlackProviders returns the data wrapper for the "slack" config section.
@@ -152,12 +168,12 @@ func GetSlackProviders() []data.SlackProvider {
 	return config.SlackProviders
 }
 
-// GetDiscordProviders returns the data wrapper for the "discord" config section.
-func GetDiscordProviders() []data.DiscordProvider {
+// GetTemplates returns the deployment-scoped template overrides.
+func GetTemplates() data.Templates {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 
-	return config.DiscordProviders
+	return config.Templates
 }
 
 // Initialize is called by main() to trigger creation of the config singleton.
@@ -181,8 +197,50 @@ func IsUndefined(c interface{}) bool {
 		return true
 	}
 
-	v := reflect.ValueOf(c)
-	return v.IsZero()
+	return reflect.ValueOf(c).IsZero()
+}
+
+// Reload is called by Initialize() to determine whether the config file has
+// changed (or is new) and reload if it has.
+func Reload() error {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+
+	sum, err := getMd5Sum(configFile)
+	if err != nil {
+		log.WithField("file", configFile).WithError(err).Error(ErrHashFailure.Error())
+
+		return gerrs.Wrap(ErrHashFailure, err)
+	}
+
+	if !slicesAreEqual(sum, md5sum) {
+		cp, err := load(configFile)
+		if err != nil {
+			// If we're already initialized, keep the original config.
+			// If not, set the state to 'error'.
+			if CurrentState() == StateConfigUninitialized {
+				updateConfigState(StateConfigError)
+			}
+
+			log.WithField("file", configFile).WithError(err).Error(ErrConfigUnloadable.Error())
+
+			return gerrs.Wrap(ErrConfigUnloadable, err)
+		}
+
+		md5sum = sum
+		config = cp
+
+		setLogFormatter()
+
+		// Properly load the database configs.
+		standardizeDatabaseConfig(&cp.DatabaseConfigs)
+
+		updateConfigState(StateConfigInitialized)
+
+		log.WithField("file", configFile).Info("Loaded configuration file")
+	}
+
+	return nil
 }
 
 // Updates returns a channel that emits a message whenever the underlying
@@ -235,48 +293,6 @@ func load(file string) (*data.GortConfig, error) {
 	}
 
 	return &config, nil
-}
-
-// Reload is called by Initialize() to determine whether the config file has changed (or is new) and reload if it has.
-func Reload() error {
-	configMutex.Lock()
-	defer configMutex.Unlock()
-
-	sum, err := getMd5Sum(configFile)
-	if err != nil {
-		log.WithField("file", configFile).WithError(err).Error(ErrHashFailure.Error())
-
-		return gerrs.Wrap(ErrHashFailure, err)
-	}
-
-	if !slicesAreEqual(sum, md5sum) {
-		cp, err := load(configFile)
-		if err != nil {
-			// If we're already initialized, keep the original config.
-			// If not, set the state to 'error'.
-			if CurrentState() == StateConfigUninitialized {
-				updateConfigState(StateConfigError)
-			}
-
-			log.WithField("file", configFile).WithError(err).Error(ErrConfigUnloadable.Error())
-
-			return gerrs.Wrap(ErrConfigUnloadable, err)
-		}
-
-		md5sum = sum
-		config = cp
-
-		setLogFormatter()
-
-		// Properly load the database configs.
-		standardizeDatabaseConfig(&cp.DatabaseConfigs)
-
-		updateConfigState(StateConfigInitialized)
-
-		log.WithField("file", configFile).Info("Loaded configuration file")
-	}
-
-	return nil
 }
 
 func setLogFormatter() {

@@ -25,6 +25,7 @@ import (
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/telemetry"
+	"github.com/getgort/gort/templates"
 	log "github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 )
@@ -81,58 +82,6 @@ func (s ClassicAdapter) GetUserInfo(userID string) (*adapter.UserInfo, error) {
 	}
 
 	return newUserInfoFromSlackUser(u), nil
-}
-
-func getFields(name string, i interface{}) map[string]interface{} {
-	merge := func(m, n map[string]interface{}) map[string]interface{} {
-		for k, v := range n {
-			m[k] = v
-		}
-		return m
-	}
-
-	value := reflect.ValueOf(i)
-
-	if value.IsZero() {
-		return map[string]interface{}{}
-	}
-
-	switch value.Kind() {
-	case reflect.Interface:
-		fallthrough
-
-	case reflect.Ptr:
-		if value.IsNil() {
-			return map[string]interface{}{}
-		}
-
-		v := value.Elem()
-		if !v.CanInterface() {
-			return map[string]interface{}{}
-		}
-
-		return getFields(name, v.Interface())
-
-	case reflect.Struct:
-		m := map[string]interface{}{}
-		t := value.Type()
-
-		for i := 0; i < t.NumField(); i++ {
-			fv := value.Field(i)
-			fn := t.Field(i).Name
-
-			if !fv.CanInterface() {
-				continue
-			}
-
-			m = merge(m, getFields(strings.ToLower(fn), fv.Interface()))
-		}
-
-		return m
-
-	default:
-		return map[string]interface{}{name: i}
-	}
 }
 
 // Listen instructs the relay to begin listening to the provider that it's attached to.
@@ -285,6 +234,24 @@ func (s ClassicAdapter) Listen(ctx context.Context) <-chan *adapter.ProviderEven
 	return events
 }
 
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
+func (s *ClassicAdapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
+	return Send(ctx, s.client, s, channelID, elements)
+}
+
+// SendText sends a simple text message to the specified channel.
+func (s *ClassicAdapter) SendText(ctx context.Context, channelID string, message string) error {
+	return SendText(ctx, s.client, s, channelID, message)
+}
+
+// SendError is a break-glass error message function that's used when the
+// templating function fails somehow. Obviously, it does not utilize the
+// templating engine.
+func (s *ClassicAdapter) SendError(ctx context.Context, channelID string, title string, err error) error {
+	return SendError(ctx, s.client, channelID, title, err)
+}
+
 // onChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.
 func (s *ClassicAdapter) onChannelMessage(event *slack.MessageEvent, info *adapter.Info) *adapter.ProviderEvent {
 	return s.wrapEvent(
@@ -386,48 +353,6 @@ func (s *ClassicAdapter) onRTMError(event *slack.RTMError, info *adapter.Info) *
 	)
 }
 
-// SendMessage will send a message (from the bot) into the specified channel.
-func (s ClassicAdapter) SendMessage(channelID string, text string) error {
-	_, _, err := s.rtm.PostMessage(
-		channelID,
-		slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionAsUser(false),
-		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionText(text, false),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}),
-	)
-
-	return err
-}
-
-// SendErrorMessage will send a message (from the bot) into the specified channel.
-func (s ClassicAdapter) SendErrorMessage(channelID string, title string, text string) error {
-	_, _, err := s.rtm.PostMessage(
-		channelID,
-		slack.MsgOptionAttachments(
-			slack.Attachment{
-				Title:      title,
-				Text:       text,
-				Color:      "#FF0000",
-				MarkdownIn: []string{"text"},
-			},
-		),
-		slack.MsgOptionDisableMediaUnfurl(),
-		slack.MsgOptionDisableMarkdown(),
-		slack.MsgOptionAsUser(false),
-		slack.MsgOptionUsername(s.provider.BotName),
-		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{
-			IconURL:  s.provider.IconURL,
-			Markdown: true,
-		}),
-	)
-
-	return err
-}
-
 // wrapEvent creates a new ProviderEvent instance with metadata and the Event data attached.
 func (s *ClassicAdapter) wrapEvent(eventType adapter.EventType, info *adapter.Info, data interface{}) *adapter.ProviderEvent {
 	return &adapter.ProviderEvent{
@@ -435,5 +360,57 @@ func (s *ClassicAdapter) wrapEvent(eventType adapter.EventType, info *adapter.In
 		Data:      data,
 		Info:      info,
 		Adapter:   s,
+	}
+}
+
+func getFields(name string, i interface{}) map[string]interface{} {
+	merge := func(m, n map[string]interface{}) map[string]interface{} {
+		for k, v := range n {
+			m[k] = v
+		}
+		return m
+	}
+
+	value := reflect.ValueOf(i)
+
+	if value.IsZero() {
+		return map[string]interface{}{}
+	}
+
+	switch value.Kind() {
+	case reflect.Interface:
+		fallthrough
+
+	case reflect.Ptr:
+		if value.IsNil() {
+			return map[string]interface{}{}
+		}
+
+		v := value.Elem()
+		if !v.CanInterface() {
+			return map[string]interface{}{}
+		}
+
+		return getFields(name, v.Interface())
+
+	case reflect.Struct:
+		m := map[string]interface{}{}
+		t := value.Type()
+
+		for i := 0; i < t.NumField(); i++ {
+			fv := value.Field(i)
+			fn := t.Field(i).Name
+
+			if !fv.CanInterface() {
+				continue
+			}
+
+			m = merge(m, getFields(strings.ToLower(fn), fv.Interface()))
+		}
+
+		return m
+
+	default:
+		return map[string]interface{}{name: i}
 	}
 }

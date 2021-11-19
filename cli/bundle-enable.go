@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/getgort/gort/client"
+
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +52,7 @@ func GetBundleEnableCmd() *cobra.Command {
 		Short: bundleEnableShort,
 		Long:  bundleEnableLong,
 		RunE:  bundleEnableCmd,
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.RangeArgs(1, 2),
 	}
 
 	cmd.SetUsageTemplate(bundleEnableUsage)
@@ -60,12 +61,21 @@ func GetBundleEnableCmd() *cobra.Command {
 }
 
 func bundleEnableCmd(cmd *cobra.Command, args []string) error {
-	bundleName := args[0]
-	bundleVersion := args[1]
+	var bundleName = args[0]
+	var bundleVersion string
 
 	c, err := client.Connect(FlagGortProfile)
 	if err != nil {
 		return err
+	}
+
+	if len(args) > 1 {
+		bundleVersion = args[1]
+	} else {
+		bundleVersion, err = findLatestVersion(c, bundleName)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = c.BundleEnable(bundleName, bundleVersion)
@@ -76,4 +86,17 @@ func bundleEnableCmd(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Bundle \"%s\" version %s enabled.\n", bundleName, bundleVersion)
 
 	return nil
+}
+
+func findLatestVersion(c *client.GortClient, bundleName string) (string, error) {
+	bb, err := c.BundleListVersions(bundleName)
+	if err != nil {
+		return "", err
+	}
+
+	if len(bb) == 0 {
+		return "", nil
+	}
+
+	return bb[len(bb)-1].Version, nil
 }

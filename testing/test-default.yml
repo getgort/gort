@@ -17,9 +17,7 @@ permissions:
   - manage_roles
   - manage_users
 
-docker:
-  image: getgort/gort
-  tag: latest
+image: getgort/gort:latest
 
 commands:
   bundle:
@@ -136,5 +134,16 @@ commands:
       Usage:
         gort:help [flags] [command]
     executable: [ "/bin/gort", "hidden", "commands" ]
+    rules:
+      - allow
+
+  whoami:
+    description: "Provides your basic identity and account information"
+    long_description: |-
+      Provides your basic identity and account information.
+
+      Usage:
+        gort:whoami
+    executable: [ "/bin/gort", "hidden", "whoami" ]
     rules:
       - allow

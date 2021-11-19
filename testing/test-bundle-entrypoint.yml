@@ -13,9 +13,7 @@ long_description: |-
 permissions:
   - bar
 
-docker:
-  image: ubuntu
-  tag: 20.04
+image: ubuntu:20.04
 
 commands:
   bar:

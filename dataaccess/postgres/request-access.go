@@ -76,13 +76,11 @@ func (da PostgresDataAccess) RequestBegin(ctx context.Context, req *data.Command
 }
 
 func (da PostgresDataAccess) RequestError(ctx context.Context, req data.CommandRequest, err error) error {
-	response := data.CommandResponse{
-		Command: req,
-		Error:   err,
-		Status:  1,
-	}
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	_, sp := tr.Start(ctx, "postgres.RequestUpdate")
+	defer sp.End()
 
-	return da.RequestClose(ctx, response)
+	return da.RequestClose(ctx, data.NewCommandResponseEnvelope(req, data.WithError("", err, 1)))
 }
 
 func (da PostgresDataAccess) RequestUpdate(ctx context.Context, req data.CommandRequest) error {
@@ -125,12 +123,12 @@ func (da PostgresDataAccess) RequestUpdate(ctx context.Context, req data.Command
 	return err
 }
 
-func (da PostgresDataAccess) RequestClose(ctx context.Context, res data.CommandResponse) error {
+func (da PostgresDataAccess) RequestClose(ctx context.Context, envelope data.CommandResponseEnvelope) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.RequestClose")
 	defer sp.End()
 
-	if res.Command.RequestID == 0 {
+	if envelope.Request.RequestID == 0 {
 		return fmt.Errorf("command request ID unset")
 	}
 
@@ -148,26 +146,26 @@ func (da PostgresDataAccess) RequestClose(ctx context.Context, res data.CommandR
 		WHERE request_id=$15;`
 
 	errMsg := ""
-	if res.Error != nil {
-		errMsg = res.Error.Error()
+	if envelope.Data.Error != nil {
+		errMsg = envelope.Data.Error.Error()
 	}
 
 	_, err = db.ExecContext(ctx, query,
-		res.Command.Bundle.Name,
-		res.Command.Bundle.Version,
-		res.Command.Command.Name,
-		encodeStringSlice(res.Command.Command.Executable),
-		strings.Join(res.Command.Parameters, " "),
-		res.Command.Adapter,
-		res.Command.UserID,
-		res.Command.UserEmail,
-		res.Command.ChannelID,
-		res.Command.UserName,
-		res.Command.Timestamp,
-		res.Duration.Milliseconds(),
-		res.Status,
+		envelope.Request.Bundle.Name,
+		envelope.Request.Bundle.Version,
+		envelope.Request.Command.Name,
+		encodeStringSlice(envelope.Request.Command.Executable),
+		strings.Join(envelope.Request.Parameters, " "),
+		envelope.Request.Adapter,
+		envelope.Request.UserID,
+		envelope.Request.UserEmail,
+		envelope.Request.ChannelID,
+		envelope.Request.UserName,
+		envelope.Request.Timestamp,
+		envelope.Data.Duration.Milliseconds(),
+		envelope.Data.ExitCode,
 		errMsg,
-		res.Command.RequestID)
+		envelope.Request.RequestID)
 	if err != nil {
 		err = gerr.Wrap(errs.ErrDataAccess, err)
 	}

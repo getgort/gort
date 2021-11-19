@@ -25,9 +25,9 @@ import (
 	"github.com/getgort/gort/dataaccess/errs"
 	gerr "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/telemetry"
-	"go.opentelemetry.io/otel"
 
 	_ "github.com/lib/pq" // Load the Postgres drivers
+	"go.opentelemetry.io/otel"
 )
 
 const (
@@ -181,6 +181,18 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 		}
 	}
 
+	// Check whether the bundles_kubernetes table exists
+	exists, err = da.tableExists(ctx, "bundle_kubernetes", db)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		err = da.createBundleKubernetesTables(ctx, db)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Check whether the roles table exists
 	exists, err = da.tableExists(ctx, "roles", db)
 	if err != nil {
@@ -254,8 +266,8 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		homepage			TEXT,
 		description			TEXT NOT NULL CHECK(description <> ''),
 		long_description	TEXT,
-		docker_image		TEXT,
-		docker_tag			TEXT,
+		image_repository	TEXT,
+		image_tag			TEXT,
 		install_timestamp	TIMESTAMP WITH TIME ZONE,
 		install_user		TEXT,
 		CONSTRAINT 			unq_bundle UNIQUE(name, version),
@@ -284,11 +296,24 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		ON DELETE CASCADE
 	);
 
+	CREATE TABLE bundle_templates (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		command				TEXT,
+		command_error		TEXT,
+		message				TEXT,
+		message_error		TEXT,
+		CONSTRAINT			unq_bundle_template UNIQUE(bundle_name, bundle_version),
+		PRIMARY KEY			(bundle_name, bundle_version),
+		FOREIGN KEY 		(bundle_name, bundle_version) REFERENCES bundles(name, version)
+		ON DELETE CASCADE
+	);
+
 	CREATE TABLE bundle_commands (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		name				TEXT NOT NULL CHECK(name <> ''),
-		description			TEXT NOT NULL CHECK(description <> ''),
+		description			TEXT NOT NULL,
 		executable			TEXT NOT NULL,
 		long_description	TEXT,
 		CONSTRAINT			unq_bundle_command UNIQUE(bundle_name, bundle_version, name),
@@ -306,6 +331,39 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
 		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
 		ON DELETE CASCADE
+	);
+
+	CREATE TABLE bundle_command_templates (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		command_name		TEXT NOT NULL,
+		command				TEXT,
+		command_error		TEXT,
+		message				TEXT,
+		message_error		TEXT,
+		CONSTRAINT			unq_bundle_command_templates UNIQUE(bundle_name, bundle_version, command_name),
+		PRIMARY KEY			(bundle_name, bundle_version, command_name),
+		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
+		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
+		ON DELETE CASCADE
+	);
+	`
+
+	_, err = db.ExecContext(ctx, createBundlesQuery)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) createBundleKubernetesTables(ctx context.Context, db *sql.DB) error {
+	var err error
+
+	createBundlesQuery := `CREATE TABLE bundle_kubernetes (
+		bundle_version 			TEXT NOT NULL,
+		bundle_name				TEXT NOT NULL,
+		service_account_name 	TEXT NOT NULL
 	);
 	`
 
