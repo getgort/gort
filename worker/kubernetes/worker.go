@@ -252,13 +252,15 @@ func (w *KubernetesWorker) envVars(ctx context.Context) ([]corev1.EnvVar, error)
 	}
 
 	vars := map[string]string{
+		`GORT_ADAPTER`:       w.command.Adapter,
 		`GORT_BUNDLE`:        w.command.Bundle.Name,
 		`GORT_COMMAND`:       w.command.Command.Name,
-		`GORT_CHAT_HANDLE`:   w.command.UserID,
+		`GORT_CHAT_ID`:       w.command.UserID,
 		`GORT_INVOCATION_ID`: fmt.Sprintf("%d", w.command.RequestID),
 		`GORT_ROOM`:          w.command.ChannelID,
 		`GORT_SERVICE_TOKEN`: w.token.Token,
 		`GORT_SERVICES_ROOT`: fmt.Sprintf("%s:%d", gortIP, gortPort),
+		`GORT_USER`:          w.command.UserName,
 	}
 
 	var env []corev1.EnvVar

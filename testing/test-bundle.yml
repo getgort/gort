@@ -42,3 +42,39 @@ commands:
       command_error: 'Template:Command:CommandError'
       message: 'Template:Command:Message'
       message_error: 'Template:Command:MessageError'
+  echoa:
+    description: "Write arguments to the standard output. Accessible to all users"
+    long_description: |-
+      Write arguments to the standard output.
+
+      Usage:
+        test:echox [string ...]
+    executable: [ "/bin/echo" ]
+    rules:
+      - allow
+    templates:
+      command: '{{ text }}{{ .Response.Out }}{{ endtext }}'
+      command_error: 'Template:Command:CommandError'
+      message: 'Template:Command:Message'
+      message_error: 'Template:Command:MessageError'
+  noalt:
+    description: "Returns a message with an unrenderable tag, forcing alt text formed from element text."
+    executable: [ "/bin/echo" ]
+    rules:
+      - allow
+    templates:
+      command: '{{ text }}{{ .Response.Out }}{{ endtext }}{{ unimplemented }}'
+      command_error: 'Template:Command:CommandError'
+      message: 'Template:Command:Message'
+      message_error: 'Template:Command:MessageError'
+  alt:
+    description: "Returns a message with an unrenderable tag, forcing the alt tag to be rendered."
+    executable: [ "/bin/echo" ]
+    rules:
+      - allow
+    templates:
+      command: '{{ text }}{{ .Response.Out }}{{ endtext }}{{ unimplemented }}{{ alt "alt text" }}'
+      command_error: 'Template:Command:CommandError'
+      message: 'Template:Command:Message'
+      message_error: 'Template:Command:MessageError'
+  

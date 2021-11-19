@@ -83,9 +83,8 @@ func ScrubMarkdown(text string) string {
 	return text
 }
 
-// Send sends the contents of a response envelope to a
-// specified channel. If channelID is empty the value of
-// envelope.Request.ChannelID will be used.
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
 func Send(ctx context.Context, client *slack.Client, a adapter.Adapter, channelID string, elements templates.OutputElements) error {
 	e := log.WithContext(ctx)
 
@@ -99,6 +98,23 @@ func Send(ctx context.Context, client *slack.Client, a adapter.Adapter, channelI
 	}
 
 	_, _, err = client.PostMessage(channelID, options...)
+	if err != nil {
+		e.WithError(err).Error("failed to post Slack message")
+		if err := a.SendError(ctx, channelID, "Slack Message Failure", err); err != nil {
+			e.WithError(err).Error("break-glass send error failure!")
+		}
+		return err
+	}
+
+	return nil
+}
+
+// SendText sends a text message to a specified channel.
+// If channelID is empty the value of envelope.Request.ChannelID will be used.
+func SendText(ctx context.Context, client *slack.Client, a adapter.Adapter, channelID string, message string) error {
+	e := log.WithContext(ctx)
+
+	_, _, err := client.PostMessage(channelID, slack.MsgOptionText(message, false))
 	if err != nil {
 		e.WithError(err).Error("failed to post Slack message")
 		if err := a.SendError(ctx, channelID, "Slack Message Failure", err); err != nil {
@@ -144,6 +160,7 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 
 	var blocks []slack.Block
 	var headerBlock *slack.SectionBlock
+	var currentSection *slack.SectionBlock
 
 	for _, e := range elements.Elements {
 		switch t := e.(type) {
@@ -165,49 +182,100 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 			}
 
 		case *templates.Image:
-			blocks = append(blocks, slack.NewImageBlock(t.URL, "alt-text", "", nil))
+			if t.Thumbnail && currentSection == nil {
+				currentSection = slack.NewSectionBlock(nil, nil, nil)
+				blocks = append(blocks, currentSection)
+			}
+
+			if t.Thumbnail {
+				if currentSection.Accessory == nil {
+					currentSection.Accessory = &slack.Accessory{}
+				}
+				currentSection.Accessory.ImageElement = slack.NewImageBlockElement(t.URL, "alt-text")
+			} else {
+				currentSection = nil
+				blocks = append(blocks, slack.NewImageBlock(t.URL, "alt-text", "", nil))
+			}
 
 		case *templates.Section:
-			var tbf []*slack.TextBlockObject
-			var tbo *slack.TextBlockObject // TODO(mtitmus) There's currently no way for a user to set this.
-			var tba *slack.Accessory
-
-			if t.Text != nil {
-				textBlock, err := buildTextBlockObject(t.Text)
-				if err != nil {
-					return nil, err
-				}
-
-				tbo = textBlock
-			}
+			currentSection = slack.NewSectionBlock(nil, nil, nil)
+			blocks = append(blocks, currentSection)
 
 			for _, tf := range t.Fields {
 				switch t := tf.(type) {
 				case *templates.Text:
-					if textBlock, err := buildTextBlockObject(t); err != nil {
+					tbo, err := buildTextBlockObject(t)
+					if err != nil {
 						return nil, err
+					}
+
+					if currentSection == nil {
+						currentSection = slack.NewSectionBlock(nil, nil, nil)
+						blocks = append(blocks, currentSection)
+					}
+
+					if t.Inline && len(currentSection.Fields) == 0 {
+						currentSection.Fields = []*slack.TextBlockObject{
+							slack.NewTextBlockObject("mrkdwn", t.Title, false, false),
+							tbo,
+						}
+					} else if t.Inline && len(currentSection.Fields) > 0 {
+						m := len(currentSection.Fields) / 2
+						currentSection.Fields = append(currentSection.Fields[:m+1], currentSection.Fields[m:]...)
+						currentSection.Fields[m] = slack.NewTextBlockObject("mrkdwn", t.Title, false, false)
+						currentSection.Fields = append(currentSection.Fields, tbo)
+					} else if currentSection.Text == nil {
+						if t.Title != "" {
+							tbo.Text = fmt.Sprintf("*%s*\n%s", t.Title, tbo.Text)
+						}
+
+						currentSection.Text = tbo
 					} else {
-						tbf = append(tbf, textBlock)
+						currentSection.Text.Text += "\n" + t.Text
 					}
+
 				case *templates.Image:
-					if tba == nil {
-						tba = &slack.Accessory{}
+					if currentSection.Accessory == nil {
+						currentSection.Accessory = &slack.Accessory{}
 					}
-					tba.ImageElement = slack.NewImageBlockElement(t.URL, "alt-text")
+					currentSection.Accessory.ImageElement = slack.NewImageBlockElement(t.URL, "alt-text")
 				default:
 					return nil, fmt.Errorf("%T elements are not supported inside a Section for Slack", e)
 				}
 			}
 
-			blocks = append(blocks, slack.NewSectionBlock(tbo, tbf, tba))
+			currentSection = nil
 
 		case *templates.Text:
-			textBlock, err := buildTextBlockObject(t)
+			if currentSection == nil {
+				currentSection = slack.NewSectionBlock(nil, nil, nil)
+				blocks = append(blocks, currentSection)
+			}
+
+			tbo, err := buildTextBlockObject(t)
 			if err != nil {
 				return nil, err
 			}
 
-			blocks = append(blocks, slack.NewSectionBlock(textBlock, nil, nil))
+			if t.Inline && len(currentSection.Fields) == 0 {
+				title := fmt.Sprintf("*%s*", t.Title)
+				currentSection.Fields = []*slack.TextBlockObject{
+					slack.NewTextBlockObject("mrkdwn", title, false, false), tbo,
+				}
+			} else if t.Inline && len(currentSection.Fields) > 0 {
+				title := fmt.Sprintf("*%s*", t.Title)
+				m := len(currentSection.Fields) / 2
+				currentSection.Fields = append(currentSection.Fields[:m+1], currentSection.Fields[m:]...)
+				currentSection.Fields[m] = slack.NewTextBlockObject("mrkdwn", title, false, false)
+				currentSection.Fields = append(currentSection.Fields, tbo)
+			} else if currentSection.Text == nil {
+				currentSection.Text = tbo
+			} else {
+				currentSection.Text.Text += "\n" + t.Text
+			}
+
+		case *templates.Alt:
+			// Ignore Alt, only rendered as fallback
 
 		default:
 			return nil, fmt.Errorf("%T elements are not yet supported by Gort for Slack", e)
@@ -219,24 +287,12 @@ func buildSlackOptions(elements *templates.OutputElements) ([]slack.MsgOption, e
 	// error. Therefore we only use one if we have
 
 	// If there's no color set, we just use blocks and no attachment options.
+
 	if elements.Color == "" {
 		if headerBlock != nil {
 			blocks = append([]slack.Block{headerBlock}, blocks...)
 		}
 		options = append(options, slack.MsgOptionBlocks(blocks...))
-
-		return options, nil
-	}
-
-	// If we have one block, and it's a text block, we can use a title!
-	// This isn't TECHNICALLY necessary, but it produces a cleaner output.
-	if sb, ok := blocks[0].(*slack.SectionBlock); ok && sb.Text != nil && len(blocks) == 1 {
-		attachment := slack.Attachment{
-			Color: elements.Color,
-			Title: elements.Title,
-			Text:  sb.Text.Text,
-		}
-		options = append(options, slack.MsgOptionAttachments(attachment))
 
 		return options, nil
 	}

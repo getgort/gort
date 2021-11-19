@@ -18,6 +18,7 @@ package cli
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/getgort/gort/client"
@@ -85,30 +86,33 @@ func doBundleInfoAll(name string) error {
 		return err
 	}
 
-	var enabled *data.Bundle
-	var versions = make([]string, 0)
+	var enabled data.Bundle
+	var versions []string
 
 	for _, bundle := range bundles {
 		versions = append(versions, bundle.Version)
 
 		if bundle.Enabled {
-			enabled = &bundle
+			enabled = bundle
 		}
 	}
 
 	fmt.Printf("Name: %s\n", name)
 	fmt.Printf("Versions: %s\n", strings.Join(versions, ", "))
 
-	if enabled != nil {
+	if enabled.Version != "" {
 		fmt.Println("Status: Enabled")
 		fmt.Printf("Enabled Version: %s\n", enabled.Version)
 
-		commands := make([]string, 0)
+		var commands []string
 		for name := range enabled.Commands {
 			commands = append(commands, name)
 		}
 
+		sort.Strings(commands)
 		fmt.Printf("Commands: %s\n", strings.Join(commands, ", "))
+
+		sort.Strings(enabled.Permissions)
 		fmt.Printf("Permissions: %s\n", strings.Join(enabled.Permissions, ", "))
 	} else {
 		fmt.Println("Status: Disabled")
@@ -134,7 +138,7 @@ func doBundleInfoVersion(name, version string) error {
 	if bundle.Enabled {
 		fmt.Println("Status: Enabled")
 	} else {
-		fmt.Println("Status: Enabled")
+		fmt.Println("Status: Not Enabled")
 	}
 
 	commands := make([]string, 0)

@@ -96,7 +96,7 @@ Groups     %s
 			"user to one or more chat provider IDs.")
 	} else {
 		var keys []string
-		for k, _ := range user.Mappings {
+		for k := range user.Mappings {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)

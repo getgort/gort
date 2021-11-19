@@ -109,10 +109,13 @@ type Adapter interface {
 	// begin relaying back events (including errors) via the returned channel.
 	Listen(ctx context.Context) <-chan *ProviderEvent
 
-	// SendEnvelope sends the contents of a response envelope to a
+	// Send sends the contents of a response envelope to a
 	// specified channel. If channelID is empty the value of
 	// envelope.Request.ChannelID will be used.
 	Send(ctx context.Context, channelID string, elements templates.OutputElements) error
+
+	// SendText sends a simple text message to the specified channel.
+	SendText(ctx context.Context, channelID string, message string) error
 
 	// SendError is a break-glass error message function that's used when the
 	// templating function fails somehow. Obviously, it does not utilize the
@@ -296,9 +299,8 @@ func SendMessage(ctx context.Context, a Adapter, channelID string, message strin
 	return SendEnvelope(ctx, a, channelID, e, data.Message)
 }
 
-// SendEnvelope sends the contents of a response envelope to a
-// specified channel. If channelID is empty the value of
-// envelope.Request.ChannelID will be used.
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
 func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "adapter.SendEnvelope")
@@ -334,6 +336,12 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	}
 
 	err = a.Send(ctx, channelID, elements)
+	if err == nil {
+		return nil
+	}
+
+	e.WithError(err).Warn("failed to send rich message to adapter, falling back to alt text")
+	err = a.SendText(ctx, channelID, elements.Alt())
 	if err != nil {
 		e.WithError(err).Error("failed to send message to adapter")
 		if err := a.SendError(ctx, channelID, "Failed to Send Message", err); err != nil {
@@ -392,18 +400,21 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		if id.GortUser, autocreated, err = findOrMakeGortUser(ctx, id.Adapter, id.ChatUser); err != nil {
 			switch {
 			case gerrs.Is(err, ErrSelfRegistrationOff):
-				msg := "I'm terribly sorry, but either I don't " +
-					"have a Gort account for you, or your Slack chat handle has " +
-					"not been registered. Currently, only registered users can " +
-					"interact with me.\n\n\nYou'll need to ask a Gort " +
-					"administrator to fix this situation and to register your " +
-					"Slack handle."
+				msg := "I'm terribly sorry, but either I don't have a Gort " +
+					"account for you, or your chat handle has not been " +
+					"registered. Currently, only registered users can " +
+					"interact with me.\n\nYou'll need a Gort administrator " +
+					"to map your Gort user to the adapter (%s) and chat " +
+					"user ID (%s)."
+				msg = fmt.Sprintf(msg, id.Adapter.GetName(), id.ChatUser.ID)
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Account", msg)
+
 			case gerrs.Is(err, ErrGortNotBootstrapped):
 				msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
 					"use `gort bootstrap` to properly bootstrap the Gort " +
 					"environment before proceeding."
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Not Bootstrapped?", msg)
+
 			default:
 				msg := "An unexpected error has occurred"
 				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", msg)

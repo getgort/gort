@@ -35,6 +35,10 @@ func (o *Header) String() string {
 	return encodeTag(*o)
 }
 
+func (o *Header) Alt() string {
+	return o.Title
+}
+
 func (f *Functions) HeaderFunction() *Header {
 	return &Header{}
 }
@@ -49,22 +53,4 @@ func (f *Functions) HeaderColorFunction(s string, t *Header) (*Header, error) {
 
 	t.Color = fmt.Sprintf("#%X", v)
 	return t, nil
-}
-
-func (f *Functions) HeaderTitleFunction(s string, t *Header) *Header {
-	t.Title = s
-	return t
-}
-
-type HeaderEnd struct {
-	Tag
-}
-
-func (o *HeaderEnd) String() string {
-	return encodeTag(*o)
-}
-
-func (f *Functions) HeaderEndFunction() *HeaderEnd {
-	o := &HeaderEnd{}
-	return o
 }

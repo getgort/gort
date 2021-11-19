@@ -16,18 +16,27 @@
 
 package templates
 
-type Divider struct {
+type Image struct {
 	Tag
+	Height    int    `json:",omitempty"`
+	Width     int    `json:",omitempty"`
+	URL       string `json:",omitempty"`
+	Thumbnail bool   `json:",omitempty"`
 }
 
-func (o *Divider) String() string {
+func (o *Image) String() string {
 	return encodeTag(*o)
 }
 
-func (o *Divider) Alt() string {
-	return "==="
+func (o *Image) Alt() string {
+	return o.URL
 }
 
-func (f *Functions) DividerFunction() *Divider {
-	return &Divider{}
+func (f *Functions) ImageFunction(url string) *Image {
+	return &Image{URL: url}
+}
+
+func (f *Functions) ImageThumbnailunction(b bool, i *Image) *Image {
+	i.Thumbnail = b
+	return i
 }

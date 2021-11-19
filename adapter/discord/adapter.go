@@ -67,17 +67,6 @@ func (s *Adapter) GetChannelInfo(channelID string) (*adapter.ChannelInfo, error)
 	return newChannelInfoFromDiscordChannel(channel), nil
 }
 
-func newChannelInfoFromDiscordChannel(channel *discordgo.Channel) *adapter.ChannelInfo {
-	out := &adapter.ChannelInfo{
-		ID:   channel.ID,
-		Name: channel.Name,
-	}
-	for _, r := range channel.Recipients {
-		out.Members = append(out.Members, r.Username)
-	}
-	return out
-}
-
 // GetName provides the name of this adapter as per the configuration.
 func (s *Adapter) GetName() string {
 	return s.provider.Name
@@ -132,6 +121,149 @@ func (s *Adapter) Listen(ctx context.Context) <-chan *adapter.ProviderEvent {
 	}()
 
 	return s.events
+}
+
+// Send the contents of a response envelope to a specified channel. If
+// channelID is empty the value of envelope.Request.ChannelID will be used.
+func (s *Adapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
+	var flattened []templates.OutputElement
+
+	for _, e := range elements.Elements {
+		if section, ok := e.(*templates.Section); ok {
+			flattened = append(flattened, section.Fields...)
+		} else {
+			flattened = append(flattened, e)
+		}
+	}
+
+	var err error
+	var fields []*discordgo.MessageEmbedField
+	var textOnly = true
+
+	embed := &discordgo.MessageEmbed{Type: discordgo.EmbedTypeRich}
+
+	for _, e := range flattened {
+		switch t := e.(type) {
+		case *templates.Divider:
+			// Discord dividers are just empty text fields.
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Name: ZeroWidthSpace, Value: ZeroWidthSpace,
+			})
+
+		case *templates.Image:
+			if t.Thumbnail {
+				img := &discordgo.MessageEmbedThumbnail{URL: t.URL}
+				if t.Height != 0 {
+					img.Height = t.Height
+				}
+				if t.Width != 0 {
+					img.Width = t.Width
+				}
+				embed.Thumbnail = img
+			} else {
+				img := &discordgo.MessageEmbedImage{URL: t.URL}
+				if t.Height != 0 {
+					img.Height = t.Height
+				}
+				if t.Width != 0 {
+					img.Width = t.Width
+				}
+				embed.Image = img
+			}
+			textOnly = false
+
+		case *templates.Header:
+			elements.Color = strings.TrimPrefix(t.Color, "#")
+			elements.Title = t.Title
+			textOnly = false
+
+		case *templates.Section:
+			// Ignore sections entirely in Discord.
+
+		case *templates.Alt:
+			// Ignore Alt, only rendered as fallback
+
+		case *templates.Text:
+			var title = t.Title
+			var text = t.Text
+
+			if title == "" {
+				title = ZeroWidthSpace
+			}
+			if text == "" {
+				text = ZeroWidthSpace
+			}
+			if t.Monospace {
+				text = fmt.Sprintf("```%s```", text)
+			}
+
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Name:   title,
+				Value:  text,
+				Inline: t.Inline,
+			})
+
+		default:
+			return fmt.Errorf("%T fields are not yet supported by Gort for Discord", e)
+		}
+	}
+
+	if elements.Color == "" && elements.Title == "" && textOnly {
+		var text string
+
+		if len(fields) > 0 {
+			text = fields[0].Value
+		}
+
+		for i := 1; i < len(fields); i++ {
+			text += "\n" + fields[i].Value
+		}
+
+		_, err = s.session.ChannelMessageSend(channelID, text)
+	} else {
+		var color uint64
+
+		if elements.Color != "" {
+			color, err = strconv.ParseUint(strings.Replace(elements.Color, "#", "", 1), 16, 64)
+			if err != nil {
+				return fmt.Errorf("badly-formatted color code: %q", elements.Color)
+			}
+		}
+
+		embed.Color = int(color)
+		embed.Title = elements.Title
+		embed.Fields = fields
+
+		_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
+	}
+
+	return err
+}
+
+// SendText sends a simple text message to the specified channel.
+func (s *Adapter) SendText(ctx context.Context, channelID string, message string) error {
+	_, err := s.session.ChannelMessageSend(channelID, message)
+	return err
+}
+
+// SendError is a break-glass error message function that's used when the
+// templating function fails somehow. Obviously, it does not utilize the
+// templating engine.
+func (s *Adapter) SendError(ctx context.Context, channelID string, title string, err error) error {
+	if title == "" {
+		title = "Unhandled Error"
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Color:     0xFF0000,
+		Title:     title,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Type:      discordgo.EmbedTypeRich,
+		Fields:    []*discordgo.MessageEmbedField{{Name: title, Value: err.Error()}},
+	}
+
+	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
+	return err
 }
 
 // This function will be called (due to AddHandler above) every time a new
@@ -212,113 +344,15 @@ func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adap
 	}
 }
 
-// Send the contents of a response envelope to a specified channel. If
-// channelID is empty the value of envelope.Request.ChannelID will be used.
-func (s *Adapter) Send(ctx context.Context, channelID string, elements templates.OutputElements) error {
-	var err error
-
-	var color uint64
-	if elements.Color != "" {
-		color, err = strconv.ParseUint(strings.Replace(elements.Color, "#", "", 1), 16, 64)
-		if err != nil {
-			return fmt.Errorf("badly-formatted color code: %q", elements.Color)
-		}
+func newChannelInfoFromDiscordChannel(channel *discordgo.Channel) *adapter.ChannelInfo {
+	out := &adapter.ChannelInfo{
+		ID:   channel.ID,
+		Name: channel.Name,
 	}
-
-	embed := &discordgo.MessageEmbed{
-		Color:     int(color),
-		Title:     elements.Title,
-		Timestamp: time.Now().Format(time.RFC3339),
-		Type:      discordgo.EmbedTypeRich,
+	for _, r := range channel.Recipients {
+		out.Members = append(out.Members, r.Username)
 	}
-
-	var fields []*discordgo.MessageEmbedField
-
-	for _, e := range elements.Elements {
-		switch t := e.(type) {
-		case *templates.Divider:
-			// Discord dividers are just empty text fields.
-			fields = append(fields, &discordgo.MessageEmbedField{
-				Name: ZeroWidthSpace, Value: ZeroWidthSpace,
-			})
-
-		case *templates.Image:
-			img := &discordgo.MessageEmbedImage{URL: t.URL}
-			if t.Height != 0 {
-				img.Height = t.Height
-			}
-			if t.Width != 0 {
-				img.Width = t.Width
-			}
-			embed.Image = img
-
-		case *templates.Header:
-			elements.Color = strings.TrimPrefix(t.Color, "#")
-			elements.Title = t.Title
-
-		case *templates.Section:
-			// Ignore sections entirely in Discord.
-
-		case *templates.Text:
-			var title = "" // TODO(mtitmus) Implement this.
-			var text = t.Text
-
-			if title == "" {
-				title = ZeroWidthSpace
-			}
-			if text == "" {
-				text = ZeroWidthSpace
-			}
-			if t.Monospace {
-				text = fmt.Sprintf("```%s```", text)
-			}
-
-			fields = append(fields, &discordgo.MessageEmbedField{
-				Name:   title,
-				Value:  text,
-				Inline: false, // TODO(mtitmus) Implement this.
-			})
-
-		default:
-			return fmt.Errorf("%T fields are not yet supported by Gort for Discord", e)
-		}
-	}
-
-	if elements.Color != "" {
-		c, err := strconv.ParseInt(elements.Color, 16, 64)
-		if err != nil {
-			return fmt.Errorf("invalid color format (expected '#123456'): %w", err)
-		}
-		embed.Color = int(c)
-	}
-
-	embed.Title = elements.Title
-	embed.Fields = fields
-
-	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
-
-	return err
-}
-
-// SendError is a break-glass error message function that's used when the
-// templating function fails somehow. Obviously, it does not utilize the
-// templating engine.
-func (s *Adapter) SendError(ctx context.Context, channelID string, title string, err error) error {
-	if title == "" {
-		title = "Unhandled Error"
-	}
-
-	embed := &discordgo.MessageEmbed{
-		Color:     0xFF0000,
-		Title:     "Unhandled Error",
-		Timestamp: time.Now().Format(time.RFC3339),
-		Type:      discordgo.EmbedTypeRich,
-		Fields:    []*discordgo.MessageEmbedField{{Name: title, Value: err.Error()}},
-	}
-
-	_, err = s.session.ChannelMessageSendEmbed(channelID, embed)
-
-	return err
+	return out
 }
 
 func newUserInfoFromDiscordUser(user *discordgo.User) *adapter.UserInfo {

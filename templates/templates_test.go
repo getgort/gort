@@ -18,12 +18,12 @@ package templates
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/getgort/gort/data"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var testStructuredEnvelope = data.CommandResponseEnvelope{
@@ -131,47 +131,57 @@ func TestTransformAndEncodeText(t *testing.T) {
 			},
 		},
 		{
-			Template:    `{{ header }}Error{{ endheader }}`,
-			Transformed: `<<Header|{}>>Error<<HeaderEnd|{}>>`,
+			Template:    `{{ header }}`,
+			Transformed: `<<Header|{}>>`,
 			Encoded: OutputElements{
 				Elements: []OutputElement{
 					&Header{
-						Tag:   Tag{FirstIndex: 0, LastIndex: 33},
-						Title: "Error",
+						Tag: Tag{FirstIndex: 0, LastIndex: 12},
 					},
 				},
 			},
 		},
 		{
-			Template:    `{{ header | color "#FF0000" }}Error{{ endheader }}`,
-			Transformed: `<<Header|{"Color":"#FF0000"}>>Error<<HeaderEnd|{}>>`,
+			Template:    `{{ header | color "#FF0000" }}`,
+			Transformed: `<<Header|{"Color":"#FF0000"}>>`,
 			Encoded: OutputElements{
 				Elements: []OutputElement{
 					&Header{
-						Tag:   Tag{FirstIndex: 0, LastIndex: 50},
+						Tag:   Tag{FirstIndex: 0, LastIndex: 29},
 						Color: "#FF0000",
-						Title: "Error",
 					},
 				},
 			},
 		},
 		{
-			Template:    `{{ header | color "FF0000" }}Error{{ endheader }}`,
-			Transformed: `<<Header|{"Color":"#FF0000"}>>Error<<HeaderEnd|{}>>`,
-			Encoded: OutputElements{
-				Elements: []OutputElement{
-					&Header{
-						Tag:   Tag{FirstIndex: 0, LastIndex: 50},
-						Color: "#FF0000",
-						Title: "Error",
-					},
-				},
-			},
-		},
-		{
-			Template:       `{{ header | color "FF 00 00" }}Error{{ endheader }}`,
-			Transformed:    `<<Header|{"Color":"#FF0000"}>>Error<<HeaderEnd|{}>>`,
+			Template:       `{{ header | color "FF 00 00" }}`,
+			Transformed:    `<<Header|{"Color":"#FF0000"}>>`,
 			TransformError: `template: gort:echo foo bar:1:12: executing "gort:echo foo bar" at <color "FF 00 00">: error calling color: colors should be expressed in RGB hex format: #123456`,
+		},
+		{
+			Template:    `{{ header | title "Error" }}`,
+			Transformed: `<<Header|{"Title":"Error"}>>`,
+			Encoded: OutputElements{
+				Elements: []OutputElement{
+					&Header{
+						Tag:   Tag{FirstIndex: 0, LastIndex: 27},
+						Title: "Error",
+					},
+				},
+			},
+		},
+		{
+			Template:    `{{ header | color "#FF0000" | title "Error" }}`,
+			Transformed: `<<Header|{"Color":"#FF0000","Title":"Error"}>>`,
+			Encoded: OutputElements{
+				Elements: []OutputElement{
+					&Header{
+						Tag:   Tag{FirstIndex: 0, LastIndex: 45},
+						Color: "#FF0000",
+						Title: "Error",
+					},
+				},
+			},
 		},
 		{
 			Template:    `{{ image "https://example.com/image.jpg" }}`,
@@ -196,13 +206,14 @@ func TestTransformAndEncodeText(t *testing.T) {
 			EncodeError: "unmatched {{endtext}} on line 1",
 		},
 		{
-			Template:    `{{ text | emoji true | markdown true | monospace true }}Test{{ endtext }}`,
-			Transformed: `<<Text|{"Emoji":true,"Markdown":true,"Monospace":true}>>Test<<TextEnd|{}>>`,
+			Template:    `{{ text | emoji true | inline true | markdown true | monospace true }}Test{{ endtext }}`,
+			Transformed: `<<Text|{"Emoji":true,"Inline":true,"Markdown":true,"Monospace":true}>>Test<<TextEnd|{}>>`,
 			Encoded: OutputElements{
 				Elements: []OutputElement{
 					&Text{
-						Tag:       Tag{FirstIndex: 0, LastIndex: 73},
+						Tag:       Tag{FirstIndex: 0, LastIndex: 87},
 						Emoji:     true,
+						Inline:    true,
 						Markdown:  true,
 						Monospace: true,
 						Text:      "Test",
@@ -211,13 +222,14 @@ func TestTransformAndEncodeText(t *testing.T) {
 			},
 		},
 		{
-			Template:    `{{ text | emoji true | markdown true | monospace true }}{{ .Payload.Company }}{{ endtext }}`,
-			Transformed: `<<Text|{"Emoji":true,"Markdown":true,"Monospace":true}>>Dunder Mifflin<<TextEnd|{}>>`,
+			Template:    `{{ text | emoji true | inline true | markdown true | monospace true }}{{ .Payload.Company }}{{ endtext }}`,
+			Transformed: `<<Text|{"Emoji":true,"Inline":true,"Markdown":true,"Monospace":true}>>Dunder Mifflin<<TextEnd|{}>>`,
 			Encoded: OutputElements{
 				Elements: []OutputElement{
 					&Text{
-						Tag:       Tag{FirstIndex: 0, LastIndex: 83},
+						Tag:       Tag{FirstIndex: 0, LastIndex: 97},
 						Emoji:     true,
+						Inline:    true,
 						Markdown:  true,
 						Monospace: true,
 						Text:      "Dunder Mifflin",
@@ -225,26 +237,43 @@ func TestTransformAndEncodeText(t *testing.T) {
 				},
 			},
 		},
+		{
+			Template:    `{{ text | title .Payload.Company }}{{ .Payload.Company }}{{ endtext }}`,
+			Transformed: `<<Text|{"Emoji":true,"Markdown":true,"Title":"Dunder Mifflin"}>>Dunder Mifflin<<TextEnd|{}>>`,
+			Encoded: OutputElements{
+				Elements: []OutputElement{
+					&Text{
+						Tag:      Tag{FirstIndex: 0, LastIndex: 91},
+						Emoji:    true,
+						Markdown: true,
+						Text:     "Dunder Mifflin",
+						Title:    "Dunder Mifflin",
+					},
+				},
+			},
+		},
 	}
 
-	for _, test := range tests {
+	for idx, test := range tests {
+		msg := fmt.Sprintf("Index %d: %s", idx, test.Template)
+
 		tf, err := Transform(test.Template, testStructuredEnvelope)
 		if test.TransformError != "" {
-			require.EqualError(t, err, test.TransformError)
+			assert.EqualError(t, err, test.TransformError, msg)
 			continue
 		} else {
-			require.NoError(t, err)
+			assert.NoError(t, err, msg)
 		}
-		require.Equal(t, test.Transformed, tf)
+		assert.Equal(t, test.Transformed, tf, msg)
 
 		enc, err := EncodeElements(tf)
 		if test.EncodeError != "" {
-			assert.EqualError(t, err, test.EncodeError)
+			assert.EqualError(t, err, test.EncodeError, msg)
 			continue
 		} else {
-			assert.NoError(t, err)
+			assert.NoError(t, err, msg)
 		}
 
-		assert.Equal(t, test.Encoded, enc, tf)
+		assert.Equal(t, test.Encoded, enc, msg)
 	}
 }
