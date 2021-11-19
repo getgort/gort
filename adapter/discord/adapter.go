@@ -139,8 +139,10 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 	var err error
 	var fields []*discordgo.MessageEmbedField
 	var textOnly = true
+	var textLength = 0
 
-	embed := &discordgo.MessageEmbed{Type: discordgo.EmbedTypeRich}
+	embed := &discordgo.MessageEmbed{Type: discordgo.EmbedTypeArticle}
+	var files = []*discordgo.File{}
 
 	for _, e := range flattened {
 		switch t := e.(type) {
@@ -176,6 +178,11 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 			elements.Color = strings.TrimPrefix(t.Color, "#")
 			elements.Title = t.Title
 			textOnly = false
+			files = append(files, &discordgo.File{
+				Name:        "header",
+				ContentType: "text/plain",
+				Reader:      strings.NewReader(t.Title),
+			})
 
 		case *templates.Section:
 			// Ignore sections entirely in Discord.
@@ -184,8 +191,23 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 			// Ignore Alt, only rendered as fallback
 
 		case *templates.Text:
-			var title = t.Title
+			var filename = t.Title
 			var text = t.Text
+
+			textLength += len(t.Text)
+
+			if filename == "" {
+				filename = "text"
+			}
+			if text != "" {
+				files = append(files, &discordgo.File{
+					Name:        filename,
+					ContentType: "text/plain",
+					Reader:      strings.NewReader(text),
+				})
+			}
+
+			var title = t.Title
 
 			if title == "" {
 				title = ZeroWidthSpace
@@ -208,7 +230,15 @@ func (s *Adapter) Send(ctx context.Context, channelID string, elements templates
 		}
 	}
 
-	if elements.Color == "" && elements.Title == "" && textOnly {
+	// Send content as files if the text is too long for a message
+	if textLength > 1024 {
+		_, err = s.session.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+			Files: files,
+		})
+		return err
+	}
+
+	if textLength > 1024 || (elements.Color == "" && elements.Title == "" && textOnly) {
 		var text string
 
 		if len(fields) > 0 {
