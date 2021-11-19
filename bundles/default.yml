@@ -3,6 +3,7 @@ gort_bundle_version: 1
 
 name: gort
 version: 0.0.1
+
 author: Matt Titmus <matthew.titmus@gmail.com>
 homepage: https://guide.getgort.io
 description: The default command bundle.
@@ -17,9 +18,7 @@ permissions:
   - manage_roles
   - manage_users
 
-docker:
-  image: getgort/gort
-  tag: {{.Version}}
+image: getgort/gort:{{.Version}}
 
 commands:
   bundle:

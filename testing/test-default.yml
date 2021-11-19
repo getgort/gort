@@ -17,9 +17,7 @@ permissions:
   - manage_roles
   - manage_users
 
-docker:
-  image: getgort/gort
-  tag: latest
+image: getgort/gort:latest
 
 commands:
   bundle:

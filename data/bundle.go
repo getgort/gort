@@ -34,41 +34,61 @@ type BundleInfo struct {
 // Bundle represents a bundle as defined in the "bundles" section of the
 // config.
 type Bundle struct {
-	GortBundleVersion int                       `yaml:"gort_bundle_version,omitempty" json:"gort_bundle_version,omitempty"`
-	Name              string                    `yaml:",omitempty" json:"name,omitempty"`
-	Version           string                    `yaml:",omitempty" json:"version,omitempty"`
-	Enabled           bool                      `yaml:",omitempty" json:"enabled"`
-	Author            string                    `yaml:",omitempty" json:"author,omitempty"`
-	Homepage          string                    `yaml:",omitempty" json:"homepage,omitempty"`
-	Description       string                    `yaml:",omitempty" json:"description,omitempty"`
-	InstalledOn       time.Time                 `yaml:"-" json:"installed_on,omitempty"`
-	InstalledBy       string                    `yaml:",omitempty" json:"installed_by,omitempty"`
-	LongDescription   string                    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
-	Docker            BundleDocker              `yaml:",omitempty" json:"docker,omitempty"`
-	Kubernetes        BundleKubernetes          `yaml:",omitempty" json:"kubernetes,omitempty"`
-	Permissions       []string                  `yaml:",omitempty" json:"permissions,omitempty"`
-	Commands          map[string]*BundleCommand `yaml:",omitempty" json:"commands,omitempty"`
-	Default           bool                      `yaml:"-" json:"default,omitempty"`
-	Templates         Templates                 `yaml:",omitempty" json:"templates,omitempty"`
+	GortBundleVersion int                       `yaml:"gort_bundle_version,omitempty" json:",omitempty"`
+	Name              string                    `yaml:",omitempty" json:",omitempty"`
+	Version           string                    `yaml:",omitempty" json:",omitempty"`
+	Enabled           bool                      `yaml:",omitempty" json:",omitempty"`
+	Author            string                    `yaml:",omitempty" json:",omitempty"`
+	Homepage          string                    `yaml:",omitempty" json:",omitempty"`
+	Description       string                    `yaml:",omitempty" json:",omitempty"`
+	Image             string                    `yaml:",omitempty" json:",omitempty"`
+	InstalledOn       time.Time                 `yaml:"-" json:",omitempty"`
+	InstalledBy       string                    `yaml:",omitempty" json:",omitempty"`
+	LongDescription   string                    `yaml:"long_description,omitempty" json:",omitempty"`
+	Kubernetes        BundleKubernetes          `yaml:",omitempty" json:",omitempty"`
+	Permissions       []string                  `yaml:",omitempty" json:",omitempty"`
+	Commands          map[string]*BundleCommand `yaml:",omitempty" json:",omitempty"`
+	Default           bool                      `yaml:"-" json:",omitempty"`
+	Templates         Templates                 `yaml:",omitempty" json:",omitempty"`
 }
 
-// BundleKubernetes represents the "bundles/kubernetes" subsection of the config doc
-type BundleKubernetes struct {
-	ServiceAccountName string `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
+// ImageFull returns the full image name, consisting of a repository and tag.
+func (b Bundle) ImageFull() string {
+	if repo, tag := b.ImageFullParts(); repo != "" {
+		return repo + ":" + tag
+	}
+
+	return ""
 }
 
+// ImageFullParts returns the image repository and tag. If the tag isn't
+// specified in b.Image, the returned tag will be "latest".
+func (b Bundle) ImageFullParts() (repository, tag string) {
+	if b.Image == "" {
+		return
+	}
+
+	ss := strings.SplitN(b.Image, ":", 2)
+
+	repository = ss[0]
+
+	if len(ss) > 1 {
+		tag = ss[1]
+	} else {
+		tag = "latest"
+	}
+
+	return
+}
+
+// Semver returns b.Version as a semver.Version value, which makes it easier
+// to compare and sort version numbers. If b.Version == "", a zero-value
+// Version{} is returned. If b.Version isn't valid per Semantic Versioning
+// 2.0.0 (https://semver.org), it will attempt to coerce it into a correct
+// semantic version (since users be crazy). If it fails, a zero-value
+// Version{} is returned.
 func (b Bundle) Semver() semver.Version {
-	var version = b.Version
-
-	if version == "" {
-		return semver.Version{}
-	}
-
-	if strings.ToLower(version)[0] == 'v' {
-		version = version[1:]
-	}
-
-	if v, err := semver.NewVersion(version); err != nil {
+	if v, err := semver.NewVersion(CoerceVersionToSemver(b.Version)); err != nil {
 		return semver.Version{}
 	} else {
 		return *v
@@ -86,8 +106,63 @@ type BundleCommand struct {
 	Templates       Templates `yaml:",omitempty" json:"templates,omitempty"`
 }
 
-// BundleDocker represents the "bundles/docker" subsection of the config doc
-type BundleDocker struct {
-	Image string `yaml:",omitempty" json:"image,omitempty"`
-	Tag   string `yaml:",omitempty" json:"tag,omitempty"`
+// BundleKubernetes represents the "bundles/kubernetes" subsection of the config doc
+type BundleKubernetes struct {
+	ServiceAccountName string `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
+}
+
+// CoerceVersionToSemver takes a version number and attempts to coerce it
+// into a semver-compliant dotted-tri format. It also understands semver
+// pre-release and metadata decorations.
+func CoerceVersionToSemver(version string) string {
+	version = strings.TrimSpace(version)
+
+	if version == "" {
+		return "0.0.0"
+	}
+
+	if strings.ToLower(version)[0] == 'v' {
+		version = version[1:]
+	}
+
+	v := version
+
+	var metadata, preRelease string
+	var ss []string
+	var dotParts = make([]string, 3)
+
+	ss = strings.SplitN(v, "+", 2)
+	if len(ss) > 1 {
+		v = ss[0]
+		metadata = ss[1]
+	}
+
+	ss = strings.SplitN(v, "-", 2)
+	if len(ss) > 1 {
+		v = ss[0]
+		preRelease = ss[1]
+	}
+
+	// If it turns out to be in dotted-tri format, return the original
+	ss = strings.SplitN(v, ".", 4)
+	for i := 0; i < len(ss) && i < 3; i++ {
+		dotParts[i] = ss[i]
+	}
+	for i := 0; i < len(dotParts); i++ {
+		if dotParts[i] == "" {
+			dotParts[i] = "0"
+		}
+	}
+
+	v = strings.Join(dotParts, ".")
+
+	if preRelease != "" {
+		v += "-" + preRelease
+	}
+
+	if metadata != "" {
+		v += "+" + metadata
+	}
+
+	return v
 }

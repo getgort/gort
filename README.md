@@ -83,9 +83,7 @@ long_description: |-
 permissions:
   - can_echo
 
-docker:
-  image: ubuntu
-  tag: 20.04
+image: ubuntu:20.04
 
 commands:
   foo:

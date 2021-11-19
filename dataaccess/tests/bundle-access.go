@@ -37,6 +37,7 @@ func (da DataAccessTester) testBundleAccess(t *testing.T) {
 	t.Run("testBundleDelete", da.testBundleDelete)
 	t.Run("testBundleDeleteDoesntDisable", da.testBundleDeleteDoesntDisable)
 	t.Run("testBundleGet", da.testBundleGet)
+	t.Run("testBundleImageConsistency", da.testBundleImageConsistency)
 	t.Run("testBundleList", da.testBundleList)
 	t.Run("testBundleVersionList", da.testBundleVersionList)
 	t.Run("testFindCommandEntry", da.testFindCommandEntry)
@@ -311,13 +312,38 @@ func (da DataAccessTester) testBundleGet(t *testing.T) {
 	// This is set automatically on save, so we copy it here for the sake of the tests.
 	bundleCreate.InstalledOn = bundleGet.InstalledOn
 
-	assert.Equal(t, bundleCreate.Docker, bundleGet.Docker)
+	assert.Equal(t, bundleCreate.Image, bundleGet.Image)
 	assert.ElementsMatch(t, bundleCreate.Permissions, bundleGet.Permissions)
 	assert.Equal(t, bundleCreate.Commands, bundleGet.Commands)
 	assert.Equal(t, bundleCreate.Kubernetes, bundleGet.Kubernetes)
 
 	// Compare everything for good measure
 	assert.Equal(t, bundleCreate, bundleGet)
+}
+
+func (da DataAccessTester) testBundleImageConsistency(t *testing.T) {
+	tests := []struct {
+		B             data.Bundle
+		ExpectedImage string
+	}{
+		{data.Bundle{GortBundleVersion: 1, Name: "test-image-0", Version: "0.0.0", Description: "Foo"}, ""},
+		{data.Bundle{GortBundleVersion: 1, Name: "test-image-1", Version: "0.0.1", Description: "Foo", Image: "ubuntu:20.04"}, "ubuntu:20.04"},
+		{data.Bundle{GortBundleVersion: 1, Name: "test-image-2", Version: "0.0.2", Description: "Foo", Image: "ubuntu:latest"}, "ubuntu:latest"},
+		{data.Bundle{GortBundleVersion: 1, Name: "test-image-3", Version: "0.0.3", Description: "Foo", Image: "ubuntu"}, "ubuntu:latest"},
+	}
+
+	const msg = "Test case %d: Name:%q Image:%q"
+
+	for i, test := range tests {
+		err := da.BundleCreate(da.ctx, test.B)
+		require.NoError(t, err, msg, i, test.B.Name, test.B.Image)
+		defer da.BundleDelete(da.ctx, test.B.Name, test.B.Version)
+
+		b, err := da.BundleGet(da.ctx, test.B.Name, test.B.Version)
+		require.NoError(t, err, msg, i, test.B.Name, test.B.Image)
+
+		assert.Equal(t, test.ExpectedImage, b.Image)
+	}
 }
 
 func (da DataAccessTester) testBundleList(t *testing.T) {
