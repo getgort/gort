@@ -35,8 +35,7 @@ func TestLoadBundleFromFile(t *testing.T) {
 	assert.Equal(t, "A test bundle.", b.Description)
 	assert.Equal(t, "This is test bundle.\nThere are many like it, but this one is mine.", b.LongDescription)
 	assert.Len(t, b.Permissions, 1)
-	assert.Equal(t, "ubuntu", b.Docker.Image)
-	assert.Equal(t, "20.04", b.Docker.Tag)
+	assert.Equal(t, "ubuntu:20.04", b.Image)
 	assert.Len(t, b.Commands, 4)
 
 	// Bundle templates

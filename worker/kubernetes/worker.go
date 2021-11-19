@@ -53,14 +53,8 @@ type KubernetesWorker struct {
 
 // New will build and returns a new Worker for a single command execution.
 func New(command data.CommandRequest, token rest.Token) (*KubernetesWorker, error) {
-	image := command.Bundle.Docker.Image
-	tag := command.Bundle.Docker.Tag
 	entrypoint := command.Command.Executable
 	params := command.Parameters
-
-	if tag == "" {
-		tag = "latest"
-	}
 
 	// creates the in-cluster config
 	kconfig, err := k8srest.InClusterConfig()
@@ -80,7 +74,7 @@ func New(command data.CommandRequest, token rest.Token) (*KubernetesWorker, erro
 		commandParameters: params,
 		entryPoint:        entrypoint,
 		exitStatus:        make(chan int64, 1),
-		imageName:         image + ":" + tag,
+		imageName:         command.Bundle.ImageFull(),
 		token:             token,
 	}
 

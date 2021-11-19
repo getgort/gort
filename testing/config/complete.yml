@@ -113,37 +113,3 @@ slack:
   # The name of the bot, as it appears in Slack. Defaults to the name used
   # when the bot was added to the account.
   bot_name: Gort
-
-bundles:
-- name: echo
-  description: A default bundle with echo commands.
-
-  permissions:
-    - echo
-
-  docker:
-    image: getgort/relaytest
-    tag: latest
-
-  commands:
-    echo:
-      description: "Echos back anything sent to it, all at once."
-      executable: ["/bin/echo"]
-    splitecho:
-      description: "Echos back anything sent to it, one parameter at a time."
-      executable: ["/opt/app/splitecho.sh"]
-
-- name: curl
-  description: A default bundle that provides curl.
-
-  permissions:
-    - echo
-
-  docker:
-    image: getgort/relaytest
-    tag: latest
-
-  commands:
-    curl:
-      description: "The official curl command."
-      executable: ["/usr/bin/curl"]
