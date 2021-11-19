@@ -87,7 +87,7 @@ func (da DataAccessTester) testTokenExpiry(t *testing.T) {
 	defer da.UserDelete(da.ctx, "test_expires")
 	assert.NoError(t, err)
 
-	token, err := da.TokenGenerate(da.ctx, "test_expires", 1*time.Second)
+	token, err := da.TokenGenerate(da.ctx, "test_expires", time.Second/2)
 	defer da.TokenInvalidate(da.ctx, token.Token)
 	assert.NoError(t, err)
 	require.False(t, token.IsExpired())

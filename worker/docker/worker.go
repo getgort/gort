@@ -50,8 +50,6 @@ type ContainerWorker struct {
 
 // New will build and returns a new Worker for a single command execution.
 func New(command data.CommandRequest, token rest.Token) (*ContainerWorker, error) {
-	image := command.Bundle.Docker.Image
-	tag := command.Bundle.Docker.Tag
 	entrypoint := command.Command.Executable
 	params := command.Parameters
 
@@ -66,10 +64,6 @@ func New(command data.CommandRequest, token rest.Token) (*ContainerWorker, error
 		return nil, err
 	}
 
-	if tag == "" {
-		tag = "latest"
-	}
-
 	return &ContainerWorker{
 		command:           command,
 		commandParameters: params,
@@ -77,7 +71,7 @@ func New(command data.CommandRequest, token rest.Token) (*ContainerWorker, error
 		dockerHost:        config.GetDockerConfigs().DockerHost,
 		entryPoint:        entrypoint,
 		exitStatus:        make(chan int64),
-		imageName:         image + ":" + tag,
+		imageName:         command.Bundle.ImageFull(),
 		token:             token,
 	}, nil
 }

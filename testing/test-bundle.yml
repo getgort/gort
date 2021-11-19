@@ -13,9 +13,7 @@ long_description: |-
 permissions:
   - echox
 
-docker:
-  image: ubuntu
-  tag: 20.04
+image: ubuntu:20.04
 
 templates:
   command_error: 'Template:Bundle:CommandError'
@@ -77,4 +75,3 @@ commands:
       command_error: 'Template:Command:CommandError'
       message: 'Template:Command:Message'
       message_error: 'Template:Command:MessageError'
-  

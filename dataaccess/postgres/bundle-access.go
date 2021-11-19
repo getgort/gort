@@ -647,19 +647,29 @@ func (da PostgresDataAccess) doFindCommandEntry(ctx context.Context, tx *sql.Tx,
 
 func (da PostgresDataAccess) doBundleGet(ctx context.Context, tx *sql.Tx, name string, version string) (data.Bundle, error) {
 	query := `SELECT gort_bundle_version, name, version, author, homepage,
-			description, long_description, docker_image, docker_tag,
+			description, long_description, image_repository, image_tag,
 			install_timestamp, install_user
 		FROM bundles
 		WHERE name=$1 AND version=$2`
+
+	var repository, tag string
 
 	bundle := data.Bundle{}
 	row := tx.QueryRowContext(ctx, query, name, version)
 	err := row.Scan(&bundle.GortBundleVersion, &bundle.Name, &bundle.Version,
 		&bundle.Author, &bundle.Homepage, &bundle.Description,
-		&bundle.LongDescription, &bundle.Docker.Image, &bundle.Docker.Tag,
+		&bundle.LongDescription, &repository, &tag,
 		&bundle.InstalledOn, &bundle.InstalledBy)
 	if err != nil {
 		return bundle, gerr.Wrap(errs.ErrNoSuchBundle, err)
+	}
+
+	if repository != "" {
+		if tag == "" {
+			tag = "latest"
+		}
+
+		bundle.Image = repository + ":" + tag
 	}
 
 	enabledVersion, err := da.doBundleEnabledVersion(ctx, tx, name)
@@ -893,13 +903,15 @@ func (da PostgresDataAccess) doBundleGetTemplates(ctx context.Context, tx *sql.T
 
 func (da PostgresDataAccess) doBundleInsert(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
 	query := `INSERT INTO bundles (gort_bundle_version, name, version, author,
-		homepage, description, long_description, docker_image,
-		docker_tag, install_user)
+		homepage, description, long_description, image_repository, image_tag,
+		install_user)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`
+
+	repository, tag := bundle.ImageFullParts()
 
 	_, err := tx.ExecContext(ctx, query, bundle.GortBundleVersion, bundle.Name, bundle.Version,
 		bundle.Author, bundle.Homepage, bundle.Description, bundle.LongDescription,
-		bundle.Docker.Image, bundle.Docker.Tag, bundle.InstalledBy)
+		repository, tag, bundle.InstalledBy)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "violates") {

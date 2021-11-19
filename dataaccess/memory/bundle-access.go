@@ -42,6 +42,8 @@ func (da *InMemoryDataAccess) BundleCreate(ctx context.Context, bundle data.Bund
 		return errs.ErrBundleExists
 	}
 
+	bundle.Image = bundle.ImageFull()
+
 	da.bundles[bundleKey(bundle.Name, bundle.Version)] = &bundle
 
 	return nil
