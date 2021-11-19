@@ -94,7 +94,7 @@ func bootstrapCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("User %q created and credentials appended to gort config.\n", user.Username)
+	fmt.Printf("User %q created and credentials appended to Gort config.\n", user.Username)
 
 	return nil
 }
