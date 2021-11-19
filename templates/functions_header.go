@@ -51,6 +51,6 @@ func (f *Functions) HeaderColorFunction(s string, t *Header) (*Header, error) {
 		return nil, fmt.Errorf("colors should be expressed in RGB hex format: #123456")
 	}
 
-	t.Color = fmt.Sprintf("#%X", v)
+	t.Color = fmt.Sprintf("#%06X", v)
 	return t, nil
 }
