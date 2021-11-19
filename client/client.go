@@ -198,6 +198,21 @@ func NewClient(entry ProfileEntry) (*GortClient, error) {
 	}, nil
 }
 
+// deleteHostToken attempts to delete an existing token file.
+func (c *GortClient) deleteHostToken() error {
+	tokenFileName, err := c.getGortTokenFilename()
+	if err != nil {
+		return gerrs.Wrap(gerrs.ErrIO, err)
+	}
+
+	// File doesn't exist. Not an error.
+	if _, err := os.Stat(tokenFileName); err != nil {
+		return nil
+	}
+
+	return os.Remove(tokenFileName)
+}
+
 func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Response, error) {
 	token, err := c.Token()
 	if err != nil {
