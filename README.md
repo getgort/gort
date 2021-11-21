@@ -4,8 +4,6 @@
 [![Tests](https://github.com/getgort/gort/actions/workflows/test.yaml/badge.svg)](https://github.com/getgort/gort/actions/workflows/test.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/getgort/gort)](https://goreportcard.com/report/github.com/getgort/gort)
 
-**Gort is considered "minimally viable", but is still a work in progress under active heavy development. Follow for updates!**
-
 Gort is a chatbot framework designed from the ground up for chatops.
 
 Gort brings the power of the command line to the place you collaborate with your team: your chat window. Its open-ended command bundle support allows developers to implement functionality in the language of their choice, while powerful access control means you can collaborate around even the most sensitive tasks with confidence. A focus on extensibility and adaptability means that you can respond quickly to the unexpected, without your team losing visibility.
@@ -31,7 +29,9 @@ More specifically:
 - Commands are packaged into bundles that can be installed in Gort
 - Users can be assigned to groups, roles can be assigned to groups, and permissions can be attached to roles
 - Supports a sophisticated identity and permission system to determine who can use commands
-- All command activities are stored in a dedicated audit log for review
+- System and command output is highly customizable at the application, bundle, and even command level
+- Supports Slack and Discord as first class chat providers (with more on the way!)
+- All command and API activities are stored in a dedicated audit log for review
 
 Each of these is described in more detail below.
 
@@ -73,6 +73,8 @@ gort_bundle_version: 1
 
 name: echo
 version: 0.0.1
+image: ubuntu:20.04
+
 author: Matt Titmus <matthew.titmus@gmail.com>
 homepage: https://guide.getgort.io
 description: A test bundle.
@@ -83,10 +85,8 @@ long_description: |-
 permissions:
   - can_echo
 
-image: ubuntu:20.04
-
 commands:
-  foo:
+  echo:
     description: "Echos back anything sent to it."
     executable: [ "/bin/echo" ]
     rules:
@@ -136,7 +136,79 @@ More information about permissions and rules can be found in the Gort Guide:
 * [Gort Guide: Permissions and Rules](https://guide.getgort.io/permissions-and-rules.html)
 * [Gort Guide: Command Execution Rules](https://guide.getgort.io/command-execution-rules.html)
 
-### Record all command activities in an audit log
+### System and command output is highly customizable
+
+Gort provides a sophisticated templating system that allows you to control the presentation of any information sent to users, including system messages, as well as command output and error messages.
+
+What's more, templates can be defined at the application level in the [configuration](https://guide.getgort.io/configuration.html), or at the bundle or even the command level in individual [bundle configurations](https://guide.getgort.io/bundle-configurations.html).
+
+Gort templates use Go's [template syntax](https://pkg.go.dev/text/template) to format output in a chat-agnostic way. For example, a very simple _command template_ might look something like the following:
+
+```
+{{ text | monospace true }}{{ .Response.Out }}{{ endtext }}
+```
+
+This template emits the command's response (`.Response.Out`) as monospaced text, which may look something like the following:
+
+![Monospaced command output](images/command-mono.png "Monospaced command output")
+
+A slightly more complicated template, this one a _command error template_ (actually the default), is shown below.
+
+```
+{{ header | color "#FF0000" | title .Response.Title }}
+{{ text }}The pipeline failed planning the invocation:{{ endtext }}
+{{ text | monospace true }}{{ .Request.Bundle.Name }}:{{ .Request.Command.Name }} {{ .Request.Parameters }}{{ endtext }}
+{{ text }}The specific error was:{{ endtext }}
+{{ text | monospace true }}{{ .Response.Out }}{{ endtext }}
+```
+
+This one includes a header with a color and title, as well as some alternating monospaced and standard text. In this case, this will format a command error something like the following:
+
+![Pretty command error message](images/command-formatted.png "Pretty command error message")
+
+You'll notice some references to `.Response`: those are references to the [_response envelope_](templates-response-envelope.md), a data structure that's accessible from any template that makes available all of the data and metadata around one command request, execution, and response.
+
+More information about audit logging can be found in the Gort Guide:
+
+* [Gort Guide: Output Format Templates](https://guide.getgort.io/templates.html)
+* [Gort Guide: Template Functions](templates-functions.md)
+* [Gort Guide: The Response Envelope](templates-response-envelope.md)
+
+### Supports Slack and Discord as first class chat providers
+
+Gort supports both [Slack](https://slack.com/) and [Discord](https://discord.com/) as first class chat providers.
+
+Each supported chat provider has a dedicated section [in the configuration](https://guide.getgort.io/configuration.html). Note that each of these is a list, so not only can you interact with both Slack and Discord from the same Gort controller, but you can interact with multiple instances of each if you want to!
+
+Once you've created a bot user according to the instructions provided in [Gort Quick Start](https://guide.getgort.io/quickstart.html), an administrators need only to create a Gort user (if you haven't already), and map that Gort user to a chat provider user ID, as shown below:
+
+```bash
+$ gort user create mtitmus --email matthew.titmus@gmail.com --name "Matt Titmus" --password REDACTED
+User "mtitmus" created.
+
+$ gort user list
+USER NAME   FULL NAME            EMAIL
+admin       Gort Administrator   gort@localhost
+mtitmus     Matt Titmus          matthew.titmus@gmail.com
+
+$ gort user map mtitmus Slack U012P123456
+User "mtitmus" mapped to "Slack:U012P123456".
+
+$ gort user info mtitmus
+Name       mtitmus
+Full Name  Matt Titmus
+Email      matthew.titmus@gmail.com
+Groups     <undefined>
+
+ADAPTER   ID MAPPING
+Slack     U012P123456
+```
+
+From then on any commands entered by the mapped chat user are associated with that Gort user!
+
+* [Gort Guide: Quick Start](https://guide.getgort.io/quickstart.html)
+
+### Records all command and API activities in an audit log
 
 All command activities are both emitted as high-cardinality log events (shown below) and recorded in [an audit log](https://guide.getgort.io/audit-log-events.html) that's maintained in Gort's database.
 
@@ -149,9 +221,9 @@ This will generate log output similar to the following:
 ```
 INFO   [49594] Triggering command   adapter.name=Gort bundle.default=false bundle.name=gort bundle.version=0.0.1
                                     command.executable="[/bin/gort bundle]" command.name=bundle
-                                    command.params=list gort.user.name=admin provider.channel.id=C0238AZ9QNB
+                                    command.params=list gort.user.name=admin provider.channel.id=C1238A01234
                                     provider.channel.name=gort-dev provider.user.email=matthew.titmus@gmail.com
-                                    provider.user.id=U023P43L6PL trace.id=476b3089c8ce0d38a2915a3b58fde032
+                                    provider.user.id=U012P123456 trace.id=476b3089c8ce0d38a2915a3b58fde032
 ```
 
 As you can see, this rich event includes:
@@ -228,19 +300,17 @@ Start with `gort --help`, and go from there.
 Gort is in a state of active heavy development. The date that various [milestones](TODO.md) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
 
 - Project created: 27 December 2018
-- Milestone 1: 7 January 2019
-- Milestone 2: 21 January 2019
-- Milestone 3: 24 January 2019
-- Milestone 4: 17 March 2019
-- Milestone 5: 7 June 2021
-- Milestone 6: 10 June 2021
-- Milestone 7: 15 June 2021
-- Milestone 8: 26 July 2021 (alpha: 2 July 2021; beta: 15 July 2021)
-- Milestone 9: _TBD_
-- Release candidate 1: _TBD_
-- Release!: _TBD_
+- Milestone 1: [7 January 2019](https://github.com/getgort/gort/tree/v0.1.0-dev.0)
+- Milestone 2: [21 January 2019](https://github.com/getgort/gort/tree/v0.2.1-dev.0)
+- Milestone 3: [24 January 2019](https://github.com/getgort/gort/tree/v0.3.0-dev.0)
+- Milestone 4: [17 March 2019](https://github.com/getgort/gort/releases/tag/v0.4.6-dev.7)
+- Milestone 5: [7 June 2021](https://github.com/getgort/gort/releases/tag/v0.5.6-dev.0)
+- Milestone 6: [10 June 2021](https://github.com/getgort/gort/releases/tag/v0.6.0-dev.0)
+- Milestone 7: [15 June 2021](https://github.com/getgort/gort/releases/tag/v0.7.0-dev.0)
+- Milestone 8: [26 July 2021](https://github.com/getgort/gort/releases/tag/v0.8.0) (alpha: [2 July 2021](https://github.com/getgort/gort/releases/tag/v0.8.0-alpha.0); beta: [15 July 2021](https://github.com/getgort/gort/releases/tag/v0.8.0-beta.0))
+- Milestone 9: [19 November 2021](https://github.com/getgort/gort/releases/tag/v0.9.0)
 
 ## More Links
 
-* [Gort Slack Community](https://join.slack.com/t/getgort/shared_invite/zt-scgi5f7r-1U9awWMWNITl1MCzrpV3~Q)
+* [Gort Slack Community](https://join.slack.com/t/getgort/shared_invite/zt-z1elsl5i-XvkiBPHqUOTDUUH1j9dSbg)
 * [GitHub Issues](https://github.com/getgort/gort/issues)
