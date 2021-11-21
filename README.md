@@ -30,6 +30,7 @@ More specifically:
 - Users can be assigned to groups, roles can be assigned to groups, and permissions can be attached to roles
 - Supports a sophisticated identity and permission system to determine who can use commands
 - System and command output is highly customizable at the application, bundle, and even command level
+- Supports Slack and Discord as first class chat providers (with more on the way!)
 - All command and API activities are stored in a dedicated audit log for review
 
 Each of these is described in more detail below.
@@ -173,6 +174,40 @@ More information about audit logging can be found in the Gort Guide:
 * [Gort Guide: Template Functions](templates-functions.md)
 * [Gort Guide: The Response Envelope](templates-response-envelope.md)
 
+### Supports Slack and Discord as first class chat providers
+
+Gort supports both [Slack](https://slack.com/) and [Discord](https://discord.com/) as first class chat providers.
+
+Each supported chat provider has a dedicated section [in the configuration](https://guide.getgort.io/configuration.html). Note that each of these is a list, so not only can you interact with both Slack and Discord from the same Gort controller, but you can interact with multiple instances of each if you want to!
+
+Once you've created a bot user according to the instructions provided in [Gort Quick Start](https://guide.getgort.io/quickstart.html), an administrators need only to create a Gort user (if you haven't already), and map that Gort user to a chat provider user ID, as shown below:
+
+```bash
+$ gort user create mtitmus --email matthew.titmus@gmail.com --name "Matt Titmus" --password REDACTED
+User "mtitmus" created.
+
+$ gort user list
+USER NAME   FULL NAME            EMAIL
+admin       Gort Administrator   gort@localhost
+mtitmus     Matt Titmus          matthew.titmus@gmail.com
+
+$ gort user map mtitmus Slack U012P123456
+User "mtitmus" mapped to "Slack:U012P123456".
+
+$ gort user info mtitmus
+Name       mtitmus
+Full Name  Matt Titmus
+Email      matthew.titmus@gmail.com
+Groups     <undefined>
+
+ADAPTER   ID MAPPING
+Slack     U012P123456
+```
+
+From then on any commands entered by the mapped chat user are associated with that Gort user!
+
+* [Gort Guide: Quick Start](https://guide.getgort.io/quickstart.html)
+
 ### Records all command and API activities in an audit log
 
 All command activities are both emitted as high-cardinality log events (shown below) and recorded in [an audit log](https://guide.getgort.io/audit-log-events.html) that's maintained in Gort's database.
@@ -186,9 +221,9 @@ This will generate log output similar to the following:
 ```
 INFO   [49594] Triggering command   adapter.name=Gort bundle.default=false bundle.name=gort bundle.version=0.0.1
                                     command.executable="[/bin/gort bundle]" command.name=bundle
-                                    command.params=list gort.user.name=admin provider.channel.id=C0238AZ9QNB
+                                    command.params=list gort.user.name=admin provider.channel.id=C1238A01234
                                     provider.channel.name=gort-dev provider.user.email=matthew.titmus@gmail.com
-                                    provider.user.id=U023P43L6PL trace.id=476b3089c8ce0d38a2915a3b58fde032
+                                    provider.user.id=U012P123456 trace.id=476b3089c8ce0d38a2915a3b58fde032
 ```
 
 As you can see, this rich event includes:

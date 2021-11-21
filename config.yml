@@ -109,7 +109,7 @@ kubernetes:
 # List of Discord adapters. Delete this section if not using Discord.
 discord:
 - # An arbitrary name for human labelling purposes.
-  name: MyWorkspace
+  name: MyDiscord
 
   # The name of the bot, as it appears in Discord. Defaults to the name used
   # when the bot was added to the account.
@@ -121,7 +121,7 @@ discord:
 # List of Slack adapters. Delete this section if not using Slack.
 slack:
 - # An arbitrary name for human labelling purposes.
-  name: MyWorkspace
+  name: MySlack
 
   # App Level Token (https://api.slack.com/authentication/token-types#app)
   # used to connect to Slack. You want the one that starts with "xapp".
@@ -130,13 +130,6 @@ slack:
   # Bot User OAuth Access Token (https://api.slack.com/docs/token-types#bot)
   # used to connect to Slack. You want the one that starts with "xoxb".
   bot_token: INSERT BOT TOKEN HERE
-
-  # The chat icon for the bot. If not defined defaults to the configured bot default.
-  icon_url: https://emoji.slack-edge.com/T023V8ZFQEQ/gort/78a0c1607eeb1f29.png
-
-  # The name of the bot, as it appears in Slack. Defaults to the name used
-  # when the bot was added to the account.
-  bot_name: Gort
 
 jaeger:
   # The URL for the Jaeger collector that spans are sent to. If not set then
