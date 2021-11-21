@@ -455,6 +455,18 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		return nil, fmt.Errorf("command tokenization error: %w", err)
 	}
 
+	if len(tokens) == 0 {
+		msg := "Empty command received. Did you forget something?"
+		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Empty Command", msg)
+
+		err := fmt.Errorf("command had no tokens")
+		da.RequestError(ctx, request, err)
+		telemetry.Errors().WithError(err).Commit(ctx)
+		le.WithError(err).Error("Command request had no tokens")
+
+		return nil, err
+	}
+
 	le = le.WithField("command.name", tokens[0]).
 		WithField("command.params", strings.Join(tokens[1:], " "))
 

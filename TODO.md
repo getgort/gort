@@ -37,7 +37,7 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 - As it says on the tin: merge merge the [gortctl](https://github.com/getgort/gortctl) commands into the main Gort repo ✅
 - Deprecate `gortctl` and archive [its repo](https://github.com/getgort/gortctl). ✅
 
-## Milestone 8 (API-level authorization)
+## Milestone 8 (API-level authorization) -- _COMPLETE!_ ✅
 
 - Document permissions model and how auth is expected to work; [execution rules](https://web.archive.org/web/20191130061912/http://book.cog.bot/sections/command_execution_rules.html). ✅
 - Command (as entered by a user into chat) interpretation ✅
@@ -54,10 +54,6 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 **_(Publicly release v0.8.0-alpha.0 at this point)_**
 
-## Milestone 9 (Remote relays)
+## Milestone 9 (TBD)
 
-- Document relay architecture
-  - Requirement: Allow a quick-start-friendly "simple mode" with a local relay
-  - Requirement: Support relay tagging and selection at the bundle/command level
-- Break the `relay` package into a standalone service
-- Include support for Kafka (and others? NATS?)
+- TBD
