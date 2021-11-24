@@ -166,13 +166,13 @@ This one includes a header with a color and title, as well as some alternating m
 
 ![Pretty command error message](images/command-formatted.png "Pretty command error message")
 
-You'll notice some references to `.Response`: those are references to the [_response envelope_](templates-response-envelope.md), a data structure that's accessible from any template that makes available all of the data and metadata around one command request, execution, and response.
+You'll notice some references to `.Response`: those are references to the [_response envelope_](https://guide.getgort.io/templates-response-envelope.html), a data structure that's accessible from any template that makes available all of the data and metadata around one command request, execution, and response.
 
 More information about audit logging can be found in the Gort Guide:
 
 * [Gort Guide: Output Format Templates](https://guide.getgort.io/templates.html)
-* [Gort Guide: Template Functions](templates-functions.md)
-* [Gort Guide: The Response Envelope](templates-response-envelope.md)
+* [Gort Guide: The Response Envelope](https://guide.getgort.io/templates-response-envelope.html)
+* [Gort Guide: Template Functions](https://guide.getgort.io/templates-functions.html)
 
 ### Supports Slack and Discord as first class chat providers
 
