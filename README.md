@@ -8,7 +8,7 @@ Gort is a chatbot framework designed from the ground up for chatops.
 
 Gort brings the power of the command line to the place you collaborate with your team: your chat window. Its open-ended command bundle support allows developers to implement functionality in the language of their choice, while powerful access control means you can collaborate around even the most sensitive tasks with confidence. A focus on extensibility and adaptability means that you can respond quickly to the unexpected, without your team losing visibility.
 
-The official documentation can be found here: [The Gort Guide](http://guide.getgort.io/).
+The official documentation can be found here: [The Gort Guide](https://guide.getgort.io/).
 
 ## History
 
@@ -47,23 +47,22 @@ As shown, the output from successful commands is relayed back by Gort.
 
 More information about commands can be found in the Gort Guide:
 
-* [Gort Guide: Commands and Bundles](https://guide.getgort.io/commands-and-bundles.html)
-
+* [Gort Guide: Commands and Bundles](https://guide.getgort.io/en/latest/sections/commands-and-bundles.html)
 ### Commands can be implemented in any programming language
 
-Gort [commands](https://guide.getgort.io/commands-and-bundles.html) are built as container images, which means you can build them in any language you're comfortable with.
+Gort [commands](https://guide.getgort.io/en/latest/sections/commands-and-bundles.html) are built as container images, which means you can build them in any language you're comfortable with.
 
 What's more, because your executable receives all chat inputs exactly as if it was being typed on the command line, you can use any command line interpreter you want. Commands can even be implemented as Bash scripts, or using existing commands, like `curl`!
 
 More information about writing commands can be found in the Gort Guide:
 
-* [Gort Guide: Writing a Command Bundle](https://guide.getgort.io/writing-a-command-bundle.html)
+* [Gort Guide: Writing a Command Bundle](https://guide.getgort.io/en/latest/sections/writing-a-command-bundle.html)
 
 ### Commands are packaged into bundles that can be installed in Gort
 
 In Gort, a set of one or more related commands can be installed as a "command bundle".
 
-A bundle is [represented in YAML](https://guide.getgort.io/bundle-configurations.html), specifying which executable to use for each command and who is allowed to execute each commands.
+A bundle is [represented in YAML](https://guide.getgort.io/en/latest/sections/bundle-configurations.html), specifying which executable to use for each command and who is allowed to execute each commands.
 
 A very simple bundle file is shown below.
 
@@ -93,12 +92,12 @@ commands:
       - must have echo:can_echo
 ```
 
-This shows a bundle called `echo`, which defines a command (also called `echo`) and a permission called `can_echo`. Once [installed](https://guide.getgort.io/managing-bundles.html), any user with the `echo:can_echo` permission can execute it in Slack.
+This shows a bundle called `echo`, which defines a command (also called `echo`) and a permission called `can_echo`. Once [installed](https://guide.getgort.io/en/latest/sections/managing-bundles.html), any user with the `echo:can_echo` permission can execute it in Slack.
 
 More information about bundles can be found in the Gort Guide:
 
-* [Gort Guide: Bundle Configurations](https://guide.getgort.io/bundle-configurations.html)
-* [Gort Guide: Managing Bundles](https://guide.getgort.io/managing-bundles.html)
+* [Gort Guide: Bundle Configurations](https://guide.getgort.io/en/latest/sections/bundle-configurations.html)
+* [Gort Guide: Managing Bundles](https://guide.getgort.io/en/latest/sections/managing-bundles.html)
 
 ### Organize users into groups, and permissions into roles
 
@@ -106,7 +105,7 @@ In Gort, _users_ can be uniquely mapped to users in one or more chat providers. 
 
 More information about permissions and rules can be found in the Gort Guide:
 
-* [Gort Guide: User Management](https://guide.getgort.io/user-management.html)
+* [Gort Guide: Managing Users](https://guide.getgort.io/en/latest/sections/managing-users.html)
 
 ### Use a sophisticated identity and permission system to determine who can use commands
 
@@ -133,14 +132,14 @@ As you can see, the above example includes one command, also called `deploy`. It
 
 More information about permissions and rules can be found in the Gort Guide:
 
-* [Gort Guide: Permissions and Rules](https://guide.getgort.io/permissions-and-rules.html)
-* [Gort Guide: Command Execution Rules](https://guide.getgort.io/command-execution-rules.html)
+* [Gort Guide: Permissions and Rules](https://guide.getgort.io/en/latest/sections/permissions-and-rules.html)
+* [Gort Guide: Command Execution Rules](https://guide.getgort.io/en/latest/sections/command-execution-rules.html)
 
 ### System and command output is highly customizable
 
 Gort provides a sophisticated templating system that allows you to control the presentation of any information sent to users, including system messages, as well as command output and error messages.
 
-What's more, templates can be defined at the application level in the [configuration](https://guide.getgort.io/configuration.html), or at the bundle or even the command level in individual [bundle configurations](https://guide.getgort.io/bundle-configurations.html).
+What's more, templates can be defined at the application level in the [configuration](https://guide.getgort.io/en/latest/sections/configuration.html), or at the bundle or even the command level in individual [bundle configurations](https://guide.getgort.io/en/latest/sections/bundle-configurations.html).
 
 Gort templates use Go's [template syntax](https://pkg.go.dev/text/template) to format output in a chat-agnostic way. For example, a very simple _command template_ might look something like the following:
 
@@ -170,17 +169,17 @@ You'll notice some references to `.Response`: those are references to the [_resp
 
 More information about audit logging can be found in the Gort Guide:
 
-* [Gort Guide: Output Format Templates](https://guide.getgort.io/templates.html)
-* [Gort Guide: The Response Envelope](https://guide.getgort.io/templates-response-envelope.html)
-* [Gort Guide: Template Functions](https://guide.getgort.io/templates-functions.html)
+* [Gort Guide: Output Format Templates](https://guide.getgort.io/en/latest/sections/templates.html)
+* [Gort Guide: The Response Envelope](https://guide.getgort.io/en/latest/sections/templates-response-envelope.html)
+* [Gort Guide: Template Functions](https://guide.getgort.io/en/latest/sections/templates-functions.html)
 
 ### Supports Slack and Discord as first class chat providers
 
 Gort supports both [Slack](https://slack.com/) and [Discord](https://discord.com/) as first class chat providers.
 
-Each supported chat provider has a dedicated section [in the configuration](https://guide.getgort.io/configuration.html). Note that each of these is a list, so not only can you interact with both Slack and Discord from the same Gort controller, but you can interact with multiple instances of each if you want to!
+Each supported chat provider has a dedicated section [in the configuration](https://guide.getgort.io/en/latest/sections/configuration.html). Note that each of these is a list, so not only can you interact with both Slack and Discord from the same Gort controller, but you can interact with multiple instances of each if you want to!
 
-Once you've created a bot user according to the instructions provided in [Gort Quick Start](https://guide.getgort.io/quickstart.html), an administrators need only to create a Gort user (if you haven't already), and map that Gort user to a chat provider user ID, as shown below:
+Once you've created a bot user according to the instructions provided in [Gort Quick Start](https://guide.getgort.io/en/latest/sections/quickstart.html), an administrators need only to create a Gort user (if you haven't already), and map that Gort user to a chat provider user ID, as shown below:
 
 ```bash
 $ gort user create mtitmus --email matthew.titmus@gmail.com --name "Matt Titmus" --password REDACTED
@@ -206,11 +205,11 @@ Slack     U012P123456
 
 From then on any commands entered by the mapped chat user are associated with that Gort user!
 
-* [Gort Guide: Quick Start](https://guide.getgort.io/quickstart.html)
+* [Gort Guide: Quick Start](https://guide.getgort.io/en/latest/sections/quickstart.html)
 
 ### Records all command and API activities in an audit log
 
-All command activities are both emitted as high-cardinality log events (shown below) and recorded in [an audit log](https://guide.getgort.io/audit-log-events.html) that's maintained in Gort's database.
+All command activities are both emitted as high-cardinality log events (shown below) and recorded in [an audit log](https://guide.getgort.io/en/latest/sections/audit-log-events.html) that's maintained in Gort's database.
 
 Take, for example, a user executing the `!bundle list` command from Slack:
 
@@ -237,7 +236,7 @@ Note that this example uses "human readable" format for readability. In producti
 
 More information about audit logging can be found in the Gort Guide:
 
-* [Gort Guide: Audit Log Events](https://guide.getgort.io/audit-log-events.html)
+* [Gort Guide: Audit Log Events](https://guide.getgort.io/en/latest/sections/audit-log-events.html)
 
 <!-- - execute triggered commands anywhere a relay is installed using a tag-based targeting system, -->
 
@@ -247,7 +246,7 @@ A WIP design doc, including rough milestones (but not dates) [can be seen here](
 
 ## How to Run the Gort Controller
 
-For more information, take a look at the [Quick Start Guide](https://guide.getgort.io/quickstart.html) in [The Gort Guide](https://guide.getgort.io).
+For more information, take a look at the [Quick Start Guide](https://guide.getgort.io/en/latest/sections/quickstart.html) in [The Gort Guide](https://guide.getgort.io).
 
 ## The Gort Client
 
@@ -297,7 +296,7 @@ Start with `gort --help`, and go from there.
 
 ## Status of This Project
 
-Gort is in a state of active heavy development. The date that various [milestones](TODO.md) have been achieved are listed below. The number and focus of present and future milestones are subject to change.
+Gort is in a state of active heavy development. The date that various milestones have been achieved are listed below. The number and focus of present and future milestones are subject to change.
 
 - Project created: 27 December 2018
 - Milestone 1: [7 January 2019](https://github.com/getgort/gort/tree/v0.1.0-dev.0)
