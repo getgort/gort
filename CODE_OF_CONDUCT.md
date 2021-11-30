@@ -61,7 +61,7 @@ representative at an online or offline event.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at
 [matthew.titmus@gmail.com](mailto:matthew.titmus@gmail.com) or to Matt Titmus
-or Tom Elliot on the [Gort Slack Community](https://join.slack.com/t/getgort/shared_invite/zt-z1elsl5i-XvkiBPHqUOTDUUH1j9dSbg).
+or Tom Elliott on the [Gort Slack Community](https://join.slack.com/t/getgort/shared_invite/zt-z1elsl5i-XvkiBPHqUOTDUUH1j9dSbg).
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
