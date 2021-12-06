@@ -17,6 +17,8 @@
 package data
 
 import (
+	"context"
+	"regexp"
 	"strings"
 	"time"
 
@@ -102,8 +104,20 @@ type BundleCommand struct {
 	Executable      []string  `yaml:",omitempty,flow" json:"executable,omitempty"`
 	LongDescription string    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
 	Name            string    `yaml:"-" json:"-"`
+	Trigger         string    `yaml:"trigger,omitempty" json:"trigger,omitempty"`
 	Rules           []string  `yaml:",omitempty" json:"rules,omitempty"`
 	Templates       Templates `yaml:",omitempty" json:"templates,omitempty"`
+}
+
+func (c *BundleCommand) MatchTrigger(ctx context.Context, message string) (bool, error) {
+	if c == nil || len(c.Trigger) == 0 {
+		return false, nil
+	}
+	re, err := regexp.Compile(c.Trigger)
+	if err != nil {
+		return false, err
+	}
+	return re.MatchString(message), nil
 }
 
 // BundleKubernetes represents the "bundles/kubernetes" subsection of the config doc

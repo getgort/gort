@@ -19,6 +19,7 @@ package memory
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
@@ -246,6 +247,29 @@ func (da *InMemoryDataAccess) FindCommandEntry(ctx context.Context, bundleName, 
 
 		for _, cmd := range bundle.Commands {
 			if cmd.Name == commandName {
+				e := data.CommandEntry{Bundle: *bundle, Command: *cmd}
+				entries = append(entries, e)
+			}
+		}
+	}
+
+	return entries, nil
+}
+
+func (da *InMemoryDataAccess) FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error) {
+	entries := make([]data.CommandEntry, 0)
+
+	for _, bundle := range da.bundles {
+		if !bundle.Enabled {
+			continue
+		}
+
+		for _, cmd := range bundle.Commands {
+			matched, err := cmd.MatchTrigger(ctx, strings.Join(tokens, " "))
+			if err != nil {
+				return nil, err
+			}
+			if matched {
 				e := data.CommandEntry{Bundle: *bundle, Command: *cmd}
 				entries = append(entries, e)
 			}

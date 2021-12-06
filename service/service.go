@@ -303,7 +303,7 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(token)
 }
 
-func doBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
+func DoBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
 	const adminGroup = "admin"
 	const adminRole = "admin"
 	var adminPermissions = []string{
@@ -411,7 +411,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err = doBootstrap(r.Context(), user)
+	user, err = DoBootstrap(r.Context(), user)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return

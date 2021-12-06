@@ -506,6 +506,21 @@ func (da PostgresDataAccess) FindCommandEntry(ctx context.Context, bundleName, c
 	return da.doFindCommandEntry(ctx, tx, bundleName, commandName)
 }
 
+func (da PostgresDataAccess) FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error) {
+	db, err := da.connect(ctx, "gort")
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return da.doFindCommandEntryByTrigger(ctx, tx, tokens)
+}
+
 func (da PostgresDataAccess) doBundleDelete(ctx context.Context, tx *sql.Tx, name string, version string) error {
 	query := "DELETE FROM bundle_kubernetes WHERE bundle_name=$1 AND bundle_version=$2;"
 	_, err := tx.ExecContext(ctx, query, name, version)
@@ -645,6 +660,33 @@ func (da PostgresDataAccess) doFindCommandEntry(ctx context.Context, tx *sql.Tx,
 	return entries, nil
 }
 
+func (da PostgresDataAccess) doFindCommandEntryByTrigger(ctx context.Context, tx *sql.Tx, tokens []string) ([]data.CommandEntry, error) {
+	bundles, err := da.BundleList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]data.CommandEntry, 0)
+
+	for _, bundle := range bundles {
+		for _, cmd := range bundle.Commands {
+			matched, err := cmd.MatchTrigger(ctx, strings.Join(tokens, " "))
+			if err != nil {
+				return nil, err
+			}
+			if matched {
+				entries = append(entries, data.CommandEntry{
+					Bundle:  bundle,
+					Command: *cmd,
+				})
+			}
+		}
+
+	}
+
+	return entries, nil
+}
+
 func (da PostgresDataAccess) doBundleGet(ctx context.Context, tx *sql.Tx, name string, version string) (data.Bundle, error) {
 	query := `SELECT gort_bundle_version, name, version, author, homepage,
 			description, long_description, image_repository, image_tag,
@@ -725,12 +767,12 @@ func (da PostgresDataAccess) doBundleGetCommandsData(ctx context.Context, tx *sq
 	}
 
 	if enabledOnly {
-		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description
+		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description, trigger
 			FROM bundle_commands
 			INNER JOIN bundle_enabled ON bundle_commands.bundle_name=bundle_enabled.bundle_name
 			WHERE bundle_commands.bundle_name LIKE $1 AND bundle_commands.bundle_version LIKE $2 AND name LIKE $3`
 	} else {
-		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description
+		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description, trigger
 			FROM bundle_commands
 			WHERE bundle_commands.bundle_name LIKE $1 AND bundle_commands.bundle_version LIKE $2 AND name LIKE $3`
 	}
@@ -747,7 +789,7 @@ func (da PostgresDataAccess) doBundleGetCommandsData(ctx context.Context, tx *sq
 		var enc string
 		cd := bundleCommandData{}
 
-		err = rows.Scan(&cd.BundleName, &cd.BundleVersion, &cd.Name, &cd.Description, &enc, &cd.LongDescription)
+		err = rows.Scan(&cd.BundleName, &cd.BundleVersion, &cd.Name, &cd.Description, &enc, &cd.LongDescription, &cd.Trigger)
 		if err != nil {
 			return nil, gerr.Wrap(errs.ErrDataAccess, err)
 		}
@@ -975,8 +1017,8 @@ func (da PostgresDataAccess) doBundleInsertCommandTemplates(ctx context.Context,
 
 func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
 	query := `INSERT INTO bundle_commands
-		(bundle_name, bundle_version, name, description, executable, long_description)
-		VALUES ($1, $2, $3, $4, $5, $6);`
+		(bundle_name, bundle_version, name, description, executable, long_description, trigger)
+		VALUES ($1, $2, $3, $4, $5, $6, $7);`
 
 	for name, cmd := range bundle.Commands {
 		cmd.Name = name
@@ -984,7 +1026,7 @@ func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql
 		enc := encodeStringSlice(cmd.Executable)
 
 		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
-			cmd.Name, cmd.Description, enc, cmd.LongDescription)
+			cmd.Name, cmd.Description, enc, cmd.LongDescription, cmd.Trigger)
 
 		if err != nil {
 			if strings.Contains(err.Error(), "violates") {

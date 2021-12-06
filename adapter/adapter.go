@@ -191,6 +191,39 @@ func GetCommandEntry(ctx context.Context, bundleName, commandName string) (data.
 	return entries[0], nil
 }
 
+// GetCommandEntryByTrigger accepts a tokenized parameter slice and returns any
+// associated data.CommandEntry instances. If the number of matching
+// commands is > 1, an error is returned.
+func GetCommandEntryByTrigger(ctx context.Context, tokens []string) (data.CommandEntry, error) {
+	finders, err := allCommandEntryFinders()
+	if err != nil {
+		return data.CommandEntry{}, err
+	}
+
+	entries, err := findAllEntriesByTrigger(ctx, tokens, finders...)
+	if err != nil {
+		return data.CommandEntry{}, err
+	}
+
+	if len(entries) == 0 {
+		return data.CommandEntry{}, ErrNoSuchCommand
+	}
+
+	if len(entries) > 1 {
+		log.
+			WithField("requested", strings.Join(tokens, " ")).
+			WithField("bundle0", entries[0].Bundle.Name).
+			WithField("command0", entries[0].Command.Name).
+			WithField("bundle1", entries[1].Bundle.Name).
+			WithField("command1", entries[1].Command.Name).
+			Warn("Multiple commands found")
+
+		return data.CommandEntry{}, ErrMultipleCommands
+	}
+
+	return entries[0], nil
+}
+
 // OnConnected handles ConnectedEvent events.
 func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -232,8 +265,8 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 
 	rawCommandText := data.Text
 
-	// If this isn't prepended by a trigger character, ignore.
-	if len(rawCommandText) <= 1 || rawCommandText[0] != '!' {
+	// Ignore empty messages
+	if len(rawCommandText) <= 1 {
 		return nil, nil
 	}
 
@@ -250,7 +283,9 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	}
 
 	// Remove the "trigger character" (!)
-	rawCommandText = rawCommandText[1:]
+	if rawCommandText[0] == '!' {
+		rawCommandText = rawCommandText[1:]
+	}
 
 	adapterLogEntry(ctx, nil, event, id).
 		WithField("command.raw", rawCommandText).
@@ -489,13 +524,8 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 
 	// Try to find the relevant command entry.
 	cmdEntry, err := GetCommandEntry(ctx, cmdInput.Bundle, cmdInput.Command)
-	if err != nil {
+	if err != nil && !gerrs.Is(err, ErrNoSuchCommand) {
 		switch {
-		case gerrs.Is(err, ErrNoSuchCommand):
-			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
-				"If this is not expected, you should contact a Gort administrator.",
-				tokens[0])
-			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
 		case gerrs.Is(err, ErrMultipleCommands):
 			msg := fmt.Sprintf("The command %s matches multiple bundles.\n"+
 				"Please namespace your command using the bundle name: `bundle:command`.",
@@ -510,6 +540,32 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		le.WithError(err).Error("Command lookup error")
 
 		return nil, fmt.Errorf("command lookup error: %w", err)
+	}
+	if gerrs.Is(err, ErrNoSuchCommand) {
+		fmt.Println("Getting entry by trigger")
+		cmdEntry, err = GetCommandEntryByTrigger(ctx, tokens)
+		if err != nil {
+			switch {
+			case gerrs.Is(err, ErrNoSuchCommand):
+				msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
+					"If this is not expected, you should contact a Gort administrator.",
+					tokens[0])
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
+			case gerrs.Is(err, ErrMultipleCommands):
+				msg := fmt.Sprintf("The command %s matches multiple bundles.\n"+
+					"Please namespace your command using the bundle name: `bundle:command`.",
+					tokens[0])
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
+			default:
+				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", err.Error())
+			}
+
+			da.RequestError(ctx, request, err)
+			telemetry.Errors().WithError(err).Commit(ctx)
+			le.WithError(err).Error("Command lookup error")
+
+			return nil, fmt.Errorf("command lookup error: %w", err)
+		}
 	}
 
 	// Now that we have a command entry, we can re-create the complete Command value.
@@ -870,7 +926,23 @@ func findAllEntries(ctx context.Context, bundleName, commandName string, finder 
 	entries := make([]data.CommandEntry, 0)
 
 	for _, f := range finder {
+		fmt.Println(bundleName, commandName)
 		e, err := f.FindCommandEntry(ctx, bundleName, commandName)
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, e...)
+	}
+
+	return entries, nil
+}
+
+func findAllEntriesByTrigger(ctx context.Context, tokens []string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {
+	entries := make([]data.CommandEntry, 0)
+
+	for _, f := range finder {
+		e, err := f.FindCommandEntryByTrigger(ctx, tokens)
 		if err != nil {
 			return nil, err
 		}
