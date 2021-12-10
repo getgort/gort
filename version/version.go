@@ -18,5 +18,5 @@ package version
 
 const (
 	// Version is the current version of Gort
-	Version = "0.9.2"
+	Version = "0.9.3-dev.0"
 )
