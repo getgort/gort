@@ -511,7 +511,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 
 		return nil, fmt.Errorf("command lookup error: %w", err)
 	}
-	cmdFoundMessage := fmt.Sprintf("executing command: %s", cmdEntry.Command.Name)
+	cmdFoundMessage := fmt.Sprintf("Executing command: %s", cmdEntry.Command.Name)
 	err = SendMessage(ctx, id.Adapter, id.ChatChannel.ID, cmdFoundMessage)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
