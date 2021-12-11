@@ -184,36 +184,36 @@ func (da DataAccessTester) testDynamicConfigurationExists(t *testing.T) {
 			err: true,
 		}, {
 			dc: data.DynamicConfiguration{
-				Bundle: "some-bundle",
+				Bundle: "no-such-bundle",
 			},
 			err: true,
 		}, {
 			dc: data.DynamicConfiguration{
-				Bundle: "some-bundle",
+				Bundle: "no-such-bundle",
 				Layer:  data.LayerBundle,
 			},
 			err: true,
 		}, {
 			dc: data.DynamicConfiguration{
-				Bundle: "some-bundle",
+				Bundle: "no-such-bundle",
 				Layer:  data.LayerBundle,
-				Owner:  "some-bundle",
+				Owner:  "no-such-bundle",
 			},
 			err: true,
 		}, {
 			dc: data.DynamicConfiguration{
-				Bundle: "some-bundle",
+				Bundle: "no-such-bundle",
 				Layer:  data.LayerBundle,
-				Owner:  "some-bundle",
+				Owner:  "no-such-bundle",
 				Key:    "username",
 			},
 			err:      false,
 			expected: false,
 		}, {
 			dc: data.DynamicConfiguration{
-				Bundle: "some-bundle",
+				Bundle: "no-such-bundle",
 				Layer:  data.ConfigurationLayer("nonstandard-bundle"),
-				Owner:  "some-bundle",
+				Owner:  "no-such-bundle",
 				Key:    "username",
 			},
 			err: true,

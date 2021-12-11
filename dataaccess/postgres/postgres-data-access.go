@@ -205,6 +205,18 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 		}
 	}
 
+	// Check whether the configs table exists
+	exists, err = da.tableExists(ctx, "configs", db)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		err = da.createConfigsTable(ctx, db)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -368,6 +380,26 @@ func (da PostgresDataAccess) createBundleKubernetesTables(ctx context.Context, d
 	`
 
 	_, err = db.ExecContext(ctx, createBundlesQuery)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) createConfigsTable(ctx context.Context, db *sql.DB) error {
+	var err error
+
+	createConfigsQuery := `CREATE TABLE configs (
+		bundle_name		TEXT NOT NULL CHECK(bundle_name <> ''),
+		layer			TEXT NOT NULL,
+		owner			TEXT NOT NULL,
+		key				TEXT NOT NULL,
+		value			TEXT NOT NULL,
+		secret			BOOLEAN NOT NULL
+	);`
+
+	_, err = db.ExecContext(ctx, createConfigsQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
