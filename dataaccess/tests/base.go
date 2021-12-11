@@ -42,4 +42,5 @@ func (da DataAccessTester) RunAllTests(t *testing.T) {
 	t.Run("testBundleAccess", da.testBundleAccess)
 	t.Run("testRoleAccess", da.testRoleAccess)
 	t.Run("testRequestAccess", da.testRequestAccess)
+	t.Run("testDynamicConfigurationAccess", da.testDynamicConfigurationAccess)
 }

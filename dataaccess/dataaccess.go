@@ -48,6 +48,12 @@ type DataAccess interface {
 	BundleVersionList(ctx context.Context, name string) ([]data.Bundle, error)
 	BundleUpdate(ctx context.Context, bundle data.Bundle) error
 
+	DynamicConfigurationCreate(ctx context.Context, config data.DynamicConfiguration) error
+	DynamicConfigurationDelete(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) error
+	DynamicConfigurationExists(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) (bool, error)
+	DynamicConfigurationGet(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) (data.DynamicConfiguration, error)
+	DynamicConfigurationList(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) ([]data.DynamicConfiguration, error)
+
 	GroupCreate(ctx context.Context, group rest.Group) error
 	GroupDelete(ctx context.Context, groupname string) error
 	GroupExists(ctx context.Context, groupname string) (bool, error)
