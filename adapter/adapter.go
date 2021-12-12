@@ -541,6 +541,7 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 
 		return nil, fmt.Errorf("command lookup error: %w", err)
 	}
+  
 	if gerrs.Is(err, ErrNoSuchCommand) {
 		cmdEntry, err = GetCommandEntryByTrigger(ctx, tokens)
 
@@ -570,7 +571,15 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		// Set parameters to the full tokenized message
 		request.Parameters = tokens
 		tokens = append([]string{cmdEntry.Command.Name}, tokens...)
-	}
+  }
+
+  cmdFoundMessage := fmt.Sprintf("Executing command: %s", cmdEntry.Command.Name)
+	err = SendMessage(ctx, id.Adapter, id.ChatChannel.ID, cmdFoundMessage)
+	if err != nil {
+		telemetry.Errors().WithError(err).Commit(ctx)
+		addSpanAttributes(ctx, sp, err)
+		le.WithError(err).Error("Failed to send command acknowledgement")
+  }
 
 	// Now that we have a command entry, we can re-create the complete Command value.
 	tokens[0] = cmdEntry.Bundle.Name + ":" + cmdEntry.Command.Name
