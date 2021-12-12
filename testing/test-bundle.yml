@@ -48,6 +48,9 @@ commands:
       Usage:
         test:echox [string ...]
     executable: [ "/bin/echo" ]
+    triggers:
+      - match: echo1
+      - match: echo2
     rules:
       - allow
     templates:

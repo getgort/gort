@@ -30,7 +30,7 @@ func TestChannelMessageWithTrigger(t *testing.T) {
 		},
 		&ChannelMessageEvent{
 			ChannelID: "mychannel",
-			Text:      "command",
+			Text:      "run this command",
 			UserID:    "user",
 		},
 	)
@@ -38,7 +38,7 @@ func TestChannelMessageWithTrigger(t *testing.T) {
 		t.Errorf("%v", err)
 		return
 	}
-	expected := "test:cmd "
+	expected := "test:cmd run this command"
 	if result.String() != expected {
 		t.Errorf("expected %q, got %q", expected, result)
 	}
@@ -76,9 +76,13 @@ var testBundle = data.Bundle{
 	Enabled:           true,
 	Commands: map[string]*data.BundleCommand{
 		"cmd": {
-			Name:    "cmd",
-			Trigger: "com+and",
-			Rules:   []string{"allow"},
+			Name: "cmd",
+			Triggers: []data.Trigger{
+				{
+					Match: "com+and",
+				},
+			},
+			Rules: []string{"allow"},
 		},
 	},
 }

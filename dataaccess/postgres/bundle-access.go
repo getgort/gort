@@ -767,12 +767,12 @@ func (da PostgresDataAccess) doBundleGetCommandsData(ctx context.Context, tx *sq
 	}
 
 	if enabledOnly {
-		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description, trigger
+		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description
 			FROM bundle_commands
 			INNER JOIN bundle_enabled ON bundle_commands.bundle_name=bundle_enabled.bundle_name
 			WHERE bundle_commands.bundle_name LIKE $1 AND bundle_commands.bundle_version LIKE $2 AND name LIKE $3`
 	} else {
-		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description, trigger
+		query = `SELECT bundle_commands.bundle_name, bundle_commands.bundle_version, name, description, executable, long_description
 			FROM bundle_commands
 			WHERE bundle_commands.bundle_name LIKE $1 AND bundle_commands.bundle_version LIKE $2 AND name LIKE $3`
 	}
@@ -789,7 +789,7 @@ func (da PostgresDataAccess) doBundleGetCommandsData(ctx context.Context, tx *sq
 		var enc string
 		cd := bundleCommandData{}
 
-		err = rows.Scan(&cd.BundleName, &cd.BundleVersion, &cd.Name, &cd.Description, &enc, &cd.LongDescription, &cd.Trigger)
+		err = rows.Scan(&cd.BundleName, &cd.BundleVersion, &cd.Name, &cd.Description, &enc, &cd.LongDescription)
 		if err != nil {
 			return nil, gerr.Wrap(errs.ErrDataAccess, err)
 		}
@@ -811,6 +811,11 @@ func (da PostgresDataAccess) doBundleGetCommands(ctx context.Context, tx *sql.Tx
 	commands := make([]*data.BundleCommand, 0)
 
 	for _, bc := range bcd {
+		bc.BundleCommand.Triggers, err = da.doBundleGetCommandTriggers(ctx, tx, bundleName, bundleVersion, bc.Name)
+		if err != nil {
+			return nil, gerr.Wrap(fmt.Errorf("failed to get bundle command templates"), err)
+		}
+
 		bc.BundleCommand.Rules, err = da.doBundleGetCommandRules(ctx, tx, bundleName, bundleVersion, bc.Name)
 		if err != nil {
 			return nil, gerr.Wrap(fmt.Errorf("failed to get bundle command rules"), err)
@@ -826,6 +831,32 @@ func (da PostgresDataAccess) doBundleGetCommands(ctx context.Context, tx *sql.Tx
 	}
 
 	return commands, nil
+}
+
+func (da PostgresDataAccess) doBundleGetCommandTriggers(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion, commandName string) ([]data.Trigger, error) {
+	cmdQuery := `SELECT match
+		FROM bundle_command_triggers
+		WHERE bundle_name=$1 AND bundle_version=$2 AND command_name=$3`
+
+	rows, err := tx.QueryContext(ctx, cmdQuery, bundleName, bundleVersion, commandName)
+	if err != nil {
+		return nil, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+	defer rows.Close()
+
+	var triggers []data.Trigger
+	for rows.Next() {
+		var trigger data.Trigger
+
+		err = rows.Scan(&trigger.Match)
+		if err != nil {
+			return nil, gerr.Wrap(errs.ErrDataAccess, err)
+		}
+
+		triggers = append(triggers, trigger)
+	}
+
+	return triggers, nil
 }
 
 func (da PostgresDataAccess) doBundleGetCommandRules(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion, commandName string) ([]string, error) {
@@ -968,6 +999,29 @@ func (da PostgresDataAccess) doBundleInsert(ctx context.Context, tx *sql.Tx, bun
 	return nil
 }
 
+func (da PostgresDataAccess) doBundleInsertCommandTriggers(ctx context.Context,
+	tx *sql.Tx, bundle data.Bundle, command *data.BundleCommand) error {
+
+	query := `INSERT INTO bundle_command_triggers
+		(bundle_name, bundle_version, command_name, match)
+		VALUES ($1, $2, $3, $4);`
+
+	for _, trigger := range command.Triggers {
+		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version, command.Name, trigger.Match)
+		if err != nil {
+			if strings.Contains(err.Error(), "violates") {
+				err = gerr.Wrap(errs.ErrFieldRequired, err)
+			} else {
+				err = gerr.Wrap(errs.ErrDataAccess, err)
+			}
+
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (da PostgresDataAccess) doBundleInsertCommandRules(ctx context.Context,
 	tx *sql.Tx, bundle data.Bundle, command *data.BundleCommand) error {
 
@@ -1017,8 +1071,8 @@ func (da PostgresDataAccess) doBundleInsertCommandTemplates(ctx context.Context,
 
 func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
 	query := `INSERT INTO bundle_commands
-		(bundle_name, bundle_version, name, description, executable, long_description, trigger)
-		VALUES ($1, $2, $3, $4, $5, $6, $7);`
+		(bundle_name, bundle_version, name, description, executable, long_description)
+		VALUES ($1, $2, $3, $4, $5, $6);`
 
 	for name, cmd := range bundle.Commands {
 		cmd.Name = name
@@ -1026,7 +1080,7 @@ func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql
 		enc := encodeStringSlice(cmd.Executable)
 
 		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
-			cmd.Name, cmd.Description, enc, cmd.LongDescription, cmd.Trigger)
+			cmd.Name, cmd.Description, enc, cmd.LongDescription)
 
 		if err != nil {
 			if strings.Contains(err.Error(), "violates") {
@@ -1035,6 +1089,11 @@ func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql
 				err = gerr.Wrap(errs.ErrDataAccess, err)
 			}
 
+			return err
+		}
+
+		err = da.doBundleInsertCommandTriggers(ctx, tx, bundle, cmd)
+		if err != nil {
 			return err
 		}
 

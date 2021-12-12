@@ -104,20 +104,31 @@ type BundleCommand struct {
 	Executable      []string  `yaml:",omitempty,flow" json:"executable,omitempty"`
 	LongDescription string    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
 	Name            string    `yaml:"-" json:"-"`
-	Trigger         string    `yaml:"trigger,omitempty" json:"trigger,omitempty"`
+	Triggers        []Trigger `yaml:"triggers,omitempty" json:"trigger,omitempty"`
 	Rules           []string  `yaml:",omitempty" json:"rules,omitempty"`
 	Templates       Templates `yaml:",omitempty" json:"templates,omitempty"`
 }
 
+// Trigger represents the configuration for a command trigger as defined
+// in the bundles/commands/triggers section of the config.
+type Trigger struct {
+	Match string `yaml:"match" json:"match"`
+}
+
 func (c *BundleCommand) MatchTrigger(ctx context.Context, message string) (bool, error) {
-	if c == nil || len(c.Trigger) == 0 {
-		return false, nil
+	for _, trigger := range c.Triggers {
+		if c == nil || len(trigger.Match) == 0 {
+			return false, nil
+		}
+		re, err := regexp.Compile(trigger.Match)
+		if err != nil {
+			return false, err
+		}
+		if re.MatchString(message) {
+			return true, nil
+		}
 	}
-	re, err := regexp.Compile(c.Trigger)
-	if err != nil {
-		return false, err
-	}
-	return re.MatchString(message), nil
+	return false, nil
 }
 
 // BundleKubernetes represents the "bundles/kubernetes" subsection of the config doc

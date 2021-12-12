@@ -316,8 +316,17 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		ON DELETE CASCADE
 	);
 
-	ALTER TABLE bundle_commands ADD COLUMN IF NOT EXISTS trigger TEXT; 
-
+	CREATE TABLE IF NOT EXISTS bundle_command_triggers (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		command_name		TEXT NOT NULL,
+		match 				TEXT NOT NULL,
+		PRIMARY KEY			(bundle_name, bundle_version, command_name, match),
+		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
+		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
+		ON DELETE CASCADE
+	);
+	
 	CREATE TABLE IF NOT EXISTS bundle_command_rules (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,

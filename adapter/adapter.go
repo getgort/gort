@@ -542,8 +542,8 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		return nil, fmt.Errorf("command lookup error: %w", err)
 	}
 	if gerrs.Is(err, ErrNoSuchCommand) {
-		fmt.Println("Getting entry by trigger")
 		cmdEntry, err = GetCommandEntryByTrigger(ctx, tokens)
+
 		if err != nil {
 			switch {
 			case gerrs.Is(err, ErrNoSuchCommand):
@@ -566,10 +566,15 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 
 			return nil, fmt.Errorf("command lookup error: %w", err)
 		}
+
+		// Set parameters to the full tokenized message
+		request.Parameters = tokens
+		tokens = append([]string{cmdEntry.Command.Name}, tokens...)
 	}
 
 	// Now that we have a command entry, we can re-create the complete Command value.
 	tokens[0] = cmdEntry.Bundle.Name + ":" + cmdEntry.Command.Name
+
 	// TODO Set parse options based on the CommandEntry settings.
 	cmdInput, err = command.Parse(tokens)
 	if err != nil {
