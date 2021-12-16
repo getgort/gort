@@ -470,7 +470,7 @@ func (da PostgresDataAccess) createUsersTable(ctx context.Context, db *sql.DB) e
 	var err error
 
 	createUserQuery := `CREATE TABLE users (
-		email         	TEXT UNIQUE NOT NULL,
+		email         	TEXT,
 		full_name     	TEXT,
 		password_hash 	TEXT,
 		username 		TEXT PRIMARY KEY
