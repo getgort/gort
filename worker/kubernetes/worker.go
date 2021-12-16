@@ -200,6 +200,19 @@ func (w *KubernetesWorker) buildJobData(ctx context.Context) (*batchv1.Job, erro
 		return nil, err
 	}
 
+	secretEnv := []corev1.EnvFromSource{}
+
+	if w.command.Bundle.Kubernetes.EnvSecret != "" {
+		secretEnv = append(secretEnv, corev1.EnvFromSource{
+			SecretRef: &corev1.SecretEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: w.command.Bundle.Kubernetes.EnvSecret,
+				},
+			},
+		},
+		)
+	}
+
 	job := &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{APIVersion: "batch/v1", Kind: "Job"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -222,6 +235,7 @@ func (w *KubernetesWorker) buildJobData(ctx context.Context) (*batchv1.Job, erro
 							Command: w.entryPoint,
 							Args:    w.commandParameters,
 							Env:     envVars,
+							EnvFrom: secretEnv,
 						},
 					},
 					RestartPolicy: corev1.RestartPolicyNever,

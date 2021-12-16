@@ -363,7 +363,8 @@ func (da PostgresDataAccess) createBundleKubernetesTables(ctx context.Context, d
 	createBundlesQuery := `CREATE TABLE bundle_kubernetes (
 		bundle_version 			TEXT NOT NULL,
 		bundle_name				TEXT NOT NULL,
-		service_account_name 	TEXT NOT NULL
+		service_account_name 	TEXT NOT NULL,
+		env_secret            TEXT NOT NULL
 	);
 	`
 

@@ -833,14 +833,14 @@ func (da PostgresDataAccess) doBundleGetCommandTemplates(ctx context.Context, tx
 }
 
 func (da PostgresDataAccess) doBundleGetKubernetes(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion string) (data.BundleKubernetes, error) {
-	query := `SELECT service_account_name
+	query := `SELECT service_account_name, env_secret
 		FROM bundle_kubernetes
 		WHERE bundle_name=$1 AND bundle_version=$2`
 
 	var kubernetes data.BundleKubernetes
 
 	err := tx.QueryRowContext(ctx, query, bundleName, bundleVersion).
-		Scan(&kubernetes.ServiceAccountName)
+		Scan(&kubernetes.ServiceAccountName, &kubernetes.EnvSecret)
 
 	switch {
 	case err == sql.ErrNoRows:
@@ -1055,11 +1055,11 @@ func (da PostgresDataAccess) doBundleInsertTemplates(ctx context.Context, tx *sq
 
 func (da PostgresDataAccess) doBundleInsertKubernetes(ctx context.Context, tx *sql.Tx, bundle data.Bundle) error {
 	query := `INSERT INTO bundle_kubernetes
-		(bundle_name, bundle_version, service_account_name)
-		VALUES ($1, $2, $3);`
+		(bundle_name, bundle_version, service_account_name, env_secret)
+		VALUES ($1, $2, $3, $4);`
 
 	_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
-		bundle.Kubernetes.ServiceAccountName)
+		bundle.Kubernetes.ServiceAccountName, bundle.Kubernetes.EnvSecret)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "violates") {

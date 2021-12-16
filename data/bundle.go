@@ -109,6 +109,7 @@ type BundleCommand struct {
 // BundleKubernetes represents the "bundles/kubernetes" subsection of the config doc
 type BundleKubernetes struct {
 	ServiceAccountName string `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
+	EnvSecret          string `yaml:"env_secret,omitempty" json:"env_secret,omitempty"`
 }
 
 // CoerceVersionToSemver takes a version number and attempts to coerce it
