@@ -9,7 +9,7 @@ Please note we have a code of conduct, please follow it in all your interactions
 ## Pull Request Workflow
 
 1. Fork the project repository and create a topic branch in your fork for your work. This fork should almost always be made against the `develop` branch of the project you're working on, unless you have previously discussed basing your changes on a different branch with the team.
-2. This project uses [pre-commit] to ensure certain consistency of [certain stylistic elements](https://github.com/getgort/gort/blob/main/.pre-commit-config.yaml). Install [pre-commit], and run `pre-commit install` to set up the git hook scripts.
+2. This project uses `pre-commit` to ensure certain consistency of [certain stylistic elements](https://github.com/getgort/gort/blob/main/.pre-commit-config.yaml). Install [pre-commit](https://pre-commit.com/#install), and run `pre-commit install` to set up the git hook scripts.
 3. Make your changes, including any necessary tests to cover new features or fixes that you make.
 4. Ensure that all tests pass.
 5. Submit a Pull Request against the `develop` branch of the project you're working on.
