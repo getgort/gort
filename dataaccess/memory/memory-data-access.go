@@ -25,18 +25,20 @@ import (
 
 var dataAccess = &InMemoryDataAccess{
 	bundles: make(map[string]*data.Bundle),
+	configs: make(map[string]*data.DynamicConfiguration),
 	groups:  make(map[string]*rest.Group),
-	users:   make(map[string]*rest.User),
 	roles:   make(map[string]*rest.Role),
+	users:   make(map[string]*rest.User),
 }
 
 // InMemoryDataAccess is an entirely in-memory representation of a data access layer.
 // Great for testing and development. Terrible for production.
 type InMemoryDataAccess struct {
 	bundles map[string]*data.Bundle
+	configs map[string]*data.DynamicConfiguration
 	groups  map[string]*rest.Group
-	users   map[string]*rest.User
 	roles   map[string]*rest.Role
+	users   map[string]*rest.User
 }
 
 // NewInMemoryDataAccess returns a new InMemoryDataAccess instance.
@@ -51,7 +53,8 @@ func (da *InMemoryDataAccess) Initialize(ctx context.Context) error {
 
 func Reset() {
 	dataAccess.bundles = make(map[string]*data.Bundle)
+	dataAccess.configs = make(map[string]*data.DynamicConfiguration)
 	dataAccess.groups = make(map[string]*rest.Group)
-	dataAccess.users = make(map[string]*rest.User)
 	dataAccess.roles = make(map[string]*rest.Role)
+	dataAccess.users = make(map[string]*rest.User)
 }
