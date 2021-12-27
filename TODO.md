@@ -1,4 +1,4 @@
-# Gort MVP To-Do
+# Gort Version 1.0 To-Do
 
 An incomplete list of tasks for Gort by milestone. Tasks listed within a milestone are mostly unordered.
 
@@ -54,6 +54,26 @@ This is ABSOLUTELY NOT an exhaustive list. Please feel free to add to it. If wha
 
 **_(Publicly release v0.8.0-alpha.0 at this point)_**
 
-## Milestone 9 (TBD)
+## Milestone 9 (Output Format Templating) -- _COMPLETE!_ ✅
 
-- TBD
+- This feature allows you to control the look and feel (and, to some degree, content) of any information sent to users in a chat-agnostic way.
+- Add colors, images, or other text formatting to your command (a future release will add buttons to chat providers that support it.
+- Both Gort system messages and command output message may be customized (within the constraints imposed by a given chat provider).
+- Templates can be defined at the application configuration level, the bundle level, and even the individual command level. Or you can just use the defaults. They're fine.
+- JSON objects output by commands are easily accessible.
+- For more information about Templates, see the official documentation.
+
+## Milestone 10 (Triggers; Dynamic Configuration) -- _In progress!_
+
+- Triggers
+  - Allow Gort to execute existing bundled commands in response to non-command chat input.
+- Dynamic Configuration
+  - Configuration values will be securely stored in Gort (more specifically, in a secure secret storage backend, such as Hashicorp Vault).
+  - Values will be able to be associated with specific bundles and/or roles/users.
+  - Appropriate values will be injected into worker containers as either environment variables or files.
+
+## Milestone 11 (Custom webhooks)
+
+- Expose custom (auth-gated) RESTful endpoints that can be used to execute existing bundled commands.
+
+### NOTE: Future milestones may be re-prioritized at any time.
