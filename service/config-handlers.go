@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/data"
-	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/dynamic"
 	gerrs "github.com/getgort/gort/errors"
 )
 
@@ -46,7 +46,7 @@ func getDynamicConfigParameters(params map[string]string) (layer data.Configurat
 
 // handleDeleteDynamicConfig handles "DELETE /v2/configs/{groupname}"
 func handleDeleteDynamicConfig(w http.ResponseWriter, r *http.Request) {
-	dataAccessLayer, err := dataaccess.Get()
+	dc, err := dynamic.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -58,7 +58,7 @@ func handleDeleteDynamicConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dataAccessLayer.DynamicConfigurationDelete(r.Context(), layer, bundle, owner, key)
+	err = dc.Delete(r.Context(), layer, bundle, owner, key)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -67,7 +67,7 @@ func handleDeleteDynamicConfig(w http.ResponseWriter, r *http.Request) {
 
 // handleGetDynamicConfig handles "GET /v2/configs/{groupname}"
 func handleGetDynamicConfig(w http.ResponseWriter, r *http.Request) {
-	dataAccessLayer, err := dataaccess.Get()
+	dc, err := dynamic.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -79,7 +79,7 @@ func handleGetDynamicConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err := dataAccessLayer.DynamicConfigurationExists(r.Context(), layer, bundle, owner, key)
+	exists, err := dc.Exists(r.Context(), layer, bundle, owner, key)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -89,7 +89,7 @@ func handleGetDynamicConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	configs, err := dataAccessLayer.DynamicConfigurationGet(r.Context(), layer, bundle, owner, key)
+	configs, err := dc.Get(r.Context(), layer, bundle, owner, key)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -100,7 +100,7 @@ func handleGetDynamicConfig(w http.ResponseWriter, r *http.Request) {
 
 // handleGetDynamicConfigs handles "GET /v2/configs"
 func handleGetDynamicConfigs(w http.ResponseWriter, r *http.Request) {
-	dataAccessLayer, err := dataaccess.Get()
+	dc, err := dynamic.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -112,7 +112,7 @@ func handleGetDynamicConfigs(w http.ResponseWriter, r *http.Request) {
 	owner := params[ParameterConfigurationOwner]
 	key := params[ParameterConfigurationKey]
 
-	configs, err := dataAccessLayer.DynamicConfigurationList(r.Context(), layer, bundle, owner, key)
+	configs, err := dc.List(r.Context(), layer, bundle, owner, key)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -123,7 +123,7 @@ func handleGetDynamicConfigs(w http.ResponseWriter, r *http.Request) {
 
 // handlePutDynamicConfiguration handles "PUT /v2/configs/{groupname}"
 func handlePutDynamicConfiguration(w http.ResponseWriter, r *http.Request) {
-	dataAccessLayer, err := dataaccess.Get()
+	dc, err := dynamic.Get()
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -147,21 +147,21 @@ func handlePutDynamicConfiguration(w http.ResponseWriter, r *http.Request) {
 	c.Owner = owner
 	c.Key = key
 
-	exists, err := dataAccessLayer.DynamicConfigurationExists(r.Context(), c.Layer, c.Bundle, c.Owner, c.Key)
+	exists, err := dc.Exists(r.Context(), c.Layer, c.Bundle, c.Owner, c.Key)
 	if err != nil {
 		respondAndLogError(r.Context(), w, gerrs.ErrUnmarshal)
 		return
 	}
 
 	if exists {
-		err = dataAccessLayer.DynamicConfigurationDelete(r.Context(), c.Layer, c.Bundle, c.Owner, c.Key)
+		err = dc.Delete(r.Context(), c.Layer, c.Bundle, c.Owner, c.Key)
 		if err != nil {
 			respondAndLogError(r.Context(), w, err)
 			return
 		}
 	}
 
-	err = dataAccessLayer.DynamicConfigurationCreate(r.Context(), c)
+	err = dc.Create(r.Context(), c)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
