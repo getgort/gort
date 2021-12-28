@@ -78,7 +78,7 @@ func (r ResponseTester) WithOutput(out interface{}) ResponseTester {
 // Test sends a constructed request to the provided router and performs any
 // required checks on it.
 func (r ResponseTester) Test(t *testing.T, router *mux.Router) {
-	// t.Helper()
+	t.Helper()
 
 	var bodyReader io.Reader = nil
 	if r.body != nil {

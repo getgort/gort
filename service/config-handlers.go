@@ -44,7 +44,7 @@ func getDynamicConfigParameters(params map[string]string) (layer data.Configurat
 	return
 }
 
-// handleDeleteDynamicConfig handles "DELETE /v2/configs/{groupname}"
+// handleDeleteDynamicConfig handles "DELETE /v2/configs/{bundle}/{layer}/{owner}/{key}"
 func handleDeleteDynamicConfig(w http.ResponseWriter, r *http.Request) {
 	dc, err := dynamic.Get()
 	if err != nil {
@@ -65,7 +65,7 @@ func handleDeleteDynamicConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleGetDynamicConfig handles "GET /v2/configs/{groupname}"
+// handleGetDynamicConfig handles "GET /v2/configs/{bundle}/{layer}/{owner}/{key}"
 func handleGetDynamicConfig(w http.ResponseWriter, r *http.Request) {
 	dc, err := dynamic.Get()
 	if err != nil {
@@ -121,7 +121,7 @@ func handleGetDynamicConfigs(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(configs)
 }
 
-// handlePutDynamicConfiguration handles "PUT /v2/configs/{groupname}"
+// handlePutDynamicConfiguration handles "PUT /v2/configs/{bundle}/{layer}/{owner}/{key}"
 func handlePutDynamicConfiguration(w http.ResponseWriter, r *http.Request) {
 	dc, err := dynamic.Get()
 	if err != nil {
