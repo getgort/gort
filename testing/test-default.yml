@@ -3,6 +3,7 @@ gort_bundle_version: 1
 
 name: gort
 version: 0.0.1
+
 author: Matt Titmus <matthew.titmus@gmail.com>
 homepage: https://guide.getgort.io
 description: The default command bundle.
@@ -13,6 +14,7 @@ long_description: |-
 
 permissions:
   - manage_commands
+  - manage_configs
   - manage_groups
   - manage_roles
   - manage_users
@@ -42,6 +44,26 @@ commands:
     executable: [ "/bin/gort", "bundle" ]
     rules:
       - must have gort:manage_commands
+
+  config:
+    description: "Get or set dynamic configurations"
+    long_description: |-
+      Allows you to perform bundle administration.
+
+      Usage:
+        gort:config [command]
+
+      Available Commands:
+        delete      Delete an existing dynamic configuration
+        get         Get a dynamic configuration by key
+        list        List configurations for a particular bundle
+        set         Set a dynamic configuration
+
+      Flags:
+        -h, --help   help for config
+    executable: [ "/bin/gort", "config" ]
+    rules:
+      - must have gort:manage_configs
 
   group:
     description: "Manage Cog user groups"
@@ -133,7 +155,7 @@ commands:
 
       Usage:
         gort:help [flags] [command]
-    executable: [ "/bin/gort", "hidden", "commands" ]
+    executable: [ "/bin/gort", "hidden", "command" ]
     rules:
       - allow
 

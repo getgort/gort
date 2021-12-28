@@ -373,7 +373,7 @@ func addGroupMethodsToRouter(router *mux.Router) {
 	router.Handle("/v2/groups/{groupname}/members/{username}", otelhttp.NewHandler(authCommand(handlePutGroupMember, "group", ""), "handlePutGroupMember")).Methods("PUT")
 
 	// Group roles
-	router.Handle("/v2/groups/{groupname}/roles", otelhttp.NewHandler(authCommand(handleGetGroupRoles, "group", "info"), "handleGetGroupMembers")).Methods("GET")
-	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(authCommand(handleDeleteGroupRole, "group", "add"), "handleDeleteGroupMember")).Methods("DELETE")
-	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(authCommand(handlePutGroupRole, "group", "add"), "handlePutGroupMember")).Methods("PUT")
+	router.Handle("/v2/groups/{groupname}/roles", otelhttp.NewHandler(authCommand(handleGetGroupRoles, "group", "info"), "handleGetGroupRoles")).Methods("GET")
+	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(authCommand(handleDeleteGroupRole, "group", "add"), "handleDeleteGroupRole")).Methods("DELETE")
+	router.Handle("/v2/groups/{groupname}/roles/{rolename}", otelhttp.NewHandler(authCommand(handlePutGroupRole, "group", "add"), "handlePutGroupRole")).Methods("PUT")
 }

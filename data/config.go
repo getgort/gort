@@ -24,6 +24,7 @@ type GortConfig struct {
 	GlobalConfigs     GlobalConfigs     `yaml:"global,omitempty"`
 	DatabaseConfigs   DatabaseConfigs   `yaml:"database,omitempty"`
 	DockerConfigs     DockerConfigs     `yaml:"docker,omitempty"`
+	DynamicConfigs    DynamicConfigs    `yaml:"dynamic_configuration,omitempty"`
 	JaegerConfigs     JaegerConfigs     `yaml:"jaeger,omitempty"`
 	KubernetesConfigs KubernetesConfigs `yaml:"kubernetes,omitempty"`
 	SlackProviders    []SlackProvider   `yaml:"slack,omitempty"`
@@ -65,6 +66,11 @@ type DatabaseConfigs struct {
 type DockerConfigs struct {
 	DockerHost string `yaml:"host,omitempty"`
 	Network    string `yaml:"network,omitempty"`
+}
+
+// DynamicConfigs is the data wrapper for the "dynamic_configuration" section.
+type DynamicConfigs struct {
+	Backend string `yaml:"backend,omitempty"`
 }
 
 // JaegerConfigs is the data wrapper for the "jaeger" section.
