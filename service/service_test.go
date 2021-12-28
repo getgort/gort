@@ -97,10 +97,12 @@ func (r ResponseTester) Test(t *testing.T, router *mux.Router) {
 
 	resp := w.Result()
 	resBody, err := io.ReadAll(resp.Body)
+
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.out != nil {
+
+	if r.out != nil && json.Valid(resBody) {
 		err = json.Unmarshal(resBody, &r.out)
 		if err != nil {
 			t.Fatal(err)

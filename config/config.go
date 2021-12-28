@@ -128,6 +128,14 @@ func GetDockerConfigs() data.DockerConfigs {
 	return config.DockerConfigs
 }
 
+// GetDynamicConfigs returns the data wrapper for the "dynamic" config section.
+func GetDynamicConfigs() data.DynamicConfigs {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	return config.DynamicConfigs
+}
+
 // GetGlobalConfigs returns the data wrapper for the "global" config section.
 func GetGlobalConfigs() data.GlobalConfigs {
 	configMutex.RLock()
