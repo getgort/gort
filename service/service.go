@@ -136,6 +136,7 @@ func BuildRESTServer(ctx context.Context, addr string) *RESTServer {
 func addAllMethodsToRouter(router *mux.Router) {
 	addHealthzMethodToRouter(router)
 	addBundleMethodsToRouter(router)
+	addConfigMethodsToRouter(router)
 	addGroupMethodsToRouter(router)
 	addRoleMethodsToRouter(router)
 	addUserMethodsToRouter(router)
@@ -308,6 +309,7 @@ func doBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
 	const adminRole = "admin"
 	var adminPermissions = []string{
 		"manage_commands",
+		"manage_configs",
 		"manage_groups",
 		"manage_roles",
 		"manage_users",
@@ -476,6 +478,8 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 	case gerrs.Is(err, ErrMissingValue):
 		fallthrough
 	case gerrs.Is(err, errs.ErrFieldRequired):
+		fallthrough
+	case strings.HasPrefix(err.Error(), "dynamic configuration layers must be one of:"):
 		status = http.StatusExpectationFailed
 		log.WithError(err).WithField("status", status).Info(msg)
 
