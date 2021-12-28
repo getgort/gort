@@ -28,11 +28,11 @@ import (
 // DynamicConfiguration is the interface used to interact with the dynamic
 // configuration backend.
 type DynamicConfiguration interface {
-	Create(ctx context.Context, config data.DynamicConfiguration) error
 	Delete(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) error
 	Exists(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) (bool, error)
 	Get(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) (data.DynamicConfiguration, error)
 	List(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) ([]data.DynamicConfiguration, error)
+	Set(ctx context.Context, config data.DynamicConfiguration) error
 }
 
 // Get provides an interface to the dynamic configuration backend. If no

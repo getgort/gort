@@ -37,10 +37,6 @@ type DALDynamicConfiguration struct {
 	da dataaccess.DataAccess
 }
 
-func (c *DALDynamicConfiguration) Create(ctx context.Context, config data.DynamicConfiguration) error {
-	return c.da.DynamicConfigurationCreate(ctx, config)
-}
-
 func (c *DALDynamicConfiguration) Delete(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) error {
 	return c.da.DynamicConfigurationDelete(ctx, layer, bundle, owner, key)
 }
@@ -55,4 +51,19 @@ func (c *DALDynamicConfiguration) Get(ctx context.Context, layer data.Configurat
 
 func (c *DALDynamicConfiguration) List(ctx context.Context, layer data.ConfigurationLayer, bundle, owner, key string) ([]data.DynamicConfiguration, error) {
 	return c.da.DynamicConfigurationList(ctx, layer, bundle, owner, key)
+}
+
+func (c *DALDynamicConfiguration) Set(ctx context.Context, config data.DynamicConfiguration) error {
+	exists, err := c.Exists(ctx, config.Layer, config.Bundle, config.Owner, config.Key)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		if err := c.Delete(ctx, config.Layer, config.Bundle, config.Owner, config.Key); err != nil {
+			return err
+		}
+	}
+
+	return c.da.DynamicConfigurationCreate(ctx, config)
 }

@@ -147,21 +147,7 @@ func handlePutDynamicConfiguration(w http.ResponseWriter, r *http.Request) {
 	c.Owner = owner
 	c.Key = key
 
-	exists, err := dc.Exists(r.Context(), c.Layer, c.Bundle, c.Owner, c.Key)
-	if err != nil {
-		respondAndLogError(r.Context(), w, gerrs.ErrUnmarshal)
-		return
-	}
-
-	if exists {
-		err = dc.Delete(r.Context(), c.Layer, c.Bundle, c.Owner, c.Key)
-		if err != nil {
-			respondAndLogError(r.Context(), w, err)
-			return
-		}
-	}
-
-	err = dc.Create(r.Context(), c)
+	err = dc.Set(r.Context(), c)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
