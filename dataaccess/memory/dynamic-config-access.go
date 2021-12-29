@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess/errs"
 )
 
 func (da *InMemoryDataAccess) DynamicConfigurationCreate(_ context.Context, config data.DynamicConfiguration) error {
@@ -36,7 +37,7 @@ func (da *InMemoryDataAccess) DynamicConfigurationCreate(_ context.Context, conf
 	}
 
 	if da.configs[lookupKey] != nil {
-		return fmt.Errorf("dynamic configuration already exists")
+		return errs.ErrConfigExists
 	}
 
 	da.configs[lookupKey] = &config
@@ -55,7 +56,7 @@ func (da *InMemoryDataAccess) DynamicConfigurationDelete(_ context.Context, laye
 	}
 
 	if da.configs[lookupKey] == nil {
-		return fmt.Errorf("no such dynamic configuration")
+		return errs.ErrNoSuchConfig
 	}
 
 	delete(da.configs, lookupKey)
@@ -88,7 +89,7 @@ func (da *InMemoryDataAccess) DynamicConfigurationGet(_ context.Context, layer d
 
 	dc := da.configs[lookupKey]
 	if dc == nil {
-		return data.DynamicConfiguration{}, fmt.Errorf("no such dynamic configuration")
+		return data.DynamicConfiguration{}, errs.ErrNoSuchConfig
 	}
 
 	return *dc, nil
@@ -100,7 +101,7 @@ func (da *InMemoryDataAccess) DynamicConfigurationList(_ context.Context, layer 
 	const wildcard = `([^\|]+)`
 
 	if bundle == "" {
-		return nil, fmt.Errorf("bundle must not be empty")
+		return nil, errs.ErrEmptyConfigBundle
 	}
 	if layer == "" {
 		layer = wildcard
@@ -129,13 +130,13 @@ func (da *InMemoryDataAccess) DynamicConfigurationList(_ context.Context, layer 
 func generateLookupKey(layer data.ConfigurationLayer, bundle, owner, key string) (string, error) {
 	switch {
 	case bundle == "":
-		return "", fmt.Errorf("dynamic configuration bundle name is empty")
+		return "", errs.ErrEmptyConfigBundle
 	case layer == "":
-		return "", fmt.Errorf("dynamic configuration bundle layer is empty")
+		return "", errs.ErrEmptyConfigLayer
 	case owner == "":
-		return "", fmt.Errorf("dynamic configuration owner name is empty")
+		return "", errs.ErrEmptyConfigOwner
 	case key == "":
-		return "", fmt.Errorf("dynamic configuration key name is empty")
+		return "", errs.ErrEmptyConfigKey
 	}
 
 	lookupKey := fmt.Sprintf("%s||%s||%s||%s", bundle, layer, owner, key)
