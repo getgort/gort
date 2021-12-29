@@ -471,6 +471,14 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		fallthrough
 	case gerrs.Is(err, errs.ErrEmptyBundleVersion):
 		fallthrough
+	case gerrs.Is(err, errs.ErrEmptyConfigBundle):
+		fallthrough
+	case gerrs.Is(err, errs.ErrEmptyConfigLayer):
+		fallthrough
+	case gerrs.Is(err, errs.ErrEmptyConfigOwner):
+		fallthrough
+	case gerrs.Is(err, errs.ErrEmptyConfigKey):
+		fallthrough
 	case gerrs.Is(err, errs.ErrEmptyGroupName):
 		fallthrough
 	case gerrs.Is(err, errs.ErrEmptyUserName):
@@ -485,6 +493,8 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 
 	// Requested resource doesn't exist
 	case gerrs.Is(err, errs.ErrNoSuchBundle):
+		fallthrough
+	case gerrs.Is(err, errs.ErrNoSuchConfig):
 		fallthrough
 	case gerrs.Is(err, errs.ErrNoSuchGroup):
 		fallthrough
@@ -503,6 +513,8 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 
 	// Can't insert over something that already exists
 	case gerrs.Is(err, errs.ErrBundleExists):
+		fallthrough
+	case gerrs.Is(err, errs.ErrConfigExists):
 		fallthrough
 	case gerrs.Is(err, errs.ErrGroupExists):
 		fallthrough

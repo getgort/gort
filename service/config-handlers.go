@@ -107,10 +107,18 @@ func handleGetDynamicConfigs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := mux.Vars(r)
-	layer := data.ConfigurationLayer(params[ParameterConfigurationLayer])
-	bundle := params[ParameterConfigurationBundle]
-	owner := params[ParameterConfigurationOwner]
-	key := params[ParameterConfigurationKey]
+	p := func(key string) string {
+		if val := params[key]; val == "*" {
+			return ""
+		} else {
+			return val
+		}
+	}
+
+	layer := data.ConfigurationLayer(p(ParameterConfigurationLayer))
+	bundle := p(ParameterConfigurationBundle)
+	owner := p(ParameterConfigurationOwner)
+	key := p(ParameterConfigurationKey)
 
 	configs, err := dc.List(r.Context(), layer, bundle, owner, key)
 	if err != nil {

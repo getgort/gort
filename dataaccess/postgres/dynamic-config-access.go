@@ -19,7 +19,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"go.opentelemetry.io/otel"
 
@@ -41,7 +40,7 @@ func (da PostgresDataAccess) DynamicConfigurationCreate(ctx context.Context, dc 
 	if exists, err := da.DynamicConfigurationExists(ctx, dc.Layer, dc.Bundle, dc.Owner, dc.Key); err != nil {
 		return err
 	} else if exists {
-		return fmt.Errorf("dynamic configuration already exists")
+		return errs.ErrConfigExists
 	}
 
 	db, err := da.connect(ctx, DatabaseGort)
@@ -73,7 +72,7 @@ func (da PostgresDataAccess) DynamicConfigurationDelete(ctx context.Context, lay
 	if exists, err := da.DynamicConfigurationExists(ctx, layer, bundle, owner, key); err != nil {
 		return err
 	} else if !exists {
-		return fmt.Errorf("no such dynamic configuration")
+		return errs.ErrNoSuchConfig
 	}
 
 	db, err := da.connect(ctx, DatabaseGort)
@@ -129,7 +128,7 @@ func (da PostgresDataAccess) DynamicConfigurationGet(ctx context.Context, layer 
 	if exists, err := da.DynamicConfigurationExists(ctx, layer, bundle, owner, key); err != nil {
 		return data.DynamicConfiguration{}, err
 	} else if !exists {
-		return data.DynamicConfiguration{}, fmt.Errorf("no such dynamic configuration")
+		return data.DynamicConfiguration{}, errs.ErrNoSuchConfig
 	}
 
 	db, err := da.connect(ctx, DatabaseGort)
@@ -161,7 +160,7 @@ func (da PostgresDataAccess) DynamicConfigurationList(ctx context.Context, layer
 	defer sp.End()
 
 	if bundle == "" {
-		return nil, fmt.Errorf("bundle must not be empty")
+		return nil, errs.ErrEmptyConfigBundle
 	}
 	if layer == "" {
 		layer = "%"
@@ -211,15 +210,15 @@ func (da PostgresDataAccess) DynamicConfigurationList(ctx context.Context, layer
 func validate(layer data.ConfigurationLayer, bundle, owner, key string) error {
 	switch {
 	case bundle == "":
-		return fmt.Errorf("dynamic configuration bundle name is empty")
+		return errs.ErrEmptyConfigBundle
 	case layer == "":
-		return fmt.Errorf("dynamic configuration bundle layer is empty")
+		return errs.ErrEmptyConfigLayer
 	case layer.Validate() != nil:
 		return layer.Validate()
 	case owner == "":
-		return fmt.Errorf("dynamic configuration owner name is empty")
+		return errs.ErrEmptyConfigOwner
 	case key == "":
-		return fmt.Errorf("dynamic configuration key name is empty")
+		return errs.ErrEmptyConfigKey
 	}
 
 	return nil

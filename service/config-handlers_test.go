@@ -69,53 +69,72 @@ func TestGetDynamicConfigs(t *testing.T) {
 		bundle   string
 		layer    data.ConfigurationLayer
 		owner    string
-		key      string
 		expected []data.DynamicConfiguration
 		status   int
 	}{
 		{
 			bundle: "",
-			status: 404,
+			status: http.StatusNotFound,
+		},
+		{
+			bundle: "*",
+			layer:  data.LayerRoom,
+			owner:  "foo",
+			status: http.StatusExpectationFailed,
 		},
 		{
 			bundle:   "bundle-non-existent",
 			expected: []data.DynamicConfiguration{},
-			status:   200,
+			status:   http.StatusOK,
 		},
 		{
 			bundle:   "bundle-service-list",
 			expected: []data.DynamicConfiguration{dcs[0], dcs[1], dcs[2], dcs[3]},
-			status:   200,
+			status:   http.StatusOK,
 		},
 		{
 			bundle:   "bundle-service-list",
 			layer:    data.LayerRoom,
 			expected: []data.DynamicConfiguration{dcs[0], dcs[1], dcs[2]},
-			status:   200,
+			status:   http.StatusOK,
 		},
 		{
 			bundle:   "bundle-service-list",
 			layer:    data.LayerUser,
 			expected: []data.DynamicConfiguration{dcs[3]},
-			status:   200,
+			status:   http.StatusOK,
 		},
 		{
 			bundle:   "bundle-service-list",
 			layer:    data.LayerRoom,
 			owner:    "foo",
 			expected: []data.DynamicConfiguration{dcs[0], dcs[1]},
-			status:   200,
+			status:   http.StatusOK,
+		},
+		{
+			bundle:   "bundle-service-list",
+			layer:    data.ConfigurationLayer("*"),
+			owner:    "foo",
+			expected: []data.DynamicConfiguration{dcs[0], dcs[1]},
+			status:   http.StatusOK,
+		},
+		{
+			bundle:   "bundle-service-list",
+			layer:    data.ConfigurationLayer("*"),
+			owner:    "bar",
+			expected: []data.DynamicConfiguration{dcs[2], dcs[3]},
+			status:   http.StatusOK,
 		},
 	}
 
-	const msg = "Index=%d Layer=%q Bundle=%q Owner=%q Key=%q"
+	const msg = "Index=%d Layer=%q Bundle=%q Owner=%q"
 	for i, test := range tests {
-		url := fmt.Sprintf("http://example.com/v2/configs/%s/%s/%s/%s", test.bundle, test.layer, test.owner, test.key)
+		url := fmt.Sprintf("http://example.com/v2/configs/%s/%s/%s", test.bundle, test.layer, test.owner)
 		url = strings.TrimRight(url, "/")
 
 		list := []data.DynamicConfiguration{}
 		NewResponseTester("GET", url).WithStatus(test.status).WithOutput(&list).Test(t, router)
-		assert.ElementsMatch(t, test.expected, list, msg, i, test.layer, test.bundle, test.owner, test.key)
+		assert.ElementsMatch(t, test.expected, list, msg, i, test.layer, test.bundle, test.owner)
 	}
 }
 
