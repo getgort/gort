@@ -106,7 +106,7 @@ func configSetCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Configuraion set: bundle=%q layer=%q owner=%q key=%q\n",
+	fmt.Printf("Configuration set: bundle=%q layer=%q owner=%q key=%q\n",
 		flagGortConfigBundle,
 		flagGortConfigLayer,
 		flagGortConfigOwner,

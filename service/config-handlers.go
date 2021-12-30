@@ -166,7 +166,7 @@ func addConfigMethodsToRouter(router *mux.Router) {
 	router.Handle("/v2/configs/{bundle}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "list"), "handleGetConfigs")).Methods("GET")
 	router.Handle("/v2/configs/{bundle}/{layer}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "list"), "handleGetConfigs")).Methods("GET")
 	router.Handle("/v2/configs/{bundle}/{layer}/{owner}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "list"), "handleGetConfigs")).Methods("GET")
-	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handleGetDynamicConfig, "config", "info"), "handleGetConfig")).Methods("GET")
-	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handlePutDynamicConfiguration, "config", "create"), "handlePutDynamicConfiguration")).Methods("PUT")
+	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handleGetDynamicConfig, "config", "get"), "handleGetConfig")).Methods("GET")
+	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handlePutDynamicConfiguration, "config", "set"), "handlePutDynamicConfiguration")).Methods("PUT")
 	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handleDeleteDynamicConfig, "config", "delete"), "handleDeleteConfig")).Methods("DELETE")
 }
