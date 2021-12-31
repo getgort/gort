@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/getgort/gort/config"
@@ -12,48 +13,163 @@ import (
 	"github.com/getgort/gort/templates"
 )
 
-func TestChannelMessageWithTrigger(t *testing.T) {
-	setupGort(t)
-
-	result, err := OnChannelMessage(
-		context.Background(),
-		&ProviderEvent{
-			EventType: EventChannelMessage,
-			Data:      nil,
-			Info: &Info{
-				Provider: &ProviderInfo{
-					Type: "test",
-					Name: "provider",
-				},
-			},
-			Adapter: &testAdapter{},
-		},
-		&ChannelMessageEvent{
-			ChannelID: "mychannel",
-			Text:      "run this command",
-			UserID:    "user",
-		},
-	)
+func TestMain(m *testing.M) {
+	err := setupGort()
 	if err != nil {
-		t.Errorf("%v", err)
-		return
+		panic(err)
 	}
-	expected := "test:cmd run this command"
-	if result.String() != expected {
-		t.Errorf("expected %q, got %q", expected, result)
-	}
+	code := m.Run()
+	os.Exit(code)
 }
 
-func setupGort(t *testing.T) {
+func TestChannelMessage(t *testing.T) {
+	var tests = []struct {
+		name     string
+		message  string
+		expected string
+		err      bool
+	}{
+		{
+			name:     "can execute command by name with bang",
+			message:  "!test:cmd arg1 arg2",
+			expected: "test:cmd arg1 arg2",
+		},
+		{
+			name:    "cannot execute command by name without bang",
+			message: "test:cmd arg1 arg2",
+			err:     true,
+		},
+		{
+			name:     "can execute command by trigger",
+			message:  "run this command",
+			expected: "test:cmd run this command",
+		},
+		{
+			name:    "error on unknown command with bang",
+			message: "!missing:cmd arg1 arg2",
+			err:     true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := OnChannelMessage(
+				context.Background(),
+				&ProviderEvent{
+					EventType: EventChannelMessage,
+					Data:      nil,
+					Info: &Info{
+						Provider: &ProviderInfo{
+							Type: "test",
+							Name: "provider",
+						},
+					},
+					Adapter: &testAdapter{},
+				},
+				&ChannelMessageEvent{
+					ChannelID: "mychannel",
+					Text:      test.message,
+					UserID:    "user",
+				},
+			)
+			if err != nil {
+				if test.err {
+					return
+				}
+				t.Errorf("%v", err)
+				return
+			}
+			if test.err {
+				t.Errorf("expected an error, got %q", result)
+				return
+			}
+			if result.String() != test.expected {
+				t.Errorf("expected %q, got %q", test.expected, result)
+			}
+		})
+	}
+
+}
+
+func TestDirectMessage(t *testing.T) {
+	var tests = []struct {
+		name     string
+		message  string
+		expected string
+		err      bool
+	}{
+		{
+			name:     "can execute command by name with bang",
+			message:  "test:cmd arg1 arg2",
+			expected: "test:cmd arg1 arg2",
+		},
+		{
+			name:     "can execute command by name without bang",
+			message:  "test:cmd arg1 arg2",
+			expected: "test:cmd arg1 arg2",
+		},
+		{
+			name:     "can execute command with trigger",
+			message:  "run this command",
+			expected: "test:cmd run this command",
+		},
+		{
+			name:    "error on unknown command with bang",
+			message: "!missing:cmd arg1 arg2",
+			err:     true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := OnDirectMessage(
+				context.Background(),
+				&ProviderEvent{
+					EventType: EventChannelMessage,
+					Data:      nil,
+					Info: &Info{
+						Provider: &ProviderInfo{
+							Type: "test",
+							Name: "provider",
+						},
+					},
+					Adapter: &testAdapter{},
+				},
+				&DirectMessageEvent{
+					ChannelID: "mychannel",
+					Text:      test.message,
+					UserID:    "user",
+				},
+			)
+			if err != nil {
+				if test.err {
+					return
+				}
+				t.Errorf("%v", err)
+				return
+			}
+			if test.err {
+				t.Errorf("expected an error, got %q", result)
+				return
+			}
+			if result.String() != test.expected {
+				t.Errorf("expected %q, got %q", test.expected, result)
+			}
+		})
+	}
+
+}
+
+func setupGort() error {
 	// Init Gort
 	err := config.Initialize("../testing/config/no-database.yml")
 	if err != nil {
-		t.Fatalf("%v", err)
+		return err
 	}
 
 	da, err := dataaccess.Get()
 	if err != nil {
-		t.Fatalf("%v", err)
+		return err
 	}
 
 	da.Initialize(context.Background())
@@ -64,8 +180,10 @@ func setupGort(t *testing.T) {
 
 	err = da.BundleCreate(context.Background(), testBundle)
 	if err != nil {
-		t.Fatalf("%v", err)
+		return err
 	}
+
+	return nil
 }
 
 var testBundle = data.Bundle{
