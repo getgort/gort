@@ -120,6 +120,7 @@ func (c *BundleCommand) MatchTrigger(ctx context.Context, message string) (bool,
 		if c == nil || len(trigger.Match) == 0 {
 			return false, nil
 		}
+		// TODO: Compile regexes up-front for improved performance
 		re, err := regexp.Compile(trigger.Match)
 		if err != nil {
 			return false, err
