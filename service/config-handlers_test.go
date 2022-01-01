@@ -153,23 +153,3 @@ func TestGetDynamicConfigs(t *testing.T) {
 		assert.ElementsMatch(t, test.expected, list, msg, i, test.layer, test.bundle, test.owner, test.key)
 	}
 }
-
-// func TestPutAndGetDynamicConfiguration(t *testing.T) {
-// 	router := createTestRouter()
-
-// 	dc := data.DynamicConfiguration{
-// 		Bundle: "bundle",
-// 		Layer:  data.LayerUser,
-// 		Owner:  "admin",
-// 		Key:    "foo",
-// 		Value:  "test-value",
-// 	}
-
-// 	NewResponseTester("GET", "http://example.com/v2/configs/bundle/user/admin/foo").WithStatus(http.StatusNotFound).Test(t, router)
-
-// 	NewResponseTester("PUT", "http://example.com/v2/configs/bundle/user/admin/foo").WithBody(dc).WithStatus(http.StatusOK).Test(t, router)
-
-// 	output := data.DynamicConfiguration{}
-// 	NewResponseTester("GET", "http://example.com/v2/configs/bundle/user/admin/foo").WithOutput(&output).WithStatus(http.StatusOK).Test(t, router)
-// 	assert.Equal(t, dc, output)
-// }
