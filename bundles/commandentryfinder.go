@@ -27,4 +27,5 @@ import (
 // Importantly, this must only return ENABLED commands!
 type CommandEntryFinder interface {
 	FindCommandEntry(ctx context.Context, bundle, command string) ([]data.CommandEntry, error)
+	FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error)
 }

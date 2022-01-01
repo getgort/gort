@@ -48,12 +48,12 @@ func init() {
 // Get provides an interface to the data access layer. If the last
 // initialization attempt failed this will return an error.
 func Get() (DataAccess, error) {
+	initializationMutex.RLock()
+	defer initializationMutex.RUnlock()
+
 	if initializationError != nil {
 		return nil, initializationError
 	}
-
-	initializationMutex.RLock()
-	defer initializationMutex.RUnlock()
 
 	return getCorrectDataAccess(), nil
 }
