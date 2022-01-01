@@ -28,6 +28,23 @@ import (
 
 // DynamicConfigurationDelete
 func (c *GortClient) DynamicConfigurationDelete(bundle string, layer data.ConfigurationLayer, owner, key string) error {
+	switch {
+	case bundle == "":
+		return fmt.Errorf("dynamic configuration bundle is required")
+	case layer == data.ConfigurationLayer(""):
+		return fmt.Errorf("dynamic configuration layer is required")
+	case layer.Validate() != nil:
+		return layer.Validate()
+	case owner == "" && layer != data.LayerBundle:
+		return fmt.Errorf("dynamic configuration owner is required for layer %s", layer)
+	case key == "":
+		return fmt.Errorf("dynamic configuration key is required")
+	}
+
+	if owner == "" {
+		owner = "-"
+	}
+
 	url := fmt.Sprintf("%s/v2/configs/%s/%s/%s/%s", c.profile.URL.String(), bundle, layer, owner, key)
 	resp, err := c.doRequest("DELETE", url, []byte{})
 	if err != nil {
@@ -61,35 +78,8 @@ func (c *GortClient) DynamicConfigurationExists(bundle string, layer data.Config
 	}
 }
 
-// DynamicConfigurationGet
-func (c *GortClient) DynamicConfigurationGet(bundle string, layer data.ConfigurationLayer, owner, key string) (data.DynamicConfiguration, error) {
-	url := fmt.Sprintf("%s/v2/configs/%s/%s/%s/%s", c.profile.URL.String(), bundle, layer, owner, key)
-	resp, err := c.doRequest("GET", url, []byte{})
-	if err != nil {
-		return data.DynamicConfiguration{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return data.DynamicConfiguration{}, getResponseError(resp)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return data.DynamicConfiguration{}, err
-	}
-
-	config := data.DynamicConfiguration{}
-	err = json.Unmarshal(body, &config)
-	if err != nil {
-		return data.DynamicConfiguration{}, err
-	}
-
-	return config, nil
-}
-
 // DynamicConfigurationList
-func (c *GortClient) DynamicConfigurationList(bundle string, layer data.ConfigurationLayer, owner string) ([]data.DynamicConfiguration, error) {
+func (c *GortClient) DynamicConfigurationList(bundle string, layer data.ConfigurationLayer, owner, key string) ([]data.DynamicConfiguration, error) {
 	p := func(s string) string {
 		if s == "" {
 			return "*"
@@ -98,7 +88,7 @@ func (c *GortClient) DynamicConfigurationList(bundle string, layer data.Configur
 		}
 	}
 
-	url := fmt.Sprintf("%s/v2/configs/%s/%s/%s", c.profile.URL.String(), p(bundle), p(string(layer)), p(owner))
+	url := fmt.Sprintf("%s/v2/configs/%s/%s/%s/%s", c.profile.URL.String(), p(bundle), p(string(layer)), p(owner), p(key))
 	url = strings.TrimRight(url, "/")
 	resp, err := c.doRequest("GET", url, []byte{})
 	if err != nil {
@@ -126,7 +116,25 @@ func (c *GortClient) DynamicConfigurationList(bundle string, layer data.Configur
 
 // DynamicConfigurationSave
 func (c *GortClient) DynamicConfigurationSave(config data.DynamicConfiguration) error {
+	switch {
+	case config.Bundle == "":
+		return fmt.Errorf("dynamic configuration bundle is required")
+	case config.Layer == data.ConfigurationLayer(""):
+		return fmt.Errorf("dynamic configuration layer is required")
+	case config.Layer.Validate() != nil:
+		return config.Layer.Validate()
+	case config.Owner == "" && config.Layer != data.LayerBundle:
+		return fmt.Errorf("dynamic configuration owner is required for layer %s", config.Layer)
+	case config.Key == "":
+		return fmt.Errorf("dynamic configuration key is required")
+	}
+
+	if config.Owner == "" {
+		config.Owner = "-"
+	}
+
 	url := fmt.Sprintf("%s/v2/configs/%s/%s/%s/%s", c.profile.URL.String(), config.Bundle, config.Layer, config.Owner, config.Key)
+
 	bytes, err := json.Marshal(config)
 	if err != nil {
 		return err

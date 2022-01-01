@@ -26,13 +26,6 @@ const (
 	configLong  = "Read, write, or delete dynamic configurations."
 )
 
-var (
-	flagGortConfigLayer  string
-	flagGortConfigBundle string
-	flagGortConfigOwner  string
-	flagGortConfigKey    string
-)
-
 // GetConfigCmd config
 func GetConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -41,6 +34,8 @@ func GetConfigCmd() *cobra.Command {
 		Long:  configLong,
 	}
 
+	cmd.AddCommand(GetConfigDeleteCmd())
+	cmd.AddCommand(GetConfigGetCmd())
 	cmd.AddCommand(GetConfigSetCmd())
 
 	return cmd

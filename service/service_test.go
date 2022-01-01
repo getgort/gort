@@ -27,6 +27,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
@@ -77,7 +78,7 @@ func (r ResponseTester) WithOutput(out interface{}) ResponseTester {
 
 // Test sends a constructed request to the provided router and performs any
 // required checks on it.
-func (r ResponseTester) Test(t *testing.T, router *mux.Router) {
+func (r ResponseTester) Test(t *testing.T, router *mux.Router, msgAndArgs ...interface{}) {
 	t.Helper()
 
 	var bodyReader io.Reader = nil
@@ -97,20 +98,15 @@ func (r ResponseTester) Test(t *testing.T, router *mux.Router) {
 
 	resp := w.Result()
 	resBody, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err, msgAndArgs...)
 
 	if r.out != nil && json.Valid(resBody) {
 		err = json.Unmarshal(resBody, &r.out)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err, msgAndArgs...)
 	}
 
 	if r.expectedStatus != nil {
-		assert.Equal(t, *r.expectedStatus, resp.StatusCode)
+		assert.Equal(t, *r.expectedStatus, resp.StatusCode, msgAndArgs...)
 	}
 }
 

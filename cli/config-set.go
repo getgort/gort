@@ -18,6 +18,7 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data"
@@ -29,18 +30,30 @@ const (
 	configSetShort = "Set or update a configuration value"
 	configSetLong  = "Set or update a configuration value."
 
-// 	configSetUsage = `Usage:
-//    gort group set [flags] group_name user_name...
+	configSetUsage = `Set or update a configuration value.
 
-//  Flags:
-//    -h, --help   Show this message and exit
+Usage:
+gort config set [-b bundle] [-l layer] [-o owner] [-k key] [flags] config_value
 
-//  Global Flags:
-//    -P, --profile string   The Gort profile within the config file to use
-//  `
+Flags:
+-b, --bundle string   The bundle to configure (required)
+-h, --help            Show this message and exit
+-k, --key string      The name of the configuration
+-l, --layer string    One of: [bundle room group user] (default "bundle")
+-o, --owner string    The owning room, group, or user
+-s, --secret          Makes a configuration value secret
+
+Global Flags:
+-P, --profile string   The Gort profile within the config file to use`
 )
 
-var flagGortConfigSecret bool
+var (
+	flagGortConfigSetLayer  string
+	flagGortConfigSetBundle string
+	flagGortConfigSetOwner  string
+	flagGortConfigSetKey    string
+	flagGortConfigSetSecret bool
+)
 
 // GetConfigSetCmd is a command
 func GetConfigSetCmd() *cobra.Command {
@@ -52,13 +65,13 @@ func GetConfigSetCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	// cmd.SetUsageTemplate(configSetUsage)
+	cmd.SetUsageTemplate(configSetUsage)
 
-	cmd.Flags().StringVarP(&flagGortConfigLayer, "layer", "l", "bundle", "One of: [bundle room group user]")
-	cmd.Flags().StringVarP(&flagGortConfigBundle, "bundle", "b", "", "The bundle to configure")
-	cmd.Flags().StringVarP(&flagGortConfigOwner, "owner", "o", "", "The owning room, group, or user")
-	cmd.Flags().StringVarP(&flagGortConfigKey, "key", "k", "", "The name of the configuration")
-	cmd.Flags().BoolVarP(&flagGortConfigSecret, "secret", "s", false, "Makes a configuration value secret")
+	cmd.Flags().StringVarP(&flagGortConfigSetLayer, "layer", "l", "bundle", "One of: [bundle room group user]")
+	cmd.Flags().StringVarP(&flagGortConfigSetBundle, "bundle", "b", "", "The bundle to configure")
+	cmd.Flags().StringVarP(&flagGortConfigSetOwner, "owner", "o", "", "The owning room, group, or user")
+	cmd.Flags().StringVarP(&flagGortConfigSetKey, "key", "k", "", "The name of the configuration")
+	cmd.Flags().BoolVarP(&flagGortConfigSetSecret, "secret", "s", false, "Makes a configuration value secret")
 
 	return cmd
 }
@@ -67,12 +80,12 @@ func configSetCmd(cmd *cobra.Command, args []string) error {
 	value := args[0]
 
 	dc := data.DynamicConfiguration{
-		Bundle: flagGortConfigBundle,
-		Layer:  data.ConfigurationLayer(flagGortConfigLayer),
-		Owner:  flagGortConfigOwner,
-		Key:    flagGortConfigKey,
+		Bundle: flagGortConfigSetBundle,
+		Layer:  data.ConfigurationLayer(flagGortConfigSetLayer),
+		Owner:  flagGortConfigSetOwner,
+		Key:    flagGortConfigSetKey,
 		Value:  value,
-		Secret: flagGortConfigSecret,
+		Secret: flagGortConfigSetSecret,
 	}
 
 	switch {
@@ -93,12 +106,12 @@ func configSetCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	vs, err := gortClient.BundleListVersions(dc.Bundle)
+	_, err = gortClient.BundleListVersions(dc.Bundle)
 	if err != nil {
+		if cerr, ok := err.(client.Error); ok && cerr.Status() == http.StatusNoContent {
+			return fmt.Errorf("no such bundle installed: %s", dc.Bundle)
+		}
 		return err
-	}
-	if len(vs) == 0 {
-		return fmt.Errorf("no such bundle installed: %s", dc.Bundle)
 	}
 
 	err = gortClient.DynamicConfigurationSave(dc)
@@ -106,11 +119,18 @@ func configSetCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Configuration set: bundle=%q layer=%q owner=%q key=%q\n",
-		flagGortConfigBundle,
-		flagGortConfigLayer,
-		flagGortConfigOwner,
-		flagGortConfigKey)
+	if dc.Layer == data.LayerBundle {
+		fmt.Printf("Configuration set: bundle=%q layer=%q key=%q\n",
+			flagGortConfigSetBundle,
+			flagGortConfigSetLayer,
+			flagGortConfigSetKey)
+	} else {
+		fmt.Printf("Configuration set: bundle=%q layer=%q owner=%q key=%q\n",
+			flagGortConfigSetBundle,
+			flagGortConfigSetLayer,
+			flagGortConfigSetOwner,
+			flagGortConfigSetKey)
+	}
 
 	return err
 }
