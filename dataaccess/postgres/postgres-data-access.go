@@ -169,16 +169,10 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 		}
 	}
 
-	// Check whether the bundles table exists
-	exists, err = da.tableExists(ctx, "bundles", db)
+	// Upsert bundles tables to make sure it and related tables exist with appropriate columns
+	err = da.createBundlesTables(ctx, db)
 	if err != nil {
 		return err
-	}
-	if !exists {
-		err = da.createBundlesTables(ctx, db)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Check whether the bundles_kubernetes table exists
@@ -270,7 +264,7 @@ func (da PostgresDataAccess) connect(ctx context.Context, dbname string) (*sql.D
 func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB) error {
 	var err error
 
-	createBundlesQuery := `CREATE TABLE bundles (
+	createBundlesQuery := `CREATE TABLE IF NOT EXISTS bundles (
 		gort_bundle_version INT NOT NULL CHECK(gort_bundle_version > 0),
 		name				TEXT NOT NULL CHECK(name <> ''),
 		version				TEXT NOT NULL CHECK(version <> ''),
@@ -288,7 +282,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 
 	ALTER TABLE bundles ALTER COLUMN install_timestamp SET DEFAULT now();
 
-	CREATE TABLE bundle_enabled (
+	CREATE TABLE IF NOT EXISTS bundle_enabled (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		CONSTRAINT			unq_bundle_enabled UNIQUE(bundle_name),
@@ -297,7 +291,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		ON DELETE CASCADE
 	);
 
-	CREATE TABLE bundle_permissions (
+	CREATE TABLE IF NOT EXISTS bundle_permissions (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		index				INT NOT NULL CHECK(index >= 0),
@@ -308,7 +302,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		ON DELETE CASCADE
 	);
 
-	CREATE TABLE bundle_templates (
+	CREATE TABLE IF NOT EXISTS bundle_templates (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		command				TEXT,
@@ -321,7 +315,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		ON DELETE CASCADE
 	);
 
-	CREATE TABLE bundle_commands (
+	CREATE TABLE IF NOT EXISTS bundle_commands (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		name				TEXT NOT NULL CHECK(name <> ''),
@@ -334,7 +328,18 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		ON DELETE CASCADE
 	);
 
-	CREATE TABLE bundle_command_rules (
+	CREATE TABLE IF NOT EXISTS bundle_command_triggers (
+		bundle_name			TEXT NOT NULL,
+		bundle_version		TEXT NOT NULL,
+		command_name		TEXT NOT NULL,
+		match 				TEXT NOT NULL,
+		PRIMARY KEY			(bundle_name, bundle_version, command_name, match),
+		FOREIGN KEY 		(bundle_name, bundle_version, command_name)
+		REFERENCES 			bundle_commands(bundle_name, bundle_version, name)
+		ON DELETE CASCADE
+	);
+	
+	CREATE TABLE IF NOT EXISTS bundle_command_rules (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		command_name		TEXT NOT NULL,
@@ -345,7 +350,7 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, db *sql.DB
 		ON DELETE CASCADE
 	);
 
-	CREATE TABLE bundle_command_templates (
+	CREATE TABLE IF NOT EXISTS bundle_command_templates (
 		bundle_name			TEXT NOT NULL,
 		bundle_version		TEXT NOT NULL,
 		command_name		TEXT NOT NULL,
