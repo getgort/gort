@@ -18,7 +18,6 @@ package cli
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data"
@@ -99,12 +98,10 @@ func configDeleteCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_, err = gortClient.BundleListVersions(dc.Bundle)
-	if err != nil {
-		if cerr, ok := err.(client.Error); ok && cerr.Status() == http.StatusNoContent {
-			return fmt.Errorf("no such bundle installed: %s", dc.Bundle)
-		}
+	if exists, err := gortClient.BundleExists(dc.Bundle); err != nil {
 		return err
+	} else if !exists {
+		return fmt.Errorf("no such bundle installed: %s", dc.Bundle)
 	}
 
 	err = gortClient.DynamicConfigurationDelete(dc.Bundle, dc.Layer, dc.Owner, dc.Key)

@@ -47,7 +47,7 @@ func TestDeleteDynamicConfig(t *testing.T) {
 
 	NewResponseTester("DELETE", url).WithStatus(http.StatusOK).Test(t, router)
 
-	NewResponseTester("GET", url).WithStatus(http.StatusNotFound).Test(t, router)
+	NewResponseTester("GET", url).WithStatus(http.StatusNoContent).Test(t, router)
 }
 
 func TestGetDynamicConfigs(t *testing.T) {
@@ -93,7 +93,7 @@ func TestGetDynamicConfigs(t *testing.T) {
 		{
 			bundle:   "bundle-non-existent",
 			expected: []data.DynamicConfiguration{},
-			status:   http.StatusNotFound,
+			status:   http.StatusNoContent,
 		},
 		{
 			bundle:   "bundle-service-list",

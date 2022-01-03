@@ -18,7 +18,6 @@ package cli
 
 import (
 	"fmt"
-	"net/http"
 	"sort"
 
 	"github.com/getgort/gort/client"
@@ -86,12 +85,10 @@ func configGetCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_, err = gortClient.BundleListVersions(flagGortConfigGetBundle)
-	if err != nil {
-		if cerr, ok := err.(client.Error); ok && cerr.Status() == http.StatusNoContent {
-			return fmt.Errorf("no such bundle installed: %s", flagGortConfigGetBundle)
-		}
+	if exists, err := gortClient.BundleExists(flagGortConfigGetBundle); err != nil {
 		return err
+	} else if !exists {
+		return fmt.Errorf("no such bundle installed: %s", flagGortConfigGetBundle)
 	}
 
 	layer := data.ConfigurationLayer(flagGortConfigGetLayer)
@@ -104,7 +101,20 @@ func configGetCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sort.Sort(SortableConfigurations(cs))
+	sort.Slice(cs, func(i, j int) bool {
+		switch {
+		case cs[i].Bundle != cs[j].Bundle:
+			return cs[i].Bundle < cs[j].Bundle
+		case cs[i].Layer != cs[j].Layer:
+			return cs[i].Layer < cs[j].Layer
+		case cs[i].Owner != cs[j].Owner:
+			return cs[i].Owner < cs[j].Owner
+		case cs[i].Key != cs[j].Key:
+			return cs[i].Key < cs[j].Key
+		default:
+			return cs[i].Value < cs[j].Value
+		}
+	})
 
 	c := &Columnizer{}
 	c.StringColumn("BUNDLE", func(i int) string { return cs[i].Bundle })
@@ -128,29 +138,4 @@ func configGetCmd(cmd *cobra.Command, args []string) error {
 	c.Print(cs)
 
 	return err
-}
-
-type SortableConfigurations []data.DynamicConfiguration
-
-func (s SortableConfigurations) Len() int {
-	return len(s)
-}
-
-func (s SortableConfigurations) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s SortableConfigurations) Less(i, j int) bool {
-	switch {
-	case s[i].Bundle != s[j].Bundle:
-		return s[i].Bundle < s[j].Bundle
-	case s[i].Layer != s[j].Layer:
-		return s[i].Layer < s[j].Layer
-	case s[i].Owner != s[j].Owner:
-		return s[i].Owner < s[j].Owner
-	case s[i].Key != s[j].Key:
-		return s[i].Key < s[j].Key
-	default:
-		return s[i].Value < s[j].Value
-	}
 }
