@@ -714,3 +714,23 @@ func getGortBundleCommand(ctx context.Context, commandName string) (data.Bundle,
 
 	return bundle, *cmd, nil
 }
+
+// getUserByRequest gets the user associated with a request token.
+func getUserByRequest(r *http.Request) (rest.User, error) {
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		return rest.User{}, err
+	}
+
+	t := r.Header.Get("X-Session-Token")
+	if t == "" || !dataAccessLayer.TokenEvaluate(r.Context(), t) {
+		return rest.User{}, ErrUnauthorized
+	}
+
+	token, err := dataAccessLayer.TokenRetrieveByToken(r.Context(), t)
+	if err != nil {
+		return rest.User{}, err
+	}
+
+	return dataAccessLayer.UserGet(r.Context(), token.User)
+}
