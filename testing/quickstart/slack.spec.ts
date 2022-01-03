@@ -22,7 +22,7 @@ test.describe('quickstart', () => {
     // quickstart tests the flow described in the quickstart guide:
     //   https://guide.getgort.io/en/latest/sections/quickstart.html
     test('quickstart', async ({ page }) => {
-        test.setTimeout(5 * 60 * 1000);
+        test.setTimeout(2 * 60 * 1000);
 
         // 2.2 Create Your Config File (https://guide.getgort.io/en/latest/sections/quickstart.html#create-your-configuration-file)
         await createConfigFile();
