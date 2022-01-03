@@ -63,6 +63,21 @@ func handleDeleteDynamicConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if layer == data.LayerUser {
+		user, err := getUserByRequest(r)
+		if err != nil {
+			respondAndLogError(r.Context(), w, err)
+			return
+		}
+
+		if owner == "" {
+			owner = user.Username
+		} else if owner != user.Username {
+			respondAndLogError(r.Context(), w, ErrUnauthorized)
+			return
+		}
+	}
+
 	err = dc.Delete(r.Context(), layer, bundle, owner, key)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -101,7 +116,28 @@ func handleGetDynamicConfigs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(configs)
+	// Filter to ensure only the accessible configs are returned
+	user, err := getUserByRequest(r)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	var filtered []data.DynamicConfiguration
+
+	for _, c := range configs {
+		if c.Layer == data.LayerUser && c.Owner != user.Username {
+			continue
+		}
+
+		if c.Secret {
+			c.Value = ""
+		}
+
+		filtered = append(filtered, c)
+	}
+
+	json.NewEncoder(w).Encode(filtered)
 }
 
 // handlePutDynamicConfiguration handles "PUT /v2/configs/{bundle}/{layer}/{owner}/{key}"
@@ -123,6 +159,21 @@ func handlePutDynamicConfiguration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
+	}
+
+	if layer == data.LayerUser {
+		user, err := getUserByRequest(r)
+		if err != nil {
+			respondAndLogError(r.Context(), w, err)
+			return
+		}
+
+		if owner == "" {
+			owner = user.Username
+		} else if owner != user.Username {
+			respondAndLogError(r.Context(), w, ErrUnauthorized)
+			return
+		}
 	}
 
 	c.Layer = layer

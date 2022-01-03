@@ -29,9 +29,7 @@ const (
 	configDeleteShort = "Delete a configuration value"
 	configDeleteLong  = "Delete a configuration value."
 
-	configDeleteUsage = `Delete a configuration value.
-
- Usage:
+	configDeleteUsage = `Usage:
  gort config delete [-b bundle] [-l layer] [-o owner] [-k key]
 
  Flags:
@@ -82,15 +80,15 @@ func configDeleteCmd(cmd *cobra.Command, args []string) error {
 
 	switch {
 	case dc.Bundle == "":
-		return fmt.Errorf("dynamic configuration bundle is required")
+		return fmt.Errorf("dynamic configuration bundle (--bundle) is required")
 	case dc.Layer == data.ConfigurationLayer(""):
-		return fmt.Errorf("dynamic configuration layer is required")
+		return fmt.Errorf("dynamic configuration layer (--layer) is required")
 	case dc.Layer.Validate() != nil:
 		return dc.Layer.Validate()
 	case dc.Owner == "" && dc.Layer != data.LayerBundle:
-		return fmt.Errorf("dynamic configuration owner is required for layer %s", dc.Layer)
+		return fmt.Errorf("dynamic configuration owner (--owner) is required for layer %s", dc.Layer)
 	case dc.Key == "":
-		return fmt.Errorf("dynamic configuration key is required")
+		return fmt.Errorf("dynamic configuration key (--key) is required")
 	}
 
 	gortClient, err := client.Connect(FlagGortProfile)

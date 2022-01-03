@@ -28,12 +28,20 @@ import (
 
 const (
 	configGetUse   = "get"
-	configGetShort = "Get a non-secret configuration value"
-	configGetLong  = "Get a non-secret configuration value."
+	configGetShort = "Get non-secret configuration value(s)"
+	configGetLong  = `Get one or more non-secret configuration values.
 
-	configGetUsage = `Get a non-secret configuration value.
+Of the four config value flags available (--bundle, --layer, --owner, --key),
+only --bundle is required. Any flags that aren't explicitly set are treated
+as wildcards.
 
- Usage:
+Configurations with a "user" layer are treated specially: they're only visible
+by the owning user, or by a Gort administrator.
+
+Configurations set to "secret" cannot be retrieved.
+`
+
+	configGetUsage = `Usage:
  gort config get [-b bundle] [-l layer] [-o owner] [-k key] [flags]
 
  Flags:
@@ -42,7 +50,6 @@ const (
  -k, --key string      The name of the configuration
  -l, --layer string    One of: [bundle room group user] (default "bundle")
  -o, --owner string    The owning room, group, or user
- -s, --secret          Makes a configuration value secret
 
  Global Flags:
  -P, --profile string   The Gort profile within the config file to use`
@@ -77,7 +84,7 @@ func GetConfigGetCmd() *cobra.Command {
 
 func configGetCmd(cmd *cobra.Command, args []string) error {
 	if flagGortConfigGetBundle == "" {
-		return fmt.Errorf("dynamic configuration bundle is required")
+		return fmt.Errorf("dynamic configuration bundle (--bundle) is required")
 	}
 
 	gortClient, err := client.Connect(FlagGortProfile)

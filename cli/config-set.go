@@ -18,7 +18,6 @@ package cli
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data"
@@ -27,24 +26,26 @@ import (
 
 const (
 	configSetUse   = "set"
-	configSetShort = "Set or update a configuration value"
-	configSetLong  = "Set or update a configuration value."
+	configSetShort = "Set or update a dynamic configuration value"
+	configSetLong  = `Set or update a dynamic configuration value, which can be injected into
+commands' environments at execution time with the same name as the key.
 
-	configSetUsage = `Set or update a configuration value.
+Dynamic configuration keys may not start with "GORT_".`
 
-Usage:
-gort config set [-b bundle] [-l layer] [-o owner] [-k key] [flags] config_value
+	configSetUsage = `Usage:
+ gort config set [-b bundle] [-l layer] [-o owner] [-k key] [-s secret] [flags] config_value
 
-Flags:
--b, --bundle string   The bundle to configure (required)
--h, --help            Show this message and exit
--k, --key string      The name of the configuration
--l, --layer string    One of: [bundle room group user] (default "bundle")
--o, --owner string    The owning room, group, or user
--s, --secret          Makes a configuration value secret
+ Flags:
+ -b, --bundle string   The bundle to configure (required)
+ -h, --help            Show this message and exit
+ -k, --key string      The name of the configuration
+ -l, --layer string    One of: [bundle room group user] (default "bundle")
+ -o, --owner string    The owning room, group, or user
+ -s, --secret          Makes a configuration value secret
 
-Global Flags:
--P, --profile string   The Gort profile within the config file to use`
+ Global Flags:
+ -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 var (
@@ -90,15 +91,15 @@ func configSetCmd(cmd *cobra.Command, args []string) error {
 
 	switch {
 	case dc.Bundle == "":
-		return fmt.Errorf("dynamic configuration bundle is required")
+		return fmt.Errorf("dynamic configuration bundle (--bundle) is required")
 	case dc.Layer == data.ConfigurationLayer(""):
-		return fmt.Errorf("dynamic configuration layer is required")
+		return fmt.Errorf("dynamic configuration layer (--layer) is required")
 	case dc.Layer.Validate() != nil:
 		return dc.Layer.Validate()
 	case dc.Owner == "" && dc.Layer != data.LayerBundle:
-		return fmt.Errorf("dynamic configuration owner is required for layer %s", dc.Layer)
+		return fmt.Errorf("dynamic configuration owner (--owner) is required for layer %s", dc.Layer)
 	case dc.Key == "":
-		return fmt.Errorf("dynamic configuration key is required")
+		return fmt.Errorf("dynamic configuration key (--key) is required")
 	}
 
 	gortClient, err := client.Connect(FlagGortProfile)
@@ -106,12 +107,10 @@ func configSetCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_, err = gortClient.BundleListVersions(dc.Bundle)
-	if err != nil {
-		if cerr, ok := err.(client.Error); ok && cerr.Status() == http.StatusNoContent {
-			return fmt.Errorf("no such bundle installed: %s", dc.Bundle)
-		}
+	if exists, err := gortClient.BundleExists(dc.Bundle); err != nil {
 		return err
+	} else if !exists {
+		return fmt.Errorf("no such bundle installed: %s", dc.Bundle)
 	}
 
 	err = gortClient.DynamicConfigurationSave(dc)

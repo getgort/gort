@@ -57,7 +57,7 @@ func TestGetDynamicConfigs(t *testing.T) {
 		{Bundle: "bundle-service-list", Layer: data.LayerRoom, Owner: "foo", Key: "username", Value: "one"},
 		{Bundle: "bundle-service-list", Layer: data.LayerRoom, Owner: "foo", Key: "password", Value: "two"},
 		{Bundle: "bundle-service-list", Layer: data.LayerRoom, Owner: "bar", Key: "username", Value: "three"},
-		{Bundle: "bundle-service-list", Layer: data.LayerUser, Owner: "bar", Key: "username", Value: "four"},
+		{Bundle: "bundle-service-list", Layer: data.LayerGroup, Owner: "bar", Key: "username", Value: "four"},
 	}
 
 	for _, dc := range dcs {
@@ -108,7 +108,7 @@ func TestGetDynamicConfigs(t *testing.T) {
 		},
 		{
 			bundle:   "bundle-service-list",
-			layer:    data.LayerUser,
+			layer:    data.LayerGroup,
 			expected: []data.DynamicConfiguration{dcs[3]},
 			status:   http.StatusOK,
 		},
