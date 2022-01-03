@@ -42,7 +42,8 @@ type DataAccess interface {
 	BundleDisable(ctx context.Context, name string, version string) error
 	BundleEnable(ctx context.Context, name string, version string) error
 	BundleEnabledVersion(ctx context.Context, name string) (string, error)
-	BundleExists(ctx context.Context, name string, version string) (bool, error)
+	BundleExists(ctx context.Context, name string) (bool, error)
+	BundleVersionExists(ctx context.Context, name string, version string) (bool, error)
 	BundleGet(ctx context.Context, name string, version string) (data.Bundle, error)
 	BundleList(ctx context.Context) ([]data.Bundle, error)
 	BundleVersionList(ctx context.Context, name string) ([]data.Bundle, error)

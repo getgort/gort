@@ -54,6 +54,29 @@ func handleGetBundles(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(bundles)
 }
 
+// handleHeadBundles handles "HEAD /v2/bundles"
+func handleHeadBundles(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	name := params["name"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	exists, err := dataAccessLayer.BundleExists(r.Context(), name)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	} else if !exists {
+		http.Error(w, "No such bundle found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(true)
+}
+
 // handleGetBundleVersions handles "GET /v2/bundles/{name}/versions"
 func handleGetBundleVersions(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -117,6 +140,30 @@ func handleGetBundleVersion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(bundle)
 }
 
+// handleHeadBundleVersion handles "HEAD /v2/bundles/{name}/versions/{version}"
+func handleHeadBundleVersion(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	name := params["name"]
+	version := params["version"]
+
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	exists, err := dataAccessLayer.BundleVersionExists(r.Context(), name, version)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	} else if !exists {
+		http.Error(w, "No such bundle found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(true)
+}
+
 // handlePatchBundleVersion handles "PATCH /v2/bundles/{name}/versions/{version}"
 func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 	var err error
@@ -146,7 +193,7 @@ func handlePatchBundleVersion(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	exists, err := dataAccessLayer.BundleExists(r.Context(), name, version)
+	exists, err := dataAccessLayer.BundleVersionExists(r.Context(), name, version)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -234,10 +281,12 @@ func getAllBundles(ctx context.Context) ([]data.Bundle, error) {
 func addBundleMethodsToRouter(router *mux.Router) {
 	router.Handle("/v2/bundles", otelhttp.NewHandler(authCommand(handleGetBundles, "help"), "handleGetBundles")).Methods("GET")
 
+	router.Handle("/v2/bundles/{name}", otelhttp.NewHandler(authCommand(handleHeadBundles, "bundle", "info"), "handleHeadBundles")).Methods("HEAD")
 	router.Handle("/v2/bundles/{name}", otelhttp.NewHandler(authCommand(handleGetBundleVersions, "bundle", "info"), "handleGetBundleVersions")).Methods("GET")
 	router.Handle("/v2/bundles/{name}/versions", otelhttp.NewHandler(authCommand(handleGetBundleVersions, "bundle", "list"), "handleGetBundleVersions")).Methods("GET")
 
 	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handleGetBundleVersion, "bundle", "info"), "handleGetBundleVersion")).Methods("GET")
+	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handleHeadBundleVersion, "bundle", "info"), "handleHeadBundleVersion")).Methods("HEAD")
 	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handlePutBundleVersion, "bundle", "install"), "handlePutBundleVersion")).Methods("PUT")
 	router.Handle("/v2/bundles/{name}/versions/{version}", otelhttp.NewHandler(authCommand(handleDeleteBundleVersion, "bundle", "install"), "handleDeleteBundleVersion")).Methods("DELETE")
 

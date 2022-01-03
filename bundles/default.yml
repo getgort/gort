@@ -142,6 +142,8 @@ commands:
       Flags:
         -h, --help    help for version
         -s, --short   Print only the version number
+    triggers: 
+      - match: gort version
     executable: [ "/bin/gort", "version" ]
     rules:
       - allow
