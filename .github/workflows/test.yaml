@@ -35,6 +35,6 @@ jobs:
       - name: Test
         run: npx playwright test testing/quickstart/slack.spec.ts
         env:
-          SLACK_WORKSPACE: ${{ secrets.SlackWorkspace }}
-          SLACK_EMAIL: ${{ secrets.SlackEmail }}
-          SLACK_PASSWORD: ${{ secrets.SlackPassword }}
+          SLACK_WORKSPACE: ${{ secrets.SLACK_WORKSPACE }}
+          SLACK_EMAIL: ${{ secrets.SLACK_EMAIL }}
+          SLACK_PASSWORD: ${{ secrets.SLACK_PASSWORD }}
