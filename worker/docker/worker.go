@@ -39,6 +39,7 @@ import (
 type ContainerWorker struct {
 	command           data.CommandRequest
 	commandParameters []string
+	configs           map[string]string
 	containerID       string
 	dockerClient      *client.Client
 	dockerHost        string
@@ -67,6 +68,7 @@ func New(command data.CommandRequest, token rest.Token) (*ContainerWorker, error
 	return &ContainerWorker{
 		command:           command,
 		commandParameters: params,
+		configs:           map[string]string{},
 		dockerClient:      dcli,
 		dockerHost:        config.GetDockerConfigs().DockerHost,
 		entryPoint:        entrypoint,
@@ -74,6 +76,16 @@ func New(command data.CommandRequest, token rest.Token) (*ContainerWorker, error
 		imageName:         command.Bundle.ImageFull(),
 		token:             token,
 	}, nil
+}
+
+func (w *ContainerWorker) Initialize(dc []data.DynamicConfiguration) {
+	for _, c := range dc {
+		key := fmt.Sprintf("%s_%s", c.Bundle, c.Key)
+		key = strings.ToUpper(key)
+		key = strings.ReplaceAll(key, "-", "_")
+
+		w.configs[key] = c.Value
+	}
 }
 
 // Start triggers a worker to run a container according to its settings.
@@ -225,6 +237,10 @@ func (w *ContainerWorker) Stopped() <-chan int64 {
 
 func (w *ContainerWorker) envVars() []string {
 	env := []string{}
+
+	for k, v := range w.configs {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
 
 	vars := map[string]string{
 		`GORT_ADAPTER`:       w.command.Adapter,

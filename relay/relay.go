@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -78,6 +79,60 @@ func SpawnWorker(ctx context.Context, command data.CommandRequest) (worker.Worke
 	}
 
 	return worker.New(command, token)
+}
+
+func loadDynamicConfigurations(ctx context.Context, command data.CommandRequest) ([]data.DynamicConfiguration, error) {
+	fmt.Println("BUNDLE:", command.Bundle.Name)
+	fmt.Println("USER:", command.UserName)
+	fmt.Println("ROOM:", command.ChannelID)
+
+	da, err := dataaccess.Get()
+	if err != nil {
+		return configs, err
+	}
+
+	var bundleLayer, roomLayer, userLayer []data.DynamicConfiguration
+	var configs []data.DynamicConfiguration
+	var errs = make(chan error, 3)
+
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		dc, err := da.DynamicConfigurationList(ctx, data.LayerBundle, command.Bundle.Name, "", "")
+		if err != nil {
+			errs <- err
+			return
+		}
+		bundleLayer = dc
+	}()
+
+	go func() {
+		defer wg.Done()
+		dc, err := da.DynamicConfigurationList(ctx, data.LayerRoom, command.Bundle.Name, command.ChannelID, "")
+		if err != nil {
+			errs <- err
+			return
+		}
+		roomLayer = dc
+	}()
+
+	go func() {
+		defer wg.Done()
+		dc, err := da.DynamicConfigurationList(ctx, data.LayerUser, command.Bundle.Name, command.UserName, "")
+		if err != nil {
+			errs <- err
+			return
+		}
+		userLayer = dc
+	}()
+
+	wg.Wait()
+
+	if err = <-errs; err != nil {
+		return configs, err
+	}
 }
 
 // getUser is just a convenience function for interacting with the DAL.

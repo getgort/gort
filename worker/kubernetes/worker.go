@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/getgort/gort/config"
@@ -43,6 +44,7 @@ type KubernetesWorker struct {
 	clientset         *kubernetes.Clientset
 	command           data.CommandRequest
 	commandParameters []string
+	configs           map[string]string
 	entryPoint        []string
 	exitStatus        chan int64
 	imageName         string
@@ -72,6 +74,7 @@ func New(command data.CommandRequest, token rest.Token) (*KubernetesWorker, erro
 		clientset:         clientset,
 		command:           command,
 		commandParameters: params,
+		configs:           map[string]string{},
 		entryPoint:        entrypoint,
 		exitStatus:        make(chan int64, 1),
 		imageName:         command.Bundle.ImageFull(),
@@ -79,6 +82,16 @@ func New(command data.CommandRequest, token rest.Token) (*KubernetesWorker, erro
 	}
 
 	return w, nil
+}
+
+func (w *KubernetesWorker) Initialize(dc []data.DynamicConfiguration) {
+	for _, c := range dc {
+		key := fmt.Sprintf("%s_%s", c.Bundle, c.Key)
+		key = strings.ToUpper(key)
+		key = strings.ReplaceAll(key, "-", "_")
+
+		w.configs[key] = c.Value
+	}
 }
 
 // Start triggers a worker to run a Kubernetes Job. It returns a string
@@ -245,6 +258,12 @@ func (w *KubernetesWorker) envVars(ctx context.Context) ([]corev1.EnvVar, error)
 		return nil, err
 	}
 
+	var env []corev1.EnvVar
+
+	for k, v := range w.configs {
+		env = append(env, corev1.EnvVar{Name: k, Value: v})
+	}
+
 	vars := map[string]string{
 		`GORT_ADAPTER`:       w.command.Adapter,
 		`GORT_BUNDLE`:        w.command.Bundle.Name,
@@ -256,8 +275,6 @@ func (w *KubernetesWorker) envVars(ctx context.Context) ([]corev1.EnvVar, error)
 		`GORT_SERVICES_ROOT`: fmt.Sprintf("%s:%d", gortIP, gortPort),
 		`GORT_USER`:          w.command.UserName,
 	}
-
-	var env []corev1.EnvVar
 
 	for k, v := range vars {
 		env = append(env, corev1.EnvVar{Name: k, Value: v})
