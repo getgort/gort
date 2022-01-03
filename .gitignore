@@ -27,3 +27,7 @@ development.yml
 
 # Our own binary, of course
 gort
+
+# Node for Playwright scripts
+node_modules
+test-results

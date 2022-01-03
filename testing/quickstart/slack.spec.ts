@@ -10,6 +10,10 @@ const slackEmail = process.env.SLACK_EMAIL;
 const slackPassword = process.env.SLACK_PASSWORD;
 
 test.describe('quickstart', () => {
+    test.use({
+        screenshot: 'only-on-failure',
+    });
+
     test.afterAll(async () => {
         // Shut down any existing docker-compose runs
         await shell("docker-compose", ["down"]);

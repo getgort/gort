@@ -38,3 +38,8 @@ jobs:
           SLACK_WORKSPACE: ${{ secrets.SLACK_WORKSPACE }}
           SLACK_EMAIL: ${{ secrets.SLACK_EMAIL }}
           SLACK_PASSWORD: ${{ secrets.SLACK_PASSWORD }}
+      - name: Save Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: test-results/
