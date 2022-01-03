@@ -507,6 +507,8 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		log.WithError(err).WithField("status", status).Info(msg)
 
 	// Nope
+	case gerrs.Is(err, errs.ErrConfigIllegal):
+		fallthrough
 	case gerrs.Is(err, errs.ErrAdminUndeletable):
 		status = http.StatusForbidden
 		log.WithError(err).WithField("status", status).Warn(msg)

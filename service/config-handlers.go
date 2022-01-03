@@ -19,11 +19,13 @@ package service
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/getgort/gort/dynamic"
 	gerrs "github.com/getgort/gort/errors"
 )
@@ -174,6 +176,11 @@ func handlePutDynamicConfiguration(w http.ResponseWriter, r *http.Request) {
 			respondAndLogError(r.Context(), w, ErrUnauthorized)
 			return
 		}
+	}
+
+	if strings.HasPrefix(key, "GORT_") {
+		respondAndLogError(r.Context(), w, errs.ErrConfigIllegal)
+		return
 	}
 
 	c.Layer = layer

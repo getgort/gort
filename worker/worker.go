@@ -30,6 +30,7 @@ import (
 
 // Worker represents a container executor. It has a lifetime of a single command execution.
 type Worker interface {
+	Initialize([]data.DynamicConfiguration)
 	Start(ctx context.Context) (<-chan string, error)
 	Stop(ctx context.Context, timeout *time.Duration)
 	Stopped() <-chan int64
