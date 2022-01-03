@@ -66,7 +66,7 @@ func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundl
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	exists, err := da.doBundleExists(ctx, tx, bundle.Name, bundle.Version)
+	exists, err := da.doBundleVersionExists(ctx, tx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	} else if exists {
@@ -142,7 +142,7 @@ func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version str
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	exists, err := da.doBundleExists(ctx, tx, name, version)
+	exists, err := da.doBundleVersionExists(ctx, tx, name, version)
 	if err != nil {
 		return err
 	} else if !exists {
@@ -268,7 +268,7 @@ func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, bundlenam
 }
 
 // BundleExists TBD
-func (da PostgresDataAccess) BundleExists(ctx context.Context, name, version string) (bool, error) {
+func (da PostgresDataAccess) BundleExists(ctx context.Context, name string) (bool, error) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "postgres.BundleExists")
 	defer sp.End()
@@ -284,7 +284,27 @@ func (da PostgresDataAccess) BundleExists(ctx context.Context, name, version str
 		return false, gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	return da.doBundleExists(ctx, tx, name, version)
+	return da.doBundleExists(ctx, tx, name)
+}
+
+// BundleVersionExists TBD
+func (da PostgresDataAccess) BundleVersionExists(ctx context.Context, name, version string) (bool, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(ctx, "postgres.BundleVersionExists")
+	defer sp.End()
+
+	db, err := da.connect(ctx, "gort")
+	if err != nil {
+		return false, err
+	}
+	defer db.Close()
+
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return false, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return da.doBundleVersionExists(ctx, tx, name, version)
 }
 
 // BundleGet TBD
@@ -403,7 +423,7 @@ func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundl
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
-	exists, err := da.doBundleExists(ctx, tx, bundle.Name, bundle.Version)
+	exists, err := da.doBundleVersionExists(ctx, tx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	} else if !exists {
@@ -612,7 +632,20 @@ func (da PostgresDataAccess) doBundleEnabledVersion(ctx context.Context, tx *sql
 }
 
 // BundleExists TBD
-func (da PostgresDataAccess) doBundleExists(ctx context.Context, tx *sql.Tx, name string, version string) (bool, error) {
+func (da PostgresDataAccess) doBundleExists(ctx context.Context, tx *sql.Tx, name string) (bool, error) {
+	query := "SELECT EXISTS(SELECT 1 FROM bundles WHERE name=$1)"
+	exists := false
+
+	err := tx.QueryRowContext(ctx, query, name).Scan(&exists)
+	if err != nil {
+		return false, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return exists, nil
+}
+
+// BundleVersionExists TBD
+func (da PostgresDataAccess) doBundleVersionExists(ctx context.Context, tx *sql.Tx, name string, version string) (bool, error) {
 	query := "SELECT EXISTS(SELECT 1 FROM bundles WHERE name=$1 AND version=$2)"
 	exists := false
 
