@@ -80,11 +80,7 @@ func New(command data.CommandRequest, token rest.Token) (*ContainerWorker, error
 
 func (w *ContainerWorker) Initialize(dc []data.DynamicConfiguration) {
 	for _, c := range dc {
-		key := fmt.Sprintf("%s_%s", c.Bundle, c.Key)
-		key = strings.ToUpper(key)
-		key = strings.ReplaceAll(key, "-", "_")
-
-		w.configs[key] = c.Value
+		w.configs[c.Key] = c.Value
 	}
 }
 

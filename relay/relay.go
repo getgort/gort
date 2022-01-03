@@ -81,60 +81,6 @@ func SpawnWorker(ctx context.Context, command data.CommandRequest) (worker.Worke
 	return worker.New(command, token)
 }
 
-func loadDynamicConfigurations(ctx context.Context, command data.CommandRequest) ([]data.DynamicConfiguration, error) {
-	fmt.Println("BUNDLE:", command.Bundle.Name)
-	fmt.Println("USER:", command.UserName)
-	fmt.Println("ROOM:", command.ChannelID)
-
-	da, err := dataaccess.Get()
-	if err != nil {
-		return configs, err
-	}
-
-	var bundleLayer, roomLayer, userLayer []data.DynamicConfiguration
-	var configs []data.DynamicConfiguration
-	var errs = make(chan error, 3)
-
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-
-	go func() {
-		defer wg.Done()
-		dc, err := da.DynamicConfigurationList(ctx, data.LayerBundle, command.Bundle.Name, "", "")
-		if err != nil {
-			errs <- err
-			return
-		}
-		bundleLayer = dc
-	}()
-
-	go func() {
-		defer wg.Done()
-		dc, err := da.DynamicConfigurationList(ctx, data.LayerRoom, command.Bundle.Name, command.ChannelID, "")
-		if err != nil {
-			errs <- err
-			return
-		}
-		roomLayer = dc
-	}()
-
-	go func() {
-		defer wg.Done()
-		dc, err := da.DynamicConfigurationList(ctx, data.LayerUser, command.Bundle.Name, command.UserName, "")
-		if err != nil {
-			errs <- err
-			return
-		}
-		userLayer = dc
-	}()
-
-	wg.Wait()
-
-	if err = <-errs; err != nil {
-		return configs, err
-	}
-}
-
 // getUser is just a convenience function for interacting with the DAL.
 func getUser(ctx context.Context, username string) (rest.User, error) {
 	da, err := dataaccess.Get()
@@ -225,9 +171,109 @@ func handleRequest(ctx context.Context, request data.CommandRequest) data.Comman
 		return envelope
 	}
 
+	dc, err := loadDynamicConfigurations(ctx, request)
+
+	if err != nil {
+		envelope = data.NewCommandResponseEnvelope(
+			request,
+			data.WithError("Failed to load dynamic configurations", err, ExitSystemErr),
+		)
+		return envelope
+	}
+
+	worker.Initialize(dc)
+
 	envelope = runWorker(ctx, worker, request)
 
 	return envelope
+}
+
+func loadDynamicConfigurations(ctx context.Context, command data.CommandRequest) ([]data.DynamicConfiguration, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	_, sp := tr.Start(ctx, "relay.loadDynamicConfigurations")
+	defer sp.End()
+
+	da, err := dataaccess.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	groups, err := da.UserGroupList(ctx, command.UserName)
+	if err != nil {
+		return nil, err
+	}
+
+	var results = make(chan []data.DynamicConfiguration, 3+len(groups))
+	var errs = make(chan error, 3+len(groups))
+
+	wg := sync.WaitGroup{}
+	wg.Add(3 + len(groups))
+
+	go func() {
+		defer wg.Done()
+		dc, err := da.DynamicConfigurationList(ctx, data.LayerBundle, command.Bundle.Name, "", "")
+		if err != nil {
+			errs <- err
+			cancel()
+			return
+		}
+		results <- dc
+	}()
+
+	go func() {
+		defer wg.Done()
+		dc, err := da.DynamicConfigurationList(ctx, data.LayerRoom, command.Bundle.Name, command.ChannelID, "")
+		if err != nil {
+			errs <- err
+			cancel()
+			return
+		}
+		results <- dc
+	}()
+
+	go func() {
+		defer wg.Done()
+		dc, err := da.DynamicConfigurationList(ctx, data.LayerUser, command.Bundle.Name, command.UserName, "")
+		if err != nil {
+			errs <- err
+			cancel()
+			return
+		}
+		results <- dc
+	}()
+
+	for _, g := range groups {
+		go func(g rest.Group) {
+			defer wg.Done()
+			dc, err := da.DynamicConfigurationList(ctx, data.LayerGroup, g.Name, "", "")
+			if err != nil {
+				errs <- err
+				cancel()
+				return
+			}
+			results <- dc
+		}(g)
+	}
+
+	wg.Wait()
+
+	close(results)
+	close(errs)
+
+	if err = <-errs; err != nil {
+		return nil, err
+	}
+
+	var configs []data.DynamicConfiguration
+
+	for dc := range results {
+		configs = append(configs, dc...)
+	}
+
+	return configs, nil
 }
 
 // runWorker is called by handleRequest to do the work of starting an

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/getgort/gort/config"
@@ -86,11 +85,7 @@ func New(command data.CommandRequest, token rest.Token) (*KubernetesWorker, erro
 
 func (w *KubernetesWorker) Initialize(dc []data.DynamicConfiguration) {
 	for _, c := range dc {
-		key := fmt.Sprintf("%s_%s", c.Bundle, c.Key)
-		key = strings.ToUpper(key)
-		key = strings.ReplaceAll(key, "-", "_")
-
-		w.configs[key] = c.Value
+		w.configs[c.Key] = c.Value
 	}
 }
 

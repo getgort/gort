@@ -31,3 +31,5 @@ var ErrEmptyConfigOwner = errors.New("dynamic configuration owner name is empty"
 var ErrEmptyConfigKey = errors.New("dynamic configuration key is empty")
 
 var ErrNoSuchConfig = errors.New("no such dynamic configuration")
+
+var ErrConfigIllegal = errors.New("dynamic configurations cannot start with GORT_")

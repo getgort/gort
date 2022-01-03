@@ -133,7 +133,7 @@ func generateLookupKey(layer data.ConfigurationLayer, bundle, owner, key string)
 		return "", errs.ErrEmptyConfigBundle
 	case layer == "":
 		return "", errs.ErrEmptyConfigLayer
-	case owner == "":
+	case owner == "" && layer != data.LayerBundle:
 		return "", errs.ErrEmptyConfigOwner
 	case key == "":
 		return "", errs.ErrEmptyConfigKey
