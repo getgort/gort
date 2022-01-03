@@ -31,6 +31,10 @@ jobs:
         with:
           node-version: '16.4.x'
       - name: Install
-        run: npm install -g wait-port
+        run: npm install && npx playwright install
       - name: Test
-        run: ${GITHUB_WORKSPACE}/.github/workflows/quickstart.sh
+        run: npx playwright test testing/quickstart/slack.spec.ts
+        env:
+          SLACK_WORKSPACE: ${{ secrets.SlackWorkspace }}
+          SLACK_EMAIL: ${{ secrets.SlackEmail }}
+          SLACK_PASSWORD: ${{ secrets.SlackPassword }}
