@@ -35,6 +35,7 @@ func (da DataAccessTester) testBundleAccess(t *testing.T) {
 	t.Run("testBundleEnable", da.testBundleEnable)
 	t.Run("testBundleEnableTwo", da.testBundleEnableTwo)
 	t.Run("testBundleExists", da.testBundleExists)
+	t.Run("testBundleVersionExists", da.testBundleVersionExists)
 	t.Run("testBundleDelete", da.testBundleDelete)
 	t.Run("testBundleDeleteDoesntDisable", da.testBundleDeleteDoesntDisable)
 	t.Run("testBundleGet", da.testBundleGet)
@@ -193,9 +194,9 @@ func (da DataAccessTester) testBundleExists(t *testing.T) {
 
 	bundle, err := getTestBundle()
 	assert.NoError(t, err)
-	bundle.Name = "test-exists"
+	bundle.Name = "test-exists-version"
 
-	exists, _ = da.BundleExists(da.ctx, bundle.Name, bundle.Version)
+	exists, _ = da.BundleExists(da.ctx, bundle.Name)
 	if exists {
 		t.Error("Bundle should not exist now")
 		t.FailNow()
@@ -205,7 +206,31 @@ func (da DataAccessTester) testBundleExists(t *testing.T) {
 	defer da.BundleDelete(da.ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 
-	exists, _ = da.BundleExists(da.ctx, bundle.Name, bundle.Version)
+	exists, _ = da.BundleExists(da.ctx, bundle.Name)
+	if !exists {
+		t.Error("Bundle should exist now")
+		t.FailNow()
+	}
+}
+
+func (da DataAccessTester) testBundleVersionExists(t *testing.T) {
+	var exists bool
+
+	bundle, err := getTestBundle()
+	assert.NoError(t, err)
+	bundle.Name = "test-exists"
+
+	exists, _ = da.BundleVersionExists(da.ctx, bundle.Name, bundle.Version)
+	if exists {
+		t.Error("Bundle should not exist now")
+		t.FailNow()
+	}
+
+	err = da.BundleCreate(da.ctx, bundle)
+	defer da.BundleDelete(da.ctx, bundle.Name, bundle.Version)
+	assert.NoError(t, err)
+
+	exists, _ = da.BundleVersionExists(da.ctx, bundle.Name, bundle.Version)
 	if !exists {
 		t.Error("Bundle should exist now")
 		t.FailNow()
@@ -236,7 +261,7 @@ func (da DataAccessTester) testBundleDelete(t *testing.T) {
 	err = da.BundleDelete(da.ctx, bundle.Name, bundle.Version)
 	assert.NoError(t, err)
 
-	exists, _ := da.BundleExists(da.ctx, bundle.Name, bundle.Version)
+	exists, _ := da.BundleVersionExists(da.ctx, bundle.Name, bundle.Version)
 	if exists {
 		t.Error("Shouldn't exist anymore!")
 		t.FailNow()
@@ -300,7 +325,7 @@ func (da DataAccessTester) testBundleGet(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test bundle should now exist in the data store.
-	exists, _ := da.BundleExists(da.ctx, bundleCreate.Name, bundleCreate.Version)
+	exists, _ := da.BundleVersionExists(da.ctx, bundleCreate.Name, bundleCreate.Version)
 	if !exists {
 		t.Error("Bundle should exist now, but it doesn't")
 		t.FailNow()
