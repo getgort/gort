@@ -41,13 +41,13 @@ func TestDeleteDynamicConfig(t *testing.T) {
 
 	NewResponseTester("PUT", url).WithBody(dc).WithStatus(http.StatusOK).Test(t, router)
 
-	output := data.DynamicConfiguration{}
+	output := []data.DynamicConfiguration{}
 	NewResponseTester("GET", url).WithOutput(&output).WithStatus(http.StatusOK).Test(t, router)
-	assert.Equal(t, dc, output)
+	assert.Equal(t, []data.DynamicConfiguration{dc}, output)
 
 	NewResponseTester("DELETE", url).WithStatus(http.StatusOK).Test(t, router)
 
-	NewResponseTester("GET", url).WithStatus(http.StatusNotFound).Test(t, router)
+	NewResponseTester("GET", url).WithStatus(http.StatusNoContent).Test(t, router)
 }
 
 func TestGetDynamicConfigs(t *testing.T) {
@@ -57,7 +57,7 @@ func TestGetDynamicConfigs(t *testing.T) {
 		{Bundle: "bundle-service-list", Layer: data.LayerRoom, Owner: "foo", Key: "username", Value: "one"},
 		{Bundle: "bundle-service-list", Layer: data.LayerRoom, Owner: "foo", Key: "password", Value: "two"},
 		{Bundle: "bundle-service-list", Layer: data.LayerRoom, Owner: "bar", Key: "username", Value: "three"},
-		{Bundle: "bundle-service-list", Layer: data.LayerUser, Owner: "bar", Key: "username", Value: "four"},
+		{Bundle: "bundle-service-list", Layer: data.LayerGroup, Owner: "bar", Key: "username", Value: "four"},
 	}
 
 	for _, dc := range dcs {
@@ -69,6 +69,7 @@ func TestGetDynamicConfigs(t *testing.T) {
 		bundle   string
 		layer    data.ConfigurationLayer
 		owner    string
+		key      string
 		expected []data.DynamicConfiguration
 		status   int
 	}{
@@ -80,12 +81,19 @@ func TestGetDynamicConfigs(t *testing.T) {
 			bundle: "*",
 			layer:  data.LayerRoom,
 			owner:  "foo",
+			key:    "username",
+			status: http.StatusExpectationFailed,
+		},
+		{
+			bundle: "*",
+			layer:  data.LayerRoom,
+			owner:  "foo",
 			status: http.StatusExpectationFailed,
 		},
 		{
 			bundle:   "bundle-non-existent",
 			expected: []data.DynamicConfiguration{},
-			status:   http.StatusOK,
+			status:   http.StatusNoContent,
 		},
 		{
 			bundle:   "bundle-service-list",
@@ -100,7 +108,7 @@ func TestGetDynamicConfigs(t *testing.T) {
 		},
 		{
 			bundle:   "bundle-service-list",
-			layer:    data.LayerUser,
+			layer:    data.LayerGroup,
 			expected: []data.DynamicConfiguration{dcs[3]},
 			status:   http.StatusOK,
 		},
@@ -125,35 +133,23 @@ func TestGetDynamicConfigs(t *testing.T) {
 			expected: []data.DynamicConfiguration{dcs[2], dcs[3]},
 			status:   http.StatusOK,
 		},
+		{
+			bundle:   "bundle-service-list",
+			layer:    data.LayerRoom,
+			owner:    "foo",
+			key:      "username",
+			expected: []data.DynamicConfiguration{dcs[0]},
+			status:   http.StatusOK,
+		},
 	}
 
-	const msg = "Index=%d Layer=%q Bundle=%q Owner=%q"
+	const msg = "Index=%d Layer=%q Bundle=%q Owner=%q Key=%q"
 	for i, test := range tests {
-		url := fmt.Sprintf("http://example.com/v2/configs/%s/%s/%s", test.bundle, test.layer, test.owner)
+		url := fmt.Sprintf("http://example.com/v2/configs/%s/%s/%s/%s", test.bundle, test.layer, test.owner, test.key)
 		url = strings.TrimRight(url, "/")
 
 		list := []data.DynamicConfiguration{}
-		NewResponseTester("GET", url).WithStatus(test.status).WithOutput(&list).Test(t, router)
-		assert.ElementsMatch(t, test.expected, list, msg, i, test.layer, test.bundle, test.owner)
+		NewResponseTester("GET", url).WithStatus(test.status).WithOutput(&list).Test(t, router, msg, i, test.layer, test.bundle, test.owner, test.key)
+		assert.ElementsMatch(t, test.expected, list, msg, i, test.layer, test.bundle, test.owner, test.key)
 	}
-}
-
-func TestPutAndGetDynamicConfiguration(t *testing.T) {
-	router := createTestRouter()
-
-	dc := data.DynamicConfiguration{
-		Bundle: "bundle",
-		Layer:  data.LayerUser,
-		Owner:  "admin",
-		Key:    "foo",
-		Value:  "test-value",
-	}
-
-	NewResponseTester("GET", "http://example.com/v2/configs/bundle/user/admin/foo").WithStatus(http.StatusNotFound).Test(t, router)
-
-	NewResponseTester("PUT", "http://example.com/v2/configs/bundle/user/admin/foo").WithBody(dc).WithStatus(http.StatusOK).Test(t, router)
-
-	output := data.DynamicConfiguration{}
-	NewResponseTester("GET", "http://example.com/v2/configs/bundle/user/admin/foo").WithOutput(&output).WithStatus(http.StatusOK).Test(t, router)
-	assert.Equal(t, dc, output)
 }
