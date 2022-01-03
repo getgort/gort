@@ -40,6 +40,7 @@ func GetRootCmd() *cobra.Command {
 	root.AddCommand(GetStartCmd())
 	root.AddCommand(cli.GetBootstrapCmd())
 	root.AddCommand(cli.GetBundleCmd())
+	root.AddCommand(cli.GetConfigCmd())
 	root.AddCommand(cli.GetGroupCmd())
 	root.AddCommand(cli.GetHiddenCmd())
 	root.AddCommand(cli.GetPermissionCmd())
