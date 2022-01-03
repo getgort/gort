@@ -108,7 +108,13 @@ async function configureSlackApp(page) {
     // Copy the contents of the manifest file slackapp.yaml into the code box below “Enter app manifest below”, 
     // replacing the existing content. Click “Next”.
     await page.click('div.CodeMirror-lines');
-    await page.keyboard.press("Meta+A");
+    
+    if (process.platform == "darwin") {
+        await page.keyboard.press("Meta+A");
+    } else {
+        await page.keyboard.press("Control+A");
+    }
+
     await page.keyboard.press("Delete");
     const appYaml = await fs.readFile("slackapp.yaml", "utf8");
     await page.fill('textarea', appYaml);
