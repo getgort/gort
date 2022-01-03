@@ -35,7 +35,7 @@ func (da *InMemoryDataAccess) BundleCreate(ctx context.Context, bundle data.Bund
 		return errs.ErrFieldRequired
 	}
 
-	exists, err := da.BundleExists(ctx, bundle.Name, bundle.Version)
+	exists, err := da.BundleVersionExists(ctx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (da *InMemoryDataAccess) BundleDelete(ctx context.Context, name, version st
 		return errs.ErrEmptyBundleVersion
 	}
 
-	exists, err := da.BundleExists(ctx, name, version)
+	exists, err := da.BundleVersionExists(ctx, name, version)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (da *InMemoryDataAccess) BundleEnable(ctx context.Context, name, version st
 		return errs.ErrEmptyBundleVersion
 	}
 
-	exists, err := da.BundleExists(ctx, name, version)
+	exists, err := da.BundleVersionExists(ctx, name, version)
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,30 @@ func (da *InMemoryDataAccess) BundleEnabledVersion(ctx context.Context, name str
 }
 
 // BundleExists TBD
-func (da *InMemoryDataAccess) BundleExists(ctx context.Context, name, version string) (bool, error) {
+func (da *InMemoryDataAccess) BundleExists(ctx context.Context, name string) (bool, error) {
+	if name == "" {
+		return false, errs.ErrEmptyBundleName
+	}
+
+	for _, v := range da.bundles {
+		if v.Name == name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// BundleVersionExists TBD
+func (da *InMemoryDataAccess) BundleVersionExists(ctx context.Context, name, version string) (bool, error) {
+	if name == "" {
+		return false, errs.ErrEmptyBundleName
+	}
+
+	if version == "" {
+		return false, errs.ErrEmptyBundleVersion
+	}
+
 	_, exists := da.bundles[bundleKey(name, version)]
 
 	return exists, nil
@@ -170,7 +193,7 @@ func (da *InMemoryDataAccess) BundleGet(ctx context.Context, name, version strin
 		return data.Bundle{}, errs.ErrEmptyBundleVersion
 	}
 
-	exists, err := da.BundleExists(ctx, name, version)
+	exists, err := da.BundleVersionExists(ctx, name, version)
 	if err != nil {
 		return data.Bundle{}, err
 	}
@@ -217,7 +240,7 @@ func (da *InMemoryDataAccess) BundleUpdate(ctx context.Context, bundle data.Bund
 		return errs.ErrEmptyBundleVersion
 	}
 
-	exists, err := da.BundleExists(ctx, bundle.Name, bundle.Version)
+	exists, err := da.BundleVersionExists(ctx, bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	}

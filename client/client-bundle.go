@@ -36,13 +36,35 @@ func (c *GortClient) BundleEnable(bundlename string, version string) error {
 	return c.doBundleEnable(bundlename, version, true)
 }
 
-// BundleExists simply returns true if a bundle exists with the specified
-// bundlename; false otherwise.
-func (c *GortClient) BundleExists(bundlename string, version string) (bool, error) {
+// BundleExists simply returns true if a bundle exists with the
+// specified bundle name; false otherwise.
+func (c *GortClient) BundleExists(bundlename string) (bool, error) {
+	url := fmt.Sprintf("%s/v2/bundles/%s",
+		c.profile.URL.String(), bundlename)
+
+	resp, err := c.doRequest("HEAD", url, []byte{})
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	default:
+		return false, getResponseError(resp)
+	}
+}
+
+// BundleVersionExists simply returns true if a bundle exists with the
+// specified bundle name and version; false otherwise.
+func (c *GortClient) BundleVersionExists(bundlename string, version string) (bool, error) {
 	url := fmt.Sprintf("%s/v2/bundles/%s/versions/%s",
 		c.profile.URL.String(), bundlename, version)
 
-	resp, err := c.doRequest("GET", url, []byte{})
+	resp, err := c.doRequest("HEAD", url, []byte{})
 	if err != nil {
 		return false, err
 	}
