@@ -10,7 +10,12 @@ const slackEmail = process.env.SLACK_EMAIL;
 const slackPassword = process.env.SLACK_PASSWORD;
 
 test.use({
-    screenshot: 'only-on-failure',
+    contextOptions: {
+        recordVideo: {
+            dir: 'test-results/video/',
+            size: { width: 640, height: 480 },
+        },
+    }
 });
 
 test.describe('quickstart', () => {
