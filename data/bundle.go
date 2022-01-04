@@ -17,6 +17,8 @@
 package data
 
 import (
+	"context"
+	"regexp"
 	"strings"
 	"time"
 
@@ -102,13 +104,38 @@ type BundleCommand struct {
 	Executable      []string  `yaml:",omitempty,flow" json:"executable,omitempty"`
 	LongDescription string    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
 	Name            string    `yaml:"-" json:"-"`
+	Triggers        []Trigger `yaml:"triggers,omitempty" json:"trigger,omitempty"`
 	Rules           []string  `yaml:",omitempty" json:"rules,omitempty"`
 	Templates       Templates `yaml:",omitempty" json:"templates,omitempty"`
+}
+
+// Trigger represents the configuration for a command trigger as defined
+// in the bundles/commands/triggers section of the config.
+type Trigger struct {
+	Match string `yaml:"match" json:"match"`
+}
+
+func (c *BundleCommand) MatchTrigger(ctx context.Context, message string) (bool, error) {
+	for _, trigger := range c.Triggers {
+		if c == nil || len(trigger.Match) == 0 {
+			return false, nil
+		}
+		// TODO: Compile regexes up-front for improved performance
+		re, err := regexp.Compile(trigger.Match)
+		if err != nil {
+			return false, err
+		}
+		if re.MatchString(message) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // BundleKubernetes represents the "bundles/kubernetes" subsection of the config doc
 type BundleKubernetes struct {
 	ServiceAccountName string `yaml:"serviceAccountName,omitempty" json:"serviceAccountName,omitempty"`
+	EnvSecret          string `yaml:"env_secret,omitempty" json:"env_secret,omitempty"`
 }
 
 // CoerceVersionToSemver takes a version number and attempts to coerce it

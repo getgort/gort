@@ -42,8 +42,8 @@ import (
 
 const (
 	groupUse   = "group"
-	groupShort = "Manage Cog user groups"
-	groupLong  = "Manage Cog user groups."
+	groupShort = "Manage Gort user groups"
+	groupLong  = "Manage Gort user groups."
 )
 
 // GetGroupCmd group

@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-package bundles
+package errs
 
 import (
-	"context"
-
-	"github.com/getgort/gort/data"
+	"errors"
 )
 
-// FindCommandEntry is used to find the enabled commands with the provided
-// bundle and command names. If either is empty, it is treated as a wildcard.
-// Importantly, this must only return ENABLED commands!
-type CommandEntryFinder interface {
-	FindCommandEntry(ctx context.Context, bundle, command string) ([]data.CommandEntry, error)
-	FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error)
-}
+var ErrConfigExists = errors.New("dynamic configuration already exists")
+
+var ErrEmptyConfigBundle = errors.New("dynamic configuration bundle name is empty")
+
+var ErrEmptyConfigLayer = errors.New("dynamic configuration layer name is empty")
+
+var ErrEmptyConfigOwner = errors.New("dynamic configuration owner name is empty")
+
+var ErrEmptyConfigKey = errors.New("dynamic configuration key is empty")
+
+var ErrNoSuchConfig = errors.New("no such dynamic configuration")
+
+var ErrConfigIllegal = errors.New("dynamic configurations cannot start with GORT_")

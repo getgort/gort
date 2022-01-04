@@ -14,18 +14,29 @@
  * limitations under the License.
  */
 
-package bundles
+package cli
 
 import (
-	"context"
-
-	"github.com/getgort/gort/data"
+	"github.com/spf13/cobra"
 )
 
-// FindCommandEntry is used to find the enabled commands with the provided
-// bundle and command names. If either is empty, it is treated as a wildcard.
-// Importantly, this must only return ENABLED commands!
-type CommandEntryFinder interface {
-	FindCommandEntry(ctx context.Context, bundle, command string) ([]data.CommandEntry, error)
-	FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error)
+const (
+	configUse   = "config"
+	configShort = "Read, write, or delete dynamic configurations"
+	configLong  = "Read, write, or delete dynamic configurations."
+)
+
+// GetConfigCmd config
+func GetConfigCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   configUse,
+		Short: configShort,
+		Long:  configLong,
+	}
+
+	cmd.AddCommand(GetConfigDeleteCmd())
+	cmd.AddCommand(GetConfigGetCmd())
+	cmd.AddCommand(GetConfigSetCmd())
+
+	return cmd
 }

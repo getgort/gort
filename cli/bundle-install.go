@@ -183,7 +183,7 @@ func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check for existing instances of this bundle, allowing forced replacement.
-	exists, err := c.BundleExists(bundle.Name, bundle.Version)
+	exists, err := c.BundleVersionExists(bundle.Name, bundle.Version)
 	if err != nil {
 		return err
 	}

@@ -136,6 +136,7 @@ func BuildRESTServer(ctx context.Context, addr string) *RESTServer {
 func addAllMethodsToRouter(router *mux.Router) {
 	addHealthzMethodToRouter(router)
 	addBundleMethodsToRouter(router)
+	addConfigMethodsToRouter(router)
 	addGroupMethodsToRouter(router)
 	addRoleMethodsToRouter(router)
 	addUserMethodsToRouter(router)
@@ -303,11 +304,12 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(token)
 }
 
-func doBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
+func DoBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
 	const adminGroup = "admin"
 	const adminRole = "admin"
 	var adminPermissions = []string{
 		"manage_commands",
+		"manage_configs",
 		"manage_groups",
 		"manage_roles",
 		"manage_users",
@@ -411,7 +413,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err = doBootstrap(r.Context(), user)
+	user, err = DoBootstrap(r.Context(), user)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -469,6 +471,14 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		fallthrough
 	case gerrs.Is(err, errs.ErrEmptyBundleVersion):
 		fallthrough
+	case gerrs.Is(err, errs.ErrEmptyConfigBundle):
+		fallthrough
+	case gerrs.Is(err, errs.ErrEmptyConfigLayer):
+		fallthrough
+	case gerrs.Is(err, errs.ErrEmptyConfigOwner):
+		fallthrough
+	case gerrs.Is(err, errs.ErrEmptyConfigKey):
+		fallthrough
 	case gerrs.Is(err, errs.ErrEmptyGroupName):
 		fallthrough
 	case gerrs.Is(err, errs.ErrEmptyUserName):
@@ -476,11 +486,15 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 	case gerrs.Is(err, ErrMissingValue):
 		fallthrough
 	case gerrs.Is(err, errs.ErrFieldRequired):
+		fallthrough
+	case strings.HasPrefix(err.Error(), "dynamic configuration layers must be one of:"):
 		status = http.StatusExpectationFailed
 		log.WithError(err).WithField("status", status).Info(msg)
 
 	// Requested resource doesn't exist
 	case gerrs.Is(err, errs.ErrNoSuchBundle):
+		fallthrough
+	case gerrs.Is(err, errs.ErrNoSuchConfig):
 		fallthrough
 	case gerrs.Is(err, errs.ErrNoSuchGroup):
 		fallthrough
@@ -493,12 +507,16 @@ func respondAndLogError(ctx context.Context, w http.ResponseWriter, err error) {
 		log.WithError(err).WithField("status", status).Info(msg)
 
 	// Nope
+	case gerrs.Is(err, errs.ErrConfigIllegal):
+		fallthrough
 	case gerrs.Is(err, errs.ErrAdminUndeletable):
 		status = http.StatusForbidden
 		log.WithError(err).WithField("status", status).Warn(msg)
 
 	// Can't insert over something that already exists
 	case gerrs.Is(err, errs.ErrBundleExists):
+		fallthrough
+	case gerrs.Is(err, errs.ErrConfigExists):
 		fallthrough
 	case gerrs.Is(err, errs.ErrGroupExists):
 		fallthrough
@@ -697,4 +715,24 @@ func getGortBundleCommand(ctx context.Context, commandName string) (data.Bundle,
 	}
 
 	return bundle, *cmd, nil
+}
+
+// getUserByRequest gets the user associated with a request token.
+func getUserByRequest(r *http.Request) (rest.User, error) {
+	dataAccessLayer, err := dataaccess.Get()
+	if err != nil {
+		return rest.User{}, err
+	}
+
+	t := r.Header.Get("X-Session-Token")
+	if t == "" || !dataAccessLayer.TokenEvaluate(r.Context(), t) {
+		return rest.User{}, ErrUnauthorized
+	}
+
+	token, err := dataAccessLayer.TokenRetrieveByToken(r.Context(), t)
+	if err != nil {
+		return rest.User{}, err
+	}
+
+	return dataAccessLayer.UserGet(r.Context(), token.User)
 }

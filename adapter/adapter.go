@@ -87,6 +87,10 @@ var (
 	// ErrUserNotFound is throws by several methods if a provider fails to
 	// return requested user information.
 	ErrUserNotFound = errors.New("user not found")
+
+	// ErrNotAllowed is thrown when checking user permissions for a command if
+	// the user does not have the appropriate permissions to use the command.
+	ErrNotAllowed = errors.New("user not allowed to use command")
 )
 
 // Adapter represents a connection to a chat provider.
@@ -191,6 +195,39 @@ func GetCommandEntry(ctx context.Context, bundleName, commandName string) (data.
 	return entries[0], nil
 }
 
+// GetCommandEntryByTrigger accepts a tokenized parameter slice and returns any
+// associated data.CommandEntry instances. If the number of matching
+// commands is > 1, an error is returned.
+func GetCommandEntryByTrigger(ctx context.Context, tokens []string) (data.CommandEntry, error) {
+	finders, err := allCommandEntryFinders()
+	if err != nil {
+		return data.CommandEntry{}, err
+	}
+
+	entries, err := findAllEntriesByTrigger(ctx, tokens, finders...)
+	if err != nil {
+		return data.CommandEntry{}, err
+	}
+
+	if len(entries) == 0 {
+		return data.CommandEntry{}, ErrNoSuchCommand
+	}
+
+	if len(entries) > 1 {
+		log.
+			WithField("requested", strings.Join(tokens, " ")).
+			WithField("bundle0", entries[0].Bundle.Name).
+			WithField("command0", entries[0].Command.Name).
+			WithField("bundle1", entries[1].Bundle.Name).
+			WithField("command1", entries[1].Command.Name).
+			Warn("Multiple commands found")
+
+		return data.CommandEntry{}, ErrMultipleCommands
+	}
+
+	return entries[0], nil
+}
+
 // OnConnected handles ConnectedEvent events.
 func OnConnected(ctx context.Context, event *ProviderEvent, data *ConnectedEvent) {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -232,8 +269,8 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 
 	rawCommandText := data.Text
 
-	// If this isn't prepended by a trigger character, ignore.
-	if len(rawCommandText) <= 1 || rawCommandText[0] != '!' {
+	// Ignore empty messages
+	if len(rawCommandText) <= 1 {
 		return nil, nil
 	}
 
@@ -249,15 +286,19 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 		return nil, err
 	}
 
-	// Remove the "trigger character" (!)
-	rawCommandText = rawCommandText[1:]
-
 	adapterLogEntry(ctx, nil, event, id).
 		WithField("command.raw", rawCommandText).
 		Debug("Got message")
 	addSpanAttributes(ctx, sp, event, attribute.String("command.raw", rawCommandText))
 
-	return TriggerCommand(ctx, rawCommandText, id)
+	// Find command by Name if the message starts with '!'
+	if rawCommandText[0] == '!' {
+		rawCommandText = rawCommandText[1:]
+		return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
+	}
+
+	// Otherwise attempt to find command by trigger
+	return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByTrigger)
 }
 
 // OnDirectMessage handles DirectMessageEvent events.
@@ -267,10 +308,6 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 	defer sp.End()
 
 	rawCommandText := data.Text
-
-	if rawCommandText[0] == '!' {
-		rawCommandText = rawCommandText[1:]
-	}
 
 	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
 	if err != nil {
@@ -284,7 +321,11 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 		Debug("Got direct message")
 	addSpanAttributes(ctx, sp, event, attribute.String("command.raw", rawCommandText))
 
-	return TriggerCommand(ctx, rawCommandText, id)
+	if rawCommandText[0] == '!' {
+		rawCommandText = rawCommandText[1:]
+		return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
+	}
+	return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByNameOrTrigger)
 }
 
 // SendErrorMessage sends an error message to a specified channel.
@@ -372,15 +413,138 @@ func StartListening(ctx context.Context) (<-chan data.CommandRequest, chan<- dat
 	return commandRequests, commandResponses, adapterErrors
 }
 
-// TriggerCommand is called by OnChannelMessage or OnDirectMessage when a
-// valid command trigger is identified. This function is at the core Gort's
-// command response capabilities, and it's the most complex in the project.
-// This looks like a long, complicated function, but it's like 75% logging
-// and tracing.
-func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity) (*data.CommandRequest, error) {
+// requestLog encapsulates objects required to log operations when building a request.
+type requestLog struct {
+	da      dataaccess.DataAccess
+	request *data.CommandRequest
+	id      *RequestorIdentity
+	le      *log.Entry
+}
+
+// logAction defines a function that allows additional logging actions to be
+// passed to requestLog.Error.
+type logAction func(ctx context.Context, r *requestLog)
+
+// logUserMessage allows an error to be sent to the user via a chat message.
+func logUserMessage(title, msg string) logAction {
+	return func(ctx context.Context, r *requestLog) {
+		SendErrorMessage(ctx, r.id.Adapter, r.id.ChatChannel.ID, title, msg)
+	}
+}
+
+// Error performs actions required to log an error in telemetry, logs and optionally
+// other actions provided by logAction functions.
+func (r *requestLog) Error(
+	ctx context.Context,
+	err error,
+	logMessage string,
+	actions ...logAction,
+) error {
+	r.da.RequestError(ctx, *r.request, err)
+	telemetry.Errors().WithError(err).Commit(ctx)
+	r.le.WithError(err).Error(logMessage)
+	for _, action := range actions {
+		action(ctx, r)
+	}
+	return fmt.Errorf("%v: %w", logMessage, err)
+}
+
+// commandFromTokens defines a function that attempts to identify a command from a slice of tokens.
+// It returns both a data.CommandEntry defining the command, and a command.Command that re-defines the input
+// as appropriate to the command that was found.
+type commandFromTokens func(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error)
+
+// commandFromTokensByTrigger implements commandFromTokens.
+// It checks if a command can be identified from the given tokens by the command name.
+func commandFromTokensByName(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
+	// Build a temporary Command value using default tokenization rules. We'll
+	// use this to load the CommandEntry for the relevant command (as defined
+	// in a command bundle), which contains the command's parsing rules that
+	// we'll use for a final, formal Parse to get the final Command version.
+	cmdInput, err := command.Parse(tokens)
+	if err != nil {
+		return nil, command.Command{}, err
+	}
+
+	cmdEntry, err := GetCommandEntry(ctx, cmdInput.Bundle, cmdInput.Command)
+	if err != nil {
+		return nil, command.Command{}, err
+	}
+
+	// Now that we have a command entry, we can re-create the complete Command value.
+	tokens[0] = cmdEntry.Bundle.Name + ":" + cmdEntry.Command.Name
+
+	// TODO Set parse options based on the CommandEntry settings.
+	cmdInput, err = command.Parse(tokens)
+	if err != nil {
+		return nil, command.Command{}, err
+	}
+
+	return &cmdEntry, cmdInput, nil
+}
+
+// commandFromTokensByTrigger implements commandFromTokens.
+// It checks if a command can be identified from the given tokens by a trigger pattern.
+func commandFromTokensByTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
+	cmdEntry, err := GetCommandEntryByTrigger(ctx, tokens)
+	if err != nil && gerrs.Is(err, ErrNoSuchCommand) {
+		return nil, command.Command{}, nil
+	}
+	if err != nil {
+		return nil, command.Command{}, err
+	}
+
+	// TODO Set parse options based on the CommandEntry settings.
+	cmdInput, err := command.Parse(
+		append(
+			[]string{cmdEntry.Bundle.Name + ":" + cmdEntry.Command.Name},
+			tokens...,
+		),
+	)
+	if err != nil {
+		return nil, command.Command{}, err
+	}
+	return &cmdEntry, cmdInput, err
+}
+
+// commandFromTokensByNameOrTrigger implements commandFromTokens.
+// It first checks if a command can be identified from the given tokens by name,
+// if this is unsuccessful because the command does not exist, it will attempt to
+// identify the command from a trigger.
+func commandFromTokensByNameOrTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
+	cmdEntry, cmdInput, err := commandFromTokensByName(ctx, tokens)
+	if err == nil {
+		return cmdEntry, cmdInput, nil
+	}
+	if err != nil && !gerrs.Is(err, ErrNoSuchCommand) {
+		return nil, command.Command{}, err
+	}
+	return commandFromTokensByTrigger(ctx, tokens)
+}
+
+// parametersFromCommand converts parameters from a command.Command into
+// a string slice.
+func parametersFromCommand(cmd command.Command) []string {
+	var out []string
+	for _, p := range cmd.Parameters {
+		out = append(out, p.String())
+	}
+	return out
+}
+
+// GetCommandRequest builds a CommandRequest object based on the provided message content and user id.
+// Both user existence and authorization are verified.
+// A lookup function for identifying a command based on tokens must be provided as a parameter.
+// Telemetry for the lookup operation are handled inside this function.
+func GetCommandRequest(
+	ctx context.Context,
+	rawCommand string,
+	id RequestorIdentity,
+	fCommandFromTokens commandFromTokens,
+) (*data.CommandRequest, error) {
 	// Start trace span
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "adapter.TriggerCommand")
+	ctx, sp := tr.Start(ctx, "adapter.CommandByName")
 	defer sp.End()
 
 	da, err := dataaccess.Get()
@@ -388,203 +552,114 @@ func TriggerCommand(ctx context.Context, rawCommand string, id RequestorIdentity
 		return nil, err
 	}
 
-	request := buildRequest(ctx, id)
-	da.RequestBegin(ctx, &request)
-
-	addSpanAttributes(ctx, sp, id, request)
-	le := adapterLogEntry(ctx, nil, id, request)
-
-	if id.GortUser == nil {
-		var autocreated bool
-
-		if id.GortUser, autocreated, err = findOrMakeGortUser(ctx, id.Adapter, id.ChatUser); err != nil {
-			switch {
-			case gerrs.Is(err, ErrSelfRegistrationOff):
-				msg := "I'm terribly sorry, but either I don't have a Gort " +
-					"account for you, or your chat handle has not been " +
-					"registered. Currently, only registered users can " +
-					"interact with me.\n\nYou'll need a Gort administrator " +
-					"to map your Gort user to the adapter (%s) and chat " +
-					"user ID (%s)."
-				msg = fmt.Sprintf(msg, id.Adapter.GetName(), id.ChatUser.ID)
-				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Account", msg)
-
-			case gerrs.Is(err, ErrGortNotBootstrapped):
-				msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
-					"use `gort bootstrap` to properly bootstrap the Gort " +
-					"environment before proceeding."
-				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Not Bootstrapped?", msg)
-
-			default:
-				msg := "An unexpected error has occurred"
-				SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", msg)
-			}
-
-			da.RequestError(ctx, request, err)
-			telemetry.Errors().WithError(err).Commit(ctx)
-			le.WithError(err).Error("Can't find or create user")
-
-			return nil, fmt.Errorf("can't find or create user: %w", err)
-		}
-
-		request.UserEmail = id.GortUser.Email
-		request.UserName = id.GortUser.Username
-		da.RequestUpdate(ctx, request)
-
-		addSpanAttributes(ctx, sp, id.GortUser)
-		le := adapterLogEntry(ctx, nil, id.GortUser)
-
-		if autocreated {
-			message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
-				"owner of a shiny new Gort account named `%s`!",
-				id.GortUser.Username)
-			SendMessage(ctx, id.Adapter, id.ChatUser.ID, message)
-
-			le.Info("Autocreating Gort user")
-		}
-	}
-
 	// Tokenize the raw command.
 	tokens, err := command.Tokenize(rawCommand)
 	if err != nil {
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Command tokenization error")
-		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
+		return nil, fmt.Errorf("command tokenziation error")
+	}
 
-		return nil, fmt.Errorf("command tokenization error: %w", err)
+	cmdEntry, cmdInput, commandLookupErr := fCommandFromTokens(ctx, tokens)
+	if commandLookupErr == nil && cmdEntry == nil {
+		return nil, nil
+	}
+
+	request, id, rl, err := buildAndBeginRequest(ctx, id)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(tokens) == 0 {
 		msg := "Empty command received. Did you forget something?"
-		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Empty Command", msg)
-
-		err := fmt.Errorf("command had no tokens")
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Command request had no tokens")
-
-		return nil, err
+		return nil, rl.Error(ctx, err, "command had no tokens", logUserMessage("Empty Command", msg))
 	}
 
-	le = le.WithField("command.name", tokens[0]).
-		WithField("command.params", strings.Join(tokens[1:], " "))
-
-	request.Parameters = tokens[1:]
-	da.RequestUpdate(ctx, request)
-
-	// Build a temporary Command value using default tokenization rules. We'll
-	// use this to load the CommandEntry for the relevant command (as defined
-	// in a command bundle), which contains the command's parsing rules that
-	// we'll use for a final, formal Parse to get the final Command version.
-	cmdInput, err := command.Parse(tokens)
-	if err != nil {
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Command parse error")
-		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
-
-		return nil, fmt.Errorf("command parse error: %w", err)
-	}
-
-	// Try to find the relevant command entry.
-	cmdEntry, err := GetCommandEntry(ctx, cmdInput.Bundle, cmdInput.Command)
-	if err != nil {
+	if commandLookupErr != nil {
+		err := commandLookupErr
 		switch {
 		case gerrs.Is(err, ErrNoSuchCommand):
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
 				"If this is not expected, you should contact a Gort administrator.",
 				tokens[0])
-			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
+			return nil, rl.Error(ctx, err, "command lookup error", logUserMessage("No Such Command", msg))
 		case gerrs.Is(err, ErrMultipleCommands):
 			msg := fmt.Sprintf("The command %s matches multiple bundles.\n"+
 				"Please namespace your command using the bundle name: `bundle:command`.",
 				tokens[0])
-			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Command", msg)
+			return nil, rl.Error(ctx, err, "command lookup error", logUserMessage("No Such Command", msg))
 		default:
-			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", err.Error())
+			return nil, rl.Error(ctx, err, "command lookup error", logUserMessage("Error", err.Error()))
 		}
-
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Command lookup error")
-
-		return nil, fmt.Errorf("command lookup error: %w", err)
 	}
 
-	// Now that we have a command entry, we can re-create the complete Command value.
-	tokens[0] = cmdEntry.Bundle.Name + ":" + cmdEntry.Command.Name
-	// TODO Set parse options based on the CommandEntry settings.
-	cmdInput, err = command.Parse(tokens)
+	rl.le = rl.le.WithField("command.name", cmdEntry.Command.Name).
+		WithField("command.params", cmdInput.Parameters.String())
+	request.Parameters = parametersFromCommand(cmdInput)
+	da.RequestUpdate(ctx, request)
+
+	cmdFoundMessage := fmt.Sprintf("Executing command: %s", cmdEntry.Command.Name)
+	err = SendMessage(ctx, id.Adapter, id.ChatChannel.ID, cmdFoundMessage)
 	if err != nil {
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Command parse error")
-		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
-
-		return nil, fmt.Errorf("command parse error: %w", err)
+		rl.Error(ctx, err, "failed to send command acknowledgement")
 	}
 
-	request.CommandEntry = cmdEntry
+	request.CommandEntry = *cmdEntry
 	da.RequestUpdate(ctx, request)
 
 	// Update log entry with cmd info
-	le = adapterLogEntry(ctx, le, cmdEntry)
-	le.Debug("Found matching command+bundle")
-	addSpanAttributes(ctx, sp, cmdEntry)
+	rl.le = adapterLogEntry(ctx, rl.le, *cmdEntry)
+	rl.le.Debug("Found matching command+bundle")
+	addSpanAttributes(ctx, sp, *cmdEntry)
 
-	env := rules.EvaluationEnvironment{
-		"option": cmdInput.OptionsValues(),
-		"arg":    cmdInput.Parameters,
+	err = checkPermissions(ctx, id, cmdInput, *cmdEntry)
+	if err != nil {
+		switch {
+		case gerrs.Is(err, auth.ErrRuleLoadError):
+			return nil, rl.Error(ctx, err, "rule load error", logUserMessage("Error", unexpectedError))
+		case gerrs.Is(err, auth.ErrNoRulesDefined):
+			msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
+				"For a command to be executable, it must have at least one rule.",
+				cmdEntry.Bundle.Name, cmdEntry.Command.Name)
+			return nil, rl.Error(ctx, err, "no rules defined", logUserMessage("No Rules Defined", msg))
+		case gerrs.Is(err, ErrNotAllowed):
+			msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
+			return nil, rl.Error(ctx, err, "permission denied", logUserMessage("Permission Denied", msg))
+		default:
+			return nil, rl.Error(ctx, err, "permission check failure", logUserMessage("Error", unexpectedError))
+		}
+	}
+
+	// Update log entry with command info
+	rl.le.Info("Triggering command")
+
+	return &request, nil
+}
+
+func checkPermissions(ctx context.Context, id RequestorIdentity, cmdInput command.Command, cmdEntry data.CommandEntry) error {
+	da, err := dataaccess.Get()
+	if err != nil {
+		return err
 	}
 
 	perms, err := da.UserPermissionList(ctx, id.GortUser.Username)
 	if err != nil {
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("User permission load failure")
-		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
-
-		return nil, fmt.Errorf("user permission load error: %w", err)
+		return err
 	}
 
-	allowed, err := auth.EvaluateCommandEntry(perms.Strings(), cmdEntry, env)
+	allowed, err := auth.EvaluateCommandEntry(
+		perms.Strings(),
+		cmdEntry,
+		rules.EvaluationEnvironment{
+			"option": cmdInput.OptionsValues(),
+			"arg":    cmdInput.Parameters,
+		},
+	)
 	if err != nil {
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-
-		switch {
-		case gerrs.Is(err, auth.ErrRuleLoadError):
-			le.WithError(err).Error("Rule load error")
-			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
-			return nil, fmt.Errorf("rule load error: %w", err)
-
-		case gerrs.Is(err, auth.ErrNoRulesDefined):
-			le.WithError(err).Error("No rules defined")
-			msg := fmt.Sprintf("The command %s:%s doesn't have any associated rules.\n"+
-				"For a command to be executable, it must have at least one rule.",
-				cmdEntry.Bundle.Name, cmdEntry.Command.Name)
-			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Rules Defined", msg)
-			return nil, err
-		}
+		return err
 	}
-
 	if !allowed {
-		msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
-		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Permission Denied", msg)
-
-		err = fmt.Errorf("permission denied")
-		da.RequestError(ctx, request, err)
-		telemetry.Errors().WithError(err).Commit(ctx)
-		le.WithError(err).Error("Permission Denied")
-
-		return nil, err
+		return ErrNotAllowed
 	}
-
-	// Update log entry with command info
-	le.Info("Triggering command")
-
-	return &request, nil
+	return nil
 }
 
 // adapterLogEntry is a helper that pre-populates a log event with attributes.
@@ -848,7 +923,10 @@ func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, use
 	return id, nil
 }
 
-func buildRequest(ctx context.Context, id RequestorIdentity) data.CommandRequest {
+// buildAndBeginRequest sets up a data.CommandRequest.
+// User information is verified and populated as needed.
+// The user is only required to exist, permission checks take place later.
+func buildAndBeginRequest(ctx context.Context, id RequestorIdentity) (data.CommandRequest, RequestorIdentity, requestLog, error) {
 	request := data.CommandRequest{
 		Adapter:   id.Adapter.GetName(),
 		ChannelID: id.ChatChannel.ID,
@@ -863,14 +941,95 @@ func buildRequest(ctx context.Context, id RequestorIdentity) data.CommandRequest
 		request.UserName = id.GortUser.Username
 	}
 
-	return request
+	r := requestLog{
+		request: &request,
+		id:      &id,
+	}
+	var err error
+	r.le = adapterLogEntry(ctx, nil, id, request)
+	r.da, err = dataaccess.Get()
+	if err != nil {
+		return data.CommandRequest{}, RequestorIdentity{}, requestLog{}, err
+	}
+
+	r.da.RequestBegin(ctx, &request)
+	addSpanAttributes(ctx, trace.SpanFromContext(ctx), id, request)
+
+	if id.GortUser != nil {
+		return request, id, r, nil
+	}
+
+	var autocreated bool
+	if id.GortUser, autocreated, err = findOrMakeGortUser(ctx, id.Adapter, id.ChatUser); err != nil {
+		switch {
+		case gerrs.Is(err, ErrSelfRegistrationOff):
+			msg := "I'm terribly sorry, but either I don't have a Gort " +
+				"account for you, or your chat handle has not been " +
+				"registered. Currently, only registered users can " +
+				"interact with me.\n\nYou'll need a Gort administrator " +
+				"to map your Gort user to the adapter (%s) and chat " +
+				"user ID (%s)."
+			msg = fmt.Sprintf(msg, id.Adapter.GetName(), id.ChatUser.ID)
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "No Such Account", msg)
+
+		case gerrs.Is(err, ErrGortNotBootstrapped):
+			msg := "Gort doesn't appear to have been bootstrapped yet! Please " +
+				"use `gort bootstrap` to properly bootstrap the Gort " +
+				"environment before proceeding."
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Not Bootstrapped?", msg)
+
+		default:
+			msg := "An unexpected error has occurred"
+			SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", msg)
+		}
+
+		r.da.RequestError(ctx, request, err)
+		telemetry.Errors().WithError(err).Commit(ctx)
+		r.le.WithError(err).Error("Can't find or create user")
+
+		return data.CommandRequest{}, RequestorIdentity{}, requestLog{}, fmt.Errorf("can't find or create user: %w", err)
+	}
+
+	request.UserEmail = id.GortUser.Email
+	request.UserName = id.GortUser.Username
+	r.da.RequestUpdate(ctx, request)
+
+	addSpanAttributes(ctx, trace.SpanFromContext(ctx), id.GortUser)
+	r.le = adapterLogEntry(ctx, nil, id.GortUser)
+
+	if autocreated {
+		message := fmt.Sprintf("Hello! It's great to meet you! You're the proud "+
+			"owner of a shiny new Gort account named `%s`!",
+			id.GortUser.Username)
+		SendMessage(ctx, id.Adapter, id.ChatUser.ID, message)
+
+		r.le.Info("Autocreating Gort user")
+	}
+
+	return request, id, r, nil
 }
 
 func findAllEntries(ctx context.Context, bundleName, commandName string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {
 	entries := make([]data.CommandEntry, 0)
 
 	for _, f := range finder {
+		fmt.Println(bundleName, commandName)
 		e, err := f.FindCommandEntry(ctx, bundleName, commandName)
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, e...)
+	}
+
+	return entries, nil
+}
+
+func findAllEntriesByTrigger(ctx context.Context, tokens []string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {
+	entries := make([]data.CommandEntry, 0)
+
+	for _, f := range finder {
+		e, err := f.FindCommandEntryByTrigger(ctx, tokens)
 		if err != nil {
 			return nil, err
 		}
