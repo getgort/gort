@@ -28,11 +28,11 @@ const (
 	hiddenWhoamiShort = "Provides your basic identity and account information"
 	hiddenWhoamiLong  = `Provides your basic identity and account information.`
 	hiddenWhoamiUsage = `Usage:
-	!gort:whoami
+  !gort:whoami
 
-  Flags:
-	-h, --help   Show this message and exit
-  `
+Flags:
+  -h, --help   Show this message and exit
+`
 )
 
 // GetHiddenWhoamiCmd is a command

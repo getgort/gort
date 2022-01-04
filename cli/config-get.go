@@ -40,19 +40,19 @@ by the owning user, or by a Gort administrator.
 
 Configurations set to "secret" cannot be retrieved.
 `
-
 	configGetUsage = `Usage:
- gort config get [-b bundle] [-l layer] [-o owner] [-k key] [flags]
+  gort config get [-b bundle] [-l layer] [-o owner] [-k key] [flags]
 
- Flags:
- -b, --bundle string   The bundle to configure (required)
- -h, --help            Show this message and exit
- -k, --key string      The name of the configuration
- -l, --layer string    One of: [bundle room group user] (default "bundle")
- -o, --owner string    The owning room, group, or user
+Flags:
+  -b, --bundle string   The bundle to configure (required)
+  -h, --help            Show this message and exit
+  -k, --key string      The name of the configuration
+  -l, --layer string    One of: [bundle room group user] (default "bundle")
+  -o, --owner string    The owning room, group, or user
 
- Global Flags:
- -P, --profile string   The Gort profile within the config file to use`
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 var (
