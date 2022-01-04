@@ -40,15 +40,15 @@ const (
 	bundleUninstallShort = "Uninstall bundles"
 	bundleUninstallLong  = `Uninstall bundles.`
 	bundleUninstallUsage = `Usage:
-   gort bundle uninstall [flags] bundle_name [version]
+  gort bundle uninstall [flags] bundle_name [version]
 
- Flags:
-   -a, --all     Uninstall all versions of the bundle
-   -c, --clean   Uninstall all disabled bundle versions
-   -h, --help    help for uninstall
+Flags:
+  -a, --all     Uninstall all versions of the bundle
+  -c, --clean   Uninstall all disabled bundle versions
+  -h, --help    help for uninstall
 
- Global Flags:
-   -P, --profile string   The Gort profile within the config file to use
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
  `
 )
 

@@ -33,18 +33,18 @@ commands' environments at execution time with the same name as the key.
 Dynamic configuration keys may not start with "GORT_".`
 
 	configSetUsage = `Usage:
- gort config set [-b bundle] [-l layer] [-o owner] [-k key] [-s secret] [flags] config_value
+  gort config set [-b bundle] [-l layer] [-o owner] [-k key] [-s secret] [flags] config_value
 
- Flags:
- -b, --bundle string   The bundle to configure (required)
- -h, --help            Show this message and exit
- -k, --key string      The name of the configuration
- -l, --layer string    One of: [bundle room group user] (default "bundle")
- -o, --owner string    The owning room, group, or user
- -s, --secret          Makes a configuration value secret
+Flags:
+  -b, --bundle string   The bundle to configure (required)
+  -h, --help            Show this message and exit
+  -k, --key string      The name of the configuration
+  -l, --layer string    One of: [bundle room group user] (default "bundle")
+  -o, --owner string    The owning room, group, or user
+  -s, --secret          Makes a configuration value secret
 
- Global Flags:
- -P, --profile string   The Gort profile within the config file to use
+Global Flags:
+  -P, --profile string   The Gort profile within the config file to use
 `
 )
 
