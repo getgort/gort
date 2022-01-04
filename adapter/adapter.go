@@ -309,10 +309,6 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 	rawCommandText := data.Text
 
-	if rawCommandText[0] == '!' {
-		rawCommandText = rawCommandText[1:]
-	}
-
 	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
@@ -325,6 +321,10 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 		Debug("Got direct message")
 	addSpanAttributes(ctx, sp, event, attribute.String("command.raw", rawCommandText))
 
+	if rawCommandText[0] == '!' {
+		rawCommandText = rawCommandText[1:]
+		return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
+	}
 	return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByNameOrTrigger)
 }
 
@@ -452,23 +452,23 @@ func (r *requestLog) Error(
 // commandFromTokens defines a function that attempts to identify a command from a slice of tokens.
 // It returns both a data.CommandEntry defining the command, and a command.Command that re-defines the input
 // as appropriate to the command that was found.
-type commandFromTokens func(ctx context.Context, tokens []string) (data.CommandEntry, command.Command, error)
+type commandFromTokens func(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error)
 
 // commandFromTokensByTrigger implements commandFromTokens.
 // It checks if a command can be identified from the given tokens by the command name.
-func commandFromTokensByName(ctx context.Context, tokens []string) (data.CommandEntry, command.Command, error) {
+func commandFromTokensByName(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
 	// Build a temporary Command value using default tokenization rules. We'll
 	// use this to load the CommandEntry for the relevant command (as defined
 	// in a command bundle), which contains the command's parsing rules that
 	// we'll use for a final, formal Parse to get the final Command version.
 	cmdInput, err := command.Parse(tokens)
 	if err != nil {
-		return data.CommandEntry{}, command.Command{}, err
+		return nil, command.Command{}, err
 	}
 
 	cmdEntry, err := GetCommandEntry(ctx, cmdInput.Bundle, cmdInput.Command)
 	if err != nil {
-		return data.CommandEntry{}, command.Command{}, err
+		return nil, command.Command{}, err
 	}
 
 	// Now that we have a command entry, we can re-create the complete Command value.
@@ -477,18 +477,21 @@ func commandFromTokensByName(ctx context.Context, tokens []string) (data.Command
 	// TODO Set parse options based on the CommandEntry settings.
 	cmdInput, err = command.Parse(tokens)
 	if err != nil {
-		return data.CommandEntry{}, command.Command{}, err
+		return nil, command.Command{}, err
 	}
 
-	return cmdEntry, cmdInput, nil
+	return &cmdEntry, cmdInput, nil
 }
 
 // commandFromTokensByTrigger implements commandFromTokens.
 // It checks if a command can be identified from the given tokens by a trigger pattern.
-func commandFromTokensByTrigger(ctx context.Context, tokens []string) (data.CommandEntry, command.Command, error) {
+func commandFromTokensByTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
 	cmdEntry, err := GetCommandEntryByTrigger(ctx, tokens)
+	if err != nil && gerrs.Is(err, ErrNoSuchCommand) {
+		return nil, command.Command{}, nil
+	}
 	if err != nil {
-		return data.CommandEntry{}, command.Command{}, err
+		return nil, command.Command{}, err
 	}
 
 	// TODO Set parse options based on the CommandEntry settings.
@@ -499,22 +502,22 @@ func commandFromTokensByTrigger(ctx context.Context, tokens []string) (data.Comm
 		),
 	)
 	if err != nil {
-		return data.CommandEntry{}, command.Command{}, err
+		return nil, command.Command{}, err
 	}
-	return cmdEntry, cmdInput, err
+	return &cmdEntry, cmdInput, err
 }
 
 // commandFromTokensByNameOrTrigger implements commandFromTokens.
 // It first checks if a command can be identified from the given tokens by name,
 // if this is unsuccessful because the command does not exist, it will attempt to
 // identify the command from a trigger.
-func commandFromTokensByNameOrTrigger(ctx context.Context, tokens []string) (data.CommandEntry, command.Command, error) {
+func commandFromTokensByNameOrTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
 	cmdEntry, cmdInput, err := commandFromTokensByName(ctx, tokens)
 	if err == nil {
 		return cmdEntry, cmdInput, nil
 	}
-	if !gerrs.Is(err, ErrNoSuchCommand) {
-		return data.CommandEntry{}, command.Command{}, err
+	if err != nil && !gerrs.Is(err, ErrNoSuchCommand) {
+		return nil, command.Command{}, err
 	}
 	return commandFromTokensByTrigger(ctx, tokens)
 }
@@ -549,15 +552,20 @@ func GetCommandRequest(
 		return nil, err
 	}
 
-	request, id, rl, err := buildAndBeginRequest(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
 	// Tokenize the raw command.
 	tokens, err := command.Tokenize(rawCommand)
 	if err != nil {
-		return nil, rl.Error(ctx, err, "command tokenization error", logUserMessage("Error", unexpectedError))
+		return nil, fmt.Errorf("command tokenziation error")
+	}
+
+	cmdEntry, cmdInput, commandLookupErr := fCommandFromTokens(ctx, tokens)
+	if commandLookupErr == nil && cmdEntry == nil {
+		return nil, nil
+	}
+
+	request, id, rl, err := buildAndBeginRequest(ctx, id)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(tokens) == 0 {
@@ -565,8 +573,8 @@ func GetCommandRequest(
 		return nil, rl.Error(ctx, err, "command had no tokens", logUserMessage("Empty Command", msg))
 	}
 
-	cmdEntry, cmdInput, err := fCommandFromTokens(ctx, tokens)
-	if err != nil && !gerrs.Is(err, ErrNoSuchCommand) {
+	if commandLookupErr != nil {
+		err := commandLookupErr
 		switch {
 		case gerrs.Is(err, ErrNoSuchCommand):
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
@@ -594,15 +602,15 @@ func GetCommandRequest(
 		rl.Error(ctx, err, "failed to send command acknowledgement")
 	}
 
-	request.CommandEntry = cmdEntry
+	request.CommandEntry = *cmdEntry
 	da.RequestUpdate(ctx, request)
 
 	// Update log entry with cmd info
-	rl.le = adapterLogEntry(ctx, rl.le, cmdEntry)
+	rl.le = adapterLogEntry(ctx, rl.le, *cmdEntry)
 	rl.le.Debug("Found matching command+bundle")
-	addSpanAttributes(ctx, sp, cmdEntry)
+	addSpanAttributes(ctx, sp, *cmdEntry)
 
-	err = checkPermissions(ctx, id, cmdInput, cmdEntry)
+	err = checkPermissions(ctx, id, cmdInput, *cmdEntry)
 	if err != nil {
 		switch {
 		case gerrs.Is(err, auth.ErrRuleLoadError):
