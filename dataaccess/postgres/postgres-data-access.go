@@ -380,7 +380,8 @@ func (da PostgresDataAccess) createBundleKubernetesTables(ctx context.Context, d
 	createBundlesQuery := `CREATE TABLE bundle_kubernetes (
 		bundle_version 			TEXT NOT NULL,
 		bundle_name				TEXT NOT NULL,
-		service_account_name 	TEXT NOT NULL
+		service_account_name 	TEXT NOT NULL,
+		env_secret            TEXT NOT NULL
 	);
 	`
 
@@ -506,7 +507,7 @@ func (da PostgresDataAccess) createUsersTable(ctx context.Context, db *sql.DB) e
 	var err error
 
 	createUserQuery := `CREATE TABLE users (
-		email         	TEXT UNIQUE NOT NULL,
+		email         	TEXT,
 		full_name     	TEXT,
 		password_hash 	TEXT,
 		username 		TEXT PRIMARY KEY
