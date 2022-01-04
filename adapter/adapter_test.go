@@ -24,10 +24,11 @@ func TestMain(m *testing.M) {
 
 func TestChannelMessage(t *testing.T) {
 	var tests = []struct {
-		name     string
-		message  string
-		expected string
-		err      bool
+		name            string
+		message         string
+		expected        string
+		expectNoRequest bool
+		err             bool
 	}{
 		{
 			name:     "can execute command by name with bang",
@@ -35,9 +36,9 @@ func TestChannelMessage(t *testing.T) {
 			expected: "test:cmd arg1 arg2",
 		},
 		{
-			name:    "cannot execute command by name without bang",
-			message: "test:cmd arg1 arg2",
-			err:     true,
+			name:            "cannot execute command by name without bang",
+			message:         "test:cmd arg1 arg2",
+			expectNoRequest: true,
 		},
 		{
 			name:     "can execute command by trigger",
@@ -48,6 +49,11 @@ func TestChannelMessage(t *testing.T) {
 			name:    "error on unknown command with bang",
 			message: "!missing:cmd arg1 arg2",
 			err:     true,
+		},
+		{
+			name:            "no request on untriggered message without bang",
+			message:         "nothing to match",
+			expectNoRequest: true,
 		},
 	}
 
@@ -83,6 +89,15 @@ func TestChannelMessage(t *testing.T) {
 				t.Errorf("expected an error, got %q", result)
 				return
 			}
+			if result == nil {
+				if !test.expectNoRequest {
+					t.Errorf("expected %q, got %q", test.expected, result)
+				}
+				return
+			}
+			if test.expectNoRequest {
+				t.Errorf("expected nil, got %q", result)
+			}
 			if result.String() != test.expected {
 				t.Errorf("expected %q, got %q", test.expected, result)
 			}
@@ -93,10 +108,11 @@ func TestChannelMessage(t *testing.T) {
 
 func TestDirectMessage(t *testing.T) {
 	var tests = []struct {
-		name     string
-		message  string
-		expected string
-		err      bool
+		name            string
+		message         string
+		expected        string
+		expectNoRequest bool
+		err             bool
 	}{
 		{
 			name:     "can execute command by name with bang",
@@ -117,6 +133,11 @@ func TestDirectMessage(t *testing.T) {
 			name:    "error on unknown command with bang",
 			message: "!missing:cmd arg1 arg2",
 			err:     true,
+		},
+		{
+			name:            "no request on untriggered message without bang",
+			message:         "nothing to match",
+			expectNoRequest: true,
 		},
 	}
 
@@ -151,6 +172,15 @@ func TestDirectMessage(t *testing.T) {
 			if test.err {
 				t.Errorf("expected an error, got %q", result)
 				return
+			}
+			if result == nil {
+				if !test.expectNoRequest {
+					t.Errorf("expected %q, got %q", test.expected, result)
+				}
+				return
+			}
+			if test.expectNoRequest {
+				t.Errorf("expected nil, got %q", result)
 			}
 			if result.String() != test.expected {
 				t.Errorf("expected %q, got %q", test.expected, result)

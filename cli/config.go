@@ -14,22 +14,29 @@
  * limitations under the License.
  */
 
-package errs
+package cli
 
 import (
-	"errors"
+	"github.com/spf13/cobra"
 )
 
-var ErrConfigExists = errors.New("dynamic configuration already exists")
+const (
+	configUse   = "config"
+	configShort = "Read, write, or delete dynamic configurations"
+	configLong  = "Read, write, or delete dynamic configurations."
+)
 
-var ErrEmptyConfigBundle = errors.New("dynamic configuration bundle name is empty")
+// GetConfigCmd config
+func GetConfigCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   configUse,
+		Short: configShort,
+		Long:  configLong,
+	}
 
-var ErrEmptyConfigLayer = errors.New("dynamic configuration layer name is empty")
+	cmd.AddCommand(GetConfigDeleteCmd())
+	cmd.AddCommand(GetConfigGetCmd())
+	cmd.AddCommand(GetConfigSetCmd())
 
-var ErrEmptyConfigOwner = errors.New("dynamic configuration owner name is empty")
-
-var ErrEmptyConfigKey = errors.New("dynamic configuration key is empty")
-
-var ErrNoSuchConfig = errors.New("no such dynamic configuration")
-
-var ErrConfigIllegal = errors.New("dynamic configurations cannot start with GORT_")
+	return cmd
+}

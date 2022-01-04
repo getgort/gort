@@ -215,7 +215,7 @@ func validate(layer data.ConfigurationLayer, bundle, owner, key string) error {
 		return errs.ErrEmptyConfigLayer
 	case layer.Validate() != nil:
 		return layer.Validate()
-	case owner == "":
+	case owner == "" && layer != data.LayerBundle:
 		return errs.ErrEmptyConfigOwner
 	case key == "":
 		return errs.ErrEmptyConfigKey

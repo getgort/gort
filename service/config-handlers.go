@@ -19,11 +19,13 @@ package service
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/getgort/gort/dynamic"
 	gerrs "github.com/getgort/gort/errors"
 )
@@ -41,6 +43,11 @@ func getDynamicConfigParameters(params map[string]string) (layer data.Configurat
 	owner = params[ParameterConfigurationOwner]
 	key = params[ParameterConfigurationKey]
 	err = layer.Validate()
+
+	if layer == data.LayerBundle {
+		owner = ""
+	}
+
 	return
 }
 
@@ -58,44 +65,26 @@ func handleDeleteDynamicConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if layer == data.LayerUser {
+		user, err := getUserByRequest(r)
+		if err != nil {
+			respondAndLogError(r.Context(), w, err)
+			return
+		}
+
+		if owner == "" {
+			owner = user.Username
+		} else if owner != user.Username {
+			respondAndLogError(r.Context(), w, ErrUnauthorized)
+			return
+		}
+	}
+
 	err = dc.Delete(r.Context(), layer, bundle, owner, key)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
 	}
-}
-
-// handleGetDynamicConfig handles "GET /v2/configs/{bundle}/{layer}/{owner}/{key}"
-func handleGetDynamicConfig(w http.ResponseWriter, r *http.Request) {
-	dc, err := dynamic.Get()
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	layer, bundle, owner, key, err := getDynamicConfigParameters(mux.Vars(r))
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	exists, err := dc.Exists(r.Context(), layer, bundle, owner, key)
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-	if !exists {
-		http.Error(w, "No such dynamic configuration", http.StatusNotFound)
-		return
-	}
-
-	configs, err := dc.Get(r.Context(), layer, bundle, owner, key)
-	if err != nil {
-		respondAndLogError(r.Context(), w, err)
-		return
-	}
-
-	json.NewEncoder(w).Encode(configs)
 }
 
 // handleGetDynamicConfigs handles "GET /v2/configs"
@@ -124,9 +113,33 @@ func handleGetDynamicConfigs(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
+	} else if len(configs) == 0 {
+		http.Error(w, "No dynamic configurations found", http.StatusNoContent)
+		return
 	}
 
-	json.NewEncoder(w).Encode(configs)
+	// Filter to ensure only the accessible configs are returned
+	user, err := getUserByRequest(r)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	var filtered []data.DynamicConfiguration
+
+	for _, c := range configs {
+		if c.Layer == data.LayerUser && c.Owner != user.Username {
+			continue
+		}
+
+		if c.Secret {
+			c.Value = ""
+		}
+
+		filtered = append(filtered, c)
+	}
+
+	json.NewEncoder(w).Encode(filtered)
 }
 
 // handlePutDynamicConfiguration handles "PUT /v2/configs/{bundle}/{layer}/{owner}/{key}"
@@ -150,6 +163,26 @@ func handlePutDynamicConfiguration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if layer == data.LayerUser {
+		user, err := getUserByRequest(r)
+		if err != nil {
+			respondAndLogError(r.Context(), w, err)
+			return
+		}
+
+		if owner == "" {
+			owner = user.Username
+		} else if owner != user.Username {
+			respondAndLogError(r.Context(), w, ErrUnauthorized)
+			return
+		}
+	}
+
+	if strings.HasPrefix(key, "GORT_") {
+		respondAndLogError(r.Context(), w, errs.ErrConfigIllegal)
+		return
+	}
+
 	c.Layer = layer
 	c.Bundle = bundle
 	c.Owner = owner
@@ -163,10 +196,10 @@ func handlePutDynamicConfiguration(w http.ResponseWriter, r *http.Request) {
 }
 
 func addConfigMethodsToRouter(router *mux.Router) {
-	router.Handle("/v2/configs/{bundle}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "list"), "handleGetConfigs")).Methods("GET")
-	router.Handle("/v2/configs/{bundle}/{layer}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "list"), "handleGetConfigs")).Methods("GET")
-	router.Handle("/v2/configs/{bundle}/{layer}/{owner}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "list"), "handleGetConfigs")).Methods("GET")
-	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handleGetDynamicConfig, "config", "info"), "handleGetConfig")).Methods("GET")
-	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handlePutDynamicConfiguration, "config", "create"), "handlePutDynamicConfiguration")).Methods("PUT")
+	router.Handle("/v2/configs/{bundle}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "get"), "handleGetConfigs")).Methods("GET")
+	router.Handle("/v2/configs/{bundle}/{layer}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "get"), "handleGetConfigs")).Methods("GET")
+	router.Handle("/v2/configs/{bundle}/{layer}/{owner}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "get"), "handleGetConfigs")).Methods("GET")
+	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handleGetDynamicConfigs, "config", "get"), "handleGetConfigs")).Methods("GET")
+	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handlePutDynamicConfiguration, "config", "set"), "handlePutDynamicConfiguration")).Methods("PUT")
 	router.Handle("/v2/configs/{bundle}/{layer}/{owner}/{key}", otelhttp.NewHandler(authCommand(handleDeleteDynamicConfig, "config", "delete"), "handleDeleteConfig")).Methods("DELETE")
 }
