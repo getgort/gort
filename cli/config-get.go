@@ -40,7 +40,6 @@ by the owning user, or by a Gort administrator.
 
 Configurations set to "secret" cannot be retrieved.
 `
-
 	configGetUsage = `Usage:
   gort config get [-b bundle] [-l layer] [-o owner] [-k key] [flags]
 
@@ -52,7 +51,8 @@ Flags:
   -o, --owner string    The owning room, group, or user
 
 Global Flags:
-  -P, --profile string   The Gort profile within the config file to use`
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 var (

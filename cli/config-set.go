@@ -30,8 +30,8 @@ const (
 	configSetLong  = `Set or update a dynamic configuration value, which can be injected into
 commands' environments at execution time with the same name as the key.
 
-Dynamic configuration keys may not start with "GORT_".`
-
+Dynamic configuration keys may not start with "GORT_".
+`
 	configSetUsage = `Usage:
   gort config set [-b bundle] [-l layer] [-o owner] [-k key] [-s secret] [flags] config_value
 

@@ -49,7 +49,7 @@ Flags:
 
 Global Flags:
   -P, --profile string   The Gort profile within the config file to use
- `
+`
 )
 
 var (

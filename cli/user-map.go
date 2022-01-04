@@ -36,8 +36,8 @@ accessible in Slack via View Full Profile -> More -> Copy Member ID. It looks
 something like U01234567AB.
 
 A Gort user can only be mapped to one ID per adapter, and each adapter:ID pair
-can only be mapped to one Gort user.`
-
+can only be mapped to one Gort user.
+`
 	userMapUsage = `Usage:
   gort user map [flags] username adapter_name [chat_user_id]
 

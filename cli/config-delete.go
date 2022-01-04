@@ -28,7 +28,6 @@ const (
 	configDeleteUse   = "delete"
 	configDeleteShort = "Delete a configuration value"
 	configDeleteLong  = "Delete a configuration value."
-
 	configDeleteUsage = `Usage:
   gort config delete [-b bundle] [-l layer] [-o owner] [-k key]
 
@@ -40,7 +39,8 @@ Flags:
   -o, --owner string    The owning room, group, or user
 
 Global Flags:
-  -P, --profile string   The Gort profile within the config file to use`
+  -P, --profile string   The Gort profile within the config file to use
+`
 )
 
 var (
