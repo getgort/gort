@@ -58,11 +58,21 @@ test.describe('quickstart', () => {
         // 2.7. Using Gort (https://guide.getgort.io/en/latest/sections/quickstart.html#using-gort)
         await page.goto(slackWorkspace); // Navigate to workspace
 
-        const channel = "test-mychannel-" + Date.now();
+        // Create a channel (for a blank slate) and add Gort (alluded to in the instructions)
+        const channel = "test-gort-" + Date.now();
         await createTestChannel(page, channel);
         await addGortToChannel(page);
-        await sendSlackMessage(page, channel, "!echo Hello, Gort!");
-        await sendSlackMessage(page, channel, "!echo:echo Hello, Gort!");
+
+        // Send a command
+        await sendSlackMessage(page, channel, "!gort:version");
+
+        // Expect Gort to respond
+        await page.waitForSelector('text="Executing command: version"', {timeout: 1000});
+        await page.waitForSelector('text=Gort ChatOps Engine v', {timeout: 5000});
+        
+        // TODO: Use the commands in the actual instructions (or update instructions)
+        // await sendSlackMessage(page, channel, "!echo Hello, Gort!");
+        // await sendSlackMessage(page, channel, "!echo:echo Hello, Gort!");
     });
 })
 
@@ -129,7 +139,6 @@ async function configureSlackApp(page) {
     await page.keyboard.press("Delete");
     const appYaml = await fs.readFile("slackapp.yaml", "utf8");
     await page.fill('textarea', appYaml);
-    //await page.waitForSelector("text=token_rotation_enabled"); // Wait until the last line can be seen
     await page.click('text=Next');
 
     // Review the summary and click “Create” to create your app.
