@@ -1,15 +1,20 @@
 # Use `tilt up -- --k8s` to run with Kubernetes.
 config.define_bool("k8s",args=False,usage="If set, runs resources under Kubernetes. Otherwise, docker-compose is used.")
+config.define_string("config",args=False,usage="Gort config file, default development.yml")
 
 args = config.parse()
 k8s = "k8s" in args and args["k8s"]
+config = "development.yml"
+if "config" in args:
+    config = args["config"]
 
 # Build the container image as needed
 docker_build('getgort/gort', '.')
 
 # Set up resources using docker-compose
 def compose():
-    docker_compose('docker-compose.yml')
+    composeFile = str(read_file('docker-compose.yml')).replace('development.yml',config)
+    docker_compose(encode_yaml(decode_yaml(composeFile)))
 
 # Pull relay config from development.yml
 def loadRelayConfig(devConfig,relayType,setValues):
@@ -26,8 +31,8 @@ def loadDbConfig(devConfig,setValues):
         setValues.append(value)
 
 setValues = []
-if os.path.exists("development.yml"):
-    devConfig = read_yaml("development.yml")
+if os.path.exists(config):
+    devConfig = read_yaml(config)
     loadRelayConfig(devConfig,"discord",setValues)
     loadRelayConfig(devConfig,"slack",setValues)
     loadDbConfig(devConfig,setValues)
