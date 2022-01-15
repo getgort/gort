@@ -5,7 +5,6 @@
     "playwright": "^1.17.1"
   },
   "dependencies": {
-    "tcp-port-used": "^1.0.2",
     "yaml": "2.0.0-10"
   }
 }

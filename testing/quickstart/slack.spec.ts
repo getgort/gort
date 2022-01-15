@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 import { parse, stringify } from 'yaml'
 import { promises as fs } from 'fs';
 import { spawn } from 'child_process';
-import { waitUntilUsed } from 'tcp-port-used';
 
 const doMakeImage = true;
 const slackWorkspace = process.env.SLACK_WORKSPACE;
@@ -40,6 +39,7 @@ test.describe('quickstart', () => {
             slackEmail,
             slackPassword
         );
+        await removeExistingSlackApps(page);
         const tokens = await configureSlackApp(page);
         await updateConfigFileForSlackApp(tokens.appToken,tokens.botToken);
 
@@ -57,10 +57,12 @@ test.describe('quickstart', () => {
 
         // 2.7. Using Gort (https://guide.getgort.io/en/latest/sections/quickstart.html#using-gort)
         await page.goto(slackWorkspace); // Navigate to workspace
-        await addGortToGeneral(page);
-        await sendSlackMessage(page, "!echo Hello, Gort!");
-        await sendSlackMessage(page, "!echo:echo Hello, Gort!");
-        await removeGortFromGeneral(page);
+
+        const channel = "test-mychannel-" + Date.now();
+        await createTestChannel(page, channel);
+        await addGortToChannel(page);
+        await sendSlackMessage(page, channel, "!echo Hello, Gort!");
+        await sendSlackMessage(page, channel, "!echo:echo Hello, Gort!");
     });
 })
 
@@ -91,6 +93,15 @@ async function loginToSlack(page, workspaceURL, email, password) {
 
     // Use Slack in the browser rather than the app
     await page.click('text=use Slack in your browser');
+}
+
+async function removeExistingSlackApps(page) {
+    await page.goto('https://api.slack.com/apps');
+    while (await page.$('text=Gort', { timeout: 1000 }) !== null) {
+        await page.click('text=Gort');
+        await page.click('button:has-text("Delete App")');
+        await page.click('text=Yes, I’m sure');
+    }
 }
 
 async function configureSlackApp(page) {
@@ -164,16 +175,19 @@ function shell(command: string, args) {
     return new Promise(function (resolve, reject) {
         const m = spawn(command, args);
 
+        var output = "";
+
         m.stdout.on('data', (data) => {
-            console.log(`stdout: ${data}`);
+            output += (`stdout: ${data}`);
         });
 
         m.stderr.on('data', (data) => {
-            console.error(`stderr: ${data}`);
+            output += (`stderr: ${data}`);
         });
 
         m.on('close', (code) => {
             if (code !== 0) {
+                console.log(output);
                 console.log(`make exited with code ${code}`);
                 reject();
                 return
@@ -183,10 +197,41 @@ function shell(command: string, args) {
     });
 }
 
-// startGort initializes Gort and waits until it is listening on port 4000
+function checkGort() {
+    var https = require('https');
+    const options = {
+        hostname: 'localhost',
+        port: 4000,
+        path: '/',
+        method: 'GET',
+        agent: new https.Agent({
+            rejectUnauthorized: false
+        })
+    }
+
+    return new Promise<boolean> ((resolve) => {
+        const req = https.get(options,(res) => {
+            return resolve(true);
+        });
+
+        req.on('error', (e) => {
+            return resolve(false);
+        });
+    }); 
+}
+
+
+// startGort initializes Gort and waits until it is up and running
 async function startGort() {
     await shell("docker-compose", ["up", "-d"]);
-    await waitUntilUsed(4000,500,2000);
+
+    var running = false;
+    while (!running) {
+        running = await checkGort();
+        if (!running) {
+            await new Promise(f => setTimeout(f, 1000));
+        }
+    }
 }
 
 async function bootstrapGort() {
@@ -196,24 +241,31 @@ async function bootstrapGort() {
 }
 
 // TODO: Add expected response
-async function sendSlackMessage(page, message) {
+async function sendSlackMessage(page, channel, message) {
     // Post message and press enter
-    await page.fill('[aria-label="Message to general"]', message);
-    await page.press('[aria-label="Message to general"]', 'Enter');
+    await page.fill(`[aria-label="Message to ${channel}"]`, message);
+    await page.press(`[aria-label="Message to ${channel}"]`, 'Enter');
 }
 
 
-async function addGortToGeneral(page) {
+async function createTestChannel(page, name) {
+    if (process.platform == "darwin") {
+        await page.press('[data-qa=message_input]', 'Meta+Shift+l');
+    } else {
+        await page.press('[data-qa=message_input]', 'Control+Shift+l');
+    }
+
+    await page.click('[data-qa=channel_browser_channel_create_btn]');
+
+    await page.fill('[placeholder="e.g. plan-budget"]', name);
+    await page.click('[aria-label="Create a channel"]')
+    await page.click('[aria-label="Close"]');
+    await page.click('text=Skip for Now');
+}
+
+async function addGortToChannel(page) {
     await page.click('[aria-label="View 1 member. Includes you."]');
     await page.click('button[role="tab"]:has-text("Integrations")');
     await page.click('text=Add an App');
     await page.click('[aria-label="Add app"]');
-  }
-  
-  async function removeGortFromGeneral(page) {
-    await page.click('[aria-label="View 1 member. Includes you."]');
-    await page.click('button[role="tab"]:has-text("Integrations")');
-    await page.click('button:has-text("Gort")');
-    await page.click('button[role="menuitem"]:has-text("Remove this app from general …")');
-    await page.click('button:has-text("Remove")');
   }
