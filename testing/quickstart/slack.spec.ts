@@ -20,6 +20,12 @@ test.use({
 const terminalOptions = { logsEnabled: true, logDir: "test-results/logs"};
 
 test.describe('quickstart', () => {
+    test.setTimeout(10 * 60 * 1000);
+    test.use({
+        actionTimeout: 10 * 1000,
+        navigationTimeout: 30 * 1000,
+    });
+
     test.afterEach(async () => {
         // Shut down any existing docker-compose runs
         var terminal = new Terminal(undefined, terminalOptions);
@@ -32,8 +38,6 @@ test.describe('quickstart', () => {
     // quickstart tests the flow described in the quickstart guide:
     //   https://guide.getgort.io/en/latest/sections/quickstart.html
     test('quickstart', async ({ page }) => {
-        test.setTimeout(10 * 60 * 1000);
-
         // 2.2 Create Your Config File (https://guide.getgort.io/en/latest/sections/quickstart.html#create-your-configuration-file)
         await createConfigFile();
         
