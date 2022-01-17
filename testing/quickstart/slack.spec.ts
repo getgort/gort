@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { parse, stringify } from 'yaml'
 import { promises as fs } from 'fs';
-import { spawn } from 'child_process';
+import { Terminal } from 'playwright-terminal';
 
 const doMakeImage = true;
 const slackWorkspace = process.env.SLACK_WORKSPACE;
@@ -17,10 +17,16 @@ test.use({
     }
 });
 
+const terminalOptions = { logsEnabled: true, logDir: "test-results/logs"};
+
 test.describe('quickstart', () => {
-    test.afterAll(async () => {
+    test.afterEach(async () => {
         // Shut down any existing docker-compose runs
-        await shell("docker-compose", ["down"]);
+        var terminal = new Terminal(undefined, terminalOptions);
+        // Output Gort (and dependency) logs to file
+        await terminal.Execute("docker-compose", ["logs"]);
+        // Stop Gort and dependencies
+        await terminal.Execute("docker-compose", ["down"]);
     });
 
     // quickstart tests the flow described in the quickstart guide:
@@ -43,17 +49,19 @@ test.describe('quickstart', () => {
         const tokens = await configureSlackApp(page);
         await updateConfigFileForSlackApp(tokens.appToken,tokens.botToken);
 
+        var terminal = new Terminal(page, terminalOptions);
+
         // 2.4. Build the Gort Image (Optional) (https://guide.getgort.io/en/latest/sections/quickstart.html#build-the-gort-image-optional)
         if (doMakeImage) {
-            await shell("make", ["image"]);
+            await terminal.Execute("make", ["image"]);
             // TODO: Verify that the image was built
         }
 
         // 2.5. Starting Containerized Gort (https://guide.getgort.io/en/latest/sections/quickstart.html#starting-containerized-gort)
-        await startGort();
+        await startGort(terminal);
 
         // 2.6. Bootstrapping Gort (https://guide.getgort.io/en/latest/sections/quickstart.html#bootstrapping-gort)
-        await bootstrapGort();
+        await bootstrapGort(terminal);
 
         // 2.7. Using Gort (https://guide.getgort.io/en/latest/sections/quickstart.html#using-gort)
         await page.goto(slackWorkspace); // Navigate to workspace
@@ -180,32 +188,6 @@ async function configureSlackApp(page) {
     };
 }
 
-function shell(command: string, args) {
-    return new Promise(function (resolve, reject) {
-        const m = spawn(command, args);
-
-        var output = "";
-
-        m.stdout.on('data', (data) => {
-            output += (`stdout: ${data}`);
-        });
-
-        m.stderr.on('data', (data) => {
-            output += (`stderr: ${data}`);
-        });
-
-        m.on('close', (code) => {
-            if (code !== 0) {
-                console.log(output);
-                console.log(`make exited with code ${code}`);
-                reject();
-                return
-            }
-            resolve(true);
-        });
-    });
-}
-
 function checkGort() {
     var https = require('https');
     const options = {
@@ -231,8 +213,8 @@ function checkGort() {
 
 
 // startGort initializes Gort and waits until it is up and running
-async function startGort() {
-    await shell("docker-compose", ["up", "-d"]);
+async function startGort(terminal) {
+    await terminal.Execute("docker-compose", ["up", "-d"]);
 
     var running = false;
     while (!running) {
@@ -243,10 +225,10 @@ async function startGort() {
     }
 }
 
-async function bootstrapGort() {
+async function bootstrapGort(terminal) {
     // Note that -F is used here (not mentioned in Quickstart)
     // This makes it easier to re-run tests
-    await shell("go", ["run", ".", "bootstrap", "-F", "--allow-insecure", "https://localhost:4000"]);
+    await terminal.Execute("go", ["run", ".", "bootstrap", "-F", "--allow-insecure", "https://localhost:4000"]);
 }
 
 // TODO: Add expected response
@@ -258,6 +240,7 @@ async function sendSlackMessage(page, channel, message) {
 
 
 async function createTestChannel(page, name) {
+    await page.click('[data-qa=message_input]');
     if (process.platform == "darwin") {
         await page.press('[data-qa=message_input]', 'Meta+Shift+l');
     } else {

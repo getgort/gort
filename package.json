@@ -5,6 +5,7 @@
     "playwright": "^1.17.1"
   },
   "dependencies": {
+    "playwright-terminal": "^0.0.1",
     "yaml": "2.0.0-10"
   }
 }
