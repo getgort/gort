@@ -67,7 +67,7 @@ test.describe('quickstart', () => {
         await sendSlackMessage(page, channel, "!gort:version");
 
         // Expect Gort to respond
-        await page.waitForSelector('text="Executing command: version"', {timeout: 1000});
+        await page.waitForSelector('text="Executing command: version"', {timeout: 2000});
         await page.waitForSelector('text=Gort ChatOps Engine v', {timeout: 5000});
         
         // TODO: Use the commands in the actual instructions (or update instructions)
