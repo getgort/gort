@@ -38,8 +38,8 @@ type Worker interface {
 
 // New will build and return a new Worker for a single command execution.
 func New(command data.CommandRequest, token rest.Token) (Worker, error) {
-	dockerDefined := !config.IsUndefined(config.GetDockerConfigs())
-	kubernetesDefined := !config.IsUndefined(config.GetKubernetesConfigs())
+	dockerDefined := !config.Undefined(config.GetDockerConfigs())
+	kubernetesDefined := !config.Undefined(config.GetKubernetesConfigs())
 
 	switch {
 	case dockerDefined && kubernetesDefined:

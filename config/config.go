@@ -198,9 +198,9 @@ func Initialize(file string) error {
 	return Reload()
 }
 
-// IsUndefined is a helper method that is used to determine whether config
+// Undefined is a helper method that is used to determine whether config
 // sections are present.
-func IsUndefined(c interface{}) bool {
+func Undefined(c interface{}) bool {
 	if c == nil {
 		return true
 	}
