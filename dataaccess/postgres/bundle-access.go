@@ -55,11 +55,10 @@ func (da PostgresDataAccess) BundleCreate(ctx context.Context, bundle data.Bundl
 		return errs.ErrEmptyBundleVersion
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -131,11 +130,10 @@ func (da PostgresDataAccess) BundleDelete(ctx context.Context, name, version str
 		return errs.ErrEmptyBundleVersion
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -176,11 +174,10 @@ func (da PostgresDataAccess) BundleDisable(ctx context.Context, name, version st
 	ctx, sp := tr.Start(ctx, "postgres.BundleDisable")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -208,11 +205,10 @@ func (da PostgresDataAccess) BundleEnable(ctx context.Context, name, version str
 	ctx, sp := tr.Start(ctx, "postgres.BundleEnable")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -241,11 +237,10 @@ func (da PostgresDataAccess) BundleEnabledVersion(ctx context.Context, bundlenam
 	ctx, sp := tr.Start(ctx, "postgres.BundleEnabledVersion")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return "", err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -273,11 +268,10 @@ func (da PostgresDataAccess) BundleExists(ctx context.Context, name string) (boo
 	ctx, sp := tr.Start(ctx, "postgres.BundleExists")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -293,11 +287,10 @@ func (da PostgresDataAccess) BundleVersionExists(ctx context.Context, name, vers
 	ctx, sp := tr.Start(ctx, "postgres.BundleVersionExists")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -321,11 +314,10 @@ func (da PostgresDataAccess) BundleGet(ctx context.Context, name, version string
 		return data.Bundle{}, errs.ErrEmptyBundleVersion
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return data.Bundle{}, err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -349,11 +341,10 @@ func (da PostgresDataAccess) BundleList(ctx context.Context) ([]data.Bundle, err
 	// This is hacky as fuck. I know.
 	// I'll optimize later.
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return []data.Bundle{}, err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -412,11 +403,10 @@ func (da PostgresDataAccess) BundleUpdate(ctx context.Context, bundle data.Bundl
 		return errs.ErrEmptyBundleVersion
 	}
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -460,11 +450,10 @@ func (da PostgresDataAccess) BundleVersionList(ctx context.Context, name string)
 	// This is hacky as fuck. I know.
 	// I'll optimize later.
 
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return []data.Bundle{}, err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -512,11 +501,10 @@ func (da PostgresDataAccess) BundleVersionList(ctx context.Context, name string)
 // bundle and command names. If either is empty, it is treated as a wildcard.
 // Importantly, this must only return ENABLED commands!
 func (da PostgresDataAccess) FindCommandEntry(ctx context.Context, bundleName, commandName string) ([]data.CommandEntry, error) {
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -527,11 +515,10 @@ func (da PostgresDataAccess) FindCommandEntry(ctx context.Context, bundleName, c
 }
 
 func (da PostgresDataAccess) FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error) {
-	db, err := da.connect(ctx, "gort")
+	db, err := da.open(ctx, DatabaseGort)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {

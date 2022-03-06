@@ -147,8 +147,8 @@ func testInitialize(t *testing.T) {
 			t.Error("timeout waiting for database:", timeout)
 			t.FailNow()
 		}
-		db, err := da.connect(ctx, "postgres")
 
+		db, err := da.open(ctx, "postgres")
 		if db != nil && err == nil {
 			t.Log("database is ready!")
 			break
@@ -159,7 +159,7 @@ func testInitialize(t *testing.T) {
 	}
 
 	err := da.Initialize(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Run("testDatabaseExists", testDatabaseExists)
 	t.Run("testTablesExist", testTablesExist)
@@ -172,18 +172,14 @@ func testDatabaseExists(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test database "gort" exists
-	conn, err := da.connect(ctx, DatabaseGort)
-	assert.NoError(t, err)
-	defer conn.Close()
+	db, err := da.open(ctx, DatabaseGort)
+	require.NoError(t, err)
+	require.NotNil(t, db)
 
-	assert.NotNil(t, conn)
+	assert.NoError(t, db.PingContext(ctx))
 
-	if conn != nil {
-		assert.NoError(t, conn.Ping())
-	}
-
-	// Meta-test: non-existant database should return nil connection
-	nconn, err := da.connect(ctx, "doesntexist")
+	// Meta-test: non-existent database should return nil database
+	nconn, err := da.open(ctx, "doesntexist")
 	assert.Error(t, err)
 	assert.Nil(t, nconn)
 }
@@ -191,19 +187,19 @@ func testDatabaseExists(t *testing.T) {
 func testTablesExist(t *testing.T) {
 	expectedTables := []string{"users", "groups", "groupusers", "tokens", "bundles"}
 
-	db, err := da.connect(ctx, "gort")
+	conn, err := da.connect(ctx)
 	assert.NoError(t, err)
-	defer db.Close()
+	defer conn.Close()
 
 	// Expects these tables
 	for _, table := range expectedTables {
-		b, err := da.tableExists(ctx, table, db)
+		b, err := da.tableExists(ctx, table, conn)
 		assert.NoError(t, err)
 		assert.True(t, b)
 	}
 
 	// Expect not to find this one.
-	b, err := da.tableExists(ctx, "doestexist", db)
+	b, err := da.tableExists(ctx, "doestexist", conn)
 	assert.NoError(t, err)
 	assert.False(t, b)
 }

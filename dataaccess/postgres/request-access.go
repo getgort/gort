@@ -38,11 +38,11 @@ func (da PostgresDataAccess) RequestBegin(ctx context.Context, req *data.Command
 		return fmt.Errorf("command request ID already set")
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	const query = `INSERT INTO commands (bundle_name, bundle_version, command_name,
 		command_executable, command_parameters, adapter, user_id,
@@ -50,7 +50,7 @@ func (da PostgresDataAccess) RequestBegin(ctx context.Context, req *data.Command
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING request_id;`
 
-	stmt, err := db.Prepare(query)
+	stmt, err := conn.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}
@@ -92,11 +92,11 @@ func (da PostgresDataAccess) RequestUpdate(ctx context.Context, req data.Command
 		return fmt.Errorf("command request ID unset")
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	const query = `UPDATE commands
 		SET bundle_name=$1, bundle_version=$2, command_name=$3,
@@ -104,7 +104,7 @@ func (da PostgresDataAccess) RequestUpdate(ctx context.Context, req data.Command
 			user_email=$8, channel_id=$9, gort_user_name=$10
 		WHERE request_id=$11;`
 
-	_, err = db.ExecContext(ctx, query,
+	_, err = conn.ExecContext(ctx, query,
 		req.Bundle.Name,
 		req.Bundle.Version,
 		req.Command.Name,
@@ -132,11 +132,11 @@ func (da PostgresDataAccess) RequestClose(ctx context.Context, envelope data.Com
 		return fmt.Errorf("command request ID unset")
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	const query = `UPDATE commands
 		SET bundle_name=$1, bundle_version=$2, command_name=$3,
@@ -150,7 +150,7 @@ func (da PostgresDataAccess) RequestClose(ctx context.Context, envelope data.Com
 		errMsg = envelope.Data.Error.Error()
 	}
 
-	_, err = db.ExecContext(ctx, query,
+	_, err = conn.ExecContext(ctx, query,
 		envelope.Request.Bundle.Name,
 		envelope.Request.Bundle.Version,
 		envelope.Request.Command.Name,
@@ -173,7 +173,7 @@ func (da PostgresDataAccess) RequestClose(ctx context.Context, envelope data.Com
 	return err
 }
 
-func (da PostgresDataAccess) createCommandsTable(ctx context.Context, db *sql.DB) error {
+func (da PostgresDataAccess) createCommandsTable(ctx context.Context, conn *sql.Conn) error {
 	createCommandsQuery := `CREATE TABLE commands(
 		request_id          BIGSERIAL,
 		timestamp           TIMESTAMP WITH TIME ZONE,
@@ -192,7 +192,7 @@ func (da PostgresDataAccess) createCommandsTable(ctx context.Context, db *sql.DB
 		result_error        TEXT
 	);`
 
-	_, err := db.ExecContext(ctx, createCommandsQuery)
+	_, err := conn.ExecContext(ctx, createCommandsQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
