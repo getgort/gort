@@ -40,7 +40,7 @@ type DynamicConfiguration interface {
 func Get() (DynamicConfiguration, error) {
 	dynamicConfigs := config.GetDynamicConfigs()
 
-	if config.IsUndefined(dynamicConfigs) {
+	if config.Undefined(dynamicConfigs) {
 		return dal.NewDALDynamicConfiguration(dynamicConfigs)
 	}
 
