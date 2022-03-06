@@ -77,36 +77,36 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, cj.Password, "veryKleverPassw0rd!")
 }
 
-func TestIsUndefinedNil(t *testing.T) {
-	id := IsUndefined(nil)
+func TestUndefinedNil(t *testing.T) {
+	id := Undefined(nil)
 	assert.True(t, id)
 }
 
-func TestIsUndefinedFalse(t *testing.T) {
+func TestUndefinedFalse(t *testing.T) {
 	c, err := load("../testing/config/complete.yml")
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
 	}
 
-	id := IsUndefined(c)
+	id := Undefined(c)
 	assert.False(t, id)
 }
 
-func TestIsUndefinedTrue(t *testing.T) {
+func TestUndefinedTrue(t *testing.T) {
 	c := data.GortConfig{}
-	id := IsUndefined(c)
+	id := Undefined(c)
 	assert.True(t, id)
 }
 
-func TestIsUndefinedTrue2(t *testing.T) {
+func TestUndefinedTrue2(t *testing.T) {
 	c, err := load("../testing/config/no-database.yml")
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
 	}
 
-	id := IsUndefined(c.DatabaseConfigs)
+	id := Undefined(c.DatabaseConfigs)
 	assert.True(t, id)
 }
 
