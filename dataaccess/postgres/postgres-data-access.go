@@ -215,7 +215,8 @@ func (da PostgresDataAccess) createBundlesTables(ctx context.Context, conn *sql.
 	);
 	`
 
-	if _, err = conn.ExecContext(ctx, createBundlesQuery); err != nil {
+	_, err = conn.ExecContext(ctx, createBundlesQuery)
+	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
@@ -351,6 +352,24 @@ func (da PostgresDataAccess) createTokensTable(ctx context.Context, conn *sql.Co
 	return nil
 }
 
+func (da PostgresDataAccess) createUsersTable(ctx context.Context, conn *sql.Conn) error {
+	var err error
+
+	createUserQuery := `CREATE TABLE users (
+		email         	TEXT,
+		full_name     	TEXT,
+		password_hash 	TEXT,
+		username 		TEXT PRIMARY KEY
+	  );`
+
+	_, err = conn.ExecContext(ctx, createUserQuery)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
 func (da PostgresDataAccess) createUsersAdapterIDsTable(ctx context.Context, conn *sql.Conn) error {
 	var err error
 
@@ -366,24 +385,6 @@ func (da PostgresDataAccess) createUsersAdapterIDsTable(ctx context.Context, con
 	`
 
 	_, err = conn.ExecContext(ctx, createTableQuery)
-	if err != nil {
-		return gerr.Wrap(errs.ErrDataAccess, err)
-	}
-
-	return nil
-}
-
-func (da PostgresDataAccess) createUsersTable(ctx context.Context, conn *sql.Conn) error {
-	var err error
-
-	createUserQuery := `CREATE TABLE users (
-		email         	TEXT,
-		full_name     	TEXT,
-		password_hash 	TEXT,
-		username 		TEXT PRIMARY KEY
-	  );`
-
-	_, err = conn.ExecContext(ctx, createUserQuery)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
