@@ -61,7 +61,7 @@ func Get() (DataAccess, error) {
 func getCorrectDataAccess() DataAccess {
 	dbConfigs := config.GetDatabaseConfigs()
 
-	if config.IsUndefined(dbConfigs) {
+	if config.Undefined(dbConfigs) {
 		return memory.NewInMemoryDataAccess()
 	}
 

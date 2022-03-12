@@ -77,6 +77,7 @@ func (da DataAccessTester) testBundleCreate(t *testing.T) {
 	// Expect an error
 	err = da.BundleCreate(da.ctx, bundle)
 	require.Error(t, err, errs.ErrBundleExists)
+
 }
 
 func (da DataAccessTester) testBundleCreateMissingRequired(t *testing.T) {

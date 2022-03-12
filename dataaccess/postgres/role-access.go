@@ -47,14 +47,14 @@ func (da PostgresDataAccess) RoleCreate(ctx context.Context, name string) error 
 		return errs.ErrRoleExists
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `INSERT INTO roles (role_name) VALUES ($1);`
-	_, err = db.ExecContext(ctx, query, name)
+	_, err = conn.ExecContext(ctx, query, name)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -85,20 +85,20 @@ func (da PostgresDataAccess) RoleDelete(ctx context.Context, name string) error 
 		return errs.ErrNoSuchRole
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `DELETE FROM group_roles WHERE group_name=$1;`
-	_, err = db.ExecContext(ctx, query, name)
+	_, err = conn.ExecContext(ctx, query, name)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	query = `DELETE FROM roles WHERE role_name=$1;`
-	_, err = db.ExecContext(ctx, query, name)
+	_, err = conn.ExecContext(ctx, query, name)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -112,16 +112,16 @@ func (da PostgresDataAccess) RoleExists(ctx context.Context, rolename string) (b
 	ctx, sp := tr.Start(ctx, "postgres.RoleExists")
 	defer sp.End()
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := "SELECT EXISTS(SELECT 1 FROM roles WHERE role_name=$1)"
 	exists := false
 
-	err = db.QueryRowContext(ctx, query, rolename).Scan(&exists)
+	err = conn.QueryRowContext(ctx, query, rolename).Scan(&exists)
 	if err != nil {
 		return false, gerr.Wrap(errs.ErrNoSuchRole, err)
 	}
@@ -139,11 +139,11 @@ func (da PostgresDataAccess) RoleGet(ctx context.Context, name string) (rest.Rol
 		return rest.Role{}, errs.ErrEmptyRoleName
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return rest.Role{}, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	// There will be more fields here eventually
 	query := `SELECT role_name
@@ -151,7 +151,7 @@ func (da PostgresDataAccess) RoleGet(ctx context.Context, name string) (rest.Rol
 		WHERE role_name=$1`
 
 	role := rest.Role{}
-	err = db.QueryRowContext(ctx, query, name).Scan(&role.Name)
+	err = conn.QueryRowContext(ctx, query, name).Scan(&role.Name)
 	if err != nil {
 		return role, gerr.Wrap(errs.ErrNoSuchRole, err)
 	}
@@ -224,18 +224,18 @@ func (da PostgresDataAccess) RoleGroupList(ctx context.Context, rolename string)
 		return nil, errs.ErrNoSuchRole
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `SELECT group_name
 		FROM group_roles
 		WHERE role_name = $1
 		ORDER BY role_name`
 
-	rows, err := db.QueryContext(ctx, query, rolename)
+	rows, err := conn.QueryContext(ctx, query, rolename)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -267,18 +267,18 @@ func (da PostgresDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) 
 	ctx, sp := tr.Start(ctx, "postgres.RoleList")
 	defer sp.End()
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	var rolesByName = make(map[string]*rest.Role)
 	// Load all role names and add to the roles map
 	query := `SELECT role_name
 		FROM roles`
 
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := conn.QueryContext(ctx, query)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
 	}
@@ -295,7 +295,7 @@ func (da PostgresDataAccess) RoleList(ctx context.Context) ([]rest.Role, error) 
 	// Load all permissions and add to role objects
 	query = `SELECT role_name, bundle_name, permission
 		FROM role_permissions`
-	rows, err = db.QueryContext(ctx, query)
+	rows, err = conn.QueryContext(ctx, query)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrNoSuchRole, err)
 	}
@@ -345,15 +345,15 @@ func (da PostgresDataAccess) RolePermissionAdd(ctx context.Context, rolename, bu
 		return errs.ErrNoSuchRole
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `INSERT INTO role_permissions (role_name, bundle_name, permission)
 		VALUES ($1, $2, $3);`
-	_, err = db.ExecContext(ctx, query, rolename, bundle, permission)
+	_, err = conn.ExecContext(ctx, query, rolename, bundle, permission)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -378,15 +378,15 @@ func (da PostgresDataAccess) RolePermissionDelete(ctx context.Context, rolename,
 		return errs.ErrEmptyPermission
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `DELETE FROM role_permissions
 		WHERE role_name=$1 AND bundle_name=$2 AND permission=$3;`
-	_, err = db.ExecContext(ctx, query, rolename, bundle, permission)
+	_, err = conn.ExecContext(ctx, query, rolename, bundle, permission)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -439,17 +439,17 @@ func (da PostgresDataAccess) doGetRolePermissions(ctx context.Context, name stri
 
 	perms := make([]rest.RolePermission, 0)
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return perms, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `SELECT bundle_name, permission
 		FROM role_permissions
 		WHERE role_name = $1`
 
-	rows, err := db.QueryContext(ctx, query, name)
+	rows, err := conn.QueryContext(ctx, query, name)
 	if err != nil {
 		return perms, gerr.Wrap(errs.ErrDataAccess, err)
 	}
