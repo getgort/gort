@@ -37,6 +37,12 @@ func Wrap(newErr error, nestedErr error) error {
 	return NestedError{Message: newErr.Error(), Err: nestedErr}
 }
 
+// Wrap will return a new error of the specified type, but wrapping the
+// specified sub-error.
+func WrapStr(message string, nestedErr error) error {
+	return NestedError{Message: message, Err: nestedErr}
+}
+
 // Is compares two errors and returns true if they have the same message.
 // If either is a NestedError, only the top-level message is checked.
 func Is(err1 error, err2 error) bool {
