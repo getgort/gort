@@ -27,13 +27,13 @@ import (
 	gerr "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/telemetry"
 
-	_ "github.com/jackc/pgx/v4"
-	_ "github.com/lib/pq" // Load the Postgres drivers
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"go.opentelemetry.io/otel"
 )
 
 const (
 	DatabaseGort = "gort"
+	DriverName   = "pgx"
 )
 
 // PostgresDataAccess is a data access implementation backed by a database.
@@ -46,7 +46,11 @@ type PostgresDataAccess struct {
 // NewPostgresDataAccess returns a new PostgresDataAccess based on the
 // supplied config.
 func NewPostgresDataAccess(configs data.DatabaseConfigs) PostgresDataAccess {
-	return PostgresDataAccess{configs: configs, dbs: map[string]*sql.DB{}, mutex: &sync.Mutex{}}
+	return PostgresDataAccess{
+		configs: configs,
+		dbs:     map[string]*sql.DB{},
+		mutex:   &sync.Mutex{},
+	}
 }
 
 // Initialize sets up the database.
@@ -549,6 +553,7 @@ func (da PostgresDataAccess) ensureDatabaseExists(ctx context.Context, dbName st
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	exists, err := da.databaseExists(ctx, conn, dbName)
 	if err != nil {
@@ -576,19 +581,31 @@ func (da PostgresDataAccess) open(ctx context.Context, databaseName string) (*sq
 	}
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
+		"password=%s database=%s",
 		da.configs.Host, da.configs.Port, da.configs.User,
 		da.configs.Password, databaseName)
 
-	db, err := sql.Open("postgres", psqlInfo)
+	if !da.configs.SSLEnabled {
+		psqlInfo = psqlInfo + " sslmode=disable"
+	}
+
+	db, err := sql.Open(DriverName, psqlInfo)
 	if err != nil {
 		return nil, gerr.WrapStr(fmt.Sprintf("failed to open database %q", databaseName), err)
 	}
 
-	db.SetMaxIdleConns(da.configs.MaxIdleConnections)
-	db.SetMaxOpenConns(da.configs.MaxOpenConnections)
-	db.SetConnMaxIdleTime(da.configs.ConnectionMaxIdleTime)
-	db.SetConnMaxLifetime(da.configs.ConnectionMaxLifetime)
+	if da.configs.MaxIdleConnections != 0 {
+		db.SetMaxIdleConns(da.configs.MaxIdleConnections)
+	}
+	if da.configs.MaxOpenConnections != 0 {
+		db.SetMaxOpenConns(da.configs.MaxOpenConnections)
+	}
+	if da.configs.ConnectionMaxIdleTime != 0 {
+		db.SetConnMaxIdleTime(da.configs.ConnectionMaxIdleTime)
+	}
+	if da.configs.ConnectionMaxLifetime != 0 {
+		db.SetConnMaxLifetime(da.configs.ConnectionMaxLifetime)
+	}
 
 	err = db.PingContext(ctx)
 	if err != nil {

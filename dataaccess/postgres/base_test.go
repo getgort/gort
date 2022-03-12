@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/tests"
 
@@ -55,8 +56,7 @@ var (
 var DoNotCleanUpDatabase = false
 
 func TestPostgresDataAccessMain(t *testing.T) {
-	ctx, cancel = context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+	ctx = context.Background()
 
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -71,19 +71,27 @@ func TestPostgresDataAccessMain(t *testing.T) {
 	}()
 	require.NoError(t, err, "failed to start database container")
 
+	ctx, cancel = context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	t.Run("testInitialize", testInitialize)
+
+	t.Run("testConnectionLeaks", testConnectionLeaks)
 
 	dat := tests.NewDataAccessTester(ctx, cancel, da)
 	t.Run("RunAllTests", dat.RunAllTests)
 }
 
 func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
+	ctx2, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return func() {}, err
 	}
 
-	reader, err := cli.ImagePull(ctx, "docker.io/library/postgres:14", types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx2, "docker.io/library/postgres:14", types.ImagePullOptions{})
 	if err != nil {
 		return func() {}, err
 	}
@@ -93,7 +101,7 @@ func startDatabaseContainer(ctx context.Context, t *testing.T) (func(), error) {
 	containerName := fmt.Sprintf("gort-test-%x", r.Int())
 
 	resp, err := cli.ContainerCreate(
-		ctx,
+		ctx2,
 		&container.Config{
 			Image:        "postgres:14",
 			ExposedPorts: nat.PortSet{"5432/tcp": {}},
@@ -142,6 +150,7 @@ func testInitialize(t *testing.T) {
 
 	t.Log("Waiting for database to be ready")
 
+loop:
 	for {
 		if time.Now().After(timeoutAt) {
 			t.Error("timeout waiting for database:", timeout)
@@ -149,9 +158,14 @@ func testInitialize(t *testing.T) {
 		}
 
 		db, err := da.open(ctx, "postgres")
-		if db != nil && err == nil {
-			t.Log("database is ready!")
-			break
+		switch {
+		case err != nil:
+			t.Logf("connecting to database: %v", err)
+		case db == nil:
+			t.Log("connecting to database: got nil error but nil db")
+		default:
+			t.Log("connecting to database: database is ready!")
+			break loop
 		}
 
 		t.Log("Sleeping 1 second...")
@@ -163,6 +177,29 @@ func testInitialize(t *testing.T) {
 
 	t.Run("testDatabaseExists", testDatabaseExists)
 	t.Run("testTablesExist", testTablesExist)
+}
+
+func testConnectionLeaks(t *testing.T) {
+	const count = 100
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	for i := 0; i < count; i++ {
+		bundle, err := getTestBundle()
+		require.NoError(t, err)
+
+		err = da.BundleCreate(ctx, bundle)
+		require.NoError(t, err)
+
+		err = da.BundleDelete(ctx, bundle.Name, bundle.Version)
+		require.NoError(t, err)
+	}
+
+	for name, db := range da.dbs {
+		require.LessOrEqual(t, db.Stats().OpenConnections, 5, name, " has too many open connections")
+		require.LessOrEqual(t, db.Stats().InUse, 2, name, "has too many in-use connections")
+	}
 }
 
 func testDatabaseExists(t *testing.T) {
@@ -202,4 +239,8 @@ func testTablesExist(t *testing.T) {
 	b, err := da.tableExists(ctx, "doestexist", conn)
 	assert.NoError(t, err)
 	assert.False(t, b)
+}
+
+func getTestBundle() (data.Bundle, error) {
+	return bundles.LoadBundleFromFile("../../testing/test-bundle.yml")
 }
