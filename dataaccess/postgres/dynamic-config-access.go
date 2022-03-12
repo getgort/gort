@@ -43,16 +43,16 @@ func (da PostgresDataAccess) DynamicConfigurationCreate(ctx context.Context, dc 
 		return errs.ErrConfigExists
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `INSERT INTO configs
 		(bundle_name, layer, owner, key, secret, value)
 		VALUES ($1, $2, $3, $4, $5, $6);`
-	_, err = db.ExecContext(ctx, query, dc.Bundle, dc.Layer, dc.Owner, dc.Key, dc.Secret, dc.Value)
+	_, err = conn.ExecContext(ctx, query, dc.Bundle, dc.Layer, dc.Owner, dc.Key, dc.Secret, dc.Value)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -75,14 +75,14 @@ func (da PostgresDataAccess) DynamicConfigurationDelete(ctx context.Context, lay
 		return errs.ErrNoSuchConfig
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := "DELETE FROM configs WHERE bundle_name=$1 AND layer=$2 AND owner=$3 AND key=$4;"
-	_, err = db.ExecContext(ctx, query, bundle, layer, owner, key)
+	_, err = conn.ExecContext(ctx, query, bundle, layer, owner, key)
 	if err != nil {
 		err = gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -99,16 +99,16 @@ func (da PostgresDataAccess) DynamicConfigurationExists(ctx context.Context, lay
 		return false, err
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := "SELECT EXISTS(SELECT 1 FROM configs WHERE bundle_name=$1 AND layer=$2 AND owner=$3 AND key=$4)"
 	exists := false
 
-	err = db.QueryRowContext(ctx, query, bundle, layer, owner, key).Scan(&exists)
+	err = conn.QueryRowContext(ctx, query, bundle, layer, owner, key).Scan(&exists)
 	if err != nil {
 		return false, gerr.Wrap(errs.ErrNoSuchGroup, err)
 	}
@@ -131,18 +131,18 @@ func (da PostgresDataAccess) DynamicConfigurationGet(ctx context.Context, layer 
 		return data.DynamicConfiguration{}, errs.ErrNoSuchConfig
 	}
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return data.DynamicConfiguration{}, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `SELECT bundle_name, layer, owner, key, value, secret
 		FROM configs
 		WHERE bundle_name=$1 AND layer=$2 AND owner=$3 AND key=$4`
 	dc := data.DynamicConfiguration{}
 
-	err = db.QueryRowContext(ctx, query, bundle, layer, owner, key).
+	err = conn.QueryRowContext(ctx, query, bundle, layer, owner, key).
 		Scan(&dc.Bundle, &dc.Layer, &dc.Owner, &dc.Key, &dc.Value, &dc.Secret)
 
 	if err == sql.ErrNoRows {
@@ -174,17 +174,17 @@ func (da PostgresDataAccess) DynamicConfigurationList(ctx context.Context, layer
 
 	var dcs = make([]data.DynamicConfiguration, 0)
 
-	db, err := da.connect(ctx, DatabaseGort)
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `SELECT bundle_name, layer, owner, key, value, secret
 		FROM configs
 		WHERE bundle_name LIKE $1 AND layer LIKE $2 AND owner LIKE $3 AND key LIKE $4`
 
-	rows, err := db.QueryContext(ctx, query, bundle, layer, owner, key)
+	rows, err := conn.QueryContext(ctx, query, bundle, layer, owner, key)
 	if err != nil {
 		return nil, gerr.Wrap(errs.ErrDataAccess, err)
 	}
