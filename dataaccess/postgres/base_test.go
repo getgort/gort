@@ -198,7 +198,7 @@ func testConnectionLeaks(t *testing.T) {
 
 	for name, db := range da.dbs {
 		require.LessOrEqual(t, db.Stats().OpenConnections, 5, name, " has too many open connections")
-		require.LessOrEqual(t, db.Stats().InUse, 2, name, "has too many in-use connections")
+		require.LessOrEqual(t, db.Stats().InUse, 2, name, " has too many in-use connections")
 	}
 }
 
