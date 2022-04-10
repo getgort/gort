@@ -135,7 +135,7 @@ async function configureSlackApp(page) {
 
     // Select your workspace and click “Next”.
     await page.click('[aria-label="Select a team"]');
-    await page.click('#team-picker_option_0 >> :nth-match(div:has-text("telliott Test"), 4)');
+    await page.click('#team-picker_option_0 >> :nth-match(div:has-text("Gort Integration Testing"), 4)');
     await page.click('text=Next');
 
     // Copy the contents of the manifest file slackapp.yaml into the code box below “Enter app manifest below”, 
@@ -184,7 +184,7 @@ async function configureSlackApp(page) {
 
     // At the top of the screen, you should see “OAuth Tokens for Your Workspace” containing a “Bot User OAuth Token” that starts with xoxb-. Copy that value, and paste it into the slack section of your development.yml config file as bot_token.
     await page.waitForSelector('text=Bot User OAuth Token');
-    const botToken = await page.inputValue('#bot_oauth_access_token');
+    const botToken = await page.inputValue('#bot_oauth_access_token_workspace');
 
     return {
     appToken: appToken,
@@ -256,7 +256,9 @@ async function createTestChannel(page, name) {
     await page.fill('[placeholder="e.g. plan-budget"]', name);
     await page.click('[aria-label="Create a channel"]')
     await page.click('[aria-label="Close"]');
-    await page.click('text=Skip for Now');
+
+    // Hit close again to dismiss the "add people" dialog
+    await page.click('[aria-label="Close"]');
 }
 
 async function addGortToChannel(page) {
