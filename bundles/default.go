@@ -19,6 +19,7 @@ package bundles
 import (
 	"bytes"
 	_ "embed"
+	"os"
 	"text/template"
 
 	"github.com/getgort/gort/data"
@@ -29,10 +30,14 @@ import (
 var s string
 
 func Default() (data.Bundle, error) {
+	bundleTag := os.Getenv("GORT_DEFAULT_BUNDLE_IMAGE_TAG")
+	if bundleTag == "" {
+		bundleTag = version.Version
+	}
 	args := struct {
 		Version string
 	}{
-		Version: version.Version,
+		Version: bundleTag,
 	}
 
 	t, err := template.New("default-bundle").Parse(s)
