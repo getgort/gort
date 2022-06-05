@@ -83,7 +83,7 @@ func GetUserUpdateCmd() *cobra.Command {
 func userUpdateCmd(cmd *cobra.Command, args []string) error {
 	username := args[0]
 
-	c, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

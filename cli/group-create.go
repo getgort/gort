@@ -65,7 +65,7 @@ func GetGroupCreateCmd() *cobra.Command {
 func groupCreateCmd(cmd *cobra.Command, args []string) error {
 	groupname := args[0]
 
-	c, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

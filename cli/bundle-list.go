@@ -94,7 +94,7 @@ func bundleListCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--enabled and --disabled flags are mutually exclusive")
 	}
 
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

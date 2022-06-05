@@ -76,7 +76,7 @@ func bundleInfoCmd(cmd *cobra.Command, args []string) error {
 }
 
 func doBundleInfoAll(name string) error {
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func doBundleInfoAll(name string) error {
 }
 
 func doBundleInfoVersion(name, version string) error {
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

@@ -79,7 +79,7 @@ func userMapCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("chat provider user ID is missing")
 	}
 
-	c, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

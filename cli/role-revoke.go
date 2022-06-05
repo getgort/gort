@@ -59,7 +59,7 @@ func roleRevokeCmd(cmd *cobra.Command, args []string) error {
 	bundlename := args[1]
 	permissionname := args[2]
 
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

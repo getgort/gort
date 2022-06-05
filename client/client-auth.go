@@ -125,7 +125,7 @@ func (c *GortClient) Bootstrap(overwrite bool) (rest.User, error) {
 	endpointURL := fmt.Sprintf("%s/v2/bootstrap", c.profile.URL)
 
 	// Get profile data so we can update it afterwards
-	profile, err := LoadClientProfile()
+	profile, err := LoadClientProfile(c.configBaseDir)
 	if err != nil {
 		return rest.User{}, err
 	}
@@ -183,7 +183,7 @@ func (c *GortClient) Bootstrap(overwrite bool) (rest.User, error) {
 	}
 
 	profile.Profiles[entry.Name] = entry
-	err = SaveClientProfile(profile)
+	err = SaveClientProfile(profile, c.configBaseDir)
 	if err != nil {
 		return user, err
 	}
