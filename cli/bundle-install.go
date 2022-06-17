@@ -84,9 +84,13 @@ You may also give the path as ` + "`-`" + `, in which case standard input is use
   cat config.yaml | gort bundle install -
 
 Finally, if the bundle lives in git, the latest version of the bundle can be
-installed as follows:
+installed via ssh:
 
   gort bundle install git@example.com/repo.git
+
+Or via http(s):
+
+  gort bundle install https://example.com/repo.git
 
 A specific tagged version can be installed as follows:
 
@@ -96,6 +100,11 @@ For bundles in sub-directories, a double-slash syntax can be used to indicate
 the subdirectory where the bundle can be found:
 
   gort bundle install git@example.com/repo.git//bundles/example
+
+For bundles hosted in GitHub, you will also need to specify an organization.
+To load in the simple bundle example:
+
+  https://github.com/getgort/bundles.git//simple
 
 If a bundle file is not specified, it will default to "bundle.yml".
 `
