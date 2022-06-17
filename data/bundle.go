@@ -100,13 +100,20 @@ func (b Bundle) Semver() semver.Version {
 // BundleCommand represents a bundle command, as defined in the "bundles/commands"
 // section of the config.
 type BundleCommand struct {
-	Description     string    `yaml:",omitempty" json:"description,omitempty"`
-	Executable      []string  `yaml:",omitempty,flow" json:"executable,omitempty"`
-	LongDescription string    `yaml:"long_description,omitempty" json:"long_description,omitempty"`
-	Name            string    `yaml:"-" json:"-"`
-	Triggers        []Trigger `yaml:"triggers,omitempty" json:"trigger,omitempty"`
-	Rules           []string  `yaml:",omitempty" json:"rules,omitempty"`
-	Templates       Templates `yaml:",omitempty" json:"templates,omitempty"`
+	Description     string          `yaml:",omitempty" json:"description,omitempty"`
+	Executable      []string        `yaml:",omitempty,flow" json:"executable,omitempty"`
+	LongDescription string          `yaml:"long_description,omitempty" json:"long_description,omitempty"`
+	Name            string          `yaml:"-" json:"-"`
+	Rules           []string        `yaml:",omitempty" json:"rules,omitempty"`
+	Triggers        []Trigger       `yaml:"triggers,omitempty" json:"trigger,omitempty"`
+	Templates       Templates       `yaml:",omitempty" json:"templates,omitempty"`
+	Input           BundleCommandIO `yaml:",omitempty" json:"input,omitempty"`
+	Output          BundleCommandIO `yaml:",omitempty" json:"output,omitempty"`
+}
+
+// BundleCommandIOData contains the bundle command's I/O configuration data
+type BundleCommandIO struct {
+	Advanced bool `yaml:",omitempty" json:"advanced,omitempty"`
 }
 
 // Trigger represents the configuration for a command trigger as defined

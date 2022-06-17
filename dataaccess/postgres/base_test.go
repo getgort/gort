@@ -177,6 +177,7 @@ loop:
 
 	t.Run("testDatabaseExists", testDatabaseExists)
 	t.Run("testTablesExist", testTablesExist)
+	t.Run("testColumnExists", testColumnExists)
 }
 
 func testConnectionLeaks(t *testing.T) {
@@ -233,6 +234,51 @@ func testTablesExist(t *testing.T) {
 		b, err := da.tableExists(ctx, table, conn)
 		assert.NoError(t, err)
 		assert.True(t, b)
+	}
+
+	// Expect not to find this one.
+	b, err := da.tableExists(ctx, "doestexist", conn)
+	assert.NoError(t, err)
+	assert.False(t, b)
+}
+
+func testColumnExists(t *testing.T) {
+	tests := []struct {
+		Table    string
+		Column   string
+		Expected bool
+	}{
+		{
+			Table:    "",
+			Column:   "",
+			Expected: false,
+		}, {
+			Table:    "users",
+			Column:   "",
+			Expected: false,
+		}, {
+			Table:    "users",
+			Column:   "foo",
+			Expected: false,
+		}, {
+			Table:    "users",
+			Column:   "username",
+			Expected: true,
+		},
+	}
+
+	conn, err := da.connect(ctx)
+	assert.NoError(t, err)
+	defer conn.Close()
+
+	// Expects these tables
+	for i, test := range tests {
+		_, err := da.tableExists(ctx, test.Table, conn)
+		require.NoError(t, err, "(%d) tableExists error", i)
+
+		c, err := da.columnExists(ctx, test.Table, test.Column, conn)
+		require.NoError(t, err, "(%d) columnExists error", i)
+		assert.Equal(t, test.Expected, c)
 	}
 
 	// Expect not to find this one.

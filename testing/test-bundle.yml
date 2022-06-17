@@ -78,3 +78,17 @@ commands:
       command_error: 'Template:Command:CommandError'
       message: 'Template:Command:Message'
       message_error: 'Template:Command:MessageError'
+  input:
+    description: "Write arguments to the standard output."
+    long_description: |-
+      Write arguments to the standard output.
+
+      Usage:
+        test:input [string ...]
+    executable: [ "/bin/echo" ]
+    rules:
+      - must have test:input
+    input:
+      advanced: true
+    output:
+      advanced: true
