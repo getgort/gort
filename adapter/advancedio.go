@@ -30,9 +30,6 @@ type CommandInfo struct {
 	// Bundle is the name of the bundle used
 	Bundle string
 
-	// Version is the version number of the bundle
-	BundleVersion string
-
 	// Command is the name of the command
 	Command string
 
