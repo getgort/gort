@@ -40,15 +40,36 @@ func (c CommandParameters) String() string {
 // a chat provider.
 type CommandRequest struct {
 	CommandEntry
-	Adapter    string            // The name of the adapter this request originated from
-	ChannelID  string            // The provider ID of the channel that the request originated in
-	Context    context.Context   // The request context
-	Parameters CommandParameters // Tokenized command parameters
-	RequestID  int64             // A unique requestID
-	Timestamp  time.Time         // The time this request was triggered
-	UserID     string            // The provider ID of user making this request
-	UserEmail  string            // The email address associated with the user making the request
-	UserName   string            // The gort username of the user making the request
+
+	// Adapter is the name of the adapter this request originated from
+	Adapter string
+
+	// ChannelID is the (provider-specific) ID of the channel that the
+	// request originated in
+	ChannelID string
+
+	// Context is the original request context
+	// TODO How can we refactor this out?
+	Context context.Context
+
+	// Parameters is the tokenized command parameters
+	Parameters CommandParameters
+
+	// RequestID is a unique (within this Gort instance) request identifier
+	RequestID int64
+
+	// Timestamp is the time this request was triggered
+	Timestamp time.Time
+
+	// UserID is the (provider-specific) ID of user making this request
+	UserID string
+
+	// UserEmail is the email address associated with the user making the
+	// request (if known)
+	UserEmail string
+
+	// UserName is the Gort username of the user making the request
+	UserName string
 }
 
 // String is a convenience method that outputs the normalized command

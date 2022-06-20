@@ -17,25 +17,59 @@
 package adapter
 
 import (
+	"encoding/json"
+
 	"github.com/getgort/gort/command"
+	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/types"
 )
-
-// Input is used for advanced command input.
-type Input struct {
-	Channel  ChannelInfo
-	Command  CommandInfo
-	Provider ProviderInfo
-	User     UserInfo
-}
 
 // CommandInfo represents a command typed in by a user. Unlike
 // command.Command, it can be marshaled into meaningful JSON.
 type CommandInfo struct {
-	Bundle     string
-	Command    string
-	Options    map[string]string
+	// Bundle is the name of the bundle used
+	Bundle string
+
+	// Version is the version number of the bundle
+	BundleVersion string
+
+	// Command is the name of the command
+	Command string
+
+	// Options is the list of command options (i.e., flags) entered
+	// by the user
+	Options map[string]string
+
+	// Parameters is the tokenized list of non-option command parameters
 	Parameters []string
+}
+
+// AdvancedInput is used to construct the JSON blob that's passed into a
+// command in lieu of parameters when the executed bundle command's advanced
+// input is set to true.
+type AdvancedInput struct {
+	// Channel contains the basic information for the provider channel.
+	Channel ChannelInfo
+
+	// Command wraps the command execution request, as entered by the user
+	Command CommandInfo
+
+	// User contains the basic information about the provider
+	Provider ProviderInfo
+
+	// ProviderUser contains the basic information about the provider user
+	ProviderUser UserInfo
+
+	// GortUser is the Gort user triggering the command (any
+	// credentials are scrubbed).
+	GortUser rest.User
+}
+
+// String returns an un-indented JSON representation of the AdvancedInput
+// instance.
+func (ai AdvancedInput) String() string {
+	b, _ := json.Marshal(ai)
+	return string(b)
 }
 
 // NewCommandInfo creates a new CommandInfo from a command.Command value.
