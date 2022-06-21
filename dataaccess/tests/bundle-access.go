@@ -17,7 +17,6 @@
 package tests
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/getgort/gort/bundles"
@@ -442,7 +441,7 @@ func (da DataAccessTester) testFindCommandEntry(t *testing.T) {
 	assert.Len(t, ce, 1)
 
 	// Is the loaded bundle correct?
-	fmt.Println(ce)
+	t.Log(ce)
 	assert.Equal(t, tb, ce[0].Bundle)
 
 	tc := tb.Commands[CommandName]
