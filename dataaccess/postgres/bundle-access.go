@@ -31,6 +31,11 @@ import (
 	"github.com/getgort/gort/telemetry"
 )
 
+const (
+	ioTypeInput  = "input"
+	ioTypeOutput = "output"
+)
+
 type bundleData struct {
 	BundleName    string
 	BundleVersion string
@@ -860,11 +865,41 @@ func (da PostgresDataAccess) doBundleGetCommands(ctx context.Context, tx *sql.Tx
 			return nil, gerr.Wrap(fmt.Errorf("failed to get bundle command templates"), err)
 		}
 
+		bc.BundleCommand.Input, err = da.doBundleGetCommandIO(ctx, tx, ioTypeInput, bundleName, bundleVersion, bc.Name)
+		if err != nil {
+			return nil, gerr.Wrap(fmt.Errorf("failed to get bundle command inputs"), err)
+		}
+
+		bc.BundleCommand.Output, err = da.doBundleGetCommandIO(ctx, tx, ioTypeOutput, bundleName, bundleVersion, bc.Name)
+		if err != nil {
+			return nil, gerr.Wrap(fmt.Errorf("failed to get bundle command inputs"), err)
+		}
+
 		command := bc.BundleCommand
 		commands = append(commands, &command)
 	}
 
 	return commands, nil
+}
+
+func (da PostgresDataAccess) doBundleGetCommandIO(ctx context.Context, tx *sql.Tx, ioType, bundleName, bundleVersion, commandName string) (data.BundleCommandIO, error) {
+	query := `SELECT advanced
+		FROM bundle_command_io
+		WHERE bundle_name=$1 AND bundle_version=$2 AND command_name=$3 AND io_type=$4`
+
+	var io data.BundleCommandIO
+
+	err := tx.QueryRowContext(ctx, query, bundleName, bundleVersion, commandName, ioType).
+		Scan(&io.Advanced)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return data.BundleCommandIO{}, nil
+	case err != nil:
+		return data.BundleCommandIO{}, gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return io, nil
 }
 
 func (da PostgresDataAccess) doBundleGetCommandTriggers(ctx context.Context, tx *sql.Tx, bundleName, bundleVersion, commandName string) ([]data.Trigger, error) {
@@ -931,7 +966,7 @@ func (da PostgresDataAccess) doBundleGetCommandTemplates(ctx context.Context, tx
 
 	switch {
 	case err == sql.ErrNoRows:
-		return data.Templates{}, errs.ErrNoSuchUser
+		return data.Templates{}, nil
 	case err != nil:
 		return data.Templates{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -951,7 +986,7 @@ func (da PostgresDataAccess) doBundleGetKubernetes(ctx context.Context, tx *sql.
 
 	switch {
 	case err == sql.ErrNoRows:
-		return data.BundleKubernetes{}, errs.ErrNoSuchUser
+		return data.BundleKubernetes{}, errs.ErrNoSuchBundle
 	case err != nil:
 		return data.BundleKubernetes{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -1000,7 +1035,7 @@ func (da PostgresDataAccess) doBundleGetTemplates(ctx context.Context, tx *sql.T
 
 	switch {
 	case err == sql.ErrNoRows:
-		return data.Templates{}, errs.ErrNoSuchUser
+		return data.Templates{}, errs.ErrNoSuchBundle
 	case err != nil:
 		return data.Templates{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -1028,6 +1063,24 @@ func (da PostgresDataAccess) doBundleInsert(ctx context.Context, tx *sql.Tx, bun
 		}
 
 		return err
+	}
+
+	return nil
+}
+
+func (da PostgresDataAccess) doBundleInsertCommandIO(ctx context.Context,
+	tx *sql.Tx, bundle data.Bundle, command *data.BundleCommand) error {
+
+	query := `INSERT INTO bundle_command_io
+		(bundle_name, bundle_version, command_name, io_type, advanced)
+		VALUES ($1, $2, $3, $4, $5);`
+
+	if _, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version, command.Name, ioTypeInput, command.Input.Advanced); err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	if _, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version, command.Name, ioTypeOutput, command.Output.Advanced); err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
 
 	return nil
@@ -1115,29 +1168,27 @@ func (da PostgresDataAccess) doBundleInsertCommands(ctx context.Context, tx *sql
 
 		_, err := tx.ExecContext(ctx, query, bundle.Name, bundle.Version,
 			cmd.Name, cmd.Description, enc, cmd.LongDescription)
-
 		if err != nil {
 			if strings.Contains(err.Error(), "violates") {
-				err = gerr.Wrap(errs.ErrFieldRequired, err)
+				return gerr.Wrap(errs.ErrFieldRequired, err)
 			} else {
-				err = gerr.Wrap(errs.ErrDataAccess, err)
+				return gerr.Wrap(errs.ErrDataAccess, err)
 			}
+		}
 
+		if err := da.doBundleInsertCommandIO(ctx, tx, bundle, cmd); err != nil {
 			return err
 		}
 
-		err = da.doBundleInsertCommandTriggers(ctx, tx, bundle, cmd)
-		if err != nil {
+		if err := da.doBundleInsertCommandTriggers(ctx, tx, bundle, cmd); err != nil {
 			return err
 		}
 
-		err = da.doBundleInsertCommandRules(ctx, tx, bundle, cmd)
-		if err != nil {
+		if err := da.doBundleInsertCommandRules(ctx, tx, bundle, cmd); err != nil {
 			return err
 		}
 
-		err = da.doBundleInsertCommandTemplates(ctx, tx, bundle, cmd)
-		if err != nil {
+		if err := da.doBundleInsertCommandTemplates(ctx, tx, bundle, cmd); err != nil {
 			return err
 		}
 	}
