@@ -72,6 +72,18 @@ type CommandRequest struct {
 	UserName string
 }
 
+type ScheduledCommand struct {
+	CommandEntry
+	Adapter    string
+	ChannelID  string
+	Parameters CommandParameters
+	UserID     string
+	UserEmail  string
+	UserName   string
+	Cron       string
+	ScheduleID int64
+}
+
 // String is a convenience method that outputs the normalized command
 // string more or less as the user typed it.
 func (r CommandRequest) String() string {
