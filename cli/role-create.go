@@ -65,7 +65,7 @@ func GetRoleCreateCmd() *cobra.Command {
 func roleCreateCmd(cmd *cobra.Command, args []string) error {
 	rolename := args[0]
 
-	c, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

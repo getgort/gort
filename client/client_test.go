@@ -54,7 +54,7 @@ func TestAllowInsecure(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			_, err := client.ConnectWithNewProfile(test.ProfileEntry)
+			_, err := client.ConnectWithNewProfile(test.ProfileEntry, ".")
 			if test.ExpectErr {
 				assert.Error(t, err)
 			} else {

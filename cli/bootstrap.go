@@ -82,7 +82,7 @@ func bootstrapCmd(cmd *cobra.Command, args []string) error {
 		AllowInsecure: flagBootstrapAllowInsecure,
 	}
 
-	gortClient, err := client.ConnectWithNewProfile(entry)
+	gortClient, err := client.ConnectWithNewProfile(entry, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

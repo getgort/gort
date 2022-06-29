@@ -60,7 +60,7 @@ func GetProfileCreateCmd() *cobra.Command {
 }
 
 func profileCreateCmd(cmd *cobra.Command, args []string) error {
-	profile, err := client.LoadClientProfile()
+	profile, err := client.LoadClientProfile(FlagConfigBaseDir)
 	if err != nil {
 		fmt.Println("Failed to load existing profiles:", err)
 		return nil
@@ -99,7 +99,7 @@ func profileCreateCmd(cmd *cobra.Command, args []string) error {
 		profile.Defaults.Profile = pe.Name
 	}
 
-	err = client.SaveClientProfile(profile)
+	err = client.SaveClientProfile(profile, FlagConfigBaseDir)
 	if err != nil {
 		fmt.Printf("Failed to update profile: %s\n", err.Error())
 		return nil

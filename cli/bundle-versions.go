@@ -60,7 +60,7 @@ func GetBundleVersionsCmd() *cobra.Command {
 func bundleVersionsCmd(cmd *cobra.Command, args []string) error {
 	const format = "%-12s%-12s%-12s\n"
 
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

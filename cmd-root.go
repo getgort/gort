@@ -17,6 +17,7 @@
 package main
 
 import (
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 
 	"github.com/getgort/gort/cli"
@@ -35,6 +36,17 @@ func GetRootCmd() *cobra.Command {
 		Short:        rootShort,
 		Long:         rootLong,
 		SilenceUsage: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// Load the home dir into FlagConfigBaseDir if not specified.
+			if cli.FlagConfigBaseDir == "" {
+				var err error
+				cli.FlagConfigBaseDir, err = homedir.Dir()
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 	}
 
 	root.AddCommand(GetStartCmd())
@@ -50,6 +62,7 @@ func GetRootCmd() *cobra.Command {
 	root.AddCommand(cli.GetVersionCmd())
 
 	root.PersistentFlags().StringVarP(&cli.FlagGortProfile, "profile", "P", "", "The Gort profile within the config file to use")
+	root.PersistentFlags().StringVarP(&cli.FlagConfigBaseDir, "baseDir", "B", "", "Base directory for configuration, defaults to $HOME. A .gort directory will be added here.")
 
 	return root
 }

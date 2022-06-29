@@ -52,7 +52,7 @@ func GetProfileListCmd() *cobra.Command {
 }
 
 func profileListCmd(cmd *cobra.Command, args []string) error {
-	profile, err := client.LoadClientProfile()
+	profile, err := client.LoadClientProfile(FlagConfigBaseDir)
 	if err != nil {
 		fmt.Println("Failed to load existing profiles:", err)
 		return nil

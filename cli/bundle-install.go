@@ -151,7 +151,7 @@ func GetBundleInstallCmd() *cobra.Command {
 func bundleInstallCmd(cmd *cobra.Command, args []string) error {
 	bundlefile := args[0]
 
-	c, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

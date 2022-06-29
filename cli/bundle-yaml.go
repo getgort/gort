@@ -60,7 +60,7 @@ func bundleYamlCmd(cmd *cobra.Command, args []string) error {
 
 	// TODO Implement that no specified version returns enabled version.
 
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

@@ -246,7 +246,27 @@ A WIP design doc, including rough milestones (but not dates) [can be seen here](
 
 ## How to Run the Gort Controller
 
-For more information, take a look at the [Quick Start Guide](https://guide.getgort.io/en/latest/sections/quickstart.html) in [The Gort Guide](https://guide.getgort.io).
+To get up and running with Gort, take a look at the [Quick Start Guide](https://guide.getgort.io/en/latest/sections/quickstart.html) in [The Gort Guide](https://guide.getgort.io).
+
+Once you are familiar with how Gort fits together, you can use 
+[Tilt](https://tilt.dev/) when developing Gort to streamline the startup process.
+
+If you run:
+
+```
+tilt up
+```
+
+An instance of Gort will be started and bootstrapped ready for you to use.
+The profile used to bootstrap will be stored in a temporary directory so it doesn't
+interfere with your production profiles. As a shortcut to run a Gort client using this
+profile, you can use `./scripts/gort.sh` (you will need Go installed):
+
+```
+./scripts/gort.sh bundle list
+```
+
+This will build and run Gort and specify the scratch directory for configuration.
 
 ## The Gort Client
 

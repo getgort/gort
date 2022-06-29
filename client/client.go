@@ -26,11 +26,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-
-	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/getgort/gort/data/rest"
 	gerrs "github.com/getgort/gort/errors"
@@ -65,9 +64,10 @@ var (
 
 // GortClient comments to be written...
 type GortClient struct {
-	client  *http.Client
-	profile ProfileEntry
-	token   *rest.Token
+	client        *http.Client
+	configBaseDir string
+	profile       ProfileEntry
+	token         *rest.Token
 }
 
 // Error is an error implementation that represents either a a non-2XX
@@ -97,9 +97,10 @@ func (c Error) Status() uint {
 }
 
 // Connect creates and returns a configured instance of the client for the
-// specified host. An empty string will use the default profile. If the
+// specified profile stored in the .gort directory below the specified base directory.
+// An empty string will use the default profile. If the
 // requested profile doesn't exist, an empty ProfileEntry is returned.
-func Connect(profileName string) (*GortClient, error) {
+func Connect(profileName string, baseDir string) (*GortClient, error) {
 	// If the GORT_SERVICE_TOKEN envvar is set, use that first.
 	if te, exists := os.LookupEnv("GORT_SERVICE_TOKEN"); exists {
 		entry := ProfileEntry{
@@ -114,7 +115,7 @@ func Connect(profileName string) (*GortClient, error) {
 
 		entry.URL = url
 
-		client, err := NewClient(entry)
+		client, err := NewClient(entry, baseDir)
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +132,7 @@ func Connect(profileName string) (*GortClient, error) {
 	var entry ProfileEntry
 
 	// Load the profiles file
-	profile, err := LoadClientProfile()
+	profile, err := LoadClientProfile(baseDir)
 	if err != nil {
 		return nil, gerrs.Wrap(ErrBadProfile, err)
 	}
@@ -152,12 +153,12 @@ func Connect(profileName string) (*GortClient, error) {
 		return nil, ErrBadProfile
 	}
 
-	return NewClient(entry)
+	return NewClient(entry, baseDir)
 }
 
 // ConnectWithNewProfile generates a connection using the supplied profile
 // entry data.
-func ConnectWithNewProfile(entry ProfileEntry) (*GortClient, error) {
+func ConnectWithNewProfile(entry ProfileEntry, baseDir string) (*GortClient, error) {
 	url, err := parseHostURL(entry.URLString)
 	if err != nil {
 		return nil, err
@@ -170,12 +171,12 @@ func ConnectWithNewProfile(entry ProfileEntry) (*GortClient, error) {
 		entry.Name = fmt.Sprintf("%s_%s", url.Hostname(), url.Port())
 	}
 
-	return NewClient(entry)
+	return NewClient(entry, baseDir)
 }
 
-// NewClient creates a GortClient for the provided ProfileEntry.
+// NewClient creates a GortClient for the provided ProfileEntry and base config directory.
 // An error is returned if the profile is invalid.
-func NewClient(entry ProfileEntry) (*GortClient, error) {
+func NewClient(entry ProfileEntry, baseDir string) (*GortClient, error) {
 	if !entry.AllowInsecure && entry.URL.Scheme != "https" {
 		return nil, ErrInsecureURL
 	}
@@ -193,8 +194,9 @@ func NewClient(entry ProfileEntry) (*GortClient, error) {
 	}
 
 	return &GortClient{
-		client:  client,
-		profile: entry,
+		client:        client,
+		profile:       entry,
+		configBaseDir: baseDir,
 	}, nil
 }
 
@@ -240,7 +242,7 @@ func (c *GortClient) doRequest(method string, url string, body []byte) (*http.Re
 // getGortTokenFilename finds and returns the full-qualified filename for this
 // host's token file, stored in the $HOME/.gort/tokens directory.
 func (c *GortClient) getGortTokenFilename() (string, error) {
-	gortDir, err := getGortTokenDir()
+	gortDir, err := getGortTokenDir(c.configBaseDir)
 	if err != nil {
 		return "", gerrs.Wrap(gerrs.ErrIO, err)
 	}
@@ -282,13 +284,8 @@ func (c *GortClient) loadHostToken() (rest.Token, error) {
 
 // getGortConfigDir finds the users $HOME/.gort directory, creating it if it
 // doesn't exist.
-func getGortConfigDir() (string, error) {
-	homeDir, err := homedir.Dir()
-	if err != nil {
-		return "", err
-	}
-
-	gortDir := homeDir + "/.gort"
+func getGortConfigDir(baseDir string) (string, error) {
+	gortDir := filepath.Join(baseDir, ".gort")
 
 	if gortDirInfo, err := os.Stat(gortDir); err == nil {
 		if !gortDirInfo.IsDir() {
@@ -304,10 +301,10 @@ func getGortConfigDir() (string, error) {
 	return gortDir, nil
 }
 
-// getGortConfigDir finds the users $HOME/.gort/tokens directory, creating it if
+// getGortConfigDir finds the .gort/tokens directory under the specified base directory, creating it if
 // it doesn't exist.
-func getGortTokenDir() (string, error) {
-	gortDir, err := getGortConfigDir()
+func getGortTokenDir(baseDir string) (string, error) {
+	gortDir, err := getGortConfigDir(baseDir)
 	if err != nil {
 		return "", err
 	}
