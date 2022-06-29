@@ -21,8 +21,10 @@ import (
 )
 
 var (
-	// FlagGortProfile is a persistent flag
+	// FlagGortProfile is a persistent flag specifying the profile name to be used.
 	FlagGortProfile string
+	// FlagConfigBaseDir is a persistent flag specifying the base directory for storing config
+	FlagConfigBaseDir string
 )
 
 func groupNames(groups []rest.Group) []string {

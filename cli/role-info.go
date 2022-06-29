@@ -55,7 +55,7 @@ func GetRoleInfoCmd() *cobra.Command {
 }
 
 func roleInfoCmd(cmd *cobra.Command, args []string) error {
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

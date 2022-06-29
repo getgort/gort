@@ -70,10 +70,10 @@ func (pe ProfileEntry) User() rest.User {
 // loadClientProfile loads and returns the complete client profile. If there's
 // no profile file, an empty Profile is returned. An error is returned if
 // there's an underlying IO error.
-func LoadClientProfile() (Profile, error) {
+func LoadClientProfile(baseDir string) (Profile, error) {
 	profile := Profile{Profiles: make(map[string]ProfileEntry)}
 
-	configDir, err := getGortConfigDir()
+	configDir, err := getGortConfigDir(baseDir)
 	if err != nil {
 		return Profile{}, err
 	}
@@ -122,8 +122,8 @@ func LoadClientProfile() (Profile, error) {
 	return profile, err
 }
 
-func SaveClientProfile(profile Profile) error {
-	configDir, err := getGortConfigDir()
+func SaveClientProfile(profile Profile, baseDir string) error {
+	configDir, err := getGortConfigDir(baseDir)
 	if err != nil {
 		return err
 	}

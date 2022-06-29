@@ -27,6 +27,13 @@ development.yml
 
 # Our own binary, of course
 gort
+<<<<<<< HEAD
 
 # VS Code workspaces
 *.code-workspace
+||||||| dba2080
+=======
+
+# Scratch directory for runtime files used in testing
+scratch
+>>>>>>> upstream/develop

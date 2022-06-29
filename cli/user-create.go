@@ -71,7 +71,7 @@ func GetUserCreateCmd() *cobra.Command {
 func userCreateCmd(cmd *cobra.Command, args []string) error {
 	username := args[0]
 
-	c, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

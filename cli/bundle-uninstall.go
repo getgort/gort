@@ -81,7 +81,7 @@ func bundleUninstallCmd(cmd *cobra.Command, args []string) error {
 		bundleVersion = args[1]
 	}
 
-	c, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

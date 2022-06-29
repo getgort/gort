@@ -64,7 +64,7 @@ func bundleEnableCmd(cmd *cobra.Command, args []string) error {
 	var bundleName = args[0]
 	var bundleVersion string
 
-	c, err := client.Connect(FlagGortProfile)
+	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}
