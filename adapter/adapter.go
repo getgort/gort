@@ -131,6 +131,7 @@ type RequestorIdentity struct {
 	Adapter     Adapter
 	ChatUser    *UserInfo
 	ChatChannel *ChannelInfo
+	Provider    *ProviderInfo
 	GortUser    *rest.User
 }
 
@@ -279,7 +280,7 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 		return nil, nil
 	}
 
-	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
+	id, err := buildRequestorIdentity(ctx, event.Adapter, event.Info.Provider, data.ChannelID, data.UserID)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
 		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
@@ -294,11 +295,11 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	// Find command by Name if the message starts with '!'
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
-		return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
+		return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
 	}
 
 	// Otherwise attempt to find command by trigger
-	return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByTrigger)
+	return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByTrigger)
 }
 
 // OnDirectMessage handles DirectMessageEvent events.
@@ -309,7 +310,7 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 	rawCommandText := data.Text
 
-	id, err := buildRequestorIdentity(ctx, event.Adapter, data.ChannelID, data.UserID)
+	id, err := buildRequestorIdentity(ctx, event.Adapter, event.Info.Provider, data.ChannelID, data.UserID)
 	if err != nil {
 		telemetry.Errors().WithError(err).Commit(ctx)
 		SendErrorMessage(ctx, id.Adapter, id.ChatChannel.ID, "Error", unexpectedError)
@@ -323,9 +324,9 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
-		return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
+		return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
 	}
-	return GetCommandRequest(ctx, rawCommandText, id, commandFromTokensByNameOrTrigger)
+	return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByNameOrTrigger)
 }
 
 // SendErrorMessage sends an error message to a specified channel.
@@ -532,11 +533,12 @@ func parametersFromCommand(cmd command.Command) []string {
 	return out
 }
 
-// GetCommandRequest builds a CommandRequest object based on the provided message content and user id.
-// Both user existence and authorization are verified.
-// A lookup function for identifying a command based on tokens must be provided as a parameter.
-// Telemetry for the lookup operation are handled inside this function.
-func GetCommandRequest(
+// BuildCommandRequest builds a CommandRequest object based on the provided
+// message content and user id. Both user existence and authorization are
+// verified. A lookup function for identifying a command based on tokens must
+// be provided as a parameter. Telemetry for the lookup operation are handled
+// inside this function.
+func BuildCommandRequest(
 	ctx context.Context,
 	rawCommand string,
 	id RequestorIdentity,
@@ -544,7 +546,7 @@ func GetCommandRequest(
 ) (*data.CommandRequest, error) {
 	// Start trace span
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-	ctx, sp := tr.Start(ctx, "adapter.CommandByName")
+	ctx, sp := tr.Start(ctx, "adapter.BuildCommandRequest")
 	defer sp.End()
 
 	da, err := dataaccess.Get()
@@ -555,7 +557,7 @@ func GetCommandRequest(
 	// Tokenize the raw command.
 	tokens, err := command.Tokenize(rawCommand)
 	if err != nil {
-		return nil, fmt.Errorf("command tokenziation error")
+		return nil, fmt.Errorf("command tokenization error")
 	}
 
 	cmdEntry, cmdInput, commandLookupErr := fCommandFromTokens(ctx, tokens)
@@ -628,10 +630,32 @@ func GetCommandRequest(
 		}
 	}
 
+	if cmdEntry.Command.Input.Advanced {
+		request = advancedInput(request, id, cmdInput)
+	}
+
 	// Update log entry with command info
 	rl.le.Info("Triggering command")
 
 	return &request, nil
+}
+
+func advancedInput(req data.CommandRequest, id RequestorIdentity, c command.Command) data.CommandRequest {
+	gu := *id.GortUser
+	gu.Mappings = nil
+	gu.Password = ""
+
+	ai := AdvancedInput{
+		Channel:      *id.ChatChannel,
+		Command:      NewCommandInfo(c),
+		Provider:     *id.Provider,
+		ProviderUser: *id.ChatUser,
+		GortUser:     *id.GortUser,
+	}
+
+	req.Parameters = data.CommandParameters([]string{ai.String()})
+
+	return req
 }
 
 func checkPermissions(ctx context.Context, id RequestorIdentity, cmdInput command.Command, cmdEntry data.CommandEntry) error {
@@ -865,9 +889,12 @@ func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
 	return finders, nil
 }
 
-func buildRequestorIdentity(ctx context.Context, adapter Adapter, channelId, userId string) (RequestorIdentity, error) {
+func buildRequestorIdentity(ctx context.Context, adapter Adapter, provider *ProviderInfo, channelId, userId string) (RequestorIdentity, error) {
 	var err error
-	id := RequestorIdentity{Adapter: adapter}
+	id := RequestorIdentity{
+		Adapter:  adapter,
+		Provider: provider,
+	}
 
 	le := adapterLogEntry(ctx, nil, adapter).
 		WithField("channelId", channelId).
@@ -1013,7 +1040,6 @@ func findAllEntries(ctx context.Context, bundleName, commandName string, finder 
 	entries := make([]data.CommandEntry, 0)
 
 	for _, f := range finder {
-		fmt.Println(bundleName, commandName)
 		e, err := f.FindCommandEntry(ctx, bundleName, commandName)
 		if err != nil {
 			return nil, err

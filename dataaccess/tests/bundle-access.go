@@ -17,7 +17,6 @@
 package tests
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/getgort/gort/bundles"
@@ -77,6 +76,7 @@ func (da DataAccessTester) testBundleCreate(t *testing.T) {
 	// Expect an error
 	err = da.BundleCreate(da.ctx, bundle)
 	require.Error(t, err, errs.ErrBundleExists)
+
 }
 
 func (da DataAccessTester) testBundleCreateMissingRequired(t *testing.T) {
@@ -441,7 +441,7 @@ func (da DataAccessTester) testFindCommandEntry(t *testing.T) {
 	assert.Len(t, ce, 1)
 
 	// Is the loaded bundle correct?
-	fmt.Println(ce)
+	t.Log(ce)
 	assert.Equal(t, tb, ce[0].Bundle)
 
 	tc := tb.Commands[CommandName]

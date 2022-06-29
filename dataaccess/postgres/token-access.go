@@ -82,15 +82,15 @@ func (da PostgresDataAccess) TokenGenerate(ctx context.Context, username string,
 		ValidUntil: validUntil,
 	}
 
-	db, err := da.connect(ctx, "gort")
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return rest.Token{}, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `INSERT INTO tokens (token, username, valid_from, valid_until)
 	VALUES ($1, $2, $3, $4);`
-	_, err = db.ExecContext(ctx, query, token.Token, token.User, token.ValidFrom, token.ValidUntil)
+	_, err = conn.ExecContext(ctx, query, token.Token, token.User, token.ValidFrom, token.ValidUntil)
 	if err != nil {
 		return rest.Token{}, gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -105,14 +105,14 @@ func (da PostgresDataAccess) TokenInvalidate(ctx context.Context, tokenString st
 	ctx, sp := tr.Start(ctx, "postgres.TokenInvalidate")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	query := `DELETE FROM tokens WHERE token=$1;`
-	_, err = db.ExecContext(ctx, query, tokenString)
+	_, err = conn.ExecContext(ctx, query, tokenString)
 	if err != nil {
 		return gerr.Wrap(errs.ErrDataAccess, err)
 	}
@@ -127,11 +127,11 @@ func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username s
 	ctx, sp := tr.Start(ctx, "postgres.TokenRetrieveByUser")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return rest.Token{}, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	// There will be more here eventually
 	query := `SELECT token, username, valid_from, valid_until
@@ -140,7 +140,7 @@ func (da PostgresDataAccess) TokenRetrieveByUser(ctx context.Context, username s
 
 	token := rest.Token{}
 
-	err = db.
+	err = conn.
 		QueryRowContext(ctx, query, username).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 
@@ -160,11 +160,11 @@ func (da PostgresDataAccess) TokenRetrieveByToken(ctx context.Context, tokenStri
 	ctx, sp := tr.Start(ctx, "postgres.TokenRetrieveByToken")
 	defer sp.End()
 
-	db, err := da.connect(ctx, "gort")
+	conn, err := da.connect(ctx)
 	if err != nil {
 		return rest.Token{}, err
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	// There will be more here eventually
 	query := `SELECT token, username, valid_from, valid_until
@@ -172,7 +172,7 @@ func (da PostgresDataAccess) TokenRetrieveByToken(ctx context.Context, tokenStri
 		WHERE token=$1`
 
 	token := rest.Token{}
-	err = db.
+	err = conn.
 		QueryRowContext(ctx, query, tokenString).
 		Scan(&token.Token, &token.User, &token.ValidFrom, &token.ValidUntil)
 

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadBundleFromFile(t *testing.T) {
@@ -36,7 +37,7 @@ func TestLoadBundleFromFile(t *testing.T) {
 	assert.Equal(t, "This is test bundle.\nThere are many like it, but this one is mine.", b.LongDescription)
 	assert.Len(t, b.Permissions, 1)
 	assert.Equal(t, "ubuntu:20.04", b.Image)
-	assert.Len(t, b.Commands, 4)
+	assert.Len(t, b.Commands, 5)
 
 	// Bundle templates
 	assert.Equal(t, "Template:Bundle:CommandError", b.Templates.CommandError)
@@ -44,7 +45,8 @@ func TestLoadBundleFromFile(t *testing.T) {
 	assert.Equal(t, "Template:Bundle:MessageError", b.Templates.MessageError)
 	assert.Equal(t, "Template:Bundle:Message", b.Templates.Message)
 
-	cmd := b.Commands["echox"]
+	cmd, ok := b.Commands["echox"]
+	require.True(t, ok)
 	assert.Equal(t, "echox", cmd.Name)
 	assert.Equal(t, "Write arguments to the standard output.", cmd.Description)
 	assert.Equal(t, `Write arguments to the standard output.
@@ -60,4 +62,12 @@ Usage:
 	assert.Equal(t, "Template:Command:Command", cmd.Templates.Command)
 	assert.Equal(t, "Template:Command:MessageError", cmd.Templates.MessageError)
 	assert.Equal(t, "Template:Command:Message", cmd.Templates.Message)
+	assert.False(t, cmd.Input.Advanced)
+	assert.False(t, cmd.Output.Advanced)
+
+	// IO
+	cmd, ok = b.Commands["input"]
+	require.True(t, ok)
+	assert.True(t, cmd.Input.Advanced)
+	assert.True(t, cmd.Output.Advanced)
 }

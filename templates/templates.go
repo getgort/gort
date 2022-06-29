@@ -216,6 +216,10 @@ func EncodeElements(text string) (OutputElements, error) {
 		return OutputElements{}, fmt.Errorf("unmatched {{text}} on line %d", lineNumber)
 	}
 
+	if len(elements.Elements) == 0 {
+		return OutputElements{}, fmt.Errorf("failed to encode template")
+	}
+
 	return elements, nil
 }
 
