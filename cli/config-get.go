@@ -87,7 +87,7 @@ func configGetCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("dynamic configuration bundle (--bundle) is required")
 	}
 
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}

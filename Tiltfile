@@ -5,7 +5,8 @@ args = config.parse()
 k8s = "k8s" in args and args["k8s"]
 
 # Build the container image as needed
-docker_build('getgort/gort', '.')
+versionTag = local("go run . version -s")
+docker_build('getgort/gort', '.', ignore=['scratch', 'docker-compose.yml', 'Tiltfile'], extra_tag="getgort/gort:" + str(versionTag).strip())
 
 # Set up resources using docker-compose
 def compose():
@@ -49,17 +50,8 @@ def kubernetes():
 # Bootstrapping the server
 local_resource(
     "Bootstrap",
-    "go run . bootstrap https://localhost:4000 --allow-insecure",
-    trigger_mode=TRIGGER_MODE_MANUAL,
-    auto_init=False
-)
-
-# Clear profiles
-local_resource(
-    "Clear Profiles",
-    "rm -f ~/.gort/profile",
-    trigger_mode=TRIGGER_MODE_MANUAL,
-    auto_init=False
+    "./scripts/bootstrap.sh",
+    resource_deps=["gort"]
 )
 
 if k8s:

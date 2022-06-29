@@ -35,3 +35,4 @@ services:
 
 networks:
   gort:
+    name: gort

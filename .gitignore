@@ -27,3 +27,9 @@ development.yml
 
 # Our own binary, of course
 gort
+
+# VS Code workspaces
+*.code-workspace
+
+# Scratch directory for runtime files used in testing
+scratch

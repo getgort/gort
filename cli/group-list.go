@@ -73,7 +73,7 @@ func GetGroupListCmd() *cobra.Command {
 }
 
 func groupListCmd(cmd *cobra.Command, args []string) error {
-	gortClient, err := client.Connect(FlagGortProfile)
+	gortClient, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
 	}
