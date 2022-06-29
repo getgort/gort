@@ -27,3 +27,6 @@ development.yml
 
 # Our own binary, of course
 gort
+
+# VS Code workspaces
+*.code-workspace
