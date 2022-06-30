@@ -19,9 +19,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/scheduler"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -110,6 +113,17 @@ func startGort(ctx context.Context, configFile string, verboseCount int) error {
 	// Returns channels to get user command requests and adapter errors out.
 	requestsFrom, responsesTo, adapterErrorsFrom := adapter.StartListening(ctx)
 
+	da, err := dataaccess.Get()
+	commandScheduler := scheduler.NewCommandScheduler(da)
+	commandScheduler.Start()
+
+	//For testing. Gort must be bootstrapped before Add can be run.
+	//TODO(grebneerg) remove
+	time.AfterFunc(time.Minute, func() {
+		commandScheduler.Add(ctx, "@every 1m", "gort:help", "U6UT8EH96",
+			"theprogrammerjack@gmail.com", "theprogrammerjack", "MySlack", "C6VLY6UMB")
+	})
+
 	// Starts the relay (currently just a local goroutine).
 	// Returns channels to send user command request in and get command
 	// responses out.
@@ -120,6 +134,9 @@ func startGort(ctx context.Context, configFile string, verboseCount int) error {
 		// A user command request is received from a chat provider adapter.
 		// Forward it to the relay.
 		case request := <-requestsFrom:
+			requestsTo <- request
+
+		case request := <-commandScheduler.Commands:
 			requestsTo <- request
 
 		// A user command response is received from the relay.
