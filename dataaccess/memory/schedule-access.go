@@ -8,6 +8,8 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+//TODO(grebneerg): Actually assign unique IDs here
+
 func (da *InMemoryDataAccess) ScheduleCreate(ctx context.Context, command *data.ScheduledCommand) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	_, sp := tr.Start(ctx, "memory.ScheduleCreate")
