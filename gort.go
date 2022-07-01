@@ -21,12 +21,10 @@ import (
 	"fmt"
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/scheduler"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/adapter/discord"
@@ -116,13 +114,6 @@ func startGort(ctx context.Context, configFile string, verboseCount int) error {
 	da, err := dataaccess.Get()
 	commandScheduler := scheduler.NewCommandScheduler(da)
 	commandScheduler.Start()
-
-	//For testing. Gort must be bootstrapped before Add can be run.
-	//TODO(grebneerg) remove
-	time.AfterFunc(time.Minute, func() {
-		commandScheduler.Add(ctx, "@every 1m", "gort:help", "U6UT8EH96",
-			"theprogrammerjack@gmail.com", "theprogrammerjack", "MySlack", "C6VLY6UMB")
-	})
 
 	// Starts the relay (currently just a local goroutine).
 	// Returns channels to send user command request in and get command
