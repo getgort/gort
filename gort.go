@@ -19,12 +19,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/getgort/gort/dataaccess"
-	"github.com/getgort/gort/scheduler"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/scheduler"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/adapter/discord"
