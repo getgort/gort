@@ -232,7 +232,7 @@ func (w *ContainerWorker) Stopped() <-chan int64 {
 }
 
 func (w *ContainerWorker) envVars() []string {
-	env := []string{}
+	var env []string
 
 	for k, v := range w.configs {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))

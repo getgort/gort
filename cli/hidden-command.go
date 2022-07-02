@@ -138,7 +138,7 @@ func listAllCommands(gortClient *client.GortClient) error {
 
 	fmt.Printf("I know about these commands:\n\n")
 
-	cmds := []string{}
+	var cmds []string
 
 	for _, b := range bundles {
 		if !b.Enabled {

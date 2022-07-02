@@ -32,8 +32,8 @@ import (
 func Tokenize(input string) ([]string, error) {
 	const RuneNull = rune(0)
 
-	b := strings.Builder{}
-	tokens := []string{}
+	var b strings.Builder
+	var tokens []string
 
 	input = strings.TrimSpace(input)
 
