@@ -96,7 +96,7 @@ func (c *Columnizer) Format(o interface{}) []string {
 	headerFormat := fmt.Sprintf(headers.String(), columnWidths...)
 	metaFormat := fmt.Sprintf(meta.String(), columnWidths...)
 
-	lines := []string{}
+	var lines []string
 	lines = append(lines, fmt.Sprintf(headerFormat, columnNames...))
 
 	for row := 0; row < length; row++ {
