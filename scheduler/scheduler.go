@@ -25,39 +25,43 @@ import (
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/telemetry"
+
 	"github.com/go-co-op/gocron"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 )
 
-type CommandScheduler struct {
-	cron     *gocron.Scheduler
-	Commands chan data.CommandRequest
-	da       dataaccess.DataAccess
-}
+var (
+	cron        *gocron.Scheduler
+	commandsOut = make(chan data.CommandRequest, 100)
+)
 
-func NewCommandScheduler(da dataaccess.DataAccess) CommandScheduler {
-	cron := gocron.NewScheduler(time.Local)
-	cron.TagsUnique()
-	return CommandScheduler{
-		cron:     cron,
-		Commands: make(chan data.CommandRequest),
-		da:       da,
+// StartScheduler starts the scheduler running and returns a channel of data.CommandRequest according to
+// registered schedules.
+func StartScheduler() chan data.CommandRequest {
+	if cron == nil {
+		cron = gocron.NewScheduler(time.Local)
+		cron.TagsUnique()
+		cron.StartAsync()
 	}
+
+	return commandsOut
 }
 
-func (cs *CommandScheduler) Start() {
-	cs.cron.StartAsync()
-}
-
-func (cs *CommandScheduler) schedule(ctx context.Context, command data.ScheduledCommand) error {
-	err := cs.da.ScheduleCreate(ctx, &command)
+// Schedule registers a data.ScheduledCommand with the scheduler so it will be requested appropriately.
+func Schedule(ctx context.Context, command data.ScheduledCommand) error {
+	da, err := dataaccess.Get()
 	if err != nil {
 		return err
 	}
-	_, err = cs.cron.Cron(command.Cron).Do(func() { //todo tag with scheduleid
+	err = da.ScheduleCreate(ctx, &command)
+	if err != nil {
+		return err
+	}
+
+	_, err = cron.Cron(command.Cron).Do(func() { //todo tag with scheduleid
 		tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
-		ctx, sp := tr.Start(context.Background(), "adapter.handleIncomingEvent")
+		ctx, sp := tr.Start(context.Background(), "scheduler.Schedule.cronFunc")
 		defer sp.End()
 
 		req := data.CommandRequest{
@@ -72,36 +76,27 @@ func (cs *CommandScheduler) schedule(ctx context.Context, command data.Scheduled
 			UserName:     command.UserName,
 		}
 
-		err := cs.da.RequestBegin(ctx, &req)
+		da, err := dataaccess.Get()
 		if err != nil {
 			sp.RecordError(err)
-			sp.SetStatus(codes.Error, "Failed to begin request")
+			sp.SetStatus(codes.Error, "failed to get DataAccess")
+			return
+		}
+		err = da.RequestBegin(ctx, &req)
+		if err != nil {
+			sp.RecordError(err)
+			sp.SetStatus(codes.Error, "failed to begin request")
 			return
 		}
 
-		cs.Commands <- req
+		commandsOut <- req
 	})
 
 	return err
 }
 
-func (cs *CommandScheduler) Add(ctx context.Context, cron string, cmdEntry data.CommandEntry, parameters data.CommandParameters, userID, userEmail, userName, adapterName, channelID string) error {
-
-	err := cs.schedule(ctx, data.ScheduledCommand{
-		CommandEntry: cmdEntry,
-		Adapter:      adapterName,
-		ChannelID:    channelID,
-		Parameters:   parameters,
-		UserID:       userID,
-		UserEmail:    userEmail,
-		UserName:     userName,
-		Cron:         cron,
-	})
-
-	return err
-}
-
-func (cs *CommandScheduler) AddFromString(ctx context.Context, cron, commandString, userID, userEmail, userName, adapterName, channelID string) error {
+// AddFromString schedules a command using its string representation.
+func AddFromString(ctx context.Context, commandString string, etc data.ScheduledCommand) error {
 
 	tokens, err := command.Tokenize(commandString)
 	if err != nil {
@@ -113,5 +108,10 @@ func (cs *CommandScheduler) AddFromString(ctx context.Context, cron, commandStri
 		return err
 	}
 
-	return cs.Add(ctx, cron, *cmdEntry, adapter.ParametersFromCommand(cmdInput), userID, userEmail, userName, adapterName, channelID)
+	parameters := adapter.ParametersFromCommand(cmdInput)
+
+	etc.CommandEntry = *cmdEntry
+	etc.Parameters = parameters
+
+	return Schedule(ctx, etc)
 }

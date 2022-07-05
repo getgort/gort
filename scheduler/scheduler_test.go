@@ -22,24 +22,32 @@ import (
 	"time"
 
 	"github.com/getgort/gort/data"
-	"github.com/getgort/gort/dataaccess/memory"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-const OneSecond = 1*time.Second + 50*time.Millisecond
-
 func TestCommandSchedulerFull(t *testing.T) {
-	cs := NewCommandScheduler(memory.NewInMemoryDataAccess())
-	cs.Start()
-	cs.Add(context.Background(), "@every 1s", data.CommandEntry{
-		Bundle:  data.Bundle{},
-		Command: data.BundleCommand{},
-	}, make(data.CommandParameters, 0), "id", "email", "name", "test adapter", "channel")
+	scheduledCommands := StartScheduler()
+
+	require.NoError(t, Schedule(context.Background(), data.ScheduledCommand{
+		CommandEntry: data.CommandEntry{
+			Bundle:  data.Bundle{},
+			Command: data.BundleCommand{},
+		},
+		Cron:       "@every 1s",
+		Parameters: make(data.CommandParameters, 0),
+		UserID:     "id",
+		UserName:   "name",
+		UserEmail:  "email",
+		Adapter:    "test adapter",
+		ChannelID:  "channel",
+	}))
 
 	select {
-	case <-time.After(OneSecond):
+	case <-time.After(1*time.Second + 50*time.Millisecond):
 		t.Fail()
-	case req := <-cs.Commands:
+	case req := <-scheduledCommands:
 		assert.NotEqual(t, 0, req.RequestID)
 		// success
 	}

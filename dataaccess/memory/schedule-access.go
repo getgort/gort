@@ -33,7 +33,7 @@ func (da *InMemoryDataAccess) ScheduleCreate(ctx context.Context, command *data.
 	defer sp.End()
 
 	if command.ScheduleID != 0 {
-		return fmt.Errorf("Schedule id already set.")
+		return fmt.Errorf("schedule id already set")
 	}
 
 	command.ScheduleID++
@@ -47,7 +47,7 @@ func (da *InMemoryDataAccess) ScheduleDelete(ctx context.Context, command data.S
 	defer sp.End()
 
 	if command.ScheduleID == 0 {
-		return fmt.Errorf("Schedule id not set.")
+		return fmt.Errorf("schedule id not set")
 	}
 
 	return nil

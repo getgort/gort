@@ -72,15 +72,32 @@ type CommandRequest struct {
 	UserName string
 }
 
+// ScheduledCommand represents a recurring command, invoked periodically.
 type ScheduledCommand struct {
 	CommandEntry
-	Adapter    string
-	ChannelID  string
+
+	// Adapter is the name of the adapter the command was scheduled from.
+	Adapter string
+
+	// ChannelID is the ID of the channel that the command was scheduled in.
+	ChannelID string
+
+	// Parameters is the tokenized command parameters.
 	Parameters CommandParameters
-	UserID     string
-	UserEmail  string
-	UserName   string
-	Cron       string
+
+	// UserID is the (provider-specific) ID of the user who scheduled the command.
+	UserID string
+
+	// UserEmail is the email address of the user who scheduled the command (if known).
+	UserEmail string
+
+	// UserName is the Gort username of the user who scheduled the command.
+	UserName string
+
+	// Cron is the cron-format string representing when the command should be run.
+	Cron string
+
+	// ScheduleID is a unique (within this Gort instance) ID of this ScheduledCommand.
 	ScheduleID int64
 }
 
