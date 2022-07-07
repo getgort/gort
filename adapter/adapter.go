@@ -295,7 +295,7 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	// Find command by Name if the message starts with '!'
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
-		return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
+		return BuildCommandRequest(ctx, rawCommandText, id, CommandFromTokensByName)
 	}
 
 	// Otherwise attempt to find command by trigger
@@ -324,7 +324,7 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
-		return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByName)
+		return BuildCommandRequest(ctx, rawCommandText, id, CommandFromTokensByName)
 	}
 	return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByNameOrTrigger)
 }
@@ -455,9 +455,9 @@ func (r *requestLog) Error(
 // as appropriate to the command that was found.
 type commandFromTokens func(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error)
 
-// commandFromTokensByTrigger implements commandFromTokens.
+// CommandFromTokensByName implements commandFromTokens.
 // It checks if a command can be identified from the given tokens by the command name.
-func commandFromTokensByName(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
+func CommandFromTokensByName(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
 	// Build a temporary Command value using default tokenization rules. We'll
 	// use this to load the CommandEntry for the relevant command (as defined
 	// in a command bundle), which contains the command's parsing rules that
@@ -513,7 +513,7 @@ func commandFromTokensByTrigger(ctx context.Context, tokens []string) (*data.Com
 // if this is unsuccessful because the command does not exist, it will attempt to
 // identify the command from a trigger.
 func commandFromTokensByNameOrTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
-	cmdEntry, cmdInput, err := commandFromTokensByName(ctx, tokens)
+	cmdEntry, cmdInput, err := CommandFromTokensByName(ctx, tokens)
 	if err == nil {
 		return cmdEntry, cmdInput, nil
 	}
@@ -523,9 +523,9 @@ func commandFromTokensByNameOrTrigger(ctx context.Context, tokens []string) (*da
 	return commandFromTokensByTrigger(ctx, tokens)
 }
 
-// parametersFromCommand converts parameters from a command.Command into
+// ParametersFromCommand converts parameters from a command.Command into
 // a string slice.
-func parametersFromCommand(cmd command.Command) []string {
+func ParametersFromCommand(cmd command.Command) []string {
 	var out []string
 	for _, p := range cmd.Parameters {
 		out = append(out, p.String())
@@ -595,7 +595,7 @@ func BuildCommandRequest(
 
 	rl.le = rl.le.WithField("command.name", cmdEntry.Command.Name).
 		WithField("command.params", cmdInput.Parameters.String())
-	request.Parameters = parametersFromCommand(cmdInput)
+	request.Parameters = ParametersFromCommand(cmdInput)
 	da.RequestUpdate(ctx, request)
 
 	cmdFoundMessage := fmt.Sprintf("Executing command: %s", cmdEntry.Command.Name)

@@ -248,7 +248,7 @@ A WIP design doc, including rough milestones (but not dates) [can be seen here](
 
 To get up and running with Gort, take a look at the [Quick Start Guide](https://guide.getgort.io/en/latest/sections/quickstart.html) in [The Gort Guide](https://guide.getgort.io).
 
-Once you are familiar with how Gort fits together, you can use 
+Once you are familiar with how Gort fits together, you can use
 [Tilt](https://tilt.dev/) when developing Gort to streamline the startup process.
 
 If you run:
