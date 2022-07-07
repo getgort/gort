@@ -95,8 +95,8 @@ func Schedule(ctx context.Context, command data.ScheduledCommand) error {
 	return err
 }
 
-// AddFromString schedules a command using its string representation.
-func AddFromString(ctx context.Context, commandString string, etc data.ScheduledCommand) error {
+// ScheduleFromString schedules a command using its string representation.
+func ScheduleFromString(ctx context.Context, commandString string, etc data.ScheduledCommand) error {
 
 	tokens, err := command.Tokenize(commandString)
 	if err != nil {
