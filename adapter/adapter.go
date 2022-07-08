@@ -391,7 +391,7 @@ func BuildCommandRequest(
 	// Tokenize the raw command.
 	tokens, err := command.Tokenize(rawCommand)
 	if err != nil {
-		return nil, fmt.Errorf("command tokenization error")
+		return nil, fmt.Errorf("command tokenization error: %w", err)
 	}
 
 	cmdEntry, cmdInput, commandLookupErr := fCommandFromTokens(ctx, tokens)

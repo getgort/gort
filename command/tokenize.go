@@ -20,6 +20,14 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/unicode/rangetable"
+)
+
+var (
+	singleQuotes = rangetable.New('\'', '‘', '’')
+
+	doubleQuotes = rangetable.New('"', '“', '”', '„')
 )
 
 // Tokenize takes an input string and splits it into tokens. Any control
@@ -30,21 +38,18 @@ import (
 //    echo -n "foo bar" -> {"echo", "-n", "foo bar"}
 //    echo "What's" "\"this\"?" -> {"echo", "What's", "\"this\"?"}
 func Tokenize(input string) ([]string, error) {
-	const RuneNull = rune(0)
-
 	b := strings.Builder{}
 	tokens := []string{}
 
 	input = strings.TrimSpace(input)
 
-	quote := RuneNull
+	var quote *unicode.RangeTable = nil
 	quoteStart := 0
 
 	control := false
 
 	for i, ch := range input {
 		switch {
-
 		// Backslash turns on the control flag.
 		case ch == '\\':
 			b.WriteRune(ch)
@@ -55,28 +60,25 @@ func Tokenize(input string) ([]string, error) {
 			b.WriteRune(ch)
 			control = false
 
-		// Spaces outside of quotes are token delimitters.
-		case unicode.IsSpace(ch) && quote == RuneNull:
+		// Spaces outside of quotes are token delimiters.
+		case unicode.IsSpace(ch) && quote == nil:
 			if t := b.String(); len(t) > 0 {
 				tokens = append(tokens, t)
 			}
 			b.Reset()
 
 		// Everything inside a pair of quotes is added to the same token.
-		case ch == quote:
+		case quote != nil && IsMatchingQuotationMark(ch, quote):
 			b.WriteRune(ch)
 			tokens = append(tokens, b.String())
-			quote = RuneNull
+			quote = nil
 			b.Reset()
 
 		// Turn quote-mode on and off.
-		case ch == '"':
-			fallthrough
-
-		case ch == '\'':
+		case QuotationMarkCategory(ch) != nil:
 			b.WriteRune(ch)
-			if quote == RuneNull {
-				quote = ch
+			if quote == nil {
+				quote = QuotationMarkCategory(ch)
 				quoteStart = i
 			}
 
@@ -95,7 +97,7 @@ func Tokenize(input string) ([]string, error) {
 		return tokens, TokenizeError{"unterminated control character at %d", len(input)}
 	}
 
-	if quote != RuneNull {
+	if quote != nil {
 		return tokens, TokenizeError{"unterminated quote at %d", quoteStart + 1}
 	}
 
@@ -109,4 +111,19 @@ type TokenizeError struct {
 
 func (e TokenizeError) Error() string {
 	return fmt.Sprintf(e.Text, e.Position)
+}
+
+func QuotationMarkCategory(r rune) *unicode.RangeTable {
+	switch {
+	case unicode.In(r, singleQuotes):
+		return singleQuotes
+	case unicode.In(r, doubleQuotes):
+		return doubleQuotes
+	default:
+		return nil
+	}
+}
+
+func IsMatchingQuotationMark(r rune, other *unicode.RangeTable) bool {
+	return unicode.In(r, other)
 }

@@ -56,3 +56,13 @@ func TestTokenizeErrors(t *testing.T) {
 		assert.IsType(t, TokenizeError{}, err, in)
 	}
 }
+
+func TestIsQuotationMark(t *testing.T) {
+	assert.NotNil(t, QuotationMarkCategory('"'), "Double universal quotation mark U+0022")
+	assert.NotNil(t, QuotationMarkCategory('“'), "English left double quotation mark U+201C")
+	assert.NotNil(t, QuotationMarkCategory('”'), "English right double quotation mark U+201D")
+	assert.NotNil(t, QuotationMarkCategory('„'), "Double Low-9 quotation mark U+201E")
+	//assert.NotNil(t, QuotationMarkCategory('«'), "Left-Pointing Double Angle Quotation Mark U+00AB")
+	//assert.NotNil(t, QuotationMarkCategory('»'), "Right-Pointing Double Angle Quotation Mark U+00BB")
+	//assert.NotNil(t, QuotationMarkCategory('\''), "Single quote")
+}
