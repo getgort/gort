@@ -14,18 +14,24 @@
  * limitations under the License.
  */
 
-package bundles
+package cli
 
-import (
-	"context"
+import "github.com/spf13/cobra"
 
-	"github.com/getgort/gort/data"
+const (
+	scheduleUse   = "schedule"
+	scheduleShort = "Manage scheduled commands"
+	scheduleLong  = "Allows you to manage scheduled commands."
 )
 
-type CommandEntryFinder interface {
-	// FindCommandEntry is used to find the enabled commands with the provided
-	// bundle and command names. If either is empty, it is treated as a wildcard.
-	// Importantly, this must only return ENABLED commands!
-	FindCommandEntry(ctx context.Context, bundle, command string) ([]data.CommandEntry, error)
-	FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error)
+func GetScheduleCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   scheduleUse,
+		Short: scheduleShort,
+		Long:  scheduleLong,
+	}
+
+	cmd.AddCommand(GetScheduleCreateCmd())
+
+	return cmd
 }

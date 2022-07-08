@@ -22,6 +22,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/getgort/gort/bundles"
+	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
+
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/getgort/gort/dataaccess/memory"
@@ -138,4 +142,109 @@ func monitorConfig(ctx context.Context) {
 
 		lastConfigState = cs
 	}
+}
+
+func bootstrapUserWithDefaults(user rest.User) (rest.User, error) {
+	// If user doesn't have a defined email, we default to "gort@localhost".
+	if user.Email == "" {
+		user.Email = "gort@localhost"
+	}
+
+	// If user doesn't have a defined name, we default to "Gort Administrator".
+	if user.FullName == "" {
+		user.FullName = "Gort Administrator"
+	}
+
+	// The bootstrap user is _always_ named "admin".
+	user.Username = "admin"
+
+	// If user doesn't have a defined password, we kindly generate one.
+	if user.Password == "" {
+		password, err := data.GenerateRandomToken(32)
+		if err != nil {
+			return user, err
+		}
+		user.Password = password
+	}
+
+	return user, nil
+}
+
+func DoBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
+	const adminGroup = "admin"
+	const adminRole = "admin"
+	var adminPermissions = []string{
+		"manage_commands",
+		"manage_configs",
+		"manage_groups",
+		"manage_roles",
+		"manage_users",
+	}
+
+	dataAccessLayer, err := Get()
+	if err != nil {
+		return user, err
+	}
+
+	// Set user defaults where necessary.
+	user, err = bootstrapUserWithDefaults(user)
+	if err != nil {
+		return user, err
+	}
+
+	// Persist our shiny new user to the database.
+	err = dataAccessLayer.UserCreate(ctx, user)
+	if err != nil {
+		return user, err
+	}
+
+	// Create admin group.
+	err = dataAccessLayer.GroupCreate(ctx, rest.Group{Name: adminGroup})
+	if err != nil {
+		return user, err
+	}
+
+	// Add the admin user to the admin group.
+	err = dataAccessLayer.GroupUserAdd(ctx, adminGroup, user.Username)
+	if err != nil {
+		return user, err
+	}
+
+	// Create an admin role
+	err = dataAccessLayer.RoleCreate(ctx, adminRole)
+	if err != nil {
+		return user, err
+	}
+
+	// Add role to group
+	err = dataAccessLayer.GroupRoleAdd(ctx, adminGroup, adminRole)
+	if err != nil {
+		return user, err
+	}
+
+	// Add the default permissions.
+	for _, p := range adminPermissions {
+		err = dataAccessLayer.RolePermissionAdd(ctx, adminRole, "gort", p)
+		if err != nil {
+			return user, err
+		}
+	}
+
+	// Finally, add and enable the default bundle
+	b, err := bundles.Default()
+	if err != nil {
+		return user, err
+	}
+
+	err = dataAccessLayer.BundleCreate(ctx, b)
+	if err != nil {
+		return user, err
+	}
+
+	err = dataAccessLayer.BundleEnable(ctx, b.Name, b.Version)
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
 }

@@ -60,6 +60,7 @@ func GetRootCmd() *cobra.Command {
 	root.AddCommand(cli.GetRoleCmd())
 	root.AddCommand(cli.GetUserCmd())
 	root.AddCommand(cli.GetVersionCmd())
+	root.AddCommand(cli.GetScheduleCmd())
 
 	root.PersistentFlags().StringVarP(&cli.FlagGortProfile, "profile", "P", "", "The Gort profile within the config file to use")
 	root.PersistentFlags().StringVarP(&cli.FlagConfigBaseDir, "baseDir", "B", "", "Base directory for configuration, defaults to $HOME. A .gort directory will be added here.")
