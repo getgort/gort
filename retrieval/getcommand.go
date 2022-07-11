@@ -26,6 +26,7 @@ import (
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess"
 	gerrs "github.com/getgort/gort/errors"
+
 	log "github.com/sirupsen/logrus"
 )
 

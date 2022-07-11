@@ -22,9 +22,8 @@ import (
 	"fmt"
 
 	"github.com/getgort/gort/command"
-	"github.com/getgort/gort/dataaccess"
-
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess"
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/rules"
 )
@@ -104,6 +103,7 @@ func ParseCommandEntry(ce data.CommandEntry) ([]rules.Rule, error) {
 	return rr, nil
 }
 
+// CheckPermissions errors if the given user does not have permission to run the given command.
 func CheckPermissions(ctx context.Context, userName string, cmdInput command.Command, cmdEntry data.CommandEntry) error {
 	da, err := dataaccess.Get()
 	if err != nil {

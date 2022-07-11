@@ -84,17 +84,17 @@ func Tokenize(input string) ([]string, error) {
 			b.Reset()
 
 		// Everything inside a pair of quotes is added to the same token.
-		case quote != nil && IsMatchingQuotationMark(ch, quote):
-			b.WriteRune(GetBasicQuote(quote))
+		case quote != nil && isMatchingQuotationMark(ch, quote):
+			b.WriteRune(getBasicQuote(quote))
 			tokens = append(tokens, b.String())
 			quote = nil
 			b.Reset()
 
 		// Turn quote-mode on and off.
-		case QuotationMarkCategory(ch) != nil:
-			b.WriteRune(GetBasicQuote(QuotationMarkCategory(ch)))
+		case quotationMarkCategory(ch) != nil:
+			b.WriteRune(getBasicQuote(quotationMarkCategory(ch)))
 			if quote == nil {
-				quote = QuotationMarkCategory(ch)
+				quote = quotationMarkCategory(ch)
 				quoteStart = i
 			}
 
@@ -129,7 +129,9 @@ func (e TokenizeError) Error() string {
 	return fmt.Sprintf(e.Text, e.Position)
 }
 
-func QuotationMarkCategory(r rune) *unicode.RangeTable {
+// quotationMarkCategory returns a pointer to the range of unicode characters equivalent to the given quote, or nil if
+// the given character isn't a quotation mark.
+func quotationMarkCategory(r rune) *unicode.RangeTable {
 	switch {
 	case unicode.In(r, singleQuotes):
 		return singleQuotes
@@ -140,11 +142,15 @@ func QuotationMarkCategory(r rune) *unicode.RangeTable {
 	}
 }
 
-func IsMatchingQuotationMark(r rune, other *unicode.RangeTable) bool {
+// isMatchingQuotationMark returns whether a quotation mark is in the given *RangeTable, either singleQuote or
+// doubleQuote.
+func isMatchingQuotationMark(r rune, other *unicode.RangeTable) bool {
 	return unicode.In(r, other)
 }
 
-func GetBasicQuote(table *unicode.RangeTable) rune {
+// getBasicQuote accepts either the singleQuote or doubleQuote *RangeTable, and returns the ascii representative of that
+// category (either ' or ").
+func getBasicQuote(table *unicode.RangeTable) rune {
 	switch table {
 	case singleQuotes:
 		return '\''
@@ -155,6 +161,7 @@ func GetBasicQuote(table *unicode.RangeTable) rune {
 	}
 }
 
+// unescape translates a given printable character rune into it's corresponding control character.
 func unescape(r rune) (rune, error) {
 	switch r {
 	case 'n':

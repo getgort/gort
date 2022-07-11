@@ -23,8 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/getgort/gort/retrieval"
-
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -38,6 +36,7 @@ import (
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
+	"github.com/getgort/gort/retrieval"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/templates"
 	"github.com/getgort/gort/version"

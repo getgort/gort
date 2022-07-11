@@ -22,6 +22,7 @@ import (
 
 	"github.com/getgort/gort/client"
 	"github.com/getgort/gort/data/rest"
+
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +32,9 @@ const (
 	scheduleCreateLong  = "Schedule a new command."
 	scheduleCreateUsage = `Usage:
 gort schedule create [flags] cron command
+
+cron is the specification of when the command should be run in cron format
+command is a string containing the command to run.
 `
 )
 

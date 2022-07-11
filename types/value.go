@@ -431,14 +431,6 @@ func (v StringValue) LessThan(q Value) bool {
 func (v StringValue) String() string {
 	s := v.V
 
-	//if v.Quote != '\u0000' {
-	//	b := strings.Builder{}
-	//	b.WriteRune(v.Quote)
-	//	b.WriteString(v.V)
-	//	b.WriteRune(v.Quote)
-	//	s = b.String()
-	//}
-
 	return s
 }
 
