@@ -26,11 +26,11 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
-
 	"github.com/getgort/gort/data"
 	gerrs "github.com/getgort/gort/errors"
+
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
 const (

@@ -20,12 +20,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/getgort/gort/retrieval"
-
 	"github.com/getgort/gort/auth"
 	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/retrieval"
 	"github.com/getgort/gort/telemetry"
 
 	"github.com/go-co-op/gocron"
@@ -101,8 +100,8 @@ func Schedule(ctx context.Context, cmd data.ScheduledCommand) error {
 	return err
 }
 
-// AddFromString schedules a command using its string representation.
-func AddFromString(ctx context.Context, commandString string, etc data.ScheduledCommand) error {
+// ScheduleFromString schedules a command using its string representation.
+func ScheduleFromString(ctx context.Context, commandString string, etc data.ScheduledCommand) error {
 
 	tokens, err := command.Tokenize(commandString)
 	if err != nil {

@@ -54,7 +54,7 @@ func handleScheduleCommand(w http.ResponseWriter, r *http.Request) {
 		Cron:      scheduleRequest.Cron,
 	}
 
-	err = scheduler.AddFromString(r.Context(), scheduleRequest.Command, sc)
+	err = scheduler.ScheduleFromString(r.Context(), scheduleRequest.Command, sc)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return

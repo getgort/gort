@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/getgort/gort/command"
-
 	"github.com/getgort/gort/data"
 
 	"github.com/stretchr/testify/assert"
