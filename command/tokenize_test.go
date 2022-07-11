@@ -24,11 +24,16 @@ import (
 
 func TestTokenize(t *testing.T) {
 	inputs := map[string][]string{
-		`echo -n foo bar`:           {`echo`, `-n`, `foo`, `bar`},
-		`echo -n "foo bar"`:         {`echo`, `-n`, `"foo bar"`},
-		`echo "What's" "\"this\"?"`: {`echo`, `"What's"`, `"\"this\"?"`},
-		``:                          {},
-		`"" ""`:                     {`""`, `""`},
+		`echo -n foo bar`:             {`echo`, `-n`, `foo`, `bar`},
+		`echo -n "foo bar"`:           {`echo`, `-n`, `"foo bar"`},
+		`echo "What's" "\"this\"?"`:   {`echo`, `"What's"`, `""this"?"`},
+		``:                            {},
+		`"" ""`:                       {`""`, `""`},
+		`schedule “@every 1m” whoami`: {`schedule`, `"@every 1m"`, `whoami`},
+		`echo "hello\nthere"`: {`echo`, `"hello
+there"`},
+		`echo "hello\nhello"`: {`echo`, "\"hello\nhello\""},
+		`echo "hi\tthere"`: {`echo`, `"hi	there"`},
 	}
 
 	for in, expected := range inputs {

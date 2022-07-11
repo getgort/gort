@@ -140,7 +140,7 @@ func addAllMethodsToRouter(router *mux.Router) {
 	addRoleMethodsToRouter(router)
 	addUserMethodsToRouter(router)
 	addManagementMethodsToRouter(router)
-	//addScheduleMethodsToRouter(router)
+	addScheduleMethodsToRouter(router)
 }
 
 // Requests retrieves the channel to which user request events are sent.

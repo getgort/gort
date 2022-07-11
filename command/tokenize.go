@@ -30,13 +30,14 @@ var (
 	doubleQuotes = rangetable.New('"', '“', '”', '„')
 )
 
+const RuneNull = rune(0)
+
 // Tokenize takes an input string and splits it into tokens. Any control
 // character sequences ("\n", "\t", etc), pass through in their original
 // form.
 // Examples:
 //    echo -n foo bar -> {"echo", "-n", "foo", "bar"}
 //    echo -n "foo bar" -> {"echo", "-n", "foo bar"}
-//    echo "What's" "\"this\"?" -> {"echo", "What's", "\"this\"?"}
 func Tokenize(input string) ([]string, error) {
 	b := strings.Builder{}
 	tokens := []string{}
@@ -52,12 +53,27 @@ func Tokenize(input string) ([]string, error) {
 		switch {
 		// Backslash turns on the control flag.
 		case ch == '\\':
-			b.WriteRune(ch)
+			// If we aren't in double-quotes, append the literal backslash.
+			if quote != doubleQuotes {
+				b.WriteRune(ch)
+			}
 			control = true
 
-		// If the control flag is set, append the entire control character to the token.
-		case control:
+		// If the control flag is set, and we aren't in double-quotes, append the entire control character to the token.
+		case control && quote != doubleQuotes:
 			b.WriteRune(ch)
+			control = false
+
+		// If the control flag is set, and we are in double-quotes, append the unescaped control character to the token.
+		case control && quote == doubleQuotes:
+			r, err := unescape(ch)
+			if err != nil {
+				return tokens, TokenizeError{
+					Text:     err.Error(),
+					Position: i,
+				}
+			}
+			b.WriteRune(r)
 			control = false
 
 		// Spaces outside of quotes are token delimiters.
@@ -69,14 +85,14 @@ func Tokenize(input string) ([]string, error) {
 
 		// Everything inside a pair of quotes is added to the same token.
 		case quote != nil && IsMatchingQuotationMark(ch, quote):
-			b.WriteRune(ch)
+			b.WriteRune(GetBasicQuote(quote))
 			tokens = append(tokens, b.String())
 			quote = nil
 			b.Reset()
 
 		// Turn quote-mode on and off.
 		case QuotationMarkCategory(ch) != nil:
-			b.WriteRune(ch)
+			b.WriteRune(GetBasicQuote(QuotationMarkCategory(ch)))
 			if quote == nil {
 				quote = QuotationMarkCategory(ch)
 				quoteStart = i
@@ -126,4 +142,40 @@ func QuotationMarkCategory(r rune) *unicode.RangeTable {
 
 func IsMatchingQuotationMark(r rune, other *unicode.RangeTable) bool {
 	return unicode.In(r, other)
+}
+
+func GetBasicQuote(table *unicode.RangeTable) rune {
+	switch table {
+	case singleQuotes:
+		return '\''
+	case doubleQuotes:
+		return '"'
+	default:
+		return rune(0)
+	}
+}
+
+func unescape(r rune) (rune, error) {
+	switch r {
+	case 'n':
+		return '\n', nil
+	case 'r':
+		return '\r', nil
+	case 't':
+		return '\t', nil
+	case 'f':
+		return '\f', nil
+	case 'v':
+		return '\v', nil
+	case 'a':
+		return '\a', nil
+	case 'b':
+		return '\b', nil
+	case '\\':
+		return '\\', nil
+	case '"':
+		return '"', nil
+	default:
+		return RuneNull, fmt.Errorf("undefined control character '%c'", r)
+	}
 }

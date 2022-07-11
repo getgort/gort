@@ -17,10 +17,11 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/getgort/gort/client"
-	"github.com/getgort/gort/service"
+	"github.com/getgort/gort/data/rest"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +49,7 @@ func GetScheduleCreateCmd() *cobra.Command {
 }
 
 func scheduleCreateCmd(cmd *cobra.Command, args []string) error {
-	req := service.ScheduleRequest{
+	req := rest.ScheduleRequest{
 		Command:   args[1],
 		Cron:      args[0],
 		Adapter:   os.Getenv("GORT_ADAPTER"),
@@ -64,6 +65,8 @@ func scheduleCreateCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("Successfully scheduled!")
 
 	return nil
 }

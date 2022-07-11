@@ -21,21 +21,16 @@ import (
 	"net/http"
 
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/scheduler"
 
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-type ScheduleRequest struct {
-	Command   string
-	Cron      string
-	Adapter   string
-	ChannelID string
-}
-
+// handleScheduleCommand handles "PUT /v2/schedule"
 func handleScheduleCommand(w http.ResponseWriter, r *http.Request) {
-	var scheduleRequest ScheduleRequest
+	var scheduleRequest rest.ScheduleRequest
 	err := json.NewDecoder(r.Body).Decode(&scheduleRequest)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
@@ -67,5 +62,5 @@ func handleScheduleCommand(w http.ResponseWriter, r *http.Request) {
 }
 
 func addScheduleMethodsToRouter(router *mux.Router) {
-	router.Handle("/v2/schedule/create", otelhttp.NewHandler(authCommand(handleScheduleCommand, "schedule"), "handleScheduleCommand")).Methods("POST")
+	router.Handle("/v2/schedule", otelhttp.NewHandler(authCommand(handleScheduleCommand, "schedule"), "handleScheduleCommand")).Methods("PUT")
 }

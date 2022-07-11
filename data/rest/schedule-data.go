@@ -14,34 +14,16 @@
  * limitations under the License.
  */
 
-package client
+package rest
 
-import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-
-	"github.com/getgort/gort/data/rest"
-)
-
-// ScheduleCreate schedules a new command to run periodically.
-func (c *GortClient) ScheduleCreate(req rest.ScheduleRequest) error {
-	url := fmt.Sprintf("%s/v2/schedule", c.profile.URL.String())
-
-	body, err := json.Marshal(req)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.doRequest("PUT", url, body)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return getResponseError(resp)
-	}
-
-	return nil
+// ScheduleRequest holds all the information needed by the Gort server to schedule a recurring command.
+type ScheduleRequest struct {
+	// Command is the full command to be run every time.
+	Command string
+	// Cron is the specification of when the command should be run, in standard cron format.
+	Cron string
+	// Adapter is the name of the adapter that the command should output to.
+	Adapter string
+	//ChannelID is the id of the channel that the command should output to.
+	ChannelID string
 }
