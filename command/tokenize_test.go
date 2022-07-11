@@ -34,6 +34,7 @@ func TestTokenize(t *testing.T) {
 there"`},
 		`echo "hello\nhello"`: {`echo`, "\"hello\nhello\""},
 		`echo "hi\tthere"`: {`echo`, `"hi	there"`},
+		`echo 'hello\nthere'`: {`echo`, `'hello\nthere'`},
 	}
 
 	for in, expected := range inputs {
