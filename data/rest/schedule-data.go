@@ -16,14 +16,19 @@
 
 package rest
 
-// ScheduleRequest holds all the information needed by the Gort server to schedule a recurring command.
+// ScheduleRequest holds all the information needed by the Gort server to
+// schedule a recurring command.
 type ScheduleRequest struct {
 	// Command is the full command to be run every time.
 	Command string
-	// Cron is the specification of when the command should be run, in standard cron format.
+
+	// Cron is the specification of when the command should be run, in standard
+	// cron format.
 	Cron string
+
 	// Adapter is the name of the adapter that the command should output to.
 	Adapter string
+
 	//ChannelID is the id of the channel that the command should output to.
 	ChannelID string
 }

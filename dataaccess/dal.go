@@ -23,10 +23,9 @@ import (
 	"time"
 
 	"github.com/getgort/gort/bundles"
+	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
-
-	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/dataaccess/errs"
 	"github.com/getgort/gort/dataaccess/memory"
 	"github.com/getgort/gort/dataaccess/postgres"
@@ -170,7 +169,7 @@ func bootstrapUserWithDefaults(user rest.User) (rest.User, error) {
 	return user, nil
 }
 
-func DoBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
+func Bootstrap(ctx context.Context, user rest.User) (rest.User, error) {
 	const adminGroup = "admin"
 	const adminRole = "admin"
 	var adminPermissions = []string{

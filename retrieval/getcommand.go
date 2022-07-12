@@ -40,13 +40,15 @@ var (
 	ErrMultipleCommands = errors.New("multiple commands match that pattern")
 )
 
-// CommandFromTokens defines a function that attempts to identify a command from a slice of tokens.
-// It returns both a data.CommandEntry defining the command, and a command.Command that re-defines the input
-// as appropriate to the command that was found.
+// CommandFromTokens defines a function that attempts to identify a command from
+// a slice of tokens. It returns both a data.CommandEntry defining the command,
+// and a command.Command that re-defines the input as appropriate to the command
+// that was found.
 type CommandFromTokens func(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error)
 
 // CommandFromTokensByName implements CommandFromTokens.
-// It checks if a command can be identified from the given tokens by the command name.
+// It checks if a command can be identified from the given tokens by the command
+// name.
 func CommandFromTokensByName(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
 	// Build a temporary Command value using default tokenization rules. We'll
 	// use this to load the CommandEntry for the relevant command (as defined
@@ -75,7 +77,8 @@ func CommandFromTokensByName(ctx context.Context, tokens []string) (*data.Comman
 }
 
 // CommandFromTokensByTrigger implements CommandFromTokens.
-// It checks if a command can be identified from the given tokens by a trigger pattern.
+// It checks if a command can be identified from the given tokens by a trigger
+// pattern.
 func CommandFromTokensByTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
 	cmdEntry, err := GetCommandEntryByTrigger(ctx, tokens)
 	if err != nil && gerrs.Is(err, ErrNoSuchCommand) {
@@ -100,8 +103,8 @@ func CommandFromTokensByTrigger(ctx context.Context, tokens []string) (*data.Com
 
 // CommandFromTokensByNameOrTrigger implements CommandFromTokens.
 // It first checks if a command can be identified from the given tokens by name,
-// if this is unsuccessful because the command does not exist, it will attempt to
-// identify the command from a trigger.
+// if this is unsuccessful because the command does not exist, it will attempt
+// to identify the command from a trigger.
 func CommandFromTokensByNameOrTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
 	cmdEntry, cmdInput, err := CommandFromTokensByName(ctx, tokens)
 	if err == nil {

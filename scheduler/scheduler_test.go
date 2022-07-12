@@ -26,30 +26,38 @@ import (
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/dataaccess/memory"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestCommandSchedulerFull(t *testing.T) {
+// TestSchedulerMultiple tests that the one CommandRequest is issued per second
+// over a specified number of seconds.
+func TestSchedulerMultiple(t *testing.T) {
+	const iterations = 5
+
 	// Init Gort
+	memory.Reset()
+	ctx := context.Background()
 	require.NoError(t, config.Initialize("../testing/config/no-database.yml"))
 
 	da, err := dataaccess.Get()
 	require.NoError(t, err)
 
-	require.NoError(t, da.Initialize(context.Background()))
-	user, err := dataaccess.DoBootstrap(context.Background(), rest.User{
+	require.NoError(t, da.Initialize(ctx))
+	user, err := dataaccess.Bootstrap(ctx, rest.User{
 		Email:    "user@getgort.io",
 		Username: "user",
 	})
 	require.NoError(t, err)
 
 	scheduledCommands := StartScheduler()
-	entries, err := da.FindCommandEntry(context.Background(), "gort", "whoami")
+	defer StopScheduler()
+	entries, err := da.FindCommandEntry(ctx, "gort", "whoami")
 	require.NoError(t, err)
 	require.NotEmpty(t, entries)
-	require.NoError(t, Schedule(context.Background(), data.ScheduledCommand{
+	require.NoError(t, Schedule(ctx, data.ScheduledCommand{
 		CommandEntry: entries[0],
 		Command: command.Command{
 			Bundle:     "gort",
@@ -65,11 +73,13 @@ func TestCommandSchedulerFull(t *testing.T) {
 		ChannelID: "channel",
 	}))
 
-	select {
-	case <-time.After(1*time.Second + 50*time.Millisecond):
-		t.Fail()
-	case req := <-scheduledCommands:
-		assert.NotEqual(t, 0, req.RequestID)
-		// success
+	for i := 0; i < iterations; {
+		select {
+		case <-time.After(iterations*time.Second + 50*time.Millisecond):
+			t.FailNow()
+		case req := <-scheduledCommands:
+			assert.NotEqual(t, 0, req.RequestID)
+			i++
+		}
 	}
 }

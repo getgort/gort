@@ -59,12 +59,14 @@ func Tokenize(input string) ([]string, error) {
 			}
 			control = true
 
-		// If the control flag is set, and we aren't in double-quotes, append the entire control character to the token.
+		// If the control flag is set, and we aren't in double-quotes, append
+		// the entire control character to the token.
 		case control && quote != doubleQuotes:
 			b.WriteRune(ch)
 			control = false
 
-		// If the control flag is set, and we are in double-quotes, append the unescaped control character to the token.
+		// If the control flag is set, and we are in double-quotes, append the
+		// unescaped control character to the token.
 		case control && quote == doubleQuotes:
 			r, err := unescape(ch)
 			if err != nil {
@@ -129,27 +131,8 @@ func (e TokenizeError) Error() string {
 	return fmt.Sprintf(e.Text, e.Position)
 }
 
-// quotationMarkCategory returns a pointer to the range of unicode characters equivalent to the given quote, or nil if
-// the given character isn't a quotation mark.
-func quotationMarkCategory(r rune) *unicode.RangeTable {
-	switch {
-	case unicode.In(r, singleQuotes):
-		return singleQuotes
-	case unicode.In(r, doubleQuotes):
-		return doubleQuotes
-	default:
-		return nil
-	}
-}
-
-// isMatchingQuotationMark returns whether a quotation mark is in the given *RangeTable, either singleQuote or
-// doubleQuote.
-func isMatchingQuotationMark(r rune, other *unicode.RangeTable) bool {
-	return unicode.In(r, other)
-}
-
-// getBasicQuote accepts either the singleQuote or doubleQuote *RangeTable, and returns the ascii representative of that
-// category (either ' or ").
+// getBasicQuote accepts either the singleQuote or doubleQuote *RangeTable, and
+// returns the ascii representative of that category (either ' or ").
 func getBasicQuote(table *unicode.RangeTable) rune {
 	switch table {
 	case singleQuotes:
@@ -161,27 +144,52 @@ func getBasicQuote(table *unicode.RangeTable) rune {
 	}
 }
 
-// unescape translates a given printable character rune into it's corresponding control character.
+// isMatchingQuotationMark returns whether a quotation mark is in the given
+// *RangeTable, either singleQuote or doubleQuote.
+func isMatchingQuotationMark(r rune, other *unicode.RangeTable) bool {
+	return unicode.In(r, other)
+}
+
+// quotationMarkCategory returns a pointer to the range of unicode characters
+// equivalent to the given quote, or nil if the given character isn't a
+// quotation mark.
+func quotationMarkCategory(r rune) *unicode.RangeTable {
+	switch {
+	case unicode.In(r, singleQuotes):
+		return singleQuotes
+	case unicode.In(r, doubleQuotes):
+		return doubleQuotes
+	default:
+		return nil
+	}
+}
+
+// unescape translates a given printable character rune into it's corresponding
+// control character.
 func unescape(r rune) (rune, error) {
 	switch r {
+	case 'a':
+		return '\a', nil
+	case 'b':
+		return '\b', nil
+	case 'f':
+		return '\f', nil
 	case 'n':
 		return '\n', nil
 	case 'r':
 		return '\r', nil
 	case 't':
 		return '\t', nil
-	case 'f':
-		return '\f', nil
 	case 'v':
 		return '\v', nil
-	case 'a':
-		return '\a', nil
-	case 'b':
-		return '\b', nil
-	case '\\':
-		return '\\', nil
+	case '\'':
+		return '\'', nil
 	case '"':
 		return '"', nil
+	case '?':
+		return '?', nil
+	case '\\':
+		return '\\', nil
 	default:
 		return RuneNull, fmt.Errorf("undefined control character '%c'", r)
 	}

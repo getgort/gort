@@ -218,7 +218,7 @@ func setupGort() error {
 	}
 
 	da.Initialize(context.Background())
-	dataaccess.DoBootstrap(context.Background(), rest.User{
+	dataaccess.Bootstrap(context.Background(), rest.User{
 		Email:    "user@getgort.io",
 		Username: "user",
 	})

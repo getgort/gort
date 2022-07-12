@@ -308,7 +308,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err = dataaccess.DoBootstrap(r.Context(), user)
+	user, err = dataaccess.Bootstrap(r.Context(), user)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
