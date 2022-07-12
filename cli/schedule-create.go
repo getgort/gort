@@ -35,7 +35,19 @@ gort schedule create [flags] cron command
 
 cron is the specification of when the command should be run in cron format
 command is a string containing the command to run.
+
+Flags:
+  -a, --adapter	string  The name of the adapter to schedule for.
+                        Uses the GORT_ADAPTER env var if not provided.
+  -c, --channel string  The id of the channel to schedule in.
+                        Uses the GORT_ROOM env var if not provided.
+  -h, --help            Show this message and exit
 `
+)
+
+var (
+	flagAdapter   string
+	flagChannelID string
 )
 
 func GetScheduleCreateCmd() *cobra.Command {
@@ -47,6 +59,9 @@ func GetScheduleCreateCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 	}
 
+	cmd.Flags().StringVarP(&flagAdapter, "adapter", "a", os.Getenv("GORT_ADAPTER"), "The name of the adapter to schedule for.")
+	cmd.Flags().StringVarP(&flagChannelID, "channel", "c", os.Getenv("GORT_ROOM"), "The id of the channel to schedule for.")
+
 	cmd.SetUsageTemplate(scheduleCreateUsage)
 
 	return cmd
@@ -56,8 +71,8 @@ func scheduleCreateCmd(cmd *cobra.Command, args []string) error {
 	req := rest.ScheduleRequest{
 		Command:   args[1],
 		Cron:      args[0],
-		Adapter:   os.Getenv("GORT_ADAPTER"),
-		ChannelID: os.Getenv("GORT_ROOM"),
+		Adapter:   flagAdapter,
+		ChannelID: flagChannelID,
 	}
 
 	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
