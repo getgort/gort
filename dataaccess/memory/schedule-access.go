@@ -19,13 +19,12 @@ package memory
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/telemetry"
 	"go.opentelemetry.io/otel"
 )
-
-//TODO(grebneerg): Actually assign unique IDs here
 
 func (da *InMemoryDataAccess) ScheduleCreate(ctx context.Context, command *data.ScheduledCommand) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -36,7 +35,9 @@ func (da *InMemoryDataAccess) ScheduleCreate(ctx context.Context, command *data.
 		return fmt.Errorf("schedule id already set")
 	}
 
-	command.ScheduleID++
+	command.ScheduleID = atomic.AddInt64(&da.schedules.id, 1)
+
+	da.schedules.schedules[command.ScheduleID] = command
 
 	return nil
 }
@@ -49,6 +50,14 @@ func (da *InMemoryDataAccess) ScheduleDelete(ctx context.Context, command data.S
 	if command.ScheduleID == 0 {
 		return fmt.Errorf("schedule id not set")
 	}
+
+	_, found := da.schedules.schedules[command.ScheduleID]
+
+	if !found {
+		return fmt.Errorf("schedule %d not found", command.ScheduleID)
+	}
+
+	delete(da.schedules.schedules, command.ScheduleID)
 
 	return nil
 }

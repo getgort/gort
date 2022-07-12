@@ -26,7 +26,14 @@ type Value interface {
 	Equals(Value) bool
 	LessThan(Value) bool
 	Value() interface{}
+
+	// String returns the value as it would be received by a program to which it
+	// is passed as an argument.
 	String() string
+
+	// EscapedString returns the value as it would be typed on the command line,
+	// including quotation marks and escape sequences, if applicable.
+	EscapedString() string
 }
 
 type CollectionValue interface {
@@ -74,6 +81,10 @@ func (v BoolValue) String() string {
 	return fmt.Sprintf("%v", v.V)
 }
 
+func (v BoolValue) EscapedString() string {
+	return v.String()
+}
+
 func (v BoolValue) Value() interface{} {
 	return v.V
 }
@@ -111,6 +122,10 @@ func (v FloatValue) LessThan(q Value) bool {
 
 func (v FloatValue) String() string {
 	return fmt.Sprintf("%v", v.V)
+}
+
+func (v FloatValue) EscapedString() string {
+	return v.String()
 }
 
 func (v FloatValue) Value() interface{} {
@@ -151,6 +166,10 @@ func (v IntValue) LessThan(q Value) bool {
 
 func (v IntValue) String() string {
 	return fmt.Sprintf("%v", v.V)
+}
+
+func (v IntValue) EscapedString() string {
+	return v.String()
 }
 
 func (v IntValue) Value() interface{} {
@@ -202,6 +221,10 @@ func (v ListValue) String() string {
 	return v.Name
 }
 
+func (v ListValue) EscapedString() string {
+	return v.String()
+}
+
 func (v ListValue) LessThan(q Value) bool {
 	return false
 }
@@ -234,6 +257,10 @@ func (v ListElementValue) LessThan(q Value) bool {
 
 func (v ListElementValue) String() string {
 	return fmt.Sprintf("%s[%d]", v.V.Name, v.Index)
+}
+
+func (v ListElementValue) EscapedString() string {
+	return v.String()
 }
 
 func (v ListElementValue) Value() interface{} {
@@ -297,6 +324,10 @@ func (v MapValue) String() string {
 	return v.Name
 }
 
+func (v MapValue) EscapedString() string {
+	return v.String()
+}
+
 func (v MapValue) Value() interface{} {
 	return v.V
 }
@@ -342,6 +373,10 @@ func (v MapElementValue) String() string {
 	return fmt.Sprintf("%s[\"%s\"]", v.V.Name, v.Key)
 }
 
+func (v MapElementValue) EscapedString() string {
+	return v.String()
+}
+
 func (v MapElementValue) Value() interface{} {
 	return v.V.V[v.Key]
 }
@@ -364,6 +399,10 @@ func (v NullValue) LessThan(q Value) bool {
 
 func (v NullValue) String() string {
 	return "NULL"
+}
+
+func (v NullValue) EscapedString() string {
+	return v.String()
 }
 
 func (v NullValue) Value() interface{} {
@@ -401,6 +440,10 @@ func (v RegexValue) String() string {
 	return fmt.Sprintf("%v", v.V)
 }
 
+func (v RegexValue) EscapedString() string {
+	return v.String()
+}
+
 func (v RegexValue) Value() interface{} {
 	return v.V
 }
@@ -434,6 +477,17 @@ func (v StringValue) String() string {
 	return s
 }
 
+func (v StringValue) EscapedString() string {
+	switch v.Quote {
+	case '\'':
+		return fmt.Sprintf("'%s'", v.V)
+	case '"':
+		return strconv.Quote(v.V)
+	default:
+		return v.V // Theoretically impossible.
+	}
+}
+
 func (v StringValue) Value() interface{} {
 	return v.V
 }
@@ -455,6 +509,10 @@ func (v UnknownValue) LessThan(q Value) bool {
 
 func (v UnknownValue) String() string {
 	return fmt.Sprintf("??%s??", v.V)
+}
+
+func (v UnknownValue) EscapedString() string {
+	return v.String()
 }
 
 func (v UnknownValue) Value() interface{} {
