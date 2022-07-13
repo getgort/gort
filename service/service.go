@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/getgort/gort/auth"
-	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
@@ -141,6 +140,7 @@ func addAllMethodsToRouter(router *mux.Router) {
 	addRoleMethodsToRouter(router)
 	addUserMethodsToRouter(router)
 	addManagementMethodsToRouter(router)
+	addScheduleMethodsToRouter(router)
 }
 
 // Requests retrieves the channel to which user request events are sent.
@@ -175,32 +175,6 @@ func addHealthzMethodToRouter(router *mux.Router) {
 func addMetricsToRouter(router *mux.Router) error {
 	router.Handle("/v2/metrics", telemetry.PrometheusExporter)
 	return nil
-}
-
-func bootstrapUserWithDefaults(user rest.User) (rest.User, error) {
-	// If user doesn't have a defined email, we default to "gort@localhost".
-	if user.Email == "" {
-		user.Email = "gort@localhost"
-	}
-
-	// If user doesn't have a defined name, we default to "Gort Administrator".
-	if user.FullName == "" {
-		user.FullName = "Gort Administrator"
-	}
-
-	// The bootstrap user is _always_ named "admin".
-	user.Username = "admin"
-
-	// If user doesn't have a defined password, we kindly generate one.
-	if user.Password == "" {
-		password, err := data.GenerateRandomToken(32)
-		if err != nil {
-			return user, err
-		}
-		user.Password = password
-	}
-
-	return user, nil
 }
 
 func buildLoggingMiddleware(logsous chan RequestEvent) func(http.Handler) http.Handler {
@@ -304,85 +278,6 @@ func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(token)
 }
 
-func DoBootstrap(ctx context.Context, user rest.User) (rest.User, error) {
-	const adminGroup = "admin"
-	const adminRole = "admin"
-	var adminPermissions = []string{
-		"manage_commands",
-		"manage_configs",
-		"manage_groups",
-		"manage_roles",
-		"manage_users",
-	}
-
-	dataAccessLayer, err := dataaccess.Get()
-	if err != nil {
-		return user, err
-	}
-
-	// Set user defaults where necessary.
-	user, err = bootstrapUserWithDefaults(user)
-	if err != nil {
-		return user, err
-	}
-
-	// Persist our shiny new user to the database.
-	err = dataAccessLayer.UserCreate(ctx, user)
-	if err != nil {
-		return user, err
-	}
-
-	// Create admin group.
-	err = dataAccessLayer.GroupCreate(ctx, rest.Group{Name: adminGroup})
-	if err != nil {
-		return user, err
-	}
-
-	// Add the admin user to the admin group.
-	err = dataAccessLayer.GroupUserAdd(ctx, adminGroup, user.Username)
-	if err != nil {
-		return user, err
-	}
-
-	// Create an admin role
-	err = dataAccessLayer.RoleCreate(ctx, adminRole)
-	if err != nil {
-		return user, err
-	}
-
-	// Add role to group
-	err = dataAccessLayer.GroupRoleAdd(ctx, adminGroup, adminRole)
-	if err != nil {
-		return user, err
-	}
-
-	// Add the default permissions.
-	for _, p := range adminPermissions {
-		err = dataAccessLayer.RolePermissionAdd(ctx, adminRole, "gort", p)
-		if err != nil {
-			return user, err
-		}
-	}
-
-	// Finally, add and enable the default bundle
-	b, err := bundles.Default()
-	if err != nil {
-		return user, err
-	}
-
-	err = dataAccessLayer.BundleCreate(ctx, b)
-	if err != nil {
-		return user, err
-	}
-
-	err = dataAccessLayer.BundleEnable(ctx, b.Name, b.Version)
-	if err != nil {
-		return user, err
-	}
-
-	return user, nil
-}
-
 // handleBootstrap handles "POST /bootstrap"
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	dataAccessLayer, err := dataaccess.Get()
@@ -413,7 +308,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err = DoBootstrap(r.Context(), user)
+	user, err = dataaccess.Bootstrap(r.Context(), user)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return

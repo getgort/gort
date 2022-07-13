@@ -14,18 +14,34 @@
  * limitations under the License.
  */
 
-package bundles
+package client
 
 import (
-	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 
-	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/rest"
 )
 
-type CommandEntryFinder interface {
-	// FindCommandEntry is used to find the enabled commands with the provided
-	// bundle and command names. If either is empty, it is treated as a wildcard.
-	// Importantly, this must only return ENABLED commands!
-	FindCommandEntry(ctx context.Context, bundle, command string) ([]data.CommandEntry, error)
-	FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error)
+// ScheduleCreate schedules a new command to run periodically.
+func (c *GortClient) ScheduleCreate(req rest.ScheduleRequest) error {
+	url := fmt.Sprintf("%s/v2/schedule", c.profile.URL.String())
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.doRequest("PUT", url, body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return getResponseError(resp)
+	}
+
+	return nil
 }

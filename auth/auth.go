@@ -17,11 +17,13 @@
 package auth
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
-	// "fmt"
-
+	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/dataaccess"
 	gerrs "github.com/getgort/gort/errors"
 	"github.com/getgort/gort/rules"
 )
@@ -34,6 +36,10 @@ const (
 var (
 	ErrRuleLoadError  = fmt.Errorf("rule load failure")
 	ErrNoRulesDefined = fmt.Errorf("command has no rules")
+
+	// ErrNotAllowed is thrown when checking user permissions for a command if
+	// the user does not have the appropriate permissions to use the command.
+	ErrNotAllowed = errors.New("user not allowed to use command")
 )
 
 // EvaluateRules returns true if the provided permissions meet the requirements
@@ -95,4 +101,33 @@ func ParseCommandEntry(ce data.CommandEntry) ([]rules.Rule, error) {
 	}
 
 	return rr, nil
+}
+
+// CheckPermissions errors if the given user does not have permission to run the given command.
+func CheckPermissions(ctx context.Context, userName string, cmdInput command.Command, cmdEntry data.CommandEntry) error {
+	da, err := dataaccess.Get()
+	if err != nil {
+		return err
+	}
+
+	perms, err := da.UserPermissionList(ctx, userName)
+	if err != nil {
+		return err
+	}
+
+	allowed, err := EvaluateCommandEntry(
+		perms.Strings(),
+		cmdEntry,
+		rules.EvaluationEnvironment{
+			"option": cmdInput.OptionsValues(),
+			"arg":    cmdInput.Parameters,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return ErrNotAllowed
+	}
+	return nil
 }

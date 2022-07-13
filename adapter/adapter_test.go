@@ -25,7 +25,6 @@ import (
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
-	"github.com/getgort/gort/service"
 	"github.com/getgort/gort/templates"
 )
 
@@ -219,7 +218,7 @@ func setupGort() error {
 	}
 
 	da.Initialize(context.Background())
-	service.DoBootstrap(context.Background(), rest.User{
+	dataaccess.Bootstrap(context.Background(), rest.User{
 		Email:    "user@getgort.io",
 		Username: "user",
 	})

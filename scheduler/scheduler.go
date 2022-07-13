@@ -20,10 +20,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/getgort/gort/adapter"
+	"github.com/getgort/gort/auth"
 	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess"
+	"github.com/getgort/gort/retrieval"
 	"github.com/getgort/gort/telemetry"
 
 	"github.com/go-co-op/gocron"
@@ -36,44 +37,60 @@ var (
 	commandsOut = make(chan data.CommandRequest, 100)
 )
 
-// StartScheduler starts the scheduler running and returns a channel of data.CommandRequest according to
-// registered schedules.
+// StartScheduler starts the scheduler running and returns a channel of
+// data.CommandRequest according to registered schedules.
 func StartScheduler() chan data.CommandRequest {
 	if cron == nil {
 		cron = gocron.NewScheduler(time.Local)
 		cron.TagsUnique()
+	}
+
+	if !cron.IsRunning() {
 		cron.StartAsync()
 	}
 
 	return commandsOut
 }
 
-// Schedule registers a data.ScheduledCommand with the scheduler so it will be requested appropriately.
-func Schedule(ctx context.Context, command data.ScheduledCommand) error {
+// StopScheduler stops the scheduler from running. Blocks to wait for any
+// currently running jobs to complete.
+func StopScheduler() {
+	if cron != nil && cron.IsRunning() {
+		cron.Stop()
+	}
+}
+
+// Schedule registers a data.ScheduledCommand with the scheduler so it will be
+// requested appropriately.
+func Schedule(ctx context.Context, cmd data.ScheduledCommand) error {
+	err := auth.CheckPermissions(ctx, cmd.UserName, cmd.Command, cmd.CommandEntry)
+	if err != nil {
+		return err
+	}
 	da, err := dataaccess.Get()
 	if err != nil {
 		return err
 	}
-	err = da.ScheduleCreate(ctx, &command)
+	err = da.ScheduleCreate(ctx, &cmd)
 	if err != nil {
 		return err
 	}
 
-	_, err = cron.Cron(command.Cron).Do(func() { //todo tag with scheduleid
+	_, err = cron.Cron(cmd.Cron).Do(func() { //todo tag with scheduleid
 		tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 		ctx, sp := tr.Start(context.Background(), "scheduler.Schedule.cronFunc")
 		defer sp.End()
 
 		req := data.CommandRequest{
-			CommandEntry: command.CommandEntry,
-			Adapter:      command.Adapter,
-			ChannelID:    command.ChannelID,
+			CommandEntry: cmd.CommandEntry,
+			Adapter:      cmd.Adapter,
+			ChannelID:    cmd.ChannelID,
 			Context:      ctx,
-			Parameters:   command.Parameters,
+			Parameters:   retrieval.ParametersFromCommand(cmd.Command),
 			Timestamp:    time.Now(),
-			UserID:       command.UserID,
-			UserEmail:    command.UserEmail,
-			UserName:     command.UserName,
+			UserID:       cmd.UserID,
+			UserEmail:    cmd.UserEmail,
+			UserName:     cmd.UserName,
 		}
 
 		da, err := dataaccess.Get()
@@ -103,15 +120,13 @@ func ScheduleFromString(ctx context.Context, commandString string, etc data.Sche
 		return err
 	}
 
-	cmdEntry, cmdInput, err := adapter.CommandFromTokensByName(ctx, tokens)
+	cmdEntry, cmdInput, err := retrieval.CommandFromTokensByName(ctx, tokens)
 	if err != nil {
 		return err
 	}
 
-	parameters := adapter.ParametersFromCommand(cmdInput)
-
 	etc.CommandEntry = *cmdEntry
-	etc.Parameters = parameters
+	etc.Command = cmdInput
 
 	return Schedule(ctx, etc)
 }

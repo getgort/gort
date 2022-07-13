@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/getgort/gort/auth"
-	"github.com/getgort/gort/bundles"
 	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
@@ -37,7 +36,7 @@ import (
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
-	"github.com/getgort/gort/rules"
+	"github.com/getgort/gort/retrieval"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/templates"
 	"github.com/getgort/gort/version"
@@ -72,25 +71,13 @@ var (
 	// to false.
 	ErrSelfRegistrationOff = errors.New("user doesn't exist and self-registration is off")
 
-	// ErrMultipleCommands is returned by GetCommandEntry when the same command
-	// shortcut matches commands in two or more bundles.
-	ErrMultipleCommands = errors.New("multiple commands match that pattern")
-
 	// ErrNoSuchAdapter is returned by GetAdapter if a requested adapter name
 	// can't be found.
 	ErrNoSuchAdapter = errors.New("no such adapter")
 
-	// ErrNoSuchCommand is returned by GetCommandEntry if a request command
-	// isn't found.
-	ErrNoSuchCommand = errors.New("no such bundle")
-
 	// ErrUserNotFound is throws by several methods if a provider fails to
 	// return requested user information.
 	ErrUserNotFound = errors.New("user not found")
-
-	// ErrNotAllowed is thrown when checking user permissions for a command if
-	// the user does not have the appropriate permissions to use the command.
-	ErrNotAllowed = errors.New("user not allowed to use command")
 )
 
 // Adapter represents a connection to a chat provider.
@@ -156,77 +143,6 @@ func GetAdapter(name string) (Adapter, error) {
 	}
 
 	return nil, ErrNoSuchAdapter
-}
-
-// GetCommandEntry accepts a tokenized parameter slice and returns any
-// associated data.CommandEntry instances. If the number of matching
-// commands is > 1, an error is returned.
-func GetCommandEntry(ctx context.Context, bundleName, commandName string) (data.CommandEntry, error) {
-	finders, err := allCommandEntryFinders()
-	if err != nil {
-		return data.CommandEntry{}, err
-	}
-
-	entries, err := findAllEntries(ctx, bundleName, commandName, finders...)
-	if err != nil {
-		return data.CommandEntry{}, err
-	}
-
-	if len(entries) == 0 {
-		return data.CommandEntry{}, ErrNoSuchCommand
-	}
-
-	if len(entries) > 1 {
-		cmd := commandName
-		if bundleName != "" {
-			cmd = bundleName + ":" + commandName
-		}
-
-		log.
-			WithField("requested", cmd).
-			WithField("bundle0", entries[0].Bundle.Name).
-			WithField("command0", entries[0].Command.Name).
-			WithField("bundle1", entries[1].Bundle.Name).
-			WithField("command1", entries[1].Command.Name).
-			Warn("Multiple commands found")
-
-		return data.CommandEntry{}, ErrMultipleCommands
-	}
-
-	return entries[0], nil
-}
-
-// GetCommandEntryByTrigger accepts a tokenized parameter slice and returns any
-// associated data.CommandEntry instances. If the number of matching
-// commands is > 1, an error is returned.
-func GetCommandEntryByTrigger(ctx context.Context, tokens []string) (data.CommandEntry, error) {
-	finders, err := allCommandEntryFinders()
-	if err != nil {
-		return data.CommandEntry{}, err
-	}
-
-	entries, err := findAllEntriesByTrigger(ctx, tokens, finders...)
-	if err != nil {
-		return data.CommandEntry{}, err
-	}
-
-	if len(entries) == 0 {
-		return data.CommandEntry{}, ErrNoSuchCommand
-	}
-
-	if len(entries) > 1 {
-		log.
-			WithField("requested", strings.Join(tokens, " ")).
-			WithField("bundle0", entries[0].Bundle.Name).
-			WithField("command0", entries[0].Command.Name).
-			WithField("bundle1", entries[1].Bundle.Name).
-			WithField("command1", entries[1].Command.Name).
-			Warn("Multiple commands found")
-
-		return data.CommandEntry{}, ErrMultipleCommands
-	}
-
-	return entries[0], nil
 }
 
 // OnConnected handles ConnectedEvent events.
@@ -295,11 +211,11 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	// Find command by Name if the message starts with '!'
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
-		return BuildCommandRequest(ctx, rawCommandText, id, CommandFromTokensByName)
+		return BuildCommandRequest(ctx, rawCommandText, id, retrieval.CommandFromTokensByName)
 	}
 
 	// Otherwise attempt to find command by trigger
-	return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByTrigger)
+	return BuildCommandRequest(ctx, rawCommandText, id, retrieval.CommandFromTokensByTrigger)
 }
 
 // OnDirectMessage handles DirectMessageEvent events.
@@ -324,9 +240,9 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
-		return BuildCommandRequest(ctx, rawCommandText, id, CommandFromTokensByName)
+		return BuildCommandRequest(ctx, rawCommandText, id, retrieval.CommandFromTokensByName)
 	}
-	return BuildCommandRequest(ctx, rawCommandText, id, commandFromTokensByNameOrTrigger)
+	return BuildCommandRequest(ctx, rawCommandText, id, retrieval.CommandFromTokensByNameOrTrigger)
 }
 
 // SendErrorMessage sends an error message to a specified channel.
@@ -450,89 +366,6 @@ func (r *requestLog) Error(
 	return fmt.Errorf("%v: %w", logMessage, err)
 }
 
-// commandFromTokens defines a function that attempts to identify a command from a slice of tokens.
-// It returns both a data.CommandEntry defining the command, and a command.Command that re-defines the input
-// as appropriate to the command that was found.
-type commandFromTokens func(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error)
-
-// CommandFromTokensByName implements commandFromTokens.
-// It checks if a command can be identified from the given tokens by the command name.
-func CommandFromTokensByName(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
-	// Build a temporary Command value using default tokenization rules. We'll
-	// use this to load the CommandEntry for the relevant command (as defined
-	// in a command bundle), which contains the command's parsing rules that
-	// we'll use for a final, formal Parse to get the final Command version.
-	cmdInput, err := command.Parse(tokens)
-	if err != nil {
-		return nil, command.Command{}, err
-	}
-
-	cmdEntry, err := GetCommandEntry(ctx, cmdInput.Bundle, cmdInput.Command)
-	if err != nil {
-		return nil, command.Command{}, err
-	}
-
-	// Now that we have a command entry, we can re-create the complete Command value.
-	tokens[0] = cmdEntry.Bundle.Name + ":" + cmdEntry.Command.Name
-
-	// TODO Set parse options based on the CommandEntry settings.
-	cmdInput, err = command.Parse(tokens)
-	if err != nil {
-		return nil, command.Command{}, err
-	}
-
-	return &cmdEntry, cmdInput, nil
-}
-
-// commandFromTokensByTrigger implements commandFromTokens.
-// It checks if a command can be identified from the given tokens by a trigger pattern.
-func commandFromTokensByTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
-	cmdEntry, err := GetCommandEntryByTrigger(ctx, tokens)
-	if err != nil && gerrs.Is(err, ErrNoSuchCommand) {
-		return nil, command.Command{}, nil
-	}
-	if err != nil {
-		return nil, command.Command{}, err
-	}
-
-	// TODO Set parse options based on the CommandEntry settings.
-	cmdInput, err := command.Parse(
-		append(
-			[]string{cmdEntry.Bundle.Name + ":" + cmdEntry.Command.Name},
-			tokens...,
-		),
-	)
-	if err != nil {
-		return nil, command.Command{}, err
-	}
-	return &cmdEntry, cmdInput, err
-}
-
-// commandFromTokensByNameOrTrigger implements commandFromTokens.
-// It first checks if a command can be identified from the given tokens by name,
-// if this is unsuccessful because the command does not exist, it will attempt to
-// identify the command from a trigger.
-func commandFromTokensByNameOrTrigger(ctx context.Context, tokens []string) (*data.CommandEntry, command.Command, error) {
-	cmdEntry, cmdInput, err := CommandFromTokensByName(ctx, tokens)
-	if err == nil {
-		return cmdEntry, cmdInput, nil
-	}
-	if err != nil && !gerrs.Is(err, ErrNoSuchCommand) {
-		return nil, command.Command{}, err
-	}
-	return commandFromTokensByTrigger(ctx, tokens)
-}
-
-// ParametersFromCommand converts parameters from a command.Command into
-// a string slice.
-func ParametersFromCommand(cmd command.Command) []string {
-	var out []string
-	for _, p := range cmd.Parameters {
-		out = append(out, p.String())
-	}
-	return out
-}
-
 // BuildCommandRequest builds a CommandRequest object based on the provided
 // message content and user id. Both user existence and authorization are
 // verified. A lookup function for identifying a command based on tokens must
@@ -542,7 +375,7 @@ func BuildCommandRequest(
 	ctx context.Context,
 	rawCommand string,
 	id RequestorIdentity,
-	fCommandFromTokens commandFromTokens,
+	fCommandFromTokens retrieval.CommandFromTokens,
 ) (*data.CommandRequest, error) {
 	// Start trace span
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -557,7 +390,7 @@ func BuildCommandRequest(
 	// Tokenize the raw command.
 	tokens, err := command.Tokenize(rawCommand)
 	if err != nil {
-		return nil, fmt.Errorf("command tokenization error")
+		return nil, fmt.Errorf("command tokenization error: %w", err)
 	}
 
 	cmdEntry, cmdInput, commandLookupErr := fCommandFromTokens(ctx, tokens)
@@ -578,12 +411,12 @@ func BuildCommandRequest(
 	if commandLookupErr != nil {
 		err := commandLookupErr
 		switch {
-		case gerrs.Is(err, ErrNoSuchCommand):
+		case gerrs.Is(err, retrieval.ErrNoSuchCommand):
 			msg := fmt.Sprintf("No such bundle is currently installed: %s.\n"+
 				"If this is not expected, you should contact a Gort administrator.",
 				tokens[0])
 			return nil, rl.Error(ctx, err, "command lookup error", logUserMessage("No Such Command", msg))
-		case gerrs.Is(err, ErrMultipleCommands):
+		case gerrs.Is(err, retrieval.ErrMultipleCommands):
 			msg := fmt.Sprintf("The command %s matches multiple bundles.\n"+
 				"Please namespace your command using the bundle name: `bundle:command`.",
 				tokens[0])
@@ -595,7 +428,7 @@ func BuildCommandRequest(
 
 	rl.le = rl.le.WithField("command.name", cmdEntry.Command.Name).
 		WithField("command.params", cmdInput.Parameters.String())
-	request.Parameters = ParametersFromCommand(cmdInput)
+	request.Parameters = retrieval.ParametersFromCommand(cmdInput)
 	da.RequestUpdate(ctx, request)
 
 	cmdFoundMessage := fmt.Sprintf("Executing command: %s", cmdEntry.Command.Name)
@@ -612,7 +445,7 @@ func BuildCommandRequest(
 	rl.le.Debug("Found matching command+bundle")
 	addSpanAttributes(ctx, sp, *cmdEntry)
 
-	err = checkPermissions(ctx, id, cmdInput, *cmdEntry)
+	err = auth.CheckPermissions(ctx, id.GortUser.Username, cmdInput, *cmdEntry)
 	if err != nil {
 		switch {
 		case gerrs.Is(err, auth.ErrRuleLoadError):
@@ -622,7 +455,7 @@ func BuildCommandRequest(
 				"For a command to be executable, it must have at least one rule.",
 				cmdEntry.Bundle.Name, cmdEntry.Command.Name)
 			return nil, rl.Error(ctx, err, "no rules defined", logUserMessage("No Rules Defined", msg))
-		case gerrs.Is(err, ErrNotAllowed):
+		case gerrs.Is(err, auth.ErrNotAllowed):
 			msg := fmt.Sprintf("You do not have the permissions to execute %s:%s.", cmdEntry.Bundle.Name, cmdEntry.Command.Name)
 			return nil, rl.Error(ctx, err, "permission denied", logUserMessage("Permission Denied", msg))
 		default:
@@ -656,34 +489,6 @@ func advancedInput(req data.CommandRequest, id RequestorIdentity, c command.Comm
 	req.Parameters = data.CommandParameters([]string{ai.String()})
 
 	return req
-}
-
-func checkPermissions(ctx context.Context, id RequestorIdentity, cmdInput command.Command, cmdEntry data.CommandEntry) error {
-	da, err := dataaccess.Get()
-	if err != nil {
-		return err
-	}
-
-	perms, err := da.UserPermissionList(ctx, id.GortUser.Username)
-	if err != nil {
-		return err
-	}
-
-	allowed, err := auth.EvaluateCommandEntry(
-		perms.Strings(),
-		cmdEntry,
-		rules.EvaluationEnvironment{
-			"option": cmdInput.OptionsValues(),
-			"arg":    cmdInput.Parameters,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return ErrNotAllowed
-	}
-	return nil
 }
 
 // adapterLogEntry is a helper that pre-populates a log event with attributes.
@@ -875,20 +680,6 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 	sp.SetAttributes(attr...)
 }
 
-func allCommandEntryFinders() ([]bundles.CommandEntryFinder, error) {
-	finders := make([]bundles.CommandEntryFinder, 0)
-
-	// Get the DAL CommandEntryFinder
-	dal, err := dataaccess.Get()
-	if err != nil {
-		return nil, err
-	}
-
-	finders = append(finders, dal)
-
-	return finders, nil
-}
-
 func buildRequestorIdentity(ctx context.Context, adapter Adapter, provider *ProviderInfo, channelId, userId string) (RequestorIdentity, error) {
 	var err error
 	id := RequestorIdentity{
@@ -1034,36 +825,6 @@ func buildAndBeginRequest(ctx context.Context, id RequestorIdentity) (data.Comma
 	}
 
 	return request, id, r, nil
-}
-
-func findAllEntries(ctx context.Context, bundleName, commandName string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {
-	entries := make([]data.CommandEntry, 0)
-
-	for _, f := range finder {
-		e, err := f.FindCommandEntry(ctx, bundleName, commandName)
-		if err != nil {
-			return nil, err
-		}
-
-		entries = append(entries, e...)
-	}
-
-	return entries, nil
-}
-
-func findAllEntriesByTrigger(ctx context.Context, tokens []string, finder ...bundles.CommandEntryFinder) ([]data.CommandEntry, error) {
-	entries := make([]data.CommandEntry, 0)
-
-	for _, f := range finder {
-		e, err := f.FindCommandEntryByTrigger(ctx, tokens)
-		if err != nil {
-			return nil, err
-		}
-
-		entries = append(entries, e...)
-	}
-
-	return entries, nil
 }
 
 // findOrMakeGortUser ...
