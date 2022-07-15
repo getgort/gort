@@ -61,3 +61,13 @@ func (da *InMemoryDataAccess) ScheduleDelete(ctx context.Context, command data.S
 
 	return nil
 }
+
+func (da *InMemoryDataAccess) SchedulesGet(ctx context.Context) ([]data.ScheduledCommand, error) {
+	s := make([]data.ScheduledCommand, 0)
+
+	for _, c := range da.schedules.schedules {
+		s = append(s, *c)
+	}
+
+	return s, nil
+}

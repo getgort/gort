@@ -20,6 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/getgort/gort/command"
+	"github.com/getgort/gort/dataaccess/errs"
+	gerrs "github.com/getgort/gort/errors"
+
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/telemetry"
 	"go.opentelemetry.io/otel"
@@ -33,10 +37,28 @@ func (da PostgresDataAccess) ScheduleCreate(ctx context.Context, command *data.S
 	defer sp.End()
 
 	if command.ScheduleID != 0 {
-		return fmt.Errorf("schedule id already set")
+		return fmt.Errorf("schedule ID already set")
 	}
 
-	command.ScheduleID++
+	conn, err := da.connect(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	query := `INSERT INTO schedules
+		(adapter, channel_id, user_id, username, user_email, cron, command)
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING schedule_id;`
+
+	err = conn.QueryRowContext(
+		ctx, query, command.Adapter, command.ChannelID, command.UserID,
+		command.UserName, command.UserEmail, command.Cron,
+		command.Command.String(),
+	).Scan(&command.ScheduleID)
+
+	if err != nil {
+		return gerrs.Wrap(errs.ErrDataAccess, err)
+	}
 
 	return nil
 }
@@ -50,5 +72,52 @@ func (da PostgresDataAccess) ScheduleDelete(ctx context.Context, command data.Sc
 		return fmt.Errorf("schedule id not set")
 	}
 
+	conn, err := da.connect(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	query := `DELETE FROM schedules WHERE schedule_id=?;`
+	_, err = conn.ExecContext(ctx, query, command.ScheduleID)
+	if err != nil {
+		return gerrs.Wrap(errs.ErrDataAccess, err)
+	}
+
 	return nil
+}
+
+func (da PostgresDataAccess) SchedulesGet(ctx context.Context) ([]data.ScheduledCommand, error) {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	_, sp := tr.Start(ctx, "postgres.SchedulesGet")
+	defer sp.End()
+
+	schedules := make([]data.ScheduledCommand, 0)
+
+	conn, err := da.connect(ctx)
+	if err != nil {
+		return schedules, err
+	}
+	defer conn.Close()
+
+	query := `SELECT schedule_id, adapter, channel_id, user_id, username, user_email, cron, command FROM schedules;`
+	rows, err := conn.QueryContext(ctx, query)
+	if err != nil {
+		return schedules, gerrs.Wrap(errs.ErrDataAccess, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var s data.ScheduledCommand
+		var c string
+		err := rows.Scan(&s.ScheduleID, &s.Adapter, &s.ChannelID, &s.UserID, &s.UserName, &s.UserEmail, &s.Cron, &c)
+		if err != nil {
+			return nil, err
+		}
+
+		s.Command, err = command.TokenizeAndParse(c)
+		schedules = append(schedules, s)
+	}
+
+	return schedules, nil
 }

@@ -338,10 +338,7 @@ func (da PostgresDataAccess) createSchedulesTable(ctx context.Context, conn *sql
 		username	TEXT NOT NULL,
 		user_email	TEXT NOT NULL,
 		cron		TEXT NOT NULL,
-		bundle		TEXT NOT NULL,
-		command		TEXT NOT NULL,
-		options		TEXT NOT NULL,
-		parameters	TEXT NOT NULL
+		command		TEXT NOT NULL
 	)`
 	_, err := conn.ExecContext(ctx, createSchedulesQuery)
 	if err != nil {
@@ -600,6 +597,17 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 	}
 	if !exists {
 		err = da.createRolesTables(ctx, conn)
+		if err != nil {
+			return err
+		}
+	}
+
+	exists, err = da.tableExists(ctx, "schedules", conn)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		err = da.createSchedulesTable(ctx, conn)
 		if err != nil {
 			return err
 		}
