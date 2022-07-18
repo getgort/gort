@@ -37,7 +37,7 @@ type Command struct {
 	Command    string
 	Options    map[string]CommandOption
 	Parameters CommandParameters
-	original   string
+	Original   string
 }
 
 func (c Command) OptionsValues() map[string]types.Value {
@@ -51,7 +51,7 @@ func (c Command) OptionsValues() map[string]types.Value {
 }
 
 func (c Command) String() string {
-	return c.original
+	return c.Original
 }
 
 // CommandOption represents a command option or flag, and its string
@@ -272,6 +272,6 @@ func TokenizeAndParse(str string, options ...ParseOption) (Command, error) {
 	if err != nil {
 		return c, err
 	}
-	c.original = str
+	c.Original = str
 	return c, nil
 }

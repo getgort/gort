@@ -80,12 +80,12 @@ func scheduleCreateCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = c.ScheduleCreate(req)
+	id, err := c.ScheduleCreate(req)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Successfully scheduled!")
+	fmt.Printf("Successfully scheduled with id: %d\n", id)
 
 	return nil
 }

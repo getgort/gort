@@ -57,7 +57,7 @@ func TestSchedulerMultiple(t *testing.T) {
 	entries, err := da.FindCommandEntry(ctx, "gort", "whoami")
 	require.NoError(t, err)
 	require.NotEmpty(t, entries)
-	require.NoError(t, Schedule(ctx, data.ScheduledCommand{
+	id, err := Schedule(ctx, data.ScheduledCommand{
 		CommandEntry: entries[0],
 		Command: command.Command{
 			Bundle:     "gort",
@@ -71,7 +71,9 @@ func TestSchedulerMultiple(t *testing.T) {
 		UserEmail: user.Email,
 		Adapter:   "test adapter",
 		ChannelID: "channel",
-	}))
+	})
+	require.NoError(t, err)
+	require.NotZero(t, id)
 
 	for i := 0; i < iterations; {
 		select {

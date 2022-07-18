@@ -29,6 +29,14 @@ type ScheduleRequest struct {
 	// Adapter is the name of the adapter that the command should output to.
 	Adapter string
 
-	//ChannelID is the id of the channel that the command should output to.
+	// ChannelID is the id of the channel that the command should output to.
 	ChannelID string
+}
+
+type ScheduleInfo struct {
+	Id          int64
+	Command     string
+	Cron        string
+	Adapter     string
+	ChannelName string
 }

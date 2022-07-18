@@ -46,7 +46,7 @@ func TestCommandParseDefaults(t *testing.T) {
 
 		actual, err := Parse(tokens)
 		assert.NoError(t, err, test)
-		actual.original = test
+		actual.Original = test
 
 		assert.Equal(t, expected, actual, test)
 	}
@@ -74,7 +74,7 @@ func TestCommandOptionTypes(t *testing.T) {
 
 	actual, err := Parse(tokens, options...)
 	assert.NoError(t, err, test)
-	actual.original = test
+	actual.Original = test
 
 	assert.Equal(t, expected, actual, test)
 }
@@ -101,7 +101,7 @@ func TestCommandParameterTypes(t *testing.T) {
 
 	actual, err := Parse(tokens)
 	assert.NoError(t, err, test)
-	actual.original = test
+	actual.Original = test
 
 	assert.Equal(t, expected, actual, test)
 }
@@ -121,7 +121,7 @@ func TestCommandParseBareFlagsAreTrue(t *testing.T) {
 
 		actual, err := Parse(tokens)
 		assert.NoError(t, err, test)
-		actual.original = test
+		actual.Original = test
 
 		assert.Equal(t, expected, actual, test)
 	}
@@ -144,7 +144,7 @@ func TestCommandParseAgnosticDashesTrue(t *testing.T) {
 
 		actual, err := Parse(tokens, options...)
 		assert.NoError(t, err, test)
-		actual.original = test
+		actual.Original = test
 
 		assert.Equal(t, expected, actual, test)
 	}
@@ -169,7 +169,7 @@ func TestCommandParseAssumeOptionArgumentsTrue(t *testing.T) {
 
 		actual, err := Parse(tokens, options...)
 		assert.NoError(t, err, test)
-		actual.original = test
+		actual.Original = test
 
 		assert.Equal(t, expected, actual, test)
 	}
@@ -194,7 +194,7 @@ func TestCommandParseAssumeOptionArgumentsFalse(t *testing.T) {
 
 		actual, err := Parse(tokens, options...)
 		assert.NoError(t, err, test)
-		actual.original = test
+		actual.Original = test
 
 		assert.Equal(t, expected, actual, test)
 	}
@@ -221,7 +221,7 @@ func TestCommandParseOptionHasArgument(t *testing.T) {
 
 		actual, err := Parse(tokens, options...)
 		assert.NoError(t, err, test)
-		actual.original = test
+		actual.Original = test
 
 		assert.Equal(t, expected, actual, test)
 	}
@@ -247,7 +247,7 @@ func TestCommandParseOptionAlias(t *testing.T) {
 
 		actual, err := Parse(tokens, options...)
 		assert.NoError(t, err, test)
-		actual.original = test
+		actual.Original = test
 
 		assert.Equal(t, expected, actual, test)
 	}
