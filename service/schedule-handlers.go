@@ -90,7 +90,7 @@ func handleGetSchedules(w http.ResponseWriter, r *http.Request) {
 			respondAndLogError(r.Context(), w, err)
 		}
 		i := rest.ScheduleInfo{
-			Id:          s.ScheduleID,
+			ID:          s.ScheduleID,
 			Command:     s.Command.Original,
 			Cron:        s.Cron,
 			Adapter:     s.Adapter,
@@ -103,6 +103,7 @@ func handleGetSchedules(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(info)
 }
 
+// handleDeleteSchedule handles "DELETE /v2/schedules/{id:\d+}"
 func handleDeleteSchedule(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(mux.Vars(r)["id"], 0, 64)
 	if err != nil {

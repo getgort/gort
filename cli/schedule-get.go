@@ -63,8 +63,8 @@ func scheduleGetCmd(*cobra.Command, []string) error {
 	maxId, maxAdapter, maxChannel, maxCron := 2, 7, 7, 4
 
 	for _, s := range info {
-		if len(fmt.Sprintf("%d", s.Id)) > maxId {
-			maxId = len(fmt.Sprintf("%d", s.Id))
+		if len(fmt.Sprintf("%d", s.ID)) > maxId {
+			maxId = len(fmt.Sprintf("%d", s.ID))
 		}
 		if len(s.Adapter) > maxAdapter {
 			maxAdapter = len(s.Adapter)
@@ -79,11 +79,14 @@ func scheduleGetCmd(*cobra.Command, []string) error {
 
 	template := fmt.Sprintf(" %%%dd | %%%ds | %%%ds | %%%ds | %%s\n", maxId, maxAdapter, maxChannel, maxCron)
 
-	header := fmt.Sprintf(fmt.Sprintf(" %%%ds | %%%ds | %%%ds | %%%ds | %%s\n", maxId, maxAdapter, maxChannel, maxCron), "ID", "Adapter", "Channel", "Cron", "Command")
+	header := fmt.Sprintf(
+		fmt.Sprintf(" %%%ds | %%%ds | %%%ds | %%%ds | %%s\n", maxId, maxAdapter, maxChannel, maxCron),
+		"ID", "Adapter", "Channel", "Cron", "Command",
+	)
 	fmt.Print(header)
 	fmt.Println(strings.Repeat("-", len(header)))
 	for _, s := range info {
-		fmt.Printf(template, s.Id, s.Adapter, s.ChannelName, s.Cron, s.Command)
+		fmt.Printf(template, s.ID, s.Adapter, s.ChannelName, s.Cron, s.Command)
 	}
 
 	return nil

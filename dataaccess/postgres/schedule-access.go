@@ -21,15 +21,13 @@ import (
 	"fmt"
 
 	"github.com/getgort/gort/command"
+	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 	gerrs "github.com/getgort/gort/errors"
-
-	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/telemetry"
+
 	"go.opentelemetry.io/otel"
 )
-
-//TODO(grebneerg): Assign unique IDs and put in database here.
 
 func (da PostgresDataAccess) ScheduleCreate(ctx context.Context, command *data.ScheduledCommand) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)

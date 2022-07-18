@@ -58,6 +58,7 @@ func (c *GortClient) ScheduleCreate(req rest.ScheduleRequest) (int64, error) {
 	return id, nil
 }
 
+// SchedulesGet returns a list of currently scheduled commands;
 func (c *GortClient) SchedulesGet() ([]rest.ScheduleInfo, error) {
 	url := fmt.Sprintf("%s/v2/schedules", c.profile.URL.String())
 
@@ -72,6 +73,7 @@ func (c *GortClient) SchedulesGet() ([]rest.ScheduleInfo, error) {
 	return info, err
 }
 
+// ScheduleDelete deletes a scheduled command.
 func (c *GortClient) ScheduleDelete(id int64) error {
 	url := fmt.Sprintf("%s/v2/schedules/%d", c.profile.URL.String(), id)
 

@@ -33,10 +33,21 @@ type ScheduleRequest struct {
 	ChannelID string
 }
 
+// ScheduleInfo contains information about a schedule relevant to a user.
 type ScheduleInfo struct {
-	Id          int64
-	Command     string
-	Cron        string
-	Adapter     string
+	// ID is the ID of the schedule
+	ID int64
+
+	// Command is the complete command that is scheduled.
+	Command string
+
+	// Cron is the cron format string describing when the command runs.
+	Cron string
+
+	// Adapter is the name of the adapter the command outputs to.
+	Adapter string
+
+	// ChannelName is the human-friendly name of the channel that the command
+	// outputs to.
 	ChannelName string
 }
