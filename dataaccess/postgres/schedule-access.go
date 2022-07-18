@@ -63,12 +63,12 @@ func (da PostgresDataAccess) ScheduleCreate(ctx context.Context, command *data.S
 	return nil
 }
 
-func (da PostgresDataAccess) ScheduleDelete(ctx context.Context, command data.ScheduledCommand) error {
+func (da PostgresDataAccess) ScheduleDelete(ctx context.Context, scheduleID int64) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	_, sp := tr.Start(ctx, "postgres.ScheduleDelete")
 	defer sp.End()
 
-	if command.ScheduleID == 0 {
+	if scheduleID == 0 {
 		return fmt.Errorf("schedule id not set")
 	}
 
@@ -78,8 +78,8 @@ func (da PostgresDataAccess) ScheduleDelete(ctx context.Context, command data.Sc
 	}
 	defer conn.Close()
 
-	query := `DELETE FROM schedules WHERE schedule_id=?;`
-	_, err = conn.ExecContext(ctx, query, command.ScheduleID)
+	query := `DELETE FROM schedules WHERE schedule_id=$1;`
+	_, err = conn.ExecContext(ctx, query, scheduleID)
 	if err != nil {
 		return gerrs.Wrap(errs.ErrDataAccess, err)
 	}

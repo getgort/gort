@@ -29,6 +29,7 @@ import (
 
 func (da DataAccessTester) testScheduleAccess(t *testing.T) {
 	t.Run("testScheduleCreate", da.testScheduleCreate)
+	t.Run("testScheduleDelete", da.testScheduleDelete)
 	t.Run("testSchedulesGet", da.testSchedulesGet)
 }
 
@@ -48,6 +49,7 @@ func (da DataAccessTester) testScheduleCreate(t *testing.T) {
 	err := da.ScheduleCreate(da.ctx, &s1)
 	require.NoError(t, err)
 	require.NotZero(t, s1.ScheduleID)
+	defer da.ScheduleDelete(da.ctx, s1.ScheduleID)
 }
 
 func (da DataAccessTester) testSchedulesGet(t *testing.T) {
@@ -77,6 +79,7 @@ func (da DataAccessTester) testSchedulesGet(t *testing.T) {
 	err := da.ScheduleCreate(da.ctx, &s1)
 	require.NoError(t, err)
 	assert.NotZero(t, s1.ScheduleID)
+	defer da.ScheduleDelete(da.ctx, s1.ScheduleID)
 
 	list, err := da.SchedulesGet(da.ctx)
 	require.NoError(t, err)
@@ -85,9 +88,39 @@ func (da DataAccessTester) testSchedulesGet(t *testing.T) {
 	err = da.ScheduleCreate(da.ctx, &s2)
 	require.NoError(t, err)
 	assert.NotZero(t, s2.ScheduleID)
+	defer da.ScheduleDelete(da.ctx, s2.ScheduleID)
 	assert.NotEqual(t, s2.ScheduleID, s1.ScheduleID)
 
 	list, err = da.SchedulesGet(da.ctx)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(list))
+}
+
+func (da DataAccessTester) testScheduleDelete(t *testing.T) {
+	cmd, _ := command.TokenizeAndParse("whoami")
+	s1 := data.ScheduledCommand{
+		CommandEntry: data.CommandEntry{},
+		Command:      cmd,
+		Adapter:      "MySlack",
+		ChannelID:    "channel",
+		UserID:       "user",
+		UserEmail:    "email",
+		UserName:     "name",
+		Cron:         "@every 1m",
+	}
+
+	err := da.ScheduleCreate(da.ctx, &s1)
+	require.NoError(t, err)
+	assert.NotZero(t, s1.ScheduleID)
+
+	list, err := da.SchedulesGet(da.ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(list))
+
+	err = da.ScheduleDelete(da.ctx, s1.ScheduleID)
+	require.NoError(t, err)
+
+	list, err = da.SchedulesGet(da.ctx)
+	require.NoError(t, err)
+	assert.Zero(t, len(list))
 }

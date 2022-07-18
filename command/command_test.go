@@ -112,7 +112,7 @@ func TestCommandParseBareFlagsAreTrue(t *testing.T) {
 	tests := map[string]Command{
 		`foo:curl -Ik localhost`: {`foo`, `curl`, map[string]CommandOption{"I": {"I", tv}, "k": {"k", tv}}, []Value{stringValue("localhost")}, `foo:curl -Ik localhost`},
 		`bar:echo -n foo -E bar`: {`bar`, `echo`, map[string]CommandOption{"n": {"n", tv}}, []Value{stringValue("foo"), stringValue("-E"), stringValue("bar")}, `bar:echo -n foo -E bar`},
-		`bar:echo -n "foo bar"`:  {`bar`, `echo`, map[string]CommandOption{"n": {"n", tv}}, []Value{StringValue{V: "foo bar", Quote: '"'}}, `bar:echo -n "foo bar""`},
+		`bar:echo -n "foo bar"`:  {`bar`, `echo`, map[string]CommandOption{"n": {"n", tv}}, []Value{StringValue{V: "foo bar", Quote: '"'}}, `bar:echo -n "foo bar"`},
 	}
 
 	for test, expected := range tests {

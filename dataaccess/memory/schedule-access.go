@@ -42,22 +42,22 @@ func (da *InMemoryDataAccess) ScheduleCreate(ctx context.Context, command *data.
 	return nil
 }
 
-func (da *InMemoryDataAccess) ScheduleDelete(ctx context.Context, command data.ScheduledCommand) error {
+func (da *InMemoryDataAccess) ScheduleDelete(ctx context.Context, scheduleID int64) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	_, sp := tr.Start(ctx, "memory.ScheduleDelete")
 	defer sp.End()
 
-	if command.ScheduleID == 0 {
+	if scheduleID == 0 {
 		return fmt.Errorf("schedule id not set")
 	}
 
-	_, found := da.schedules.schedules[command.ScheduleID]
+	_, found := da.schedules.schedules[scheduleID]
 
 	if !found {
-		return fmt.Errorf("schedule %d not found", command.ScheduleID)
+		return fmt.Errorf("schedule %d not found", scheduleID)
 	}
 
-	delete(da.schedules.schedules, command.ScheduleID)
+	delete(da.schedules.schedules, scheduleID)
 
 	return nil
 }
