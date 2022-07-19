@@ -121,7 +121,7 @@ func createTestRouter() *mux.Router {
 		panic(err)
 	}
 
-	userAdmin, err := DoBootstrap(ctx, rest.User{})
+	userAdmin, err := dataaccess.Bootstrap(ctx, rest.User{})
 	if err != nil {
 		panic(err)
 	}

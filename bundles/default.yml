@@ -142,7 +142,7 @@ commands:
       Flags:
         -h, --help    help for version
         -s, --short   Print only the version number
-    triggers: 
+    triggers:
       - match: gort version
     executable: [ "/bin/gort", "version" ]
     rules:
@@ -169,5 +169,16 @@ commands:
       Usage:
         gort:whoami
     executable: [ "/bin/gort", "hidden", "whoami" ]
+    rules:
+      - allow
+
+  schedule:
+    description: "Schedules a command to run periodically"
+    long_description: |-
+      Schedules a command to run periodically.
+
+      Usage:
+        gort:schedule "cron" "command"
+    executable: ["/bin/gort", "schedule", "create"]
     rules:
       - allow

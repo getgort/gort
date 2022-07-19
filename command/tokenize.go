@@ -20,7 +20,17 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/unicode/rangetable"
 )
+
+var (
+	singleQuotes = rangetable.New('\'', '‘', '’')
+
+	doubleQuotes = rangetable.New('"', '“', '”', '„')
+)
+
+const RuneNull = rune(0)
 
 // Tokenize takes an input string and splits it into tokens. Any control
 // character sequences ("\n", "\t", etc), pass through in their original
@@ -28,55 +38,65 @@ import (
 // Examples:
 //    echo -n foo bar -> {"echo", "-n", "foo", "bar"}
 //    echo -n "foo bar" -> {"echo", "-n", "foo bar"}
-//    echo "What's" "\"this\"?" -> {"echo", "What's", "\"this\"?"}
 func Tokenize(input string) ([]string, error) {
-	const RuneNull = rune(0)
-
 	b := strings.Builder{}
 	tokens := []string{}
 
 	input = strings.TrimSpace(input)
 
-	quote := RuneNull
+	var quote *unicode.RangeTable = nil
 	quoteStart := 0
 
 	control := false
 
 	for i, ch := range input {
 		switch {
-
 		// Backslash turns on the control flag.
 		case ch == '\\':
-			b.WriteRune(ch)
+			// If we aren't in double-quotes, append the literal backslash.
+			if quote != doubleQuotes {
+				b.WriteRune(ch)
+			}
 			control = true
 
-		// If the control flag is set, append the entire control character to the token.
-		case control:
+		// If the control flag is set, and we aren't in double-quotes, append
+		// the entire control character to the token.
+		case control && quote != doubleQuotes:
 			b.WriteRune(ch)
 			control = false
 
-		// Spaces outside of quotes are token delimitters.
-		case unicode.IsSpace(ch) && quote == RuneNull:
+		// If the control flag is set, and we are in double-quotes, append the
+		// unescaped control character to the token.
+		case control && quote == doubleQuotes:
+			r, err := unescape(ch)
+			if err != nil {
+				return tokens, TokenizeError{
+					Text:     err.Error(),
+					Position: i,
+				}
+			}
+			b.WriteRune(r)
+			control = false
+
+		// Spaces outside of quotes are token delimiters.
+		case unicode.IsSpace(ch) && quote == nil:
 			if t := b.String(); len(t) > 0 {
 				tokens = append(tokens, t)
 			}
 			b.Reset()
 
 		// Everything inside a pair of quotes is added to the same token.
-		case ch == quote:
-			b.WriteRune(ch)
+		case quote != nil && isMatchingQuotationMark(ch, quote):
+			b.WriteRune(getBasicQuote(quote))
 			tokens = append(tokens, b.String())
-			quote = RuneNull
+			quote = nil
 			b.Reset()
 
 		// Turn quote-mode on and off.
-		case ch == '"':
-			fallthrough
-
-		case ch == '\'':
-			b.WriteRune(ch)
-			if quote == RuneNull {
-				quote = ch
+		case quotationMarkCategory(ch) != nil:
+			b.WriteRune(getBasicQuote(quotationMarkCategory(ch)))
+			if quote == nil {
+				quote = quotationMarkCategory(ch)
 				quoteStart = i
 			}
 
@@ -95,7 +115,7 @@ func Tokenize(input string) ([]string, error) {
 		return tokens, TokenizeError{"unterminated control character at %d", len(input)}
 	}
 
-	if quote != RuneNull {
+	if quote != nil {
 		return tokens, TokenizeError{"unterminated quote at %d", quoteStart + 1}
 	}
 
@@ -109,4 +129,68 @@ type TokenizeError struct {
 
 func (e TokenizeError) Error() string {
 	return fmt.Sprintf(e.Text, e.Position)
+}
+
+// getBasicQuote accepts either the singleQuote or doubleQuote *RangeTable, and
+// returns the ascii representative of that category (either ' or ").
+func getBasicQuote(table *unicode.RangeTable) rune {
+	switch table {
+	case singleQuotes:
+		return '\''
+	case doubleQuotes:
+		return '"'
+	default:
+		return rune(0)
+	}
+}
+
+// isMatchingQuotationMark returns whether a quotation mark is in the given
+// *RangeTable, either singleQuote or doubleQuote.
+func isMatchingQuotationMark(r rune, other *unicode.RangeTable) bool {
+	return unicode.In(r, other)
+}
+
+// quotationMarkCategory returns a pointer to the range of unicode characters
+// equivalent to the given quote, or nil if the given character isn't a
+// quotation mark.
+func quotationMarkCategory(r rune) *unicode.RangeTable {
+	switch {
+	case unicode.In(r, singleQuotes):
+		return singleQuotes
+	case unicode.In(r, doubleQuotes):
+		return doubleQuotes
+	default:
+		return nil
+	}
+}
+
+// unescape translates a given printable character rune into it's corresponding
+// control character.
+func unescape(r rune) (rune, error) {
+	switch r {
+	case 'a':
+		return '\a', nil
+	case 'b':
+		return '\b', nil
+	case 'f':
+		return '\f', nil
+	case 'n':
+		return '\n', nil
+	case 'r':
+		return '\r', nil
+	case 't':
+		return '\t', nil
+	case 'v':
+		return '\v', nil
+	case '\'':
+		return '\'', nil
+	case '"':
+		return '"', nil
+	case '?':
+		return '?', nil
+	case '\\':
+		return '\\', nil
+	default:
+		return RuneNull, fmt.Errorf("undefined control character '%c'", r)
+	}
 }

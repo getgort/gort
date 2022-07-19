@@ -24,11 +24,17 @@ import (
 
 func TestTokenize(t *testing.T) {
 	inputs := map[string][]string{
-		`echo -n foo bar`:           {`echo`, `-n`, `foo`, `bar`},
-		`echo -n "foo bar"`:         {`echo`, `-n`, `"foo bar"`},
-		`echo "What's" "\"this\"?"`: {`echo`, `"What's"`, `"\"this\"?"`},
-		``:                          {},
-		`"" ""`:                     {`""`, `""`},
+		`echo -n foo bar`:             {`echo`, `-n`, `foo`, `bar`},
+		`echo -n "foo bar"`:           {`echo`, `-n`, `"foo bar"`},
+		`echo "What's" "\"this\"?"`:   {`echo`, `"What's"`, `""this"?"`},
+		``:                            {},
+		`"" ""`:                       {`""`, `""`},
+		`schedule “@every 1m” whoami`: {`schedule`, `"@every 1m"`, `whoami`},
+		`echo "hello\nthere"`: {`echo`, `"hello
+there"`},
+		`echo "hello\nhello"`: {`echo`, "\"hello\nhello\""},
+		`echo "hi\tthere"`: {`echo`, `"hi	there"`},
+		`echo 'hello\nthere'`: {`echo`, `'hello\nthere'`},
 	}
 
 	for in, expected := range inputs {
@@ -55,4 +61,11 @@ func TestTokenizeErrors(t *testing.T) {
 
 		assert.IsType(t, TokenizeError{}, err, in)
 	}
+}
+
+func TestQuotationMarkCategory(t *testing.T) {
+	assert.NotNil(t, quotationMarkCategory('"'), "Double universal quotation mark U+0022")
+	assert.NotNil(t, quotationMarkCategory('“'), "English left double quotation mark U+201C")
+	assert.NotNil(t, quotationMarkCategory('”'), "English right double quotation mark U+201D")
+	assert.NotNil(t, quotationMarkCategory('„'), "Double Low-9 quotation mark U+201E")
 }

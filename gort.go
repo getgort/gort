@@ -23,17 +23,18 @@ import (
 	"os/signal"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/adapter/discord"
 	"github.com/getgort/gort/adapter/slack"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/relay"
+	"github.com/getgort/gort/scheduler"
 	"github.com/getgort/gort/service"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/version"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func initializeConfig(configFile string) error {
@@ -110,6 +111,8 @@ func startGort(ctx context.Context, configFile string, verboseCount int) error {
 	// Returns channels to get user command requests and adapter errors out.
 	requestsFrom, responsesTo, adapterErrorsFrom := adapter.StartListening(ctx)
 
+	scheduledCommands := scheduler.StartScheduler()
+
 	// Starts the relay (currently just a local goroutine).
 	// Returns channels to send user command request in and get command
 	// responses out.
@@ -120,6 +123,9 @@ func startGort(ctx context.Context, configFile string, verboseCount int) error {
 		// A user command request is received from a chat provider adapter.
 		// Forward it to the relay.
 		case request := <-requestsFrom:
+			requestsTo <- request
+
+		case request := <-scheduledCommands:
 			requestsTo <- request
 
 		// A user command response is received from the relay.

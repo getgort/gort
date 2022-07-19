@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/getgort/gort/command"
 )
 
 // CommandEntry conveniently wraps a bundle and one command within that bundle.
@@ -205,4 +207,35 @@ func unmarshalResponsePayload(s string) (interface{}, bool) {
 	}
 
 	return i, true
+}
+
+// ScheduledCommand represents a recurring command, invoked periodically.
+type ScheduledCommand struct {
+	CommandEntry
+	command.Command
+
+	// Adapter is the name of the adapter the command was scheduled from.
+	Adapter string
+
+	// ChannelID is the ID of the channel that the command was scheduled in.
+	ChannelID string
+
+	// UserID is the (provider-specific) ID of the user who scheduled the
+	// command.
+	UserID string
+
+	// UserEmail is the email address of the user who scheduled the command
+	// (if known).
+	UserEmail string
+
+	// UserName is the Gort username of the user who scheduled the command.
+	UserName string
+
+	// Cron is the cron-format string representing when the command should be
+	// run.
+	Cron string
+
+	// ScheduleID is a unique (within this Gort instance) ID of this
+	// ScheduledCommand.
+	ScheduleID int64
 }

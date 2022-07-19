@@ -14,18 +14,21 @@
  * limitations under the License.
  */
 
-package bundles
+package rest
 
-import (
-	"context"
+// ScheduleRequest holds all the information needed by the Gort server to
+// schedule a recurring command.
+type ScheduleRequest struct {
+	// Command is the full command to be run every time.
+	Command string
 
-	"github.com/getgort/gort/data"
-)
+	// Cron is the specification of when the command should be run, in standard
+	// cron format.
+	Cron string
 
-type CommandEntryFinder interface {
-	// FindCommandEntry is used to find the enabled commands with the provided
-	// bundle and command names. If either is empty, it is treated as a wildcard.
-	// Importantly, this must only return ENABLED commands!
-	FindCommandEntry(ctx context.Context, bundle, command string) ([]data.CommandEntry, error)
-	FindCommandEntryByTrigger(ctx context.Context, tokens []string) ([]data.CommandEntry, error)
+	// Adapter is the name of the adapter that the command should output to.
+	Adapter string
+
+	//ChannelID is the id of the channel that the command should output to.
+	ChannelID string
 }
