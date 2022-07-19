@@ -29,6 +29,7 @@ import (
 	"github.com/getgort/gort/telemetry"
 
 	"github.com/go-co-op/gocron"
+	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -54,11 +55,13 @@ func StartScheduler() chan data.CommandRequest {
 		schedules, err := GetSchedules(ctx)
 		if err != nil {
 			sp.RecordError(err)
+			log.Errorf("Failed to get schedules: %s", err)
 		} else {
 			for _, s := range schedules {
 				err := schedule(s)
 				if err != nil {
 					sp.RecordError(err)
+					log.WithField("ScheduleID", s.ScheduleID).Warnf("Failed to schedule command")
 				}
 			}
 		}
