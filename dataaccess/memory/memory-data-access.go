@@ -68,4 +68,11 @@ func Reset() {
 	dataAccess.groups = make(map[string]*rest.Group)
 	dataAccess.roles = make(map[string]*rest.Role)
 	dataAccess.users = make(map[string]*rest.User)
+	dataAccess.schedules = struct {
+		id        int64
+		schedules map[int64]*data.ScheduledCommand
+	}{
+		id:        0,
+		schedules: make(map[int64]*data.ScheduledCommand),
+	}
 }

@@ -35,6 +35,7 @@ import (
 // TestSchedulerMultiple tests that the one CommandRequest is issued per second
 // over a specified number of seconds.
 func TestSchedulerMultiple(t *testing.T) {
+	cron = nil // force fresh scheduler
 	const iterations = 5
 
 	// Init Gort
@@ -88,6 +89,7 @@ func TestSchedulerMultiple(t *testing.T) {
 }
 
 func TestSchedulerPersistence(t *testing.T) {
+	cron = nil // force fresh scheduler
 	memory.Reset()
 	ctx := context.Background()
 	require.NoError(t, config.Initialize("../testing/config/no-database.yml"))
@@ -101,6 +103,10 @@ func TestSchedulerPersistence(t *testing.T) {
 		Username: "user",
 	})
 	require.NoError(t, err)
+
+	schedules, err := GetSchedules(ctx)
+	require.NoError(t, err)
+	require.Zero(t, len(schedules))
 
 	_ = StartScheduler()
 
@@ -126,19 +132,19 @@ func TestSchedulerPersistence(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, id)
 
-	require.Equal(t, 1, len(cron.Jobs()))
+	require.Equal(t, 1, cron.Len())
 
 	StopScheduler()
 
-	require.Equal(t, 0, len(cron.Jobs()))
+	require.Equal(t, 0, cron.Len())
 
 	_ = StartScheduler()
 
-	require.Equal(t, 1, len(cron.Jobs()))
+	require.Equal(t, 1, cron.Len())
 
-	// TODO: StopScheduler bloack indefinitely due to
+	// TODO: StopScheduler blocks indefinitely due to
 	// https://github.com/go-co-op/gocron/issues/355
 	// Once this issue is fixed, we can stop the scheduler in this test.
 	//StopScheduler()
-	//require.Equal(t, 0, len(cron.Jobs()))
+	//require.Equal(t, 0, cron.Len())
 }
