@@ -64,6 +64,7 @@ func TestSchedulerMultiple(t *testing.T) {
 			Command:    "whoami",
 			Options:    make(map[string]command.CommandOption),
 			Parameters: make(command.CommandParameters, 0),
+			Original:   "whoami",
 		},
 		Cron:      "@every 1s",
 		UserID:    "id",
@@ -84,4 +85,60 @@ func TestSchedulerMultiple(t *testing.T) {
 			i++
 		}
 	}
+}
+
+func TestSchedulerPersistence(t *testing.T) {
+	memory.Reset()
+	ctx := context.Background()
+	require.NoError(t, config.Initialize("../testing/config/no-database.yml"))
+
+	da, err := dataaccess.Get()
+	require.NoError(t, err)
+
+	require.NoError(t, da.Initialize(ctx))
+	user, err := dataaccess.Bootstrap(ctx, rest.User{
+		Email:    "user@getgort.io",
+		Username: "user",
+	})
+	require.NoError(t, err)
+
+	_ = StartScheduler()
+
+	entries, err := da.FindCommandEntry(ctx, "gort", "whoami")
+	require.NoError(t, err)
+	require.NotEmpty(t, entries)
+	id, err := Schedule(ctx, data.ScheduledCommand{
+		CommandEntry: entries[0],
+		Command: command.Command{
+			Bundle:     "gort",
+			Command:    "whoami",
+			Options:    make(map[string]command.CommandOption),
+			Parameters: make(command.CommandParameters, 0),
+			Original:   "whoami",
+		},
+		Cron:      "@every 1s",
+		UserID:    "id",
+		UserName:  user.Username,
+		UserEmail: user.Email,
+		Adapter:   "test adapter",
+		ChannelID: "channel",
+	})
+	require.NoError(t, err)
+	require.NotZero(t, id)
+
+	require.Equal(t, 1, len(cron.Jobs()))
+
+	StopScheduler()
+
+	require.Equal(t, 0, len(cron.Jobs()))
+
+	_ = StartScheduler()
+
+	require.Equal(t, 1, len(cron.Jobs()))
+
+	// TODO: StopScheduler bloack indefinitely due to
+	// https://github.com/go-co-op/gocron/issues/355
+	// Once this issue is fixed, we can stop the scheduler in this test.
+	//StopScheduler()
+	//require.Equal(t, 0, len(cron.Jobs()))
 }

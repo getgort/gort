@@ -41,12 +41,27 @@ var (
 // StartScheduler starts the scheduler running and returns a channel of
 // data.CommandRequest according to registered schedules.
 func StartScheduler() chan data.CommandRequest {
+	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
+	ctx, sp := tr.Start(context.Background(), "scheduler.StartScheduler")
+	defer sp.End()
+
 	if cron == nil {
 		cron = gocron.NewScheduler(time.Local)
 		cron.TagsUnique()
 	}
 
 	if !cron.IsRunning() {
+		schedules, err := GetSchedules(ctx)
+		if err != nil {
+			sp.RecordError(err)
+		} else {
+			for _, s := range schedules {
+				err := schedule(s)
+				if err != nil {
+					sp.RecordError(err)
+				}
+			}
+		}
 		cron.StartAsync()
 	}
 
@@ -58,10 +73,11 @@ func StartScheduler() chan data.CommandRequest {
 func StopScheduler() {
 	if cron != nil && cron.IsRunning() {
 		cron.Stop()
+		cron.Clear()
 	}
 }
 
-func schedule(ctx context.Context, cmd data.ScheduledCommand) error {
+func schedule(cmd data.ScheduledCommand) error {
 	if cmd.ScheduleID == 0 {
 		return fmt.Errorf("scheduled command not initialized")
 	}
@@ -118,7 +134,7 @@ func Schedule(ctx context.Context, cmd data.ScheduledCommand) (int64, error) {
 		return 0, err
 	}
 
-	return cmd.ScheduleID, schedule(ctx, cmd)
+	return cmd.ScheduleID, schedule(cmd)
 }
 
 // ScheduleFromString schedules a command using its string representation.
