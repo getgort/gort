@@ -32,7 +32,7 @@ func GetScheduleCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(GetScheduleCreateCmd())
-	cmd.AddCommand(GetScheduleGetCmd())
+	cmd.AddCommand(GetScheduleListCmd())
 	cmd.AddCommand(GetScheduleDeleteCmd())
 
 	return cmd

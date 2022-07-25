@@ -27,10 +27,12 @@ import (
 
 const (
 	schedulDeleteUse    = "delete"
-	scheduleDeleteShort = "Deletes a scheduled command"
-	scheduleDeleteLong  = "Deletes a scheduled command."
+	scheduleDeleteShort = "Delete a scheduled command"
+	scheduleDeleteLong  = "Delete a scheduled command."
 	scheduleDeleteUsage = `Usage:
 gort schedule delete [flags] id
+
+Delete the specified schedule.
 
 id is the id of the scheduled command to delete.
 

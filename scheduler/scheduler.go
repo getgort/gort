@@ -169,14 +169,13 @@ func Cancel(ctx context.Context, scheduleID int64) error {
 	}
 
 	err = da.ScheduleDelete(ctx, scheduleID)
-	err2 := cron.RemoveByTag(fmt.Sprintf("%d", scheduleID))
-
 	if err != nil {
 		return err
 	}
 
-	if err2 != nil {
-		return err2
+	err = cron.RemoveByTag(fmt.Sprintf("%d", scheduleID))
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -190,7 +190,7 @@ commands:
 
       Usage:
         gort:schedule-list
-    executable: ["/bin/gort", "schedule", "get"]
+    executable: ["/bin/gort", "schedule", "list"]
     rules:
       - allow
 

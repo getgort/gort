@@ -33,6 +33,8 @@ const (
 	scheduleCreateUsage = `Usage:
 gort schedule create [flags] cron command
 
+Create a new schedule on which to run a command.
+
 cron is the specification of when the command should be run in cron format
 command is a string containing the command to run.
 

@@ -26,22 +26,24 @@ import (
 )
 
 const (
-	scheduleGetUse   = "get"
-	scheduleGetShort = "Get a list of schedules commands"
-	scheduleGetLong  = "Get a list of schedules commands."
+	scheduleGetUse   = "list"
+	scheduleGetShort = "Get a list of scheduled commands"
+	scheduleGetLong  = "Get a list of scheduled commands."
 	scheduleGetUsage = `Usage:
-gort schedule get [flags]
+gort schedule list [flags]
+
+List all scheduled commands.
 
 Flags:
   -h, --help  Show this message and exit`
 )
 
-func GetScheduleGetCmd() *cobra.Command {
+func GetScheduleListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   scheduleGetUse,
 		Short: scheduleGetShort,
 		Long:  scheduleGetLong,
-		RunE:  scheduleGetCmd,
+		RunE:  scheduleListCmd,
 	}
 
 	cmd.SetUsageTemplate(scheduleGetUsage)
@@ -49,7 +51,7 @@ func GetScheduleGetCmd() *cobra.Command {
 	return cmd
 }
 
-func scheduleGetCmd(*cobra.Command, []string) error {
+func scheduleListCmd(*cobra.Command, []string) error {
 	c, err := client.Connect(FlagGortProfile, FlagConfigBaseDir)
 	if err != nil {
 		return err
@@ -60,6 +62,8 @@ func scheduleGetCmd(*cobra.Command, []string) error {
 		return err
 	}
 
+	// Tracking the character length of each displayed field in order to
+	// generate a properly sized table.
 	maxId, maxAdapter, maxChannel, maxCron := 2, 7, 7, 4
 
 	for _, s := range info {
