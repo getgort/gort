@@ -330,6 +330,25 @@ func (da PostgresDataAccess) createRolesTables(ctx context.Context, conn *sql.Co
 	return nil
 }
 
+func (da PostgresDataAccess) createSchedulesTable(ctx context.Context, conn *sql.Conn) error {
+	createSchedulesQuery := `CREATE TABLE schedules (
+		schedule_id BIGSERIAL PRIMARY KEY,
+		adapter		TEXT NOT NULL,
+		channel_id  TEXT NOT NULL,
+		user_id		TEXT NOT NULL,
+		username	TEXT NOT NULL,
+		user_email	TEXT NOT NULL,
+		cron		TEXT NOT NULL,
+		command		TEXT NOT NULL
+	)`
+	_, err := conn.ExecContext(ctx, createSchedulesQuery)
+	if err != nil {
+		return gerr.Wrap(errs.ErrDataAccess, err)
+	}
+
+	return nil
+}
+
 func (da PostgresDataAccess) createTokensTable(ctx context.Context, conn *sql.Conn) error {
 	var err error
 
@@ -579,6 +598,17 @@ func (da PostgresDataAccess) initializeGortData(ctx context.Context) error {
 	}
 	if !exists {
 		err = da.createRolesTables(ctx, conn)
+		if err != nil {
+			return err
+		}
+	}
+
+	exists, err = da.tableExists(ctx, "schedules", conn)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		err = da.createSchedulesTable(ctx, conn)
 		if err != nil {
 			return err
 		}

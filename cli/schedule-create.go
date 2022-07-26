@@ -33,6 +33,8 @@ const (
 	scheduleCreateUsage = `Usage:
 gort schedule create [flags] cron command
 
+Create a new schedule on which to run a command.
+
 cron is the specification of when the command should be run in cron format
 command is a string containing the command to run.
 
@@ -80,12 +82,12 @@ func scheduleCreateCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = c.ScheduleCreate(req)
+	id, err := c.ScheduleCreate(req)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Successfully scheduled!")
+	fmt.Printf("Successfully scheduled with id: %d\n", id)
 
 	return nil
 }

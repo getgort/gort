@@ -19,13 +19,12 @@ package memory
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/telemetry"
 	"go.opentelemetry.io/otel"
 )
-
-//TODO(grebneerg): Actually assign unique IDs here
 
 func (da *InMemoryDataAccess) ScheduleCreate(ctx context.Context, command *data.ScheduledCommand) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
@@ -36,19 +35,39 @@ func (da *InMemoryDataAccess) ScheduleCreate(ctx context.Context, command *data.
 		return fmt.Errorf("schedule id already set")
 	}
 
-	command.ScheduleID++
+	command.ScheduleID = atomic.AddInt64(&da.schedules.id, 1)
+
+	da.schedules.schedules[command.ScheduleID] = command
 
 	return nil
 }
 
-func (da *InMemoryDataAccess) ScheduleDelete(ctx context.Context, command data.ScheduledCommand) error {
+func (da *InMemoryDataAccess) ScheduleDelete(ctx context.Context, scheduleID int64) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	_, sp := tr.Start(ctx, "memory.ScheduleDelete")
 	defer sp.End()
 
-	if command.ScheduleID == 0 {
+	if scheduleID == 0 {
 		return fmt.Errorf("schedule id not set")
 	}
 
+	_, found := da.schedules.schedules[scheduleID]
+
+	if !found {
+		return fmt.Errorf("schedule %d not found", scheduleID)
+	}
+
+	delete(da.schedules.schedules, scheduleID)
+
 	return nil
+}
+
+func (da *InMemoryDataAccess) SchedulesGet(ctx context.Context) ([]data.ScheduledCommand, error) {
+	s := make([]data.ScheduledCommand, 0)
+
+	for _, c := range da.schedules.schedules {
+		s = append(s, *c)
+	}
+
+	return s, nil
 }

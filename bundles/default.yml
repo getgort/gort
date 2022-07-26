@@ -182,3 +182,25 @@ commands:
     executable: ["/bin/gort", "schedule", "create"]
     rules:
       - allow
+
+  schedule-list:
+    description: "Lists the commands currently scheduled to run periodically"
+    long_description: |-
+      Lists the commands currently scheduled to run periodically.
+
+      Usage:
+        gort:schedule-list
+    executable: ["/bin/gort", "schedule", "list"]
+    rules:
+      - allow
+
+  cancel:
+    description: "Cancels a scheduled command"
+    long_description: |-
+      Cancels a scheduled command.
+
+      Usage:
+        gort:cancel schedule_id
+    executable: ["/bin/gort", "schedule", "delete"]
+    rules:
+      - allow

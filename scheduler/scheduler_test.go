@@ -35,6 +35,7 @@ import (
 // TestSchedulerMultiple tests that the one CommandRequest is issued per second
 // over a specified number of seconds.
 func TestSchedulerMultiple(t *testing.T) {
+	cron = nil // force fresh scheduler
 	const iterations = 5
 
 	// Init Gort
@@ -57,13 +58,14 @@ func TestSchedulerMultiple(t *testing.T) {
 	entries, err := da.FindCommandEntry(ctx, "gort", "whoami")
 	require.NoError(t, err)
 	require.NotEmpty(t, entries)
-	require.NoError(t, Schedule(ctx, data.ScheduledCommand{
+	id, err := Schedule(ctx, data.ScheduledCommand{
 		CommandEntry: entries[0],
 		Command: command.Command{
 			Bundle:     "gort",
 			Command:    "whoami",
 			Options:    make(map[string]command.CommandOption),
 			Parameters: make(command.CommandParameters, 0),
+			Original:   "whoami",
 		},
 		Cron:      "@every 1s",
 		UserID:    "id",
@@ -71,7 +73,9 @@ func TestSchedulerMultiple(t *testing.T) {
 		UserEmail: user.Email,
 		Adapter:   "test adapter",
 		ChannelID: "channel",
-	}))
+	})
+	require.NoError(t, err)
+	require.NotZero(t, id)
 
 	for i := 0; i < iterations; {
 		select {
@@ -82,4 +86,65 @@ func TestSchedulerMultiple(t *testing.T) {
 			i++
 		}
 	}
+}
+
+func TestSchedulerPersistence(t *testing.T) {
+	cron = nil // force fresh scheduler
+	memory.Reset()
+	ctx := context.Background()
+	require.NoError(t, config.Initialize("../testing/config/no-database.yml"))
+
+	da, err := dataaccess.Get()
+	require.NoError(t, err)
+
+	require.NoError(t, da.Initialize(ctx))
+	user, err := dataaccess.Bootstrap(ctx, rest.User{
+		Email:    "user@getgort.io",
+		Username: "user",
+	})
+	require.NoError(t, err)
+
+	schedules, err := GetSchedules(ctx)
+	require.NoError(t, err)
+	require.Zero(t, len(schedules))
+
+	_ = StartScheduler()
+
+	entries, err := da.FindCommandEntry(ctx, "gort", "whoami")
+	require.NoError(t, err)
+	require.NotEmpty(t, entries)
+	id, err := Schedule(ctx, data.ScheduledCommand{
+		CommandEntry: entries[0],
+		Command: command.Command{
+			Bundle:     "gort",
+			Command:    "whoami",
+			Options:    make(map[string]command.CommandOption),
+			Parameters: make(command.CommandParameters, 0),
+			Original:   "whoami",
+		},
+		Cron:      "@every 1s",
+		UserID:    "id",
+		UserName:  user.Username,
+		UserEmail: user.Email,
+		Adapter:   "test adapter",
+		ChannelID: "channel",
+	})
+	require.NoError(t, err)
+	require.NotZero(t, id)
+
+	require.Equal(t, 1, cron.Len())
+
+	StopScheduler()
+
+	require.Equal(t, 0, cron.Len())
+
+	_ = StartScheduler()
+
+	require.Equal(t, 1, cron.Len())
+
+	// TODO: StopScheduler blocks indefinitely due to
+	// https://github.com/go-co-op/gocron/issues/355
+	// Once this issue is fixed, we can stop the scheduler in this test.
+	//StopScheduler()
+	//require.Equal(t, 0, cron.Len())
 }

@@ -38,8 +38,8 @@ type DataAccess interface {
 	RequestClose(ctx context.Context, result data.CommandResponseEnvelope) error
 
 	ScheduleCreate(ctx context.Context, command *data.ScheduledCommand) error
-	ScheduleDelete(ctx context.Context, command data.ScheduledCommand) error
-	//SchedulesGet(ctx context.Context) ([]data.ScheduledCommand, error)
+	ScheduleDelete(ctx context.Context, scheduleID int64) error
+	SchedulesGet(ctx context.Context) ([]data.ScheduledCommand, error)
 
 	BundleCreate(ctx context.Context, bundle data.Bundle) error
 	BundleDelete(ctx context.Context, name string, version string) error

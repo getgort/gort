@@ -27,7 +27,7 @@ import (
 var (
 	// ErrInvalidBundleCommandPair is returned by FindCommandEntry when the
 	// command entry string doesn't look like  "command" or "bundle:command".
-	ErrInvalidBundleCommandPair = errors.New("invalid bundle:comand pair")
+	ErrInvalidBundleCommandPair = errors.New("invalid bundle:command pair")
 )
 
 // Command represents a command typed in by a user. It is typically
@@ -37,6 +37,7 @@ type Command struct {
 	Command    string
 	Options    map[string]CommandOption
 	Parameters CommandParameters
+	Original   string
 }
 
 func (c Command) OptionsValues() map[string]types.Value {
@@ -47,6 +48,10 @@ func (c Command) OptionsValues() map[string]types.Value {
 	}
 
 	return m
+}
+
+func (c Command) String() string {
+	return c.Original
 }
 
 // CommandOption represents a command option or flag, and its string
@@ -255,12 +260,18 @@ func dashCount(str string) int {
 	return count
 }
 
-// TokenizeAndParse is a helper function that combines the Tokenize and Parse functions.
+// TokenizeAndParse is a helper function that combines the Tokenize and Parse
+// functions.
 func TokenizeAndParse(str string, options ...ParseOption) (Command, error) {
 	t, err := Tokenize(str)
 	if err != nil {
 		return Command{}, err
 	}
 
-	return Parse(t, options...)
+	c, err := Parse(t, options...)
+	if err != nil {
+		return c, err
+	}
+	c.Original = str
+	return c, nil
 }

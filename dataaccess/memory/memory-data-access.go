@@ -29,16 +29,27 @@ var dataAccess = &InMemoryDataAccess{
 	groups:  make(map[string]*rest.Group),
 	roles:   make(map[string]*rest.Role),
 	users:   make(map[string]*rest.User),
+	schedules: struct {
+		id        int64
+		schedules map[int64]*data.ScheduledCommand
+	}{
+		id:        0,
+		schedules: make(map[int64]*data.ScheduledCommand),
+	},
 }
 
 // InMemoryDataAccess is an entirely in-memory representation of a data access layer.
 // Great for testing and development. Terrible for production.
 type InMemoryDataAccess struct {
-	bundles map[string]*data.Bundle
-	configs map[string]*data.DynamicConfiguration
-	groups  map[string]*rest.Group
-	roles   map[string]*rest.Role
-	users   map[string]*rest.User
+	bundles   map[string]*data.Bundle
+	configs   map[string]*data.DynamicConfiguration
+	groups    map[string]*rest.Group
+	roles     map[string]*rest.Role
+	users     map[string]*rest.User
+	schedules struct {
+		id        int64
+		schedules map[int64]*data.ScheduledCommand
+	}
 }
 
 // NewInMemoryDataAccess returns a new InMemoryDataAccess instance.
@@ -57,4 +68,11 @@ func Reset() {
 	dataAccess.groups = make(map[string]*rest.Group)
 	dataAccess.roles = make(map[string]*rest.Role)
 	dataAccess.users = make(map[string]*rest.User)
+	dataAccess.schedules = struct {
+		id        int64
+		schedules map[int64]*data.ScheduledCommand
+	}{
+		id:        0,
+		schedules: make(map[int64]*data.ScheduledCommand),
+	}
 }

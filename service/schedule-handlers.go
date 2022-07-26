@@ -18,8 +18,11 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/scheduler"
@@ -28,7 +31,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-// handleScheduleCommand handles "PUT /v2/schedule"
+// handleScheduleCommand handles "PUT /v2/schedules"
 func handleScheduleCommand(w http.ResponseWriter, r *http.Request) {
 	var scheduleRequest rest.ScheduleRequest
 	err := json.NewDecoder(r.Body).Decode(&scheduleRequest)
@@ -54,7 +57,61 @@ func handleScheduleCommand(w http.ResponseWriter, r *http.Request) {
 		Cron:      scheduleRequest.Cron,
 	}
 
-	err = scheduler.ScheduleFromString(r.Context(), scheduleRequest.Command, sc)
+	id, err := scheduler.ScheduleFromString(r.Context(), scheduleRequest.Command, sc)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	_, err = fmt.Fprintf(w, "%d", id)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+}
+
+// handleGetSchedules handles "GET /v2/schedules"
+func handleGetSchedules(w http.ResponseWriter, r *http.Request) {
+	schedules, err := scheduler.GetSchedules(r.Context())
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	info := make([]rest.ScheduleInfo, 0)
+
+	for _, s := range schedules {
+		a, err := adapter.GetAdapter(s.Adapter)
+		if err != nil {
+			respondAndLogError(r.Context(), w, err)
+		}
+		ch, err := a.GetChannelInfo(s.ChannelID)
+		if err != nil {
+			respondAndLogError(r.Context(), w, err)
+		}
+		i := rest.ScheduleInfo{
+			ID:          s.ScheduleID,
+			Command:     s.Command.Original,
+			Cron:        s.Cron,
+			Adapter:     s.Adapter,
+			ChannelName: ch.Name,
+		}
+
+		info = append(info, i)
+	}
+
+	json.NewEncoder(w).Encode(info)
+}
+
+// handleDeleteSchedule handles "DELETE /v2/schedules/{id:\d+}"
+func handleDeleteSchedule(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(mux.Vars(r)["id"], 0, 64)
+	if err != nil {
+		respondAndLogError(r.Context(), w, err)
+		return
+	}
+
+	err = scheduler.Cancel(r.Context(), id)
 	if err != nil {
 		respondAndLogError(r.Context(), w, err)
 		return
@@ -62,5 +119,7 @@ func handleScheduleCommand(w http.ResponseWriter, r *http.Request) {
 }
 
 func addScheduleMethodsToRouter(router *mux.Router) {
-	router.Handle("/v2/schedule", otelhttp.NewHandler(authCommand(handleScheduleCommand, "schedule"), "handleScheduleCommand")).Methods("PUT")
+	router.Handle("/v2/schedules", otelhttp.NewHandler(authCommand(handleScheduleCommand, "schedule"), "handleScheduleCommand")).Methods("PUT")
+	router.Handle("/v2/schedules", otelhttp.NewHandler(authCommand(handleGetSchedules, "schedule", "get"), "handleGetSchedules")).Methods("GET")
+	router.Handle("/v2/schedules/{id:\\d+}", otelhttp.NewHandler(authCommand(handleDeleteSchedule, "schedule", "delete"), "handleDeleteSchedule")).Methods("DELETE")
 }
