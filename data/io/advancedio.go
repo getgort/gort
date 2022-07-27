@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package adapter
+package io
 
 import (
 	"encoding/json"
@@ -60,6 +60,8 @@ type AdvancedInput struct {
 	// GortUser is the Gort user triggering the command (any
 	// credentials are scrubbed).
 	GortUser rest.User
+
+	MessageRef string
 }
 
 // String returns an un-indented JSON representation of the AdvancedInput
@@ -95,4 +97,11 @@ func NewCommandInfo(c command.Command) CommandInfo {
 		Options:    options,
 		Parameters: params,
 	}
+}
+
+type AdvancedOutput struct {
+	Action     string
+	ChannelID  string
+	MessageRef string
+	Content    string
 }

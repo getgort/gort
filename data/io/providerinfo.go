@@ -14,17 +14,10 @@
  * limitations under the License.
  */
 
-package adapter
+package io
 
-// UserInfo contains the basic information for a single user in any chat provider.
-type UserInfo struct {
-	ID                    string
-	Name                  string
-	DisplayName           string
-	DisplayNameNormalized string
-	Email                 string
-	FirstName             string
-	LastName              string
-	RealName              string
-	RealNameNormalized    string
+// ProviderInfo contains the basic information for a chat provider.
+type ProviderInfo struct {
+	Type string
+	Name string
 }

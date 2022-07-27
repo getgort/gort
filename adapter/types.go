@@ -14,25 +14,31 @@
  * limitations under the License.
  */
 
-package slack
+package adapter
 
-import (
-	"github.com/getgort/gort/data/io"
-	"github.com/slack-go/slack"
-)
+type MessageRef struct {
+	ID        string
+	ChannelID string
+	Timestamp string
+	Adapter   string
+}
 
-func newUserInfoFromSlackUser(slackUser *slack.User) *io.UserInfo {
-	u := &io.UserInfo{}
+type Emoji struct {
+	shortname string
+	unicode   rune
+}
 
-	u.ID = slackUser.ID
-	u.Name = slackUser.Name
-	u.DisplayName = slackUser.Profile.DisplayName
-	u.DisplayNameNormalized = slackUser.Profile.DisplayNameNormalized
-	u.Email = slackUser.Profile.Email
-	u.FirstName = slackUser.Profile.FirstName
-	u.LastName = slackUser.Profile.LastName
-	u.RealName = slackUser.RealName
-	u.RealNameNormalized = slackUser.Profile.RealNameNormalized
+func (e Emoji) Shortname() string {
+	return e.shortname
+}
 
-	return u
+func (e Emoji) Unicode() rune {
+	return e.unicode
+}
+
+func EmojiFrom(e string) Emoji {
+	return Emoji{
+		shortname: e,
+		unicode:   rune(e[0]),
+	}
 }

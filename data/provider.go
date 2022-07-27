@@ -16,11 +16,18 @@
 
 package data
 
+import (
+	"fmt"
+
+	"github.com/getgort/gort/data/io"
+	"github.com/sirupsen/logrus"
+)
+
 //// The wrappers for the "slack" section.
 //// Other providers will eventually get their own sections
 
 // Provider is the general interface for all providers.
-// Currently only Slack is supported, with HipChat coming in time.
+// Currently, only Slack and discord are supported, with HipChat coming in time.
 type Provider interface{}
 
 // AbstractProvider is used to contain the general properties shared by
@@ -48,4 +55,23 @@ type DiscordProvider struct {
 	AbstractProvider `yaml:",inline"`
 
 	BotToken string `yaml:"bot_token,omitempty"`
+}
+
+// NewProviderInfoFromConfig can create a ProviderInfo from a data.Provider instance.
+func NewProviderInfoFromConfig(provider Provider) *io.ProviderInfo {
+	p := &io.ProviderInfo{}
+
+	switch ap := provider.(type) {
+	case DiscordProvider:
+		p.Type = "discord"
+		p.Name = ap.Name
+	case SlackProvider:
+		p.Type = "slack"
+		p.Name = ap.Name
+	default:
+		logrus.WithField("type", fmt.Sprintf("%T", ap)).
+			Errorf("Unsupported provider type")
+	}
+
+	return p
 }

@@ -18,10 +18,13 @@ package relay
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/getgort/gort/data/io"
 
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
@@ -308,8 +311,23 @@ func runWorker(ctx context.Context, worker worker.Worker, request data.CommandRe
 
 	// Read input from the worker until the stream closes
 	var lines []string
+	var advanced []io.AdvancedOutput
 	for line := range stdoutChan {
-		lines = append(lines, line)
+		if strings.HasPrefix(line, "#!#") {
+			var a io.AdvancedOutput
+			err = json.NewDecoder(strings.NewReader(strings.TrimPrefix(line, "#!#"))).Decode(&a)
+			if err != nil {
+				log.
+					WithField("request.id", request.RequestID).
+					WithField("advancedOutputString", line).
+					WithError(err).
+					Warnf("Badly formatted advanced output")
+				continue
+			}
+			advanced = append(advanced, a)
+		} else {
+			lines = append(lines, line)
+		}
 	}
 
 	var exitCode int64
@@ -330,7 +348,7 @@ func runWorker(ctx context.Context, worker worker.Worker, request data.CommandRe
 			))
 		}
 
-		opts = append(opts, data.WithResponseLines(lines))
+		opts = append(opts, data.WithResponseLines(lines), data.WithAdvancedOutput(advanced))
 		envelope = data.NewCommandResponseEnvelope(request, opts...)
 
 		log.
