@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getgort/emoji/v2/emoji"
+
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -103,7 +105,7 @@ type Adapter interface {
 	Listen(ctx context.Context) <-chan *ProviderEvent
 
 	// React adds the given emoji to the given message as a reaction.
-	React(ctx context.Context, message MessageRef, emoji Emoji) error
+	React(ctx context.Context, message MessageRef, emoji emoji.Emoji) error
 
 	// Reply creates a message denoted as a reply in the adapter.
 	// The exact way these replies vary per adapter implementation.
@@ -352,7 +354,7 @@ func handleAdvancedOutput(ctx context.Context, output []io.AdvancedOutput) error
 				e1.Debug("Replied!")
 			}
 		case "react":
-			err = a.React(ctx, msgRef, EmojiFromShortname(o.Content))
+			err = a.React(ctx, msgRef, emoji.From(o.Content))
 			if err != nil {
 				e1.WithError(err).Error("Failed to react")
 			} else {

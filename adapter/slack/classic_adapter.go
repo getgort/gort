@@ -22,10 +22,11 @@ import (
 	"reflect"
 	"strings"
 
-	io2 "github.com/getgort/gort/data/io"
+	"github.com/getgort/emoji/v2/emoji"
 
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/io"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/templates"
 	log "github.com/sirupsen/logrus"
@@ -43,7 +44,7 @@ type ClassicAdapter struct {
 	rtm      *slack.RTM
 }
 
-func (s *ClassicAdapter) React(ctx context.Context, message adapter.MessageRef, emoji adapter.Emoji) error {
+func (s *ClassicAdapter) React(ctx context.Context, message adapter.MessageRef, emoji emoji.Emoji) error {
 	return s.client.AddReactionContext(ctx, emoji.Shortname(), slack.ItemRef{
 		Channel:   message.ChannelID,
 		Timestamp: message.Timestamp,
@@ -56,7 +57,7 @@ func (s *ClassicAdapter) Reply(ctx context.Context, message adapter.MessageRef, 
 }
 
 // GetChannelInfo returns the ChannelInfo for a requested channel.
-func (s ClassicAdapter) GetChannelInfo(channelID string) (*io2.ChannelInfo, error) {
+func (s ClassicAdapter) GetChannelInfo(channelID string) (*io.ChannelInfo, error) {
 	ch, err := s.rtm.GetConversationInfo(channelID, false)
 	if err != nil {
 		return nil, err
@@ -72,13 +73,13 @@ func (s ClassicAdapter) GetName() string {
 
 // GetPresentChannels returns a slice of channel ID strings that the Adapter
 // is present in. This is expensive. Don't use it often.
-func (s ClassicAdapter) GetPresentChannels() ([]*io2.ChannelInfo, error) {
+func (s ClassicAdapter) GetPresentChannels() ([]*io.ChannelInfo, error) {
 	allChannels, _, err := s.rtm.GetConversations(&slack.GetConversationsParameters{})
 	if err != nil {
 		return nil, err
 	}
 
-	channels := make([]*io2.ChannelInfo, 0)
+	channels := make([]*io.ChannelInfo, 0)
 	for _, ch := range allChannels {
 		if ch.IsMember {
 			channels = append(channels, newChannelInfoFromSlackChannel(&ch))
@@ -89,7 +90,7 @@ func (s ClassicAdapter) GetPresentChannels() ([]*io2.ChannelInfo, error) {
 }
 
 // GetUserInfo returns the UserInfo for a requested user.
-func (s ClassicAdapter) GetUserInfo(userID string) (*io2.UserInfo, error) {
+func (s ClassicAdapter) GetUserInfo(userID string) (*io.UserInfo, error) {
 	u, err := s.rtm.GetUserInfo(userID)
 	if err != nil {
 		return nil, err

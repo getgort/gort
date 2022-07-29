@@ -21,6 +21,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/getgort/emoji/v2/emoji"
+
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/io"
@@ -255,7 +257,7 @@ var _ Adapter = &testAdapter{}
 
 type testAdapter struct{}
 
-func (t *testAdapter) React(ctx context.Context, message MessageRef, emoji Emoji) error {
+func (t *testAdapter) React(ctx context.Context, message MessageRef, emoji emoji.Emoji) error {
 	//TODO implement me
 	panic("implement me")
 }

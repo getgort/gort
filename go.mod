@@ -19,7 +19,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/slack-go/slack v0.11.0
 	github.com/spf13/cobra v1.5.0
-	github.com/stretchr/testify v1.7.5
+	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.20.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/exporters/metric/prometheus v0.20.0
@@ -34,7 +34,10 @@ require (
 	k8s.io/client-go v0.24.2
 )
 
-require golang.org/x/text v0.3.7
+require (
+	github.com/getgort/emoji/v2 v2.0.0-20220729201750-03a98b1bc0ee
+	golang.org/x/text v0.3.7
+)
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect

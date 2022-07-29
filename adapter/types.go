@@ -35,35 +35,3 @@ type MessageRef struct {
 	// Adapter is the name of the adapter the message is in.
 	Adapter string
 }
-
-// Emoji represents an emoji.
-type Emoji struct {
-	shortname string
-	unicode   rune
-}
-
-// Shortname returns a string shortname used to refer to the emoji.
-func (e Emoji) Shortname() string {
-	return e.shortname
-}
-
-// Unicode returns the actual unicode rune that is the emoji.
-func (e Emoji) Unicode() rune {
-	return e.unicode
-}
-
-// EmojiFromShortname creates an Emoji with the given shortname.
-func EmojiFromShortname(e string) Emoji {
-	return Emoji{
-		shortname: e,
-		unicode:   rune(e[0]),
-	}
-}
-
-// EmojiFromUnicode creates an Emoji with the given unicode rune.
-func EmojiFromUnicode(e rune) Emoji {
-	return Emoji{
-		shortname: string(e),
-		unicode:   e,
-	}
-}

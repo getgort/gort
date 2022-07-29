@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getgort/emoji/v2/emoji"
+
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/data/io"
@@ -58,7 +60,7 @@ type Adapter struct {
 	events   chan *adapter.ProviderEvent
 }
 
-func (s *Adapter) React(ctx context.Context, message adapter.MessageRef, emoji adapter.Emoji) error {
+func (s *Adapter) React(ctx context.Context, message adapter.MessageRef, emoji emoji.Emoji) error {
 	return s.session.MessageReactionAdd(message.ChannelID, message.ID, string(emoji.Unicode()))
 }
 

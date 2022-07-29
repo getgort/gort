@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/getgort/emoji/v2/emoji"
+
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
-	io2 "github.com/getgort/gort/data/io"
+	"github.com/getgort/gort/data/io"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/templates"
 
@@ -43,7 +45,7 @@ type SocketModeAdapter struct {
 	provider     data.SlackProvider
 }
 
-func (s *SocketModeAdapter) React(ctx context.Context, message adapter.MessageRef, emoji adapter.Emoji) error {
+func (s *SocketModeAdapter) React(ctx context.Context, message adapter.MessageRef, emoji emoji.Emoji) error {
 	return s.client.AddReactionContext(ctx, emoji.Shortname(), slack.ItemRef{
 		Channel:   message.ChannelID,
 		Timestamp: message.Timestamp,
@@ -57,7 +59,7 @@ func (s *SocketModeAdapter) Reply(ctx context.Context, message adapter.MessageRe
 
 // GetChannelInfo provides info on a specific provider channel accessible
 // to the adapter.
-func (s *SocketModeAdapter) GetChannelInfo(channelID string) (*io2.ChannelInfo, error) {
+func (s *SocketModeAdapter) GetChannelInfo(channelID string) (*io.ChannelInfo, error) {
 	channel, err := s.client.GetConversationInfo(channelID, false)
 	if err != nil {
 		return nil, err
@@ -71,13 +73,13 @@ func (s *SocketModeAdapter) GetName() string {
 }
 
 // GetPresentChannels returns a slice of channels that a user is present in.
-func (s *SocketModeAdapter) GetPresentChannels() ([]*io2.ChannelInfo, error) {
+func (s *SocketModeAdapter) GetPresentChannels() ([]*io.ChannelInfo, error) {
 	allChannels, _, err := s.client.GetConversations(&slack.GetConversationsParameters{})
 	if err != nil {
 		return nil, err
 	}
 
-	channels := make([]*io2.ChannelInfo, 0)
+	channels := make([]*io.ChannelInfo, 0)
 	for _, ch := range allChannels {
 		// Is this user in this channel?
 		if ch.IsMember {
@@ -90,7 +92,7 @@ func (s *SocketModeAdapter) GetPresentChannels() ([]*io2.ChannelInfo, error) {
 
 // GetUserInfo provides info on a specific provider user accessible
 // to the adapter.
-func (s *SocketModeAdapter) GetUserInfo(userID string) (*io2.UserInfo, error) {
+func (s *SocketModeAdapter) GetUserInfo(userID string) (*io.UserInfo, error) {
 	u, err := s.client.GetUserInfo(userID)
 	if err != nil {
 		return nil, err
