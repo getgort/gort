@@ -65,6 +65,7 @@ func (s *Adapter) React(ctx context.Context, message adapter.MessageRef, emoji a
 func (s *Adapter) Reply(ctx context.Context, message adapter.MessageRef, content string) error {
 	_, err := s.session.ChannelMessageSendReply(message.ChannelID, content, &discordgo.MessageReference{
 		MessageID: message.ID,
+		ChannelID: message.ChannelID,
 	})
 
 	return err
