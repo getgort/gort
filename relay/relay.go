@@ -319,14 +319,14 @@ func runWorker(ctx context.Context, worker worker.Worker, request data.CommandRe
 			if err != nil {
 				log.
 					WithField("request.id", request.RequestID).
-					WithField("advancedOutputString", line).
+					WithField("output.raw", line).
 					WithError(err).
 					Warnf("Badly formatted advanced output")
 				continue
 			}
 			log.
 				WithField("request.id", request.RequestID).
-				WithField("advancedoutput.action", a.Action).
+				WithField("output.action", a.Action).
 				Info("Found output action")
 			advanced = append(advanced, a)
 		} else {

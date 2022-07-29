@@ -102,8 +102,11 @@ type Adapter interface {
 	// begin relaying back events (including errors) via the returned channel.
 	Listen(ctx context.Context) <-chan *ProviderEvent
 
+	// React adds the given emoji to the given message as a reaction.
 	React(ctx context.Context, message MessageRef, emoji Emoji) error
 
+	// Reply creates a message denoted as a reply in the adapter.
+	// The exact way these replies vary per adapter implementation.
 	Reply(ctx context.Context, message MessageRef, content string) error
 
 	// Send sends the contents of a response envelope to a
@@ -271,7 +274,7 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	ctx, sp := tr.Start(ctx, "adapter.SendEnvelope")
 	defer sp.End()
 
-	handleAdvancedOutput(ctx, a, envelope.Response.Advanced)
+	handleAdvancedOutput(ctx, envelope.Response.Advanced) // TODO: handle error
 
 	e := adapterLogEntry(ctx, log.WithContext(ctx), a).WithField("message.type", tt)
 
@@ -320,14 +323,25 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	return nil
 }
 
-func handleAdvancedOutput(ctx context.Context, a Adapter, output []io.AdvancedOutput) error {
-	e := adapterLogEntry(ctx, log.WithContext(ctx), a)
+// handleAdvancedOutput executes a slice of adapter actions specified as
+// io.AdvancedInput.
+func handleAdvancedOutput(ctx context.Context, output []io.AdvancedOutput) error {
+	e := adapterLogEntry(ctx, log.WithContext(ctx))
 	for _, o := range output {
-		e1 := e.WithField("output.Action", o.Action).WithField("output.messageref", o.MessageRef)
+		e1 := e.WithField("output.action", o.Action).WithField("output.messageref", o.MessageRef)
 		var msgRef MessageRef
 		err := json.NewDecoder(strings.NewReader(o.MessageRef)).Decode(&msgRef)
 		if err != nil {
 			e1.WithError(err).Errorf("Badly formatted MessageRef")
+		}
+		// An alternate way to get the adapter will be necessary for actions
+		// that don't involve existing messages.
+		a, err := GetAdapter(msgRef.Adapter)
+		if err != nil {
+			e.WithError(err).Error("Couldn't find specified adapter")
+			return nil
+		} else {
+			e1 = e1.WithField("adapter.name", a.GetName())
 		}
 		switch o.Action {
 		case "reply":
@@ -338,7 +352,7 @@ func handleAdvancedOutput(ctx context.Context, a Adapter, output []io.AdvancedOu
 				e1.Debug("Replied!")
 			}
 		case "react":
-			err = a.React(ctx, msgRef, EmojiFrom(o.Content))
+			err = a.React(ctx, msgRef, EmojiFromShortname(o.Content))
 			if err != nil {
 				e1.WithError(err).Error("Failed to react")
 			} else {
