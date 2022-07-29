@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/getgort/gort/data"
 	"github.com/getgort/gort/dataaccess/errs"
 )
@@ -42,6 +44,22 @@ func (da *InMemoryDataAccess) BundleCreate(ctx context.Context, bundle data.Bund
 	if exists {
 		return errs.ErrBundleExists
 	}
+
+	for n := range bundle.Commands {
+		(bundle.Commands[n]).Name = n
+	}
+
+	log.
+		WithField("bundle.name", bundle.Name).
+		WithField("bundle.commands.length", len(bundle.Commands)).
+		WithField("command.names", strings.Join(func() []string {
+			var names []string
+			for _, c := range bundle.Commands {
+				names = append(names, c.Name)
+			}
+			return names
+		}(), ",")).
+		Info("Creating bundle")
 
 	bundle.Image = bundle.ImageFull()
 
@@ -259,19 +277,28 @@ func (da *InMemoryDataAccess) BundleUpdate(ctx context.Context, bundle data.Bund
 func (da *InMemoryDataAccess) FindCommandEntry(ctx context.Context, bundleName, commandName string) ([]data.CommandEntry, error) {
 	entries := make([]data.CommandEntry, 0)
 
+	base := log.WithField("search.bundleName", bundleName).WithField("search.commandName", commandName)
+
 	for _, bundle := range da.bundles {
+		e := base.WithField("bundle.name", bundle.Name)
 		if bundleName != "" && bundleName != bundle.Name {
+			e.Debug("bundle name mismatch")
 			continue
 		}
 
 		if !bundle.Enabled {
+			e.Debug("bundle disabled")
 			continue
 		}
 
 		for _, cmd := range bundle.Commands {
+			l := e.WithField("cmd.name", cmd.Name)
 			if cmd.Name == commandName {
+				l.Debug("match")
 				e := data.CommandEntry{Bundle: *bundle, Command: *cmd}
 				entries = append(entries, e)
+			} else {
+				l.Debug("mismatch")
 			}
 		}
 	}

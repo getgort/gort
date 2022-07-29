@@ -323,7 +323,7 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 func handleAdvancedOutput(ctx context.Context, a Adapter, output []io.AdvancedOutput) error {
 	e := adapterLogEntry(ctx, log.WithContext(ctx), a)
 	for _, o := range output {
-		e1 := e.WithField("output.Action", o.Action)
+		e1 := e.WithField("output.Action", o.Action).WithField("output.messageref", o.MessageRef)
 		var msgRef MessageRef
 		err := json.NewDecoder(strings.NewReader(o.MessageRef)).Decode(&msgRef)
 		if err != nil {
@@ -334,12 +334,18 @@ func handleAdvancedOutput(ctx context.Context, a Adapter, output []io.AdvancedOu
 			err = a.Reply(ctx, msgRef, o.Content)
 			if err != nil {
 				e1.WithError(err).Errorf("Failed to create reply")
+			} else {
+				e1.Debug("Replied!")
 			}
 		case "react":
 			err = a.React(ctx, msgRef, EmojiFrom(o.Content))
 			if err != nil {
 				e1.WithError(err).Error("Failed to react")
+			} else {
+				e1.Debug("Reacted!")
 			}
+		default:
+			e1.Error("Unknown action")
 		}
 	}
 
@@ -514,12 +520,18 @@ func advancedInput(req data.CommandRequest, id RequestorIdentity, c command.Comm
 	gu.Mappings = nil
 	gu.Password = ""
 
+	mb, err := json.Marshal(m)
+	if err != nil {
+		// oops
+	}
+
 	ai := io.AdvancedInput{
 		Channel:      *id.ChatChannel,
 		Command:      io.NewCommandInfo(c),
 		Provider:     *id.Provider,
 		ProviderUser: *id.ChatUser,
 		GortUser:     *id.GortUser,
+		MessageRef:   string(mb),
 	}
 
 	req.Parameters = data.CommandParameters([]string{ai.String()})

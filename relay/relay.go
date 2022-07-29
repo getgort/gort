@@ -324,6 +324,10 @@ func runWorker(ctx context.Context, worker worker.Worker, request data.CommandRe
 					Warnf("Badly formatted advanced output")
 				continue
 			}
+			log.
+				WithField("request.id", request.RequestID).
+				WithField("advancedoutput.action", a.Action).
+				Info("Found output action")
 			advanced = append(advanced, a)
 		} else {
 			lines = append(lines, line)

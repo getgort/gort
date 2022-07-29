@@ -66,7 +66,7 @@ func (c CommandParameters) String() string {
 	b := strings.Builder{}
 	b.WriteString(fmt.Sprintf("%v", c[0]))
 
-	for i := 0; i < len(c); i++ {
+	for i := 1; i < len(c); i++ {
 		b.WriteRune(' ')
 		b.WriteString(fmt.Sprintf("%v", c[i]))
 	}
