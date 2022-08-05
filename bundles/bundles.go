@@ -31,7 +31,7 @@ import (
 var (
 	// ErrInvalidBundleCommandPair is returned by FindCommandEntry when the
 	// command entry string doesn't look like  "command" or "bundle:command".
-	ErrInvalidBundleCommandPair = errors.New("invalid bundle:comand pair")
+	ErrInvalidBundleCommandPair = errors.New("invalid bundle:command pair")
 )
 
 func LoadBundleFromFile(file string) (data.Bundle, error) {

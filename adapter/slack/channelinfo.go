@@ -17,12 +17,12 @@
 package slack
 
 import (
-	"github.com/getgort/gort/adapter"
+	"github.com/getgort/gort/data/io"
 	"github.com/slack-go/slack"
 )
 
-func newChannelInfoFromSlackChannel(slackChannel *slack.Channel) *adapter.ChannelInfo {
-	ch := &adapter.ChannelInfo{}
+func newChannelInfoFromSlackChannel(slackChannel *slack.Channel) *io.ChannelInfo {
+	ch := &io.ChannelInfo{}
 
 	ch.ID = slackChannel.ID
 	ch.Members = slackChannel.Members

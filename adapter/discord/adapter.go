@@ -23,8 +23,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getgort/emoji/v2/emoji"
+
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/io"
 	"github.com/getgort/gort/templates"
 
 	"github.com/bwmarrin/discordgo"
@@ -57,9 +60,22 @@ type Adapter struct {
 	events   chan *adapter.ProviderEvent
 }
 
+func (s *Adapter) React(ctx context.Context, message adapter.MessageRef, emoji emoji.Emoji) error {
+	return s.session.MessageReactionAdd(message.ChannelID, message.ID, string(emoji.Unicode()))
+}
+
+func (s *Adapter) Reply(ctx context.Context, message adapter.MessageRef, content string) error {
+	_, err := s.session.ChannelMessageSendReply(message.ChannelID, content, &discordgo.MessageReference{
+		MessageID: message.ID,
+		ChannelID: message.ChannelID,
+	})
+
+	return err
+}
+
 // GetChannelInfo provides info on a specific provider channel accessible
 // to the adapter.
-func (s *Adapter) GetChannelInfo(channelID string) (*adapter.ChannelInfo, error) {
+func (s *Adapter) GetChannelInfo(channelID string) (*io.ChannelInfo, error) {
 	channel, err := s.session.Channel(channelID)
 	if err != nil {
 		return nil, err
@@ -73,13 +89,13 @@ func (s *Adapter) GetName() string {
 }
 
 // GetPresentChannels returns a slice of channels that a user is present in.
-func (s *Adapter) GetPresentChannels() ([]*adapter.ChannelInfo, error) {
+func (s *Adapter) GetPresentChannels() ([]*io.ChannelInfo, error) {
 	allChannels, err := s.session.UserChannels()
 	if err != nil {
 		return nil, err
 	}
 
-	channels := make([]*adapter.ChannelInfo, 0)
+	channels := make([]*io.ChannelInfo, 0)
 	for _, ch := range allChannels {
 		channels = append(channels, newChannelInfoFromDiscordChannel(ch))
 	}
@@ -89,7 +105,7 @@ func (s *Adapter) GetPresentChannels() ([]*adapter.ChannelInfo, error) {
 
 // GetUserInfo provides info on a specific provider user accessible
 // to the adapter.
-func (s *Adapter) GetUserInfo(userID string) (*adapter.UserInfo, error) {
+func (s *Adapter) GetUserInfo(userID string) (*io.UserInfo, error) {
 	u, err := s.session.User(userID)
 	if err != nil {
 		return nil, err
@@ -277,22 +293,30 @@ func (s *Adapter) messageCreate(sess *discordgo.Session, m *discordgo.MessageCre
 	if err != nil {
 		panic(err)
 	}
+	mr := adapter.MessageRef{
+		ID:        m.ID,
+		ChannelID: m.ChannelID,
+		Timestamp: string(m.Timestamp),
+		Adapter:   s.GetName(),
+	}
 	if len(channel.Recipients) > 0 {
 		s.events <- s.wrapEvent(
-			adapter.EventChannelMessage,
+			adapter.EventDirectMessage,
 			&adapter.DirectMessageEvent{
-				ChannelID: m.ChannelID,
-				Text:      m.Content,
-				UserID:    m.Author.ID,
+				ChannelID:  m.ChannelID,
+				Text:       m.Content,
+				UserID:     m.Author.ID,
+				MessageRef: mr,
 			},
 		)
 	} else {
 		s.events <- s.wrapEvent(
 			adapter.EventChannelMessage,
 			&adapter.ChannelMessageEvent{
-				ChannelID: m.ChannelID,
-				Text:      m.Content,
-				UserID:    m.Author.ID,
+				ChannelID:  m.ChannelID,
+				Text:       m.Content,
+				UserID:     m.Author.ID,
+				MessageRef: mr,
 			},
 		)
 	}
@@ -333,19 +357,19 @@ func (s *Adapter) onInvalidAuth() *adapter.ProviderEvent {
 }
 
 // wrapEvent creates a new ProviderEvent instance with metadata and the Event data attached.
-func (s *Adapter) wrapEvent(eventType adapter.EventType, data interface{}) *adapter.ProviderEvent {
+func (s *Adapter) wrapEvent(eventType adapter.EventType, eventData interface{}) *adapter.ProviderEvent {
 	return &adapter.ProviderEvent{
 		EventType: eventType,
-		Data:      data,
+		Data:      eventData,
 		Info: &adapter.Info{
-			Provider: adapter.NewProviderInfoFromConfig(s.provider),
+			Provider: data.NewProviderInfoFromConfig(s.provider),
 		},
 		Adapter: s,
 	}
 }
 
-func newChannelInfoFromDiscordChannel(channel *discordgo.Channel) *adapter.ChannelInfo {
-	out := &adapter.ChannelInfo{
+func newChannelInfoFromDiscordChannel(channel *discordgo.Channel) *io.ChannelInfo {
+	out := &io.ChannelInfo{
 		ID:   channel.ID,
 		Name: channel.Name,
 	}
@@ -355,8 +379,8 @@ func newChannelInfoFromDiscordChannel(channel *discordgo.Channel) *adapter.Chann
 	return out
 }
 
-func newUserInfoFromDiscordUser(user *discordgo.User) *adapter.UserInfo {
-	u := &adapter.UserInfo{}
+func newUserInfoFromDiscordUser(user *discordgo.User) *io.UserInfo {
+	u := &io.UserInfo{}
 
 	u.ID = user.ID
 	u.Name = user.Username

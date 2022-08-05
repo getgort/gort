@@ -18,10 +18,13 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/getgort/emoji/v2/emoji"
 
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
@@ -32,6 +35,7 @@ import (
 	"github.com/getgort/gort/command"
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/io"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/dataaccess/errs"
@@ -84,21 +88,28 @@ var (
 type Adapter interface {
 	// GetChannelInfo provides info on a specific provider channel accessible
 	// to the adapter.
-	GetChannelInfo(channelID string) (*ChannelInfo, error)
+	GetChannelInfo(channelID string) (*io.ChannelInfo, error)
 
 	// GetName provides the name of this adapter as per the configuration.
 	GetName() string
 
 	// GetPresentChannels returns a slice of channels that the adapter is present in.
-	GetPresentChannels() ([]*ChannelInfo, error)
+	GetPresentChannels() ([]*io.ChannelInfo, error)
 
 	// GetUserInfo provides info on a specific provider user accessible
 	// to the adapter.
-	GetUserInfo(userID string) (*UserInfo, error)
+	GetUserInfo(userID string) (*io.UserInfo, error)
 
 	// Listen causes the Adapter to initiate a connection to its provider and
 	// begin relaying back events (including errors) via the returned channel.
 	Listen(ctx context.Context) <-chan *ProviderEvent
+
+	// React adds the given emoji to the given message as a reaction.
+	React(ctx context.Context, message MessageRef, emoji emoji.Emoji) error
+
+	// Reply creates a message denoted as a reply in the adapter.
+	// The exact way these replies vary per adapter implementation.
+	Reply(ctx context.Context, message MessageRef, content string) error
 
 	// Send sends the contents of a response envelope to a
 	// specified channel. If channelID is empty the value of
@@ -116,9 +127,9 @@ type Adapter interface {
 
 type RequestorIdentity struct {
 	Adapter     Adapter
-	ChatUser    *UserInfo
-	ChatChannel *ChannelInfo
-	Provider    *ProviderInfo
+	ChatUser    *io.UserInfo
+	ChatChannel *io.ChannelInfo
+	Provider    *io.ProviderInfo
 	GortUser    *rest.User
 }
 
@@ -211,11 +222,11 @@ func OnChannelMessage(ctx context.Context, event *ProviderEvent, data *ChannelMe
 	// Find command by Name if the message starts with '!'
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
-		return BuildCommandRequest(ctx, rawCommandText, id, retrieval.CommandFromTokensByName)
+		return BuildCommandRequest(ctx, rawCommandText, id, data.MessageRef, retrieval.CommandFromTokensByName)
 	}
 
 	// Otherwise attempt to find command by trigger
-	return BuildCommandRequest(ctx, rawCommandText, id, retrieval.CommandFromTokensByTrigger)
+	return BuildCommandRequest(ctx, rawCommandText, id, data.MessageRef, retrieval.CommandFromTokensByTrigger)
 }
 
 // OnDirectMessage handles DirectMessageEvent events.
@@ -240,9 +251,9 @@ func OnDirectMessage(ctx context.Context, event *ProviderEvent, data *DirectMess
 
 	if rawCommandText[0] == '!' {
 		rawCommandText = rawCommandText[1:]
-		return BuildCommandRequest(ctx, rawCommandText, id, retrieval.CommandFromTokensByName)
+		return BuildCommandRequest(ctx, rawCommandText, id, data.MessageRef, retrieval.CommandFromTokensByName)
 	}
-	return BuildCommandRequest(ctx, rawCommandText, id, retrieval.CommandFromTokensByNameOrTrigger)
+	return BuildCommandRequest(ctx, rawCommandText, id, data.MessageRef, retrieval.CommandFromTokensByNameOrTrigger)
 }
 
 // SendErrorMessage sends an error message to a specified channel.
@@ -257,12 +268,15 @@ func SendMessage(ctx context.Context, a Adapter, channelID string, message strin
 	return SendEnvelope(ctx, a, channelID, e, data.Message)
 }
 
-// Send the contents of a response envelope to a specified channel. If
-// channelID is empty the value of envelope.Request.ChannelID will be used.
+// SendEnvelope sends the contents of a response envelope to a specified
+// channel. If channelID is empty the value of envelope.Request.ChannelID will
+// be used.
 func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope data.CommandResponseEnvelope, tt data.TemplateType) error {
 	tr := otel.GetTracerProvider().Tracer(telemetry.ServiceName)
 	ctx, sp := tr.Start(ctx, "adapter.SendEnvelope")
 	defer sp.End()
+
+	handleAdvancedOutput(ctx, envelope.Response.Advanced) // TODO: handle error
 
 	e := adapterLogEntry(ctx, log.WithContext(ctx), a).WithField("message.type", tt)
 
@@ -306,6 +320,49 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 			e.WithError(err).Error("break-glass send error failure!")
 		}
 		return err
+	}
+
+	return nil
+}
+
+// handleAdvancedOutput executes a slice of adapter actions specified as
+// io.AdvancedInput.
+func handleAdvancedOutput(ctx context.Context, output []io.AdvancedOutput) error {
+	e := adapterLogEntry(ctx, log.WithContext(ctx))
+	for _, o := range output {
+		e1 := e.WithField("output.action", o.Action).WithField("output.messageref", o.MessageRef)
+		var msgRef MessageRef
+		err := json.NewDecoder(strings.NewReader(o.MessageRef)).Decode(&msgRef)
+		if err != nil {
+			e1.WithError(err).Errorf("Badly formatted MessageRef")
+		}
+		// An alternate way to get the adapter will be necessary for actions
+		// that don't involve existing messages.
+		a, err := GetAdapter(msgRef.Adapter)
+		if err != nil {
+			e.WithError(err).Error("Couldn't find specified adapter")
+			return nil
+		} else {
+			e1 = e1.WithField("adapter.name", a.GetName())
+		}
+		switch o.Action {
+		case io.ActionReply:
+			err = a.Reply(ctx, msgRef, o.Content)
+			if err != nil {
+				e1.WithError(err).Errorf("Failed to create reply")
+			} else {
+				e1.Debug("Replied!")
+			}
+		case io.ActionReact:
+			err = a.React(ctx, msgRef, emoji.From(o.Content))
+			if err != nil {
+				e1.WithError(err).Error("Failed to react")
+			} else {
+				e1.Debug("Reacted!")
+			}
+		default:
+			e1.Error("Unknown action")
+		}
 	}
 
 	return nil
@@ -359,7 +416,7 @@ func (r *requestLog) Error(
 ) error {
 	r.da.RequestError(ctx, *r.request, err)
 	telemetry.Errors().WithError(err).Commit(ctx)
-	r.le.WithError(err).Error(logMessage)
+	r.le.WithField("command.bundle", r.request).WithError(err).Error(logMessage)
 	for _, action := range actions {
 		action(ctx, r)
 	}
@@ -375,6 +432,7 @@ func BuildCommandRequest(
 	ctx context.Context,
 	rawCommand string,
 	id RequestorIdentity,
+	m MessageRef,
 	fCommandFromTokens retrieval.CommandFromTokens,
 ) (*data.CommandRequest, error) {
 	// Start trace span
@@ -464,7 +522,7 @@ func BuildCommandRequest(
 	}
 
 	if cmdEntry.Command.Input.Advanced {
-		request = advancedInput(request, id, cmdInput)
+		request = advancedInput(request, id, cmdInput, m)
 	}
 
 	// Update log entry with command info
@@ -473,17 +531,23 @@ func BuildCommandRequest(
 	return &request, nil
 }
 
-func advancedInput(req data.CommandRequest, id RequestorIdentity, c command.Command) data.CommandRequest {
+func advancedInput(req data.CommandRequest, id RequestorIdentity, c command.Command, m MessageRef) data.CommandRequest {
 	gu := *id.GortUser
 	gu.Mappings = nil
 	gu.Password = ""
 
-	ai := AdvancedInput{
+	mb, err := json.Marshal(m)
+	if err != nil {
+		// oops
+	}
+
+	ai := io.AdvancedInput{
 		Channel:      *id.ChatChannel,
-		Command:      NewCommandInfo(c),
+		Command:      io.NewCommandInfo(c),
 		Provider:     *id.Provider,
 		ProviderUser: *id.ChatUser,
 		GortUser:     *id.GortUser,
+		MessageRef:   string(mb),
 	}
 
 	req.Parameters = data.CommandParameters([]string{ai.String()})
@@ -511,7 +575,7 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 		case Adapter:
 			e = e.WithField("adapter.name", o.GetName())
 
-		case ChannelInfo:
+		case io.ChannelInfo:
 			e = e.WithField("provider.channel.name", o.Name).
 				WithField("provider.channel.id", o.ID)
 
@@ -538,7 +602,7 @@ func adapterLogEntry(ctx context.Context, e *log.Entry, obs ...interface{}) *log
 
 			return adapterLogEntry(ctx, e, args...)
 
-		case UserInfo:
+		case io.UserInfo:
 			e = e.WithField("provider.user.email", o.Email).
 				WithField("provider.user.id", o.ID)
 
@@ -596,7 +660,7 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 				attribute.String("adapter.name", o.GetName()),
 			)
 
-		case ChannelInfo:
+		case io.ChannelInfo:
 			attr = append(attr,
 				attribute.String("provider.channel.name", o.Name),
 				attribute.String("provider.channel.id", o.ID),
@@ -627,7 +691,7 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 
 			addSpanAttributes(ctx, sp, args...)
 
-		case UserInfo:
+		case io.UserInfo:
 			attr = append(attr,
 				attribute.String("provider.user.email", o.Email),
 				attribute.String("provider.user.id", o.ID),
@@ -680,7 +744,7 @@ func addSpanAttributes(ctx context.Context, sp trace.Span, obs ...interface{}) {
 	sp.SetAttributes(attr...)
 }
 
-func buildRequestorIdentity(ctx context.Context, adapter Adapter, provider *ProviderInfo, channelId, userId string) (RequestorIdentity, error) {
+func buildRequestorIdentity(ctx context.Context, adapter Adapter, provider *io.ProviderInfo, channelId, userId string) (RequestorIdentity, error) {
 	var err error
 	id := RequestorIdentity{
 		Adapter:  adapter,
@@ -828,7 +892,7 @@ func buildAndBeginRequest(ctx context.Context, id RequestorIdentity) (data.Comma
 }
 
 // findOrMakeGortUser ...
-func findOrMakeGortUser(ctx context.Context, adapter Adapter, info *UserInfo) (*rest.User, bool, error) {
+func findOrMakeGortUser(ctx context.Context, adapter Adapter, info *io.UserInfo) (*rest.User, bool, error) {
 	// Get the data access interface.
 	da, err := dataaccess.Get()
 	if err != nil {

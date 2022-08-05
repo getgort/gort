@@ -122,6 +122,9 @@ type Trigger struct {
 	Match string `yaml:"match" json:"match"`
 }
 
+// TODO: message should be the original message, but this is currently called
+// multiple places with the concatenated tokens slice, which is not yet
+// guaranteed to be equivalent (https://github.com/getgort/gort/issues/225)
 func (c *BundleCommand) MatchTrigger(ctx context.Context, message string) (bool, error) {
 	for _, trigger := range c.Triggers {
 		if c == nil || len(trigger.Match) == 0 {

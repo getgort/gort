@@ -14,25 +14,24 @@
  * limitations under the License.
  */
 
-package slack
+package adapter
 
-import (
-	"github.com/getgort/gort/data/io"
-	"github.com/slack-go/slack"
-)
+// MessageRef is a way to refer to a unique message across all adapters.
+// Different fields are non-zero based on what variety of adapter is referred
+// to. This is only given to bundle commands as a json-encoded string.
+type MessageRef struct {
+	// ID is the id of the message.
+	// Used by: discord.
+	ID string
 
-func newUserInfoFromSlackUser(slackUser *slack.User) *io.UserInfo {
-	u := &io.UserInfo{}
+	// ChannelID is the id of the channel containing the message.
+	// Used by: discord, slack.
+	ChannelID string
 
-	u.ID = slackUser.ID
-	u.Name = slackUser.Name
-	u.DisplayName = slackUser.Profile.DisplayName
-	u.DisplayNameNormalized = slackUser.Profile.DisplayNameNormalized
-	u.Email = slackUser.Profile.Email
-	u.FirstName = slackUser.Profile.FirstName
-	u.LastName = slackUser.Profile.LastName
-	u.RealName = slackUser.RealName
-	u.RealNameNormalized = slackUser.Profile.RealNameNormalized
+	// Timestamp is the time the message was sent.
+	// Used by: slack.
+	Timestamp string
 
-	return u
+	// Adapter is the name of the adapter the message is in.
+	Adapter string
 }

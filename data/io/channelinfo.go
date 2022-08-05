@@ -14,25 +14,11 @@
  * limitations under the License.
  */
 
-package slack
+package io
 
-import (
-	"github.com/getgort/gort/data/io"
-	"github.com/slack-go/slack"
-)
-
-func newUserInfoFromSlackUser(slackUser *slack.User) *io.UserInfo {
-	u := &io.UserInfo{}
-
-	u.ID = slackUser.ID
-	u.Name = slackUser.Name
-	u.DisplayName = slackUser.Profile.DisplayName
-	u.DisplayNameNormalized = slackUser.Profile.DisplayNameNormalized
-	u.Email = slackUser.Profile.Email
-	u.FirstName = slackUser.Profile.FirstName
-	u.LastName = slackUser.Profile.LastName
-	u.RealName = slackUser.RealName
-	u.RealNameNormalized = slackUser.Profile.RealNameNormalized
-
-	return u
+// ChannelInfo contains the basic information for a single channel in any provider.
+type ChannelInfo struct {
+	ID      string
+	Members []string
+	Name    string
 }

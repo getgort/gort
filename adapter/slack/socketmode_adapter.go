@@ -20,8 +20,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/getgort/emoji/v2/emoji"
+
 	"github.com/getgort/gort/adapter"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/io"
 	"github.com/getgort/gort/telemetry"
 	"github.com/getgort/gort/templates"
 
@@ -42,9 +45,21 @@ type SocketModeAdapter struct {
 	provider     data.SlackProvider
 }
 
+func (s *SocketModeAdapter) React(ctx context.Context, message adapter.MessageRef, emoji emoji.Emoji) error {
+	return s.client.AddReactionContext(ctx, emoji.Shortname(), slack.ItemRef{
+		Channel:   message.ChannelID,
+		Timestamp: message.Timestamp,
+	})
+}
+
+func (s *SocketModeAdapter) Reply(ctx context.Context, message adapter.MessageRef, content string) error {
+	_, _, _, err := s.client.SendMessageContext(ctx, message.ChannelID, slack.MsgOptionTS(message.Timestamp), slack.MsgOptionText(content, false))
+	return err
+}
+
 // GetChannelInfo provides info on a specific provider channel accessible
 // to the adapter.
-func (s *SocketModeAdapter) GetChannelInfo(channelID string) (*adapter.ChannelInfo, error) {
+func (s *SocketModeAdapter) GetChannelInfo(channelID string) (*io.ChannelInfo, error) {
 	channel, err := s.client.GetConversationInfo(channelID, false)
 	if err != nil {
 		return nil, err
@@ -58,13 +73,13 @@ func (s *SocketModeAdapter) GetName() string {
 }
 
 // GetPresentChannels returns a slice of channels that a user is present in.
-func (s *SocketModeAdapter) GetPresentChannels() ([]*adapter.ChannelInfo, error) {
+func (s *SocketModeAdapter) GetPresentChannels() ([]*io.ChannelInfo, error) {
 	allChannels, _, err := s.client.GetConversations(&slack.GetConversationsParameters{})
 	if err != nil {
 		return nil, err
 	}
 
-	channels := make([]*adapter.ChannelInfo, 0)
+	channels := make([]*io.ChannelInfo, 0)
 	for _, ch := range allChannels {
 		// Is this user in this channel?
 		if ch.IsMember {
@@ -77,7 +92,7 @@ func (s *SocketModeAdapter) GetPresentChannels() ([]*adapter.ChannelInfo, error)
 
 // GetUserInfo provides info on a specific provider user accessible
 // to the adapter.
-func (s *SocketModeAdapter) GetUserInfo(userID string) (*adapter.UserInfo, error) {
+func (s *SocketModeAdapter) GetUserInfo(userID string) (*io.UserInfo, error) {
 	u, err := s.client.GetUserInfo(userID)
 	if err != nil {
 		return nil, err
@@ -92,7 +107,7 @@ func (s *SocketModeAdapter) Listen(ctx context.Context) <-chan *adapter.Provider
 	var events = make(chan *adapter.ProviderEvent, 100)
 
 	info := &adapter.Info{
-		Provider: adapter.NewProviderInfoFromConfig(s.provider),
+		Provider: data.NewProviderInfoFromConfig(s.provider),
 	}
 
 	go func() {
@@ -227,13 +242,20 @@ func (s *SocketModeAdapter) SendError(ctx context.Context, channelID string, tit
 
 // onChannelMessage is called when the Slack API emits an MessageEvent for a message in a channel.
 func (s *SocketModeAdapter) onChannelMessage(event *slackevents.MessageEvent, info *adapter.Info) *adapter.ProviderEvent {
+	mr := adapter.MessageRef{
+		ID:        "",
+		ChannelID: event.Channel,
+		Timestamp: event.TimeStamp,
+		Adapter:   s.GetName(),
+	}
 	return s.wrapEvent(
 		adapter.EventChannelMessage,
 		info,
 		&adapter.ChannelMessageEvent{
-			ChannelID: event.Channel,
-			Text:      ScrubMarkdown(event.Text),
-			UserID:    event.User,
+			ChannelID:  event.Channel,
+			Text:       ScrubMarkdown(event.Text),
+			UserID:     event.User,
+			MessageRef: mr,
 		},
 	)
 }
@@ -258,13 +280,20 @@ func (s *SocketModeAdapter) onConnectionError(message string, info *adapter.Info
 
 // onDirectMessage is called when the Slack API emits an MessageEvent for a direct message.
 func (s *SocketModeAdapter) onDirectMessage(event *slackevents.MessageEvent, info *adapter.Info) *adapter.ProviderEvent {
+	mr := adapter.MessageRef{
+		ID:        "",
+		ChannelID: event.Channel,
+		Timestamp: event.TimeStamp,
+		Adapter:   s.GetName(),
+	}
 	return s.wrapEvent(
 		adapter.EventDirectMessage,
 		info,
 		&adapter.DirectMessageEvent{
-			ChannelID: event.Channel,
-			Text:      ScrubMarkdown(event.Text),
-			UserID:    event.User,
+			ChannelID:  event.Channel,
+			Text:       ScrubMarkdown(event.Text),
+			UserID:     event.User,
+			MessageRef: mr,
 		},
 	)
 }

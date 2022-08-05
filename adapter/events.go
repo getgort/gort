@@ -18,11 +18,13 @@ package adapter
 
 import (
 	"fmt"
+
+	"github.com/getgort/gort/data/io"
 )
 
 // Info is used by events to wrap user and provider info.
 type Info struct {
-	Provider *ProviderInfo
+	Provider *io.ProviderInfo
 }
 
 // EventType specifies the kind of event received from an adapter
@@ -66,6 +68,7 @@ type ChannelMessageEvent struct {
 	ChannelID string
 	Text      string
 	UserID    string
+	MessageRef
 }
 
 // ConnectedEvent indicates the client has successfully connected to
@@ -90,6 +93,7 @@ type DirectMessageEvent struct {
 	ChannelID string
 	Text      string
 	UserID    string
+	MessageRef
 }
 
 // ErrorEvent indicates an error reported by the provider. The occurs before a

@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
-package adapter
+package io
 
-// ChannelInfo contains the basic information for a single channel in any provider.
-type ChannelInfo struct {
-	ID      string
-	Members []string
-	Name    string
+// UserInfo contains the basic information for a single user in any chat provider.
+type UserInfo struct {
+	ID                    string
+	Name                  string
+	DisplayName           string
+	DisplayNameNormalized string
+	Email                 string
+	FirstName             string
+	LastName              string
+	RealName              string
+	RealNameNormalized    string
 }

@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getgort/gort/data/io"
+
 	"github.com/getgort/gort/command"
 )
 
@@ -86,6 +88,8 @@ type CommandResponse struct {
 	// a string slice, delimitted along newlines.
 	Lines []string
 
+	Advanced []io.AdvancedOutput
+
 	// Out The command output as a single block of text, with lines joined
 	// with newlines.
 	Out string
@@ -131,7 +135,7 @@ type CommandResponseEnvelope struct {
 	Response CommandResponse
 
 	// Data contains about the command execution, including its duration and exit code.
-	// If the relay set an an explicit error, it will be here as well.
+	// If the relay set an explicit error, it will be here as well.
 	Data CommandResponseData
 
 	// Payload includes the command output. If the output is structured JSON,
@@ -186,6 +190,12 @@ func WithResponseLines(r []string) CommandResponseEnvelopeOption {
 		e.Response.Lines = r
 		e.Response.Out = strings.Join(r, "\n")
 		e.Payload, e.Response.Structured = unmarshalResponsePayload(e.Response.Out)
+	}
+}
+
+func WithAdvancedOutput(o []io.AdvancedOutput) CommandResponseEnvelopeOption {
+	return func(e *CommandResponseEnvelope) {
+		e.Response.Advanced = o
 	}
 }
 

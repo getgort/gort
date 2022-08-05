@@ -19,6 +19,8 @@ oauth_config:
       - groups:read
       - im:history
       - im:read
+      - reactions:read
+      - reactions:write
       - users:read
 settings:
   event_subscriptions:

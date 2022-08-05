@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package adapter
+package io
 
 import (
 	"testing"

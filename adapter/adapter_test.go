@@ -21,8 +21,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/getgort/emoji/v2/emoji"
+
 	"github.com/getgort/gort/config"
 	"github.com/getgort/gort/data"
+	"github.com/getgort/gort/data/io"
 	"github.com/getgort/gort/data/rest"
 	"github.com/getgort/gort/dataaccess"
 	"github.com/getgort/gort/templates"
@@ -80,7 +83,7 @@ func TestChannelMessage(t *testing.T) {
 					EventType: EventChannelMessage,
 					Data:      nil,
 					Info: &Info{
-						Provider: &ProviderInfo{
+						Provider: &io.ProviderInfo{
 							Type: "test",
 							Name: "provider",
 						},
@@ -164,7 +167,7 @@ func TestDirectMessage(t *testing.T) {
 					EventType: EventChannelMessage,
 					Data:      nil,
 					Info: &Info{
-						Provider: &ProviderInfo{
+						Provider: &io.ProviderInfo{
 							Type: "test",
 							Name: "provider",
 						},
@@ -254,10 +257,20 @@ var _ Adapter = &testAdapter{}
 
 type testAdapter struct{}
 
+func (t *testAdapter) React(ctx context.Context, message MessageRef, emoji emoji.Emoji) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *testAdapter) Reply(ctx context.Context, message MessageRef, content string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 // GetChannelInfo provides info on a specific provider channel accessible
 // to the adapter.
-func (t *testAdapter) GetChannelInfo(channelID string) (*ChannelInfo, error) {
-	return &ChannelInfo{
+func (t *testAdapter) GetChannelInfo(channelID string) (*io.ChannelInfo, error) {
+	return &io.ChannelInfo{
 		ID:      channelID,
 		Members: nil,
 		Name:    channelID,
@@ -270,14 +283,14 @@ func (t *testAdapter) GetName() string {
 }
 
 // GetPresentChannels returns a slice of channels that the adapter is present in.
-func (t *testAdapter) GetPresentChannels() ([]*ChannelInfo, error) {
+func (t *testAdapter) GetPresentChannels() ([]*io.ChannelInfo, error) {
 	panic("not implemented") // TODO: Implement
 }
 
 // GetUserInfo provides info on a specific provider user accessible
 // to the adapter.
-func (t *testAdapter) GetUserInfo(userID string) (*UserInfo, error) {
-	return &UserInfo{
+func (t *testAdapter) GetUserInfo(userID string) (*io.UserInfo, error) {
+	return &io.UserInfo{
 		ID:          userID,
 		Name:        userID,
 		DisplayName: userID,
