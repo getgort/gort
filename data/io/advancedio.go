@@ -24,6 +24,11 @@ import (
 	"github.com/getgort/gort/types"
 )
 
+const (
+	ActionReply = "reply"
+	ActionReact = "react"
+)
+
 // CommandInfo represents a command typed in by a user. Unlike
 // command.Command, it can be marshaled into meaningful JSON.
 type CommandInfo struct {

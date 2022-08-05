@@ -346,14 +346,14 @@ func handleAdvancedOutput(ctx context.Context, output []io.AdvancedOutput) error
 			e1 = e1.WithField("adapter.name", a.GetName())
 		}
 		switch o.Action {
-		case "reply":
+		case io.ActionReply:
 			err = a.Reply(ctx, msgRef, o.Content)
 			if err != nil {
 				e1.WithError(err).Errorf("Failed to create reply")
 			} else {
 				e1.Debug("Replied!")
 			}
-		case "react":
+		case io.ActionReact:
 			err = a.React(ctx, msgRef, emoji.From(o.Content))
 			if err != nil {
 				e1.WithError(err).Error("Failed to react")
