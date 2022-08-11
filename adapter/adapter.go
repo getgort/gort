@@ -339,12 +339,15 @@ func handleAdvancedOutput(ctx context.Context, adapter Adapter, output []io.Adva
 		if err != nil {
 			msgRef = nil
 			if o.Adapter != "" {
-
+				a1, err := GetAdapter(o.Adapter)
+				if err != nil {
+					a = a1
+				}
 			}
 		} else {
 			a, err = GetAdapter(msgRef.Adapter)
 			if err != nil {
-				e.WithError(err).Error("Couldn't find specified adapter")
+				e.WithError(err).Error("Couldn't find specified adapter from MessageRef")
 				return nil
 			}
 		}
