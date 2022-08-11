@@ -86,6 +86,8 @@ var (
 
 // Adapter represents a connection to a chat provider.
 type Adapter interface {
+	BookmarkLink(ctx context.Context, channelID, title, link string) error
+
 	// GetChannelInfo provides info on a specific provider channel accessible
 	// to the adapter.
 	GetChannelInfo(channelID string) (*io.ChannelInfo, error)
@@ -276,7 +278,7 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 	ctx, sp := tr.Start(ctx, "adapter.SendEnvelope")
 	defer sp.End()
 
-	handleAdvancedOutput(ctx, envelope.Response.Advanced) // TODO: handle error
+	handleAdvancedOutput(ctx, a, envelope.Response.Advanced) // TODO: handle error
 
 	e := adapterLogEntry(ctx, log.WithContext(ctx), a).WithField("message.type", tt)
 
@@ -327,38 +329,57 @@ func SendEnvelope(ctx context.Context, a Adapter, channelID string, envelope dat
 
 // handleAdvancedOutput executes a slice of adapter actions specified as
 // io.AdvancedInput.
-func handleAdvancedOutput(ctx context.Context, output []io.AdvancedOutput) error {
+func handleAdvancedOutput(ctx context.Context, adapter Adapter, output []io.AdvancedOutput) error {
 	e := adapterLogEntry(ctx, log.WithContext(ctx))
 	for _, o := range output {
+		var a = adapter
 		e1 := e.WithField("output.action", o.Action).WithField("output.messageref", o.MessageRef)
-		var msgRef MessageRef
-		err := json.NewDecoder(strings.NewReader(o.MessageRef)).Decode(&msgRef)
+		var msgRef = new(MessageRef)
+		err := json.NewDecoder(strings.NewReader(o.MessageRef)).Decode(msgRef)
 		if err != nil {
-			e1.WithError(err).Errorf("Badly formatted MessageRef")
-		}
-		// An alternate way to get the adapter will be necessary for actions
-		// that don't involve existing messages.
-		a, err := GetAdapter(msgRef.Adapter)
-		if err != nil {
-			e.WithError(err).Error("Couldn't find specified adapter")
-			return nil
+			msgRef = nil
+			if o.Adapter != "" {
+
+			}
 		} else {
-			e1 = e1.WithField("adapter.name", a.GetName())
+			a, err = GetAdapter(msgRef.Adapter)
+			if err != nil {
+				e.WithError(err).Error("Couldn't find specified adapter")
+				return nil
+			}
 		}
+
+		e1 = e1.WithField("adapter.name", a.GetName())
+
 		switch o.Action {
 		case io.ActionReply:
-			err = a.Reply(ctx, msgRef, o.Content)
-			if err != nil {
-				e1.WithError(err).Errorf("Failed to create reply")
+			if msgRef != nil {
+				err = a.Reply(ctx, *msgRef, o.Content)
+				if err != nil {
+					e1.WithError(err).Errorf("Failed to create reply")
+				} else {
+					e1.Debug("Replied!")
+				}
 			} else {
-				e1.Debug("Replied!")
+				e1.WithError(err).Errorf("Badly formatted MessageRef")
 			}
 		case io.ActionReact:
-			err = a.React(ctx, msgRef, emoji.From(o.Content))
-			if err != nil {
-				e1.WithError(err).Error("Failed to react")
+			if msgRef != nil {
+				err = a.React(ctx, *msgRef, emoji.From(o.Content))
+				if err != nil {
+					e1.WithError(err).Error("Failed to react")
+				} else {
+					e1.Debug("Reacted!")
+				}
 			} else {
-				e1.Debug("Reacted!")
+				e1.WithError(err).Errorf("Badly formatted MessageRef")
+			}
+		case io.ActionBookmark:
+			err = a.BookmarkLink(ctx, o.ChannelID, o.Title, o.Content)
+			if err != nil {
+				e1.WithError(err).Error("Failed to bookmark")
+			} else {
+				e1.Debug("Bookmarked!")
 			}
 		default:
 			e1.Error("Unknown action")

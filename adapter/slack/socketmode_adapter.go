@@ -45,6 +45,16 @@ type SocketModeAdapter struct {
 	provider     data.SlackProvider
 }
 
+func (s *SocketModeAdapter) BookmarkLink(ctx context.Context, channelID, title, link string) error {
+	_, err := s.client.AddBookmarkContext(ctx, channelID, slack.AddBookmarkParameters{
+		Title: title,
+		Type:  "link",
+		Link:  link,
+	})
+	//TODO this could support emoji
+	return err
+}
+
 func (s *SocketModeAdapter) React(ctx context.Context, message adapter.MessageRef, emoji emoji.Emoji) error {
 	return s.client.AddReactionContext(ctx, emoji.Shortname(), slack.ItemRef{
 		Channel:   message.ChannelID,

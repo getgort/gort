@@ -27,6 +27,11 @@ import (
 const (
 	ActionReply = "reply"
 	ActionReact = "react"
+
+	// ActionBookmark is used to bookmark a link in a given chanel. This is
+	// currently only supported on slack. It requires a link in Content, a
+	// Title, a ChannelID, and optionally an Adapter.
+	ActionBookmark = "bookmark"
 )
 
 // CommandInfo represents a command typed in by a user. Unlike
@@ -123,4 +128,14 @@ type AdvancedOutput struct {
 	// Content is the content associated with an action, for example text for a
 	// reply or the emoji for a reaction.
 	Content string
+
+	// Title is the title of something to be created, for example a slack
+	// bookmark.
+	Title string
+
+	// Adapter is the name of a specific adapter in which to perform the action.
+	// This is usually optional, and will default to the adapter from which the
+	// command that generated this output was triggered. Actions that take
+	// MessageRef may use the adapter of that message.
+	Adapter string
 }
