@@ -257,6 +257,11 @@ var _ Adapter = &testAdapter{}
 
 type testAdapter struct{}
 
+func (t *testAdapter) BookmarkLink(ctx context.Context, channelID, title, link string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t *testAdapter) React(ctx context.Context, message MessageRef, emoji emoji.Emoji) error {
 	//TODO implement me
 	panic("implement me")

@@ -60,6 +60,10 @@ type Adapter struct {
 	events   chan *adapter.ProviderEvent
 }
 
+func (s *Adapter) BookmarkLink(ctx context.Context, channelID, title, link string) error {
+	return fmt.Errorf("discord does not curently support bookmarking links")
+}
+
 func (s *Adapter) React(ctx context.Context, message adapter.MessageRef, emoji emoji.Emoji) error {
 	return s.session.MessageReactionAdd(message.ChannelID, message.ID, string(emoji.Unicode()))
 }
