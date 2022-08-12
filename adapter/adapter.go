@@ -86,6 +86,8 @@ var (
 
 // Adapter represents a connection to a chat provider.
 type Adapter interface {
+	// BookmarkLink bookmarks a link in the specified chanel, if the adapter
+	// supports this.
 	BookmarkLink(ctx context.Context, channelID, title, link string) error
 
 	// GetChannelInfo provides info on a specific provider channel accessible
