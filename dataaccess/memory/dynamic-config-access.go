@@ -98,7 +98,7 @@ func (da *InMemoryDataAccess) DynamicConfigurationGet(_ context.Context, layer d
 // DynamicConfigurationList will list matching configurations. Empty values
 // are treated as wildcards. Bundle (at a minimum) must be not empty.
 func (da *InMemoryDataAccess) DynamicConfigurationList(_ context.Context, layer data.ConfigurationLayer, bundle, owner, key string) ([]data.DynamicConfiguration, error) {
-	const wildcard = `([^\|]+)`
+	const wildcard = `([^\|]*)`
 
 	if bundle == "" {
 		return nil, errs.ErrEmptyConfigBundle
